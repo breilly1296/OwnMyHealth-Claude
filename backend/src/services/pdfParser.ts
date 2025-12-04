@@ -1760,7 +1760,7 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
   // CALCULATE CONFIDENCE & BUILD RESULT
   // ============================================
 
-  const { confidence, factors } = calculateEnhancedSBCConfidence(text, {
+  const { confidence } = calculateEnhancedSBCConfidence(text, {
     planName: !!planName,
     insurerName: !!insurerName,
     deductible: !!deductible,
