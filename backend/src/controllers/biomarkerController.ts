@@ -498,16 +498,19 @@ export async function bulkCreateBiomarkers(
     }
   });
 
-  // If no valid items, return error
+  // If no valid items, return error with proper error object format
   if (validBiomarkerData.length === 0) {
     res.status(400).json({
       success: false,
-      error: 'All biomarkers failed validation',
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'All biomarkers failed validation',
+        details: failedItems,
+      },
       meta: {
         total: inputs.length,
         succeeded: 0,
         failed: failedItems.length,
-        failedItems,
       },
     });
     return;
@@ -523,16 +526,19 @@ export async function bulkCreateBiomarkers(
     const errorMessage = dbError instanceof Error ? dbError.message : 'Database error';
     res.status(500).json({
       success: false,
-      error: `Failed to create biomarkers: ${errorMessage}`,
-      meta: {
-        total: inputs.length,
-        succeeded: 0,
-        failed: inputs.length,
-        failedItems: validBiomarkerData.map((_, i) => ({
+      error: {
+        code: 'DATABASE_ERROR',
+        message: 'Failed to create biomarkers',
+        details: validBiomarkerData.map((_, i) => ({
           index: i,
           name: validBiomarkerData[i].name,
           error: errorMessage,
         })),
+      },
+      meta: {
+        total: inputs.length,
+        succeeded: 0,
+        failed: inputs.length,
       },
     });
     return;

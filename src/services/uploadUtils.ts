@@ -19,17 +19,11 @@ interface ApiError {
   status: number;
 }
 
-// Import auth functions from api.ts
-import { getAuthToken, setAuthToken, clearAuthToken } from './api';
+// Import auth functions from api.ts - reuse attemptTokenRefresh to avoid duplication
+import { getAuthToken, attemptTokenRefresh, setOnAuthFailure } from './api';
 
-// Token refresh state - shared with api.ts
-let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
-let onAuthFailureCallback: (() => void) | null = null;
-
-export function setUploadAuthFailureCallback(callback: () => void) {
-  onAuthFailureCallback = callback;
-}
+// Re-export setOnAuthFailure for backward compatibility
+export const setUploadAuthFailureCallback = setOnAuthFailure;
 
 /**
  * Get user-friendly error message based on status code
@@ -58,45 +52,6 @@ function getUserFriendlyMessage(status: number, serverMessage?: string): string 
     default:
       return serverMessage || 'An unexpected error occurred. Please try again.';
   }
-}
-
-/**
- * Attempt to refresh the access token
- */
-async function attemptTokenRefresh(): Promise<boolean> {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
-  }
-
-  isRefreshing = true;
-  refreshPromise = (async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.data?.token) {
-          setAuthToken(data.data.token);
-        }
-        return true;
-      }
-
-      clearAuthToken();
-      return false;
-    } catch {
-      clearAuthToken();
-      return false;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
 }
 
 /**

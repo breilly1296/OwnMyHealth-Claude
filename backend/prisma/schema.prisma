@@ -211,6 +211,9 @@ model Biomarker {
 
   @@index([userId])
   @@index([userId, category])
+  @@index([userId, isOutOfRange])
+  @@index([userId, createdAt])
+  @@index([userId, sourceType])
   @@index([measurementDate])
   @@index([isOutOfRange])
   @@map("biomarkers")

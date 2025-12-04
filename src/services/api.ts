@@ -113,8 +113,9 @@ export function setOnAuthFailure(callback: () => void) {
 /**
  * Attempt to refresh the access token using the refresh token cookie
  * Returns true if refresh succeeded, false otherwise
+ * Exported for use by other modules (e.g., uploadUtils)
  */
-async function attemptTokenRefresh(): Promise<boolean> {
+export async function attemptTokenRefresh(): Promise<boolean> {
   // If already refreshing, wait for that to complete
   if (isRefreshing && refreshPromise) {
     return refreshPromise;

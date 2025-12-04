@@ -33,3 +33,25 @@ export {
   AuditLogService,
   getAuditLogService,
 } from './auditLog.js';
+
+// Health Analysis
+export {
+  performHealthAnalysis,
+  getHealthAnalysisResult,
+  generateRiskAssessments,
+  generateTrendAnalyses,
+  detectConditions,
+  generateRecommendations,
+  generatePriorityActions,
+  calculateDeviation,
+  mapSeverityToUrgency,
+  mapConditionToSpecialty,
+  type DecryptedBiomarker,
+  type RiskAssessment,
+  type TrendAnalysis,
+  type HealthAnalysisResult,
+  type DetectedCondition,
+  type Recommendation,
+  type PriorityAction,
+  type InternalAnalysis,
+} from './healthAnalysisService.js';
