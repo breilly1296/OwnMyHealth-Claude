@@ -1,0 +1,665 @@
+// OwnMyHealth Database Schema
+// PHI (Protected Health Information) fields are encrypted at the application layer
+// Row-Level Security (RLS) policies are defined in migrations
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique @db.VarChar(255)
+  passwordHash      String    @map("password_hash") @db.VarChar(255)
+
+  // PHI - Encrypted at application layer
+  firstNameEncrypted  String?   @map("first_name_encrypted") @db.Text
+  lastNameEncrypted   String?   @map("last_name_encrypted") @db.Text
+  dateOfBirthEncrypted String?  @map("date_of_birth_encrypted") @db.Text
+  phoneEncrypted      String?   @map("phone_encrypted") @db.Text
+  addressEncrypted    String?   @map("address_encrypted") @db.Text
+
+  // Non-PHI metadata
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  emailVerificationToken   String?   @unique @map("email_verification_token") @db.VarChar(255)
+  emailVerificationExpires DateTime? @map("email_verification_expires") @db.Timestamptz
+
+  // Password reset
+  passwordResetToken   String?   @unique @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires DateTime? @map("password_reset_expires") @db.Timestamptz
+
+  isActive          Boolean   @default(true) @map("is_active")
+  role              UserRole  @default(PATIENT)
+
+  // Account lockout fields
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz
+  lastFailedLogin     DateTime? @map("last_failed_login") @db.Timestamptz
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz
+
+  // Relations
+  biomarkers        Biomarker[]
+  insurancePlans    InsurancePlan[]
+  dnaData           DNAData[]
+  healthNeeds       HealthNeed[]
+  healthGoals       HealthGoal[]
+  auditLogs         AuditLog[]
+  sessions          Session[]
+  encryptionKeys    UserEncryptionKey[]
+
+  // Provider-Patient relationships
+  providerRelationships ProviderPatient[] @relation("ProviderUser")
+  patientRelationships  ProviderPatient[] @relation("PatientUser")
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  token        String   @unique @db.VarChar(500)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent") @db.Text
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model UserEncryptionKey {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  keyType      String   @map("key_type") @db.VarChar(50) // 'phi_encryption', 'data_key'
+  keyHash      String   @map("key_hash") @db.VarChar(255) // Hash for verification
+  encryptedKey String   @map("encrypted_key") @db.Text // Key encrypted with master key
+  version      Int      @default(1)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  rotatedAt    DateTime? @map("rotated_at") @db.Timestamptz
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, keyType, version])
+  @@index([userId])
+  @@map("user_encryption_keys")
+}
+
+enum UserRole {
+  PATIENT
+  PROVIDER
+  ADMIN
+}
+
+// ============================================
+// PROVIDER-PATIENT RELATIONSHIPS
+// ============================================
+
+model ProviderPatient {
+  id              String    @id @default(uuid()) @db.Uuid
+  providerId      String    @map("provider_id") @db.Uuid
+  patientId       String    @map("patient_id") @db.Uuid
+
+  // Access permissions
+  canViewBiomarkers   Boolean @default(true) @map("can_view_biomarkers")
+  canViewInsurance    Boolean @default(false) @map("can_view_insurance")
+  canViewDna          Boolean @default(false) @map("can_view_dna")
+  canViewHealthNeeds  Boolean @default(true) @map("can_view_health_needs")
+  canEditData         Boolean @default(false) @map("can_edit_data")
+
+  // Relationship metadata
+  relationshipType  ProviderRelationType @default(PRIMARY_CARE) @map("relationship_type")
+  status            ProviderPatientStatus @default(PENDING)
+
+  // Consent tracking
+  consentGrantedAt  DateTime? @map("consent_granted_at") @db.Timestamptz
+  consentExpiresAt  DateTime? @map("consent_expires_at") @db.Timestamptz
+
+  // Notes (encrypted)
+  notesEncrypted    String?   @map("notes_encrypted") @db.Text
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations with cascade delete to prevent orphaned records
+  provider          User      @relation("ProviderUser", fields: [providerId], references: [id], onDelete: Cascade)
+  patient           User      @relation("PatientUser", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, patientId])
+  @@index([providerId])
+  @@index([patientId])
+  @@index([status])
+  @@map("provider_patients")
+}
+
+enum ProviderRelationType {
+  PRIMARY_CARE
+  SPECIALIST
+  CONSULTANT
+  EMERGENCY
+  OTHER
+}
+
+enum ProviderPatientStatus {
+  PENDING     // Patient hasn't approved yet
+  ACTIVE      // Active relationship
+  SUSPENDED   // Temporarily suspended
+  REVOKED     // Patient revoked access
+  EXPIRED     // Consent expired
+}
+
+// ============================================
+// BIOMARKERS / HEALTH DATA
+// ============================================
+
+model Biomarker {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+
+  // Non-sensitive metadata
+  category              String    @db.VarChar(100)
+  name                  String    @db.VarChar(200)
+  unit                  String    @db.VarChar(50)
+
+  // PHI - Encrypted values
+  valueEncrypted        String    @map("value_encrypted") @db.Text
+  notesEncrypted        String?   @map("notes_encrypted") @db.Text
+
+  // Normal range (non-PHI, standard medical ranges)
+  normalRangeMin        Decimal   @map("normal_range_min") @db.Decimal(10, 4)
+  normalRangeMax        Decimal   @map("normal_range_max") @db.Decimal(10, 4)
+  normalRangeSource     String?   @map("normal_range_source") @db.VarChar(200)
+
+  // Metadata
+  measurementDate       DateTime  @map("measurement_date") @db.Date
+  sourceType            DataSourceType @default(MANUAL) @map("source_type")
+  sourceFile            String?   @map("source_file") @db.VarChar(255)
+  extractionConfidence  Decimal?  @map("extraction_confidence") @db.Decimal(3, 2)
+  labName               String?   @map("lab_name") @db.VarChar(200)
+
+  // Status tracking
+  isOutOfRange          Boolean   @default(false) @map("is_out_of_range")
+  isAcknowledged        Boolean   @default(false) @map("is_acknowledged")
+
+  // Timestamps
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  history               BiomarkerHistory[]
+
+  @@index([userId])
+  @@index([userId, category])
+  @@index([measurementDate])
+  @@index([isOutOfRange])
+  @@map("biomarkers")
+}
+
+model BiomarkerHistory {
+  id              String    @id @default(uuid()) @db.Uuid
+  biomarkerId     String    @map("biomarker_id") @db.Uuid
+  valueEncrypted  String    @map("value_encrypted") @db.Text
+  measurementDate DateTime  @map("measurement_date") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  biomarker       Biomarker @relation(fields: [biomarkerId], references: [id], onDelete: Cascade)
+
+  @@index([biomarkerId])
+  @@index([measurementDate])
+  @@map("biomarker_history")
+}
+
+enum DataSourceType {
+  MANUAL
+  LAB_UPLOAD
+  EHR_IMPORT
+  DEVICE_SYNC
+  API_IMPORT
+}
+
+// ============================================
+// INSURANCE DATA
+// ============================================
+
+model InsurancePlan {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+
+  // Plan identifiers (non-PHI)
+  planName          String    @map("plan_name") @db.VarChar(300)
+  insurerName       String    @map("insurer_name") @db.VarChar(200)
+  planType          PlanType  @map("plan_type")
+
+  // PHI - Member information encrypted
+  memberIdEncrypted String?   @map("member_id_encrypted") @db.Text
+  groupIdEncrypted  String?   @map("group_id_encrypted") @db.Text
+
+  // Financial details (non-PHI, standard plan info)
+  effectiveDate     DateTime  @map("effective_date") @db.Date
+  terminationDate   DateTime? @map("termination_date") @db.Date
+  premiumMonthly    Decimal?  @map("premium_monthly") @db.Decimal(10, 2)
+
+  deductibleIndividual  Decimal @map("deductible_individual") @db.Decimal(10, 2)
+  deductibleFamily      Decimal @map("deductible_family") @db.Decimal(10, 2)
+  oopMaxIndividual      Decimal @map("oop_max_individual") @db.Decimal(10, 2)
+  oopMaxFamily          Decimal @map("oop_max_family") @db.Decimal(10, 2)
+
+  // Status
+  isActive          Boolean   @default(true) @map("is_active")
+  isPrimary         Boolean   @default(false) @map("is_primary")
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benefits          InsuranceBenefit[]
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("insurance_plans")
+}
+
+model InsuranceBenefit {
+  id                String    @id @default(uuid()) @db.Uuid
+  planId            String    @map("plan_id") @db.Uuid
+
+  serviceName       String    @map("service_name") @db.VarChar(300)
+  serviceCategory   String    @map("service_category") @db.VarChar(100)
+
+  // In-network coverage
+  inNetworkCovered      Boolean @map("in_network_covered")
+  inNetworkCopay        Decimal? @map("in_network_copay") @db.Decimal(10, 2)
+  inNetworkCoinsurance  Decimal? @map("in_network_coinsurance") @db.Decimal(5, 2)
+  inNetworkDeductible   Boolean @default(true) @map("in_network_deductible_applies")
+
+  // Out-of-network coverage
+  outNetworkCovered     Boolean @map("out_network_covered")
+  outNetworkCopay       Decimal? @map("out_network_copay") @db.Decimal(10, 2)
+  outNetworkCoinsurance Decimal? @map("out_network_coinsurance") @db.Decimal(5, 2)
+  outNetworkDeductible  Boolean @default(true) @map("out_network_deductible_applies")
+
+  // Additional info
+  limitations       String?   @db.Text
+  preAuthRequired   Boolean   @default(false) @map("pre_auth_required")
+
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  plan              InsurancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([serviceCategory])
+  @@map("insurance_benefits")
+}
+
+enum PlanType {
+  HMO
+  PPO
+  EPO
+  POS
+  HDHP
+}
+
+// ============================================
+// DNA / GENETIC DATA
+// ============================================
+
+model DNAData {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+
+  // File metadata
+  filename          String    @db.VarChar(255)
+  source            String    @db.VarChar(100) // '23andMe', 'AncestryDNA', etc.
+  uploadDate        DateTime  @default(now()) @map("upload_date") @db.Timestamptz
+
+  // Stats
+  totalVariants     Int       @map("total_variants")
+  validVariants     Int       @map("valid_variants")
+
+  // Processing status
+  processingStatus  ProcessingStatus @default(PENDING) @map("processing_status")
+  processedAt       DateTime? @map("processed_at") @db.Timestamptz
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variants          DNAVariant[]
+  traits            GeneticTrait[]
+
+  @@index([userId])
+  @@map("dna_data")
+}
+
+model DNAVariant {
+  id              String    @id @default(uuid()) @db.Uuid
+  dnaDataId       String    @map("dna_data_id") @db.Uuid
+
+  // Variant info (non-PHI - these are reference data)
+  rsid            String    @db.VarChar(20)
+  chromosome      String    @db.VarChar(5)
+  position        Int
+
+  // PHI - Actual genotype encrypted
+  genotypeEncrypted String  @map("genotype_encrypted") @db.Text
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  dnaData         DNAData   @relation(fields: [dnaDataId], references: [id], onDelete: Cascade)
+
+  @@index([dnaDataId])
+  @@index([rsid])
+  @@map("dna_variants")
+}
+
+model GeneticTrait {
+  id              String    @id @default(uuid()) @db.Uuid
+  dnaDataId       String    @map("dna_data_id") @db.Uuid
+
+  // Trait info
+  traitName       String    @map("trait_name") @db.VarChar(200)
+  category        String    @db.VarChar(100)
+  rsid            String    @db.VarChar(20)
+
+  // Risk assessment (encrypted interpretations)
+  riskLevel       RiskLevel @map("risk_level")
+  descriptionEncrypted String @map("description_encrypted") @db.Text
+  recommendationsEncrypted String? @map("recommendations_encrypted") @db.Text
+
+  // Evidence
+  citationCount   Int       @default(0) @map("citation_count")
+  confidence      Decimal   @db.Decimal(3, 2)
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  dnaData         DNAData   @relation(fields: [dnaDataId], references: [id], onDelete: Cascade)
+
+  @@index([dnaDataId])
+  @@index([category])
+  @@index([riskLevel])
+  @@map("genetic_traits")
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum RiskLevel {
+  HIGH
+  MODERATE
+  LOW
+  PROTECTIVE
+  UNKNOWN
+}
+
+// ============================================
+// HEALTH NEEDS & RECOMMENDATIONS
+// ============================================
+
+model HealthNeed {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+
+  needType        HealthNeedType @map("need_type")
+  name            String    @db.VarChar(200)
+  descriptionEncrypted String @map("description_encrypted") @db.Text
+
+  urgency         Urgency
+  status          HealthNeedStatus @default(PENDING)
+
+  // Related data
+  relatedBiomarkerIds String[] @map("related_biomarker_ids") @db.Uuid
+
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  resolvedAt      DateTime? @map("resolved_at") @db.Timestamptz
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([urgency])
+  @@map("health_needs")
+}
+
+enum HealthNeedType {
+  CONDITION
+  ACTION
+  SERVICE
+  FOLLOW_UP
+}
+
+enum Urgency {
+  IMMEDIATE
+  URGENT
+  FOLLOW_UP
+  ROUTINE
+}
+
+enum HealthNeedStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DISMISSED
+}
+
+// ============================================
+// HEALTH GOALS & TRACKING
+// ============================================
+
+model HealthGoal {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+
+  // Goal definition
+  name            String    @db.VarChar(200)
+  descriptionEncrypted String? @map("description_encrypted") @db.Text
+  category        String    @db.VarChar(100) // Biomarker category
+
+  // Target and progress tracking
+  targetValue     Decimal   @map("target_value") @db.Decimal(10, 4)
+  currentValue    Decimal?  @map("current_value") @db.Decimal(10, 4)
+  startValue      Decimal?  @map("start_value") @db.Decimal(10, 4)
+  unit            String    @db.VarChar(50)
+
+  // Goal direction (increase or decrease target)
+  direction       GoalDirection @default(DECREASE)
+
+  // Related biomarkers
+  relatedBiomarkerId String? @map("related_biomarker_id") @db.Uuid
+
+  // Timeline
+  startDate       DateTime  @map("start_date") @db.Date
+  targetDate      DateTime  @map("target_date") @db.Date
+
+  // Status and progress
+  status          GoalStatus @default(ACTIVE)
+  progress        Decimal   @default(0) @db.Decimal(5, 2) // 0-100 percentage
+
+  // Milestones (stored as JSON string)
+  milestones      String?   @db.Text
+
+  // Notifications
+  reminderFrequency ReminderFrequency? @map("reminder_frequency")
+  lastReminderSent DateTime? @map("last_reminder_sent") @db.Timestamptz
+
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progressHistory GoalProgressHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([targetDate])
+  @@map("health_goals")
+}
+
+model GoalProgressHistory {
+  id              String    @id @default(uuid()) @db.Uuid
+  goalId          String    @map("goal_id") @db.Uuid
+  value           Decimal   @db.Decimal(10, 4)
+  progress        Decimal   @db.Decimal(5, 2) // Progress percentage at this point
+  noteEncrypted   String?   @map("note_encrypted") @db.Text
+  recordedAt      DateTime  @default(now()) @map("recorded_at") @db.Timestamptz
+
+  goal            HealthGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([recordedAt])
+  @@map("goal_progress_history")
+}
+
+enum GoalDirection {
+  INCREASE
+  DECREASE
+  MAINTAIN
+}
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  ACHIEVED
+  FAILED
+  CANCELLED
+}
+
+enum ReminderFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+// ============================================
+// AUDIT LOGGING (HIPAA Compliance)
+// ============================================
+
+model AuditLog {
+  id              String    @id @default(uuid()) @db.Uuid
+
+  // Actor information
+  userId          String?   @map("user_id") @db.Uuid
+  actorType       ActorType @map("actor_type")
+  ipAddress       String?   @map("ip_address") @db.VarChar(45)
+  userAgent       String?   @map("user_agent") @db.Text
+  sessionId       String?   @map("session_id") @db.VarChar(100)
+
+  // Action details
+  action          AuditAction
+  resourceType    String    @map("resource_type") @db.VarChar(100)
+  resourceId      String?   @map("resource_id") @db.Uuid
+
+  // Change tracking (encrypted for PHI)
+  previousValueEncrypted String? @map("previous_value_encrypted") @db.Text
+  newValueEncrypted      String? @map("new_value_encrypted") @db.Text
+
+  // Metadata (stored as JSON string)
+  metadata        String?   @db.Text
+
+  // Status
+  success         Boolean   @default(true)
+  errorMessage    String?   @map("error_message") @db.Text
+
+  // Timestamp
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType])
+  @@index([resourceId])
+  @@index([createdAt], map: "audit_logs_created_at_asc_idx")
+  @@index([createdAt(sort: Desc)], map: "audit_logs_created_at_desc_idx")
+  @@map("audit_logs")
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  API
+  ADMIN
+  ANONYMOUS
+}
+
+enum AuditAction {
+  // Authentication
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+
+  // Data access
+  READ
+  VIEW
+  EXPORT
+  PRINT
+
+  // Data modification
+  CREATE
+  UPDATE
+  DELETE
+
+  // PHI specific
+  PHI_ACCESS
+  PHI_EXPORT
+  PHI_DECRYPT
+
+  // Administrative
+  PERMISSION_CHANGE
+  SETTINGS_CHANGE
+  KEY_ROTATION
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemConfig {
+  id              String    @id @default(uuid()) @db.Uuid
+  key             String    @unique @db.VarChar(100)
+  value           String    @db.Text
+  valueType       String    @default("string") @map("value_type") @db.VarChar(50)
+  description     String?   @db.Text
+  isEncrypted     Boolean   @default(false) @map("is_encrypted")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy       String?   @map("updated_by") @db.Uuid
+
+  @@map("system_config")
+}

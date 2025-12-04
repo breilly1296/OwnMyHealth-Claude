@@ -1,0 +1,11 @@
+# Railway configuration for OwnMyHealth Frontend
+# Documentation: https://docs.railway.app/reference/config-as-code
+
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build"
+
+[deploy]
+startCommand = "npx serve dist -s -l $PORT"
+healthcheckPath = "/"
+healthcheckTimeout = 30

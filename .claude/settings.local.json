@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(then echo \"POSSIBLY UNUSED: $file\" fi done)",
+      "Bash(xargs:*)",
+      "Bash(npx eslint:*)",
+      "Bash(timeout:*)",
+      "Bash(powershell -Command \"(Invoke-WebRequest -Uri ''http://localhost:5176/'' -UseBasicParsing).StatusCode\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
