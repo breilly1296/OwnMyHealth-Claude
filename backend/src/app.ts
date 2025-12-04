@@ -1,3 +1,44 @@
+/**
+ * app.ts - Express Application Server Entry Point
+ *
+ * This is the main entry point for the OwnMyHealth backend API server.
+ * It configures and initializes all middleware, routes, and server infrastructure.
+ *
+ * Middleware Stack (in order):
+ * 1. Helmet - Security HTTP headers (CSP, X-Frame-Options, etc.)
+ * 2. CORS - Cross-Origin Resource Sharing configuration
+ * 3. Cookie Parser - Parse cookies for authentication
+ * 4. CSRF Protection - Prevent cross-site request forgery
+ * 5. Rate Limiting - Prevent abuse and DoS attacks
+ * 6. Morgan - HTTP request logging
+ * 7. Body Parser - Parse JSON and URL-encoded bodies
+ * 8. Routes - API endpoint handlers
+ * 9. Error Handler - Centralized error handling
+ *
+ * Security Features:
+ * - Helmet.js for HTTP security headers
+ * - CORS with environment-specific origins
+ * - CSRF token validation for state-changing requests
+ * - Rate limiting (100 requests per 15 minutes)
+ * - Trust proxy for reverse proxy deployments
+ *
+ * Initialization Process:
+ * 1. Configure middleware stack
+ * 2. Initialize database connection (Prisma)
+ * 3. Create demo user (development/staging only)
+ * 4. Start session cleanup scheduler
+ * 5. Listen on configured port
+ * 6. Set up graceful shutdown handlers
+ *
+ * Environment Variables:
+ * - PORT: Server port (default: 3001)
+ * - NODE_ENV: Environment (development/production)
+ * - CORS_ORIGIN: Allowed origins (required in production)
+ * - DATABASE_URL: PostgreSQL connection string
+ *
+ * @module app
+ */
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

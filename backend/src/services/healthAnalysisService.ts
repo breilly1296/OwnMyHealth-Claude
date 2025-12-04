@@ -1,11 +1,50 @@
 /**
- * Health Analysis Service
+ * healthAnalysisService.ts - Health Analysis Business Logic
  *
- * Shared business logic for health analysis based on biomarkers.
- * Extracted from healthController for reusability across the application.
+ * This service provides core health analysis functionality based on biomarker data.
+ * It is used by multiple controllers and can be reused throughout the application.
+ *
+ * Key Features:
+ * 1. Risk Assessment - Calculates risk levels based on biomarker deviations
+ * 2. Trend Analysis - Tracks biomarker changes over time (future: historical comparison)
+ * 3. Condition Detection - Identifies potential health conditions from out-of-range values
+ * 4. Recommendations - Generates lifestyle and medical recommendations
+ * 5. Priority Actions - Creates actionable items based on urgency
+ *
+ * Risk Level Calculation:
+ * - Low: Within normal range
+ * - Moderate: 10-30% deviation from normal
+ * - High: 30-50% deviation from normal
+ * - Critical: >50% deviation from normal
+ *
+ * Health Score Calculation:
+ * - Score = (biomarkers in range / total biomarkers) * 100
+ * - Score < 50% = High risk
+ * - Score 50-80% = Moderate risk
+ * - Score > 80% = Low risk
+ *
+ * Category-Based Recommendations:
+ * - Lipids: Heart-healthy diet suggestions
+ * - Metabolic: Blood sugar management
+ * - Kidney: Nephrology referral
+ * - Liver: Hepatology referral
+ *
+ * Usage:
+ * ```typescript
+ * import { performHealthAnalysis, getHealthAnalysisResult } from './healthAnalysisService';
+ *
+ * const analysis = performHealthAnalysis(biomarkers);
+ * const frontendResult = getHealthAnalysisResult(biomarkers);
+ * ```
+ *
+ * @module services/healthAnalysisService
  */
 
-// Types for biomarker input
+// ============================================
+// TYPE DEFINITIONS
+// ============================================
+
+/** Decrypted biomarker data from the database */
 export interface DecryptedBiomarker {
   id: string;
   userId: string;

@@ -1,13 +1,71 @@
+/**
+ * encryption.ts - PHI Encryption Service
+ *
+ * This module provides HIPAA-compliant encryption for Protected Health Information (PHI).
+ * All sensitive user data is encrypted at the application layer before being stored
+ * in the database, providing an additional security layer beyond database encryption.
+ *
+ * Encryption Method: AES-256-GCM (Authenticated Encryption)
+ * - AES-256: Industry-standard symmetric encryption
+ * - GCM Mode: Provides both confidentiality and integrity (authentication tag)
+ * - Each encryption produces unique ciphertext (random IV)
+ *
+ * Key Management:
+ * - Master key stored in environment variable (PHI_ENCRYPTION_KEY)
+ * - Per-user keys derived using PBKDF2-SHA512 with user-specific salt
+ * - User salts stored encrypted with master key
+ *
+ * Data Format:
+ * - Encrypted data stored as: iv:authTag:ciphertext (base64 encoded)
+ * - IV (16 bytes) ensures same plaintext produces different ciphertext
+ * - Auth tag (16 bytes) ensures data integrity and authenticity
+ *
+ * PHI Fields Protected:
+ * - User: name, DOB, phone, address
+ * - Biomarker: values, notes
+ * - Insurance: member ID, group ID
+ * - DNA: genotype data, recommendations
+ * - Health Needs: descriptions, action plans
+ *
+ * Security Requirements:
+ * - Key must be 256 bits (64 hex characters)
+ * - Production blocks known weak/placeholder keys
+ * - Service fails to start if key is invalid
+ *
+ * Usage:
+ * ```typescript
+ * const encryption = getEncryptionService();
+ * const encrypted = encryption.encrypt('sensitive data', userSalt);
+ * const decrypted = encryption.decrypt(encrypted, userSalt);
+ * ```
+ *
+ * @module services/encryption
+ */
+
 import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
-// Encryption configuration
+// ============================================
+// ENCRYPTION CONFIGURATION
+// ============================================
+
+/** Encryption algorithm: AES-256 in GCM mode for authenticated encryption */
 const ALGORITHM = 'aes-256-gcm';
+
+/** Initialization vector length in bytes (128 bits for AES) */
 const IV_LENGTH = 16;
+
+/** Salt length in bytes for user key derivation */
 const SALT_LENGTH = 32;
+
+/** Derived key length in bytes (256 bits for AES-256) */
 const KEY_LENGTH = 32;
+
+/** PBKDF2 iterations for key derivation (OWASP recommended minimum) */
 const PBKDF2_ITERATIONS = 100000;
-const MIN_KEY_LENGTH = 64; // 64 hex characters = 256 bits
+
+/** Minimum master key length (64 hex chars = 256 bits) */
+const MIN_KEY_LENGTH = 64;
 
 // Known insecure/placeholder keys that should never be used in production
 const INSECURE_KEYS = [

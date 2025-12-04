@@ -1,3 +1,26 @@
+/**
+ * App.tsx - Root Application Component
+ *
+ * This is the main entry point for the OwnMyHealth React application.
+ * It provides the following functionality:
+ *
+ * 1. Authentication Provider - Wraps the app with AuthContext for global auth state
+ * 2. Error Boundary - Catches and handles React rendering errors gracefully
+ * 3. Routing Logic - Conditionally renders Login, Register, or Dashboard based on auth state
+ * 4. Loading States - Shows loading spinner while checking authentication status
+ *
+ * Component Hierarchy:
+ * App (root)
+ * └── ErrorBoundary (error handling)
+ *     └── AuthProvider (authentication context)
+ *         └── AppContent (conditional rendering)
+ *             ├── LoginPage (unauthenticated)
+ *             ├── RegisterPage (registering)
+ *             └── Dashboard (authenticated)
+ *
+ * @module App
+ */
+
 import React, { useState } from 'react';
 import { Dashboard } from './components/dashboard';
 import { LoginPage, RegisterPage } from './components/auth';
@@ -6,6 +29,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { authApi } from './services/api';
 import { Loader2, Heart } from 'lucide-react';
 
+/** Possible authentication views when user is not logged in */
 type AuthView = 'login' | 'register';
 
 /**
