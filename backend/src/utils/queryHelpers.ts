@@ -90,49 +90,6 @@ export function parsePagination(
 }
 
 /**
- * Parse a numeric query parameter with validation
- *
- * @param value - Raw value from query string
- * @param defaultValue - Default value if parsing fails
- * @param min - Minimum allowed value (optional)
- * @param max - Maximum allowed value (optional)
- * @returns Parsed numeric value
- *
- * @example
- * ```typescript
- * const limit = parseNumericParam(req.query.limit, 20, 1, 100);
- * const days = parseNumericParam(req.query.days, 90);
- * ```
- */
-export function parseNumericParam(
-  value: unknown,
-  defaultValue: number,
-  min?: number,
-  max?: number
-): number {
-  let result = defaultValue;
-
-  if (typeof value === 'string') {
-    const parsed = parseInt(value, 10);
-    if (!isNaN(parsed)) {
-      result = parsed;
-    }
-  } else if (typeof value === 'number' && !isNaN(value)) {
-    result = value;
-  }
-
-  // Apply constraints
-  if (min !== undefined) {
-    result = Math.max(min, result);
-  }
-  if (max !== undefined) {
-    result = Math.min(max, result);
-  }
-
-  return result;
-}
-
-/**
  * Parse a string query parameter with validation
  *
  * @param value - Raw value from query string
@@ -220,54 +177,3 @@ export function createPaginationMeta(
   };
 }
 
-/**
- * Parse a date query parameter
- *
- * @param value - Raw value from query string (ISO date string)
- * @param defaultValue - Default value if parsing fails
- * @returns Parsed Date object or default
- *
- * @example
- * ```typescript
- * const startDate = parseDateParam(req.query.startDate, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000));
- * ```
- */
-export function parseDateParam(
-  value: unknown,
-  defaultValue?: Date
-): Date | undefined {
-  if (typeof value === 'string') {
-    const date = new Date(value);
-    if (!isNaN(date.getTime())) {
-      return date;
-    }
-  }
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return value;
-  }
-  return defaultValue;
-}
-
-/**
- * Parse enum query parameter with validation
- *
- * @param value - Raw value from query string
- * @param allowedValues - Array of allowed enum values
- * @param defaultValue - Default value if not valid
- * @returns Validated enum value
- *
- * @example
- * ```typescript
- * const status = parseEnumParam(req.query.status, ['PENDING', 'ACTIVE', 'COMPLETED'], 'ACTIVE');
- * ```
- */
-export function parseEnumParam<T extends string>(
-  value: unknown,
-  allowedValues: readonly T[],
-  defaultValue?: T
-): T | undefined {
-  if (typeof value === 'string' && allowedValues.includes(value as T)) {
-    return value as T;
-  }
-  return defaultValue;
-}

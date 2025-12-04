@@ -17,6 +17,7 @@ import { parseDNAFile, analyzeTraits, getTraitSummary } from '../services/dnaPar
 import { getFile, type MulterFile } from '../types/multer.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { dnaControllerLogger } from '../utils/logger.js';
+import { toNumber } from '../utils/numberConversion.js';
 import type {
   DNAData as PrismaDNAData,
   DNAVariant as PrismaDNAVariant,
@@ -24,15 +25,6 @@ import type {
 } from '../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'DNAData';
-
-// Helper to convert Prisma Decimal to number
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value && typeof value === 'object' && 'toNumber' in value) {
-    return (value as { toNumber: () => number }).toNumber();
-  }
-  return Number(value);
-}
 
 // Response types with decrypted values
 interface DNAUploadResponse {

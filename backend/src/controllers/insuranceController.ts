@@ -15,6 +15,7 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseBooleanParam, createPaginationMeta } from '../utils/queryHelpers.js';
+import { toNumber } from '../utils/numberConversion.js';
 import type { InsurancePlan as PrismaInsurancePlan, InsuranceBenefit as PrismaInsuranceBenefit } from '../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'InsurancePlan';
@@ -123,15 +124,6 @@ function toResponse(
     createdAt: plan.createdAt,
     updatedAt: plan.updatedAt,
   };
-}
-
-// Helper to convert Prisma Decimal to number
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value && typeof value === 'object' && 'toNumber' in value) {
-    return (value as { toNumber: () => number }).toNumber();
-  }
-  return Number(value);
 }
 
 // Get all insurance plans for user with pagination

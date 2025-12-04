@@ -211,7 +211,8 @@ async function apiFetch<T>(
         } as ApiError;
       }
       // For successful non-JSON responses (like 204 No Content)
-      return { success: true, data: null as unknown as T };
+      // Return success with undefined data - caller should handle this case
+      return { success: true, data: undefined } as ApiResponse<T>;
     }
 
     if (!response.ok) {

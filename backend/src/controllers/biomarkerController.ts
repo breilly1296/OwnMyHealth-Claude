@@ -15,18 +15,14 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
+import { processBatch } from '../utils/batchProcessor.js';
+import { toNumber } from '../utils/numberConversion.js';
 import type { Biomarker as PrismaBiomarker, DataSourceType } from '../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
 
-// Helper to convert Prisma Decimal to number
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value && typeof value === 'object' && 'toNumber' in value) {
-    return (value as { toNumber: () => number }).toNumber();
-  }
-  return Number(value);
-}
+// Batch size for concurrent decryption operations
+const DECRYPT_BATCH_SIZE = 20;
 
 // Response type for biomarkers (with decrypted values)
 interface BiomarkerResponse {
@@ -140,9 +136,11 @@ export async function getBiomarkers(
     orderBy: { measurementDate: 'desc' },
   });
 
-  // Decrypt all biomarkers
-  const decryptedBiomarkers = await Promise.all(
-    biomarkers.map((b) => toResponse(b, userSalt))
+  // Decrypt all biomarkers with controlled concurrency
+  const decryptedBiomarkers = await processBatch(
+    biomarkers,
+    (b) => toResponse(b, userSalt),
+    DECRYPT_BATCH_SIZE
   );
 
   // Audit log: READ access to biomarker list
