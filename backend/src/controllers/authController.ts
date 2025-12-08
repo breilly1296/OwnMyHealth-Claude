@@ -38,7 +38,6 @@ import {
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
-  sendWelcomeEmail,
   isEmailConfigured,
 } from '../services/emailService.js';
 
