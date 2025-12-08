@@ -2,12 +2,11 @@
 # Documentation: https://docs.railway.app/reference/config-as-code
 
 [build]
-builder = "nixpacks"
-buildCommand = "npm ci && npx prisma generate && npm run build"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "npx prisma migrate deploy && node dist/app.js"
+startCommand = "npx prisma migrate deploy && echo '=== Starting Node.js ===' && node dist/app.js 2>&1"
 healthcheckPath = "/api/v1/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 60
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
