@@ -55,3 +55,26 @@ export {
   type PriorityAction,
   type InternalAnalysis,
 } from './healthAnalysisService.js';
+
+// Email Service
+export {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  isEmailConfigured,
+} from './emailService.js';
+
+// File Storage Service
+export {
+  uploadFile,
+  getDownloadUrl,
+  deleteFile,
+  deleteUserFiles,
+  isStorageConfigured,
+  getStorageStatus,
+  type FileCategory,
+  type UploadOptions,
+  type UploadResult,
+  type DownloadResult,
+  type DeleteResult,
+} from './fileStorageService.js';

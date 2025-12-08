@@ -35,6 +35,12 @@ import {
   User,
   SessionMetadata,
 } from '../services/authService.js';
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  isEmailConfigured,
+} from '../services/emailService.js';
 
 // ============================================
 // Audit Logging Helper
@@ -171,14 +177,23 @@ export async function register(
   // Create user (starts as unverified with verification token)
   const { user, verificationToken } = await createUser(email, password);
 
-  // Log verification URL (dev only - in production, this would send an email)
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const verificationUrl = `${baseUrl}/api/v1/auth/verify-email?token=${verificationToken}`;
-  logger.devBox('📧 EMAIL VERIFICATION REQUIRED', [
-    `Email: ${user.email}`,
-    `Verification URL: ${verificationUrl}`,
-    'Token expires in 24 hours',
-  ]);
+  // Send verification email
+  if (isEmailConfigured()) {
+    const emailResult = await sendVerificationEmail(email, verificationToken);
+    if (!emailResult.success) {
+      logger.warn('Failed to send verification email', { data: { email, error: emailResult.error } });
+    }
+  } else {
+    // Log verification URL (dev only - when email is not configured)
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const verificationUrl = `${baseUrl}/api/v1/auth/verify-email?token=${verificationToken}`;
+    logger.devBox('📧 EMAIL VERIFICATION REQUIRED', [
+      `Email: ${user.email}`,
+      `Verification URL: ${verificationUrl}`,
+      'Token expires in 24 hours',
+      '(SendGrid not configured - set SENDGRID_API_KEY to send real emails)',
+    ]);
+  }
 
   // NOTE: We intentionally DO NOT generate tokens on registration.
   // Users must verify their email first, then log in to get tokens.
@@ -690,15 +705,24 @@ export async function forgotPassword(
     tokenGenerated: !!result.token,
   });
 
-  // Log reset URL (dev only - in production, would send email)
+  // Send password reset email
   if (result.token) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const resetUrl = `${baseUrl}/api/v1/auth/reset-password?token=${result.token}`;
-    logger.devBox('🔐 PASSWORD RESET REQUESTED', [
-      `Email: ${email}`,
-      `Reset URL: ${resetUrl}`,
-      'Token expires in 1 hour',
-    ]);
+    if (isEmailConfigured()) {
+      const emailResult = await sendPasswordResetEmail(email, result.token);
+      if (!emailResult.success) {
+        logger.warn('Failed to send password reset email', { data: { email, error: emailResult.error } });
+      }
+    } else {
+      // Log reset URL (dev only - when email is not configured)
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${baseUrl}/api/v1/auth/reset-password?token=${result.token}`;
+      logger.devBox('🔐 PASSWORD RESET REQUESTED', [
+        `Email: ${email}`,
+        `Reset URL: ${resetUrl}`,
+        'Token expires in 1 hour',
+        '(SendGrid not configured - set SENDGRID_API_KEY to send real emails)',
+      ]);
+    }
   }
 
   // Always return success (don't reveal if user exists)
