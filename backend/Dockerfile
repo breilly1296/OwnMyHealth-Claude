@@ -53,9 +53,5 @@ USER nodejs
 # Expose port (Railway sets PORT automatically)
 EXPOSE 3001
 
-# Start the server with debugging
-CMD echo "=== Container Starting ===" && \
-    echo "PORT=$PORT" && \
-    echo "NODE_ENV=$NODE_ENV" && \
-    echo "=== Running Node ===" && \
-    node dist/app.js 2>&1
+# Start the server with debugging - use exec form with sh
+CMD ["sh", "-c", "echo 'CONTAINER START' && echo 'PORT='$PORT && echo 'NODE_ENV='$NODE_ENV && node dist/app.js 2>&1"]
