@@ -53,9 +53,9 @@ USER nodejs
 # Expose port (Railway sets PORT automatically)
 EXPOSE 3001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3001}/api/v1/health || exit 1
-
-# Start the server
-CMD ["node", "dist/app.js"]
+# Start the server with debugging
+CMD echo "=== Container Starting ===" && \
+    echo "PORT=$PORT" && \
+    echo "NODE_ENV=$NODE_ENV" && \
+    echo "=== Running Node ===" && \
+    node dist/app.js 2>&1
