@@ -2,8 +2,8 @@
 # Documentation: https://docs.railway.app/reference/config-as-code
 
 [build]
-builder = "dockerfile"
-dockerfilePath = "Dockerfile"
+builder = "nixpacks"
+buildCommand = "npm ci && npx prisma generate && npm run build"
 
 [deploy]
 startCommand = "npx prisma migrate deploy && node dist/app.js"
