@@ -35,6 +35,11 @@ import {
   User,
   SessionMetadata,
 } from '../services/authService.js';
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+} from '../services/emailService.js';
 
 // ============================================
 // Audit Logging Helper
@@ -171,14 +176,11 @@ export async function register(
   // Create user (starts as unverified with verification token)
   const { user, verificationToken } = await createUser(email, password);
 
-  // Log verification URL (dev only - in production, this would send an email)
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const verificationUrl = `${baseUrl}/api/v1/auth/verify-email?token=${verificationToken}`;
-  logger.devBox('📧 EMAIL VERIFICATION REQUIRED', [
-    `Email: ${user.email}`,
-    `Verification URL: ${verificationUrl}`,
-    'Token expires in 24 hours',
-  ]);
+  // Send verification email
+  const emailSent = await sendVerificationEmail(user.email, verificationToken);
+  if (!emailSent) {
+    logger.warn('Failed to send verification email', { email: user.email });
+  }
 
   // NOTE: We intentionally DO NOT generate tokens on registration.
   // Users must verify their email first, then log in to get tokens.
@@ -607,6 +609,14 @@ export async function verifyEmail(
 
   logger.auth(`Email verified successfully for: ${result.user?.email}`);
 
+  // Send welcome email
+  if (result.user?.email) {
+    const welcomeSent = await sendWelcomeEmail(result.user.email);
+    if (!welcomeSent) {
+      logger.warn('Failed to send welcome email', { email: result.user.email });
+    }
+  }
+
   const response: ApiResponse<{ message: string }> = {
     success: true,
     data: {
@@ -645,15 +655,12 @@ export async function resendVerification(
     return;
   }
 
-  // Log verification URL (dev only - in production, would send email)
+  // Send verification email
   if (result.token) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const verificationUrl = `${baseUrl}/api/v1/auth/verify-email?token=${result.token}`;
-    logger.devBox('📧 VERIFICATION EMAIL RESENT', [
-      `Email: ${email}`,
-      `Verification URL: ${verificationUrl}`,
-      'Token expires in 24 hours',
-    ]);
+    const emailSent = await sendVerificationEmail(email, result.token);
+    if (!emailSent) {
+      logger.warn('Failed to resend verification email', { email });
+    }
   }
 
   // Always return success (don't reveal if user exists)
@@ -690,15 +697,12 @@ export async function forgotPassword(
     tokenGenerated: !!result.token,
   });
 
-  // Log reset URL (dev only - in production, would send email)
+  // Send password reset email
   if (result.token) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const resetUrl = `${baseUrl}/api/v1/auth/reset-password?token=${result.token}`;
-    logger.devBox('🔐 PASSWORD RESET REQUESTED', [
-      `Email: ${email}`,
-      `Reset URL: ${resetUrl}`,
-      'Token expires in 1 hour',
-    ]);
+    const emailSent = await sendPasswordResetEmail(email, result.token);
+    if (!emailSent) {
+      logger.warn('Failed to send password reset email', { email });
+    }
   }
 
   // Always return success (don't reveal if user exists)

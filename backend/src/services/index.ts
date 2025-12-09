@@ -55,3 +55,12 @@ export {
   type PriorityAction,
   type InternalAnalysis,
 } from './healthAnalysisService.js';
+
+// Email Service
+export {
+  sendEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  isEmailConfigured,
+} from './emailService.js';
