@@ -1,0 +1,95 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  SERVER_HOST: 165.227.76.212
+  SERVER_USER: root
+  APP_DIR: /var/www/app
+
+jobs:
+  # Run CI checks first
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'ENDSSH'
+            set -e
+
+            echo "=== Starting deployment ==="
+            cd ${{ env.APP_DIR }}
+
+            echo "=== Pulling latest code ==="
+            git fetch origin
+            git reset --hard origin/main || git reset --hard origin/master
+
+            echo "=== Installing frontend dependencies ==="
+            npm ci
+
+            echo "=== Building frontend ==="
+            npm run build
+
+            echo "=== Installing backend dependencies ==="
+            cd backend
+            npm ci
+
+            echo "=== Generating Prisma client ==="
+            npx prisma generate
+
+            echo "=== Running database migrations ==="
+            npx prisma migrate deploy
+
+            echo "=== Building backend ==="
+            npm run build
+
+            echo "=== Copying Prisma client to dist ==="
+            cp -r node_modules/.prisma dist/ 2>/dev/null || true
+            cp -r node_modules/@prisma dist/ 2>/dev/null || true
+
+            echo "=== Restarting backend ==="
+            pm2 restart ownmyhealth-backend || pm2 start dist/index.js --name ownmyhealth-backend
+            pm2 save
+
+            echo "=== Deployment complete ==="
+          ENDSSH
+
+      - name: Health check
+        run: |
+          echo "Waiting for server to start..."
+          sleep 10
+
+          echo "Checking frontend..."
+          curl -f -s -o /dev/null -w "%{http_code}" https://ownmyhealth.io || exit 1
+
+          echo "Checking API..."
+          curl -f -s -o /dev/null -w "%{http_code}" https://ownmyhealth.io/api/v1/health || exit 1
+
+          echo "Health checks passed!"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Check the logs above for details."
+          # Add Slack/Discord notification here if needed
