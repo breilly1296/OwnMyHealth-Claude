@@ -73,7 +73,7 @@ jobs:
         run: npm run lint
 
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: npx prisma generate --schema=prisma/schema.prisma
 
       - name: Run unit tests
         run: npm run test:unit -- --passWithNoTests
