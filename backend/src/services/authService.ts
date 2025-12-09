@@ -204,8 +204,8 @@ export async function generateRefreshToken(user: User, metadata?: SessionMetadat
   const prisma = getPrismaClient();
   const tokenId = uuidv4();
 
-  // Demo users get a longer session (30 days) in non-production environments
-  const isDemo = isDemoUser(user) && !config.isProduction;
+  // Demo users get a longer session (30 days) when demo account is allowed
+  const isDemo = isDemoUser(user) && config.allowDemoAccount;
   const sessionDuration = isDemo ? DEMO_SESSION_DURATION_MS : config.cookie.maxAge.refreshToken;
   const tokenExpiry = isDemo ? '30d' : config.jwt.refreshExpiresIn;
 
@@ -541,9 +541,9 @@ export async function attemptLogin(
 ): Promise<LoginAttemptResult> {
   const user = await findUserByEmail(email);
 
-  // DEMO ACCOUNT: Zero restrictions - only works in non-production environments
+  // DEMO ACCOUNT: Zero restrictions - only works when demo account is allowed
   const isDemoAccount = email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL;
-  if (isDemoAccount && !config.isProduction) {
+  if (isDemoAccount && config.allowDemoAccount) {
     if (!user) {
       // Demo user doesn't exist yet - will be created by initializeDemoUser
       return {
@@ -580,11 +580,11 @@ export async function attemptLogin(
     };
   }
 
-  // Block demo account login attempts in production
-  if (isDemoAccount && config.isProduction) {
+  // Block demo account login attempts when demo is not allowed
+  if (isDemoAccount && !config.allowDemoAccount) {
     return {
       success: false,
-      error: 'Demo account is not available in production',
+      error: 'Demo account is not available',
     };
   }
 
@@ -929,12 +929,12 @@ export async function findUserByResetToken(token: string): Promise<User | null> 
 // ============================================
 
 /**
- * Initialize demo user if it doesn't exist (non-production only)
+ * Initialize demo user if it doesn't exist (when demo account is allowed)
  * This is exported so it can be called from app.ts after database initialization
  */
 export async function initializeDemoUser(): Promise<void> {
-  // Only create demo user in non-production environments
-  if (config.isProduction) {
+  // Only create demo user when demo account is allowed
+  if (!config.allowDemoAccount) {
     return;
   }
 
@@ -953,7 +953,7 @@ export async function initializeDemoUser(): Promise<void> {
           isActive: true,
         },
       });
-      logger.info(`Demo user created (auto-verified) - email: ${DEMO_ACCOUNT_EMAIL}, password: Demo123!`, { prefix: 'NON-PROD' });
+      logger.info(`Demo user created (auto-verified) - email: ${DEMO_ACCOUNT_EMAIL}, password: Demo123!`, { prefix: 'DEMO' });
     } else {
       // Ensure existing demo user is always in a valid state
       await prisma.user.update({
@@ -966,11 +966,11 @@ export async function initializeDemoUser(): Promise<void> {
           lastFailedLogin: null,
         },
       });
-      logger.info(`Demo user verified - email: ${DEMO_ACCOUNT_EMAIL}`, { prefix: 'NON-PROD' });
+      logger.info(`Demo user verified - email: ${DEMO_ACCOUNT_EMAIL}`, { prefix: 'DEMO' });
     }
   } catch {
     // Database might not be ready yet, that's okay
-    logger.info('Could not create/verify demo user (database may not be initialized yet)', { prefix: 'NON-PROD' });
+    logger.info('Could not create/verify demo user (database may not be initialized yet)', { prefix: 'DEMO' });
   }
 }
 

@@ -63,12 +63,27 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
 
+  // Email Configuration (SendGrid)
+  email: {
+    enabled: process.env.SENDGRID_API_KEY ? true : false,
+    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+    fromEmail: process.env.EMAIL_FROM || 'noreply@ownmyhealth.io',
+    fromName: process.env.EMAIL_FROM_NAME || 'OwnMyHealth',
+    // Frontend URL for email links (verification, password reset)
+    frontendUrl: process.env.FRONTEND_URL || 'https://ownmyhealth.io',
+  },
+
   // API Versioning
   apiVersion: 'v1',
 
   // Validation
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
+
+  // Demo Account - allows demo login even in production
+  // Set ALLOW_DEMO_ACCOUNT=true to enable demo account in production
+  // This is separate from NODE_ENV so you can have production security + demo access
+  allowDemoAccount: process.env.ALLOW_DEMO_ACCOUNT === 'true' || process.env.NODE_ENV === 'development',
 } as const;
 
 // Validate critical configuration in production
