@@ -36,6 +36,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@rollup/wasm-node": "^4.53.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
@@ -53,9 +54,11 @@
     "@typescript-eslint/parser": "^8.49.0",
     "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^9.39.1",
+    "globals": "^16.5.0",
     "supertest": "^7.1.4",
     "tsx": "^4.6.2",
     "typescript": "^5.3.2",
+    "typescript-eslint": "^8.49.0",
     "vitest": "^4.0.14"
   },
   "engines": {
