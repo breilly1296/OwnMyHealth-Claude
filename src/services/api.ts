@@ -359,10 +359,7 @@ export const authApi = {
   },
 
   async verifyEmail(token: string): Promise<{ message: string }> {
-    const response = await apiFetch<{ message: string }>('/auth/verify-email', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    });
+    const response = await apiFetch<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`);
     return response.data;
   },
 
