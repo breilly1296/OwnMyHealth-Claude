@@ -11,7 +11,8 @@ This guide covers security hardening for the OwnMyHealth production deployment o
 5. [Fail2ban Setup](#5-fail2ban-setup)
 6. [Database Security](#6-database-security)
 7. [SSL/TLS Configuration](#7-ssltls-configuration)
-8. [Application Security Checklist](#8-application-security-checklist)
+8. [Email Service (SendGrid)](#8-email-service-sendgrid)
+9. [Application Security Checklist](#9-application-security-checklist)
 
 ---
 
@@ -473,7 +474,75 @@ Target: A+ rating
 
 ---
 
-## 8. Application Security Checklist
+## 8. Email Service (SendGrid)
+
+Email is used for account verification and password reset.
+
+### Sign Up for SendGrid
+
+1. Go to https://signup.sendgrid.com/
+2. Create a free account (100 emails/day free)
+3. Verify your email address
+4. Create an API key: Settings > API Keys > Create API Key
+5. Give it "Mail Send" permissions
+
+### Configure Sender Identity
+
+1. Go to Settings > Sender Authentication
+2. Either verify a single sender email OR set up domain authentication
+3. For single sender: Add `noreply@ownmyhealth.io` and verify
+
+### Add Environment Variables
+
+```bash
+nano /var/www/app/backend/.env
+```
+
+Add:
+
+```env
+# Email (SendGrid)
+SENDGRID_API_KEY=SG.your_actual_api_key_here
+EMAIL_FROM=noreply@ownmyhealth.io
+EMAIL_FROM_NAME=OwnMyHealth
+FRONTEND_URL=https://ownmyhealth.io
+```
+
+### Install SendGrid Package
+
+```bash
+cd /var/www/app/backend
+npm install @sendgrid/mail
+```
+
+### Restart Backend
+
+```bash
+pm2 restart ownmyhealth-backend
+```
+
+### Test Email Sending
+
+1. Register a new account on the site
+2. Check the email inbox for verification email
+3. Click the verification link
+4. Test password reset flow
+
+### Troubleshooting
+
+```bash
+# Check logs for email errors
+pm2 logs ownmyhealth-backend --lines 50 | grep -i email
+
+# Common issues:
+# - "Unauthorized" = Invalid API key
+# - "Sender not verified" = Need to verify sender email
+# - No emails arriving = Check spam folder, verify sender domain
+```
+
+---
+
+## 9. Application Security Checklist
 
 ### Environment Variables
 
@@ -486,6 +555,9 @@ Target: A+ rating
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `CORS_ORIGIN` | Yes | `https://ownmyhealth.io` |
 | `ALLOW_DEMO_ACCOUNT` | Optional | `true` to enable demo login |
+| `SENDGRID_API_KEY` | Recommended | SendGrid API key for emails |
+| `EMAIL_FROM` | Optional | Sender email address |
+| `FRONTEND_URL` | Optional | Frontend URL for email links |
 
 ### Security Features Status
 

@@ -63,6 +63,16 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
 
+  // Email Configuration (SendGrid)
+  email: {
+    enabled: process.env.SENDGRID_API_KEY ? true : false,
+    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+    fromEmail: process.env.EMAIL_FROM || 'noreply@ownmyhealth.io',
+    fromName: process.env.EMAIL_FROM_NAME || 'OwnMyHealth',
+    // Frontend URL for email links (verification, password reset)
+    frontendUrl: process.env.FRONTEND_URL || 'https://ownmyhealth.io',
+  },
+
   // API Versioning
   apiVersion: 'v1',
 
