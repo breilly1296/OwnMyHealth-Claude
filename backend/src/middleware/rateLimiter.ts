@@ -3,9 +3,9 @@ import { config } from '../config/index.js';
 import type { ApiResponse } from '../types/index.js';
 import { isDemoEmail } from '../services/authService.js';
 
-// Helper to check if request is for demo account (only in non-production)
+// Helper to check if request is for demo account (when demo is allowed)
 const isDemoRequest = (email: string | undefined): boolean => {
-  if (config.isProduction) return false;
+  if (!config.allowDemoAccount) return false;
   if (!email) return false;
   return isDemoEmail(email);
 };
@@ -42,7 +42,7 @@ export const authLimiter = rateLimit({
   } as ApiResponse,
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting entirely for demo account (only in non-production)
+  // Skip rate limiting entirely for demo account (when demo is allowed)
   skip: (req) => isDemoRequest(req.body?.email),
 });
 
@@ -60,7 +60,7 @@ export const strictAuthLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed attempts
-  // Skip rate limiting entirely for demo account (only in non-production)
+  // Skip rate limiting entirely for demo account (when demo is allowed)
   skip: (req) => isDemoRequest(req.body?.email),
   keyGenerator: (req) => {
     // Use email + IP for login rate limiting to prevent attacks on specific accounts
