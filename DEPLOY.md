@@ -1,212 +1,487 @@
-# OwnMyHealth Deployment Guide
+# OwnMyHealth Production Deployment Guide
 
-Deploy OwnMyHealth to **Railway** with your domain **ownmyhealth.io**
+## Live Environment
+
+| Item | Value |
+|------|-------|
+| **URL** | https://ownmyhealth.io |
+| **Server** | DigitalOcean Droplet |
+| **IP Address** | 165.227.76.212 |
+| **OS** | Ubuntu 24.04 LTS |
+| **Domain Registrar** | Porkbun |
+
+### Demo Account
+```
+Email: demo@ownmyhealth.com
+Password: Demo123!
+```
 
 ---
 
-## Prerequisites
+## Infrastructure Overview
 
-- [x] Domain owned: ownmyhealth.io
-- [ ] GitHub account (for connecting to Railway)
-- [ ] Railway account (free at https://railway.app)
+```
+                    ┌─────────────────────────────────────────┐
+                    │         DigitalOcean Droplet            │
+                    │           165.227.76.212                │
+    Internet        │  ┌─────────────────────────────────┐    │
+        │           │  │           Nginx                 │    │
+        │    443    │  │   - SSL termination             │    │
+        ▼    ───────┼──►   - Static files (/dist)        │    │
+   ownmyhealth.io   │  │   - Reverse proxy → :3001       │    │
+                    │  └─────────────┬───────────────────┘    │
+                    │                │                        │
+                    │                ▼                        │
+                    │  ┌─────────────────────────────────┐    │
+                    │  │     Node.js/Express (PM2)       │    │
+                    │  │         Port 3001               │    │
+                    │  │     /var/www/app/backend        │    │
+                    │  └─────────────┬───────────────────┘    │
+                    │                │                        │
+                    │                ▼                        │
+                    │  ┌─────────────────────────────────┐    │
+                    │  │        PostgreSQL               │    │
+                    │  │     Database: ownmyhealth       │    │
+                    │  │     User: ownmyhealth           │    │
+                    │  └─────────────────────────────────┘    │
+                    └─────────────────────────────────────────┘
+```
 
 ---
 
-## Step 1: Push Code to GitHub
-
-First, commit all your changes and push to GitHub:
+## SSH Access
 
 ```bash
-cd C:\Users\breil\OneDrive\Desktop\OwnMyHealth
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Prepare for production deployment"
-
-# If you haven't set up a remote yet:
-git remote add origin https://github.com/YOUR_USERNAME/ownmyhealth.git
-
-# Push to GitHub
-git push -u origin master
+ssh root@165.227.76.212
 ```
 
 ---
 
-## Step 2: Create Railway Project
-
-1. Go to https://railway.app and sign in with GitHub
-2. Click **"New Project"**
-3. Select **"Deploy from GitHub repo"**
-4. Choose your **ownmyhealth** repository
-
----
-
-## Step 3: Set Up PostgreSQL Database
-
-1. In your Railway project, click **"+ New"**
-2. Select **"Database"** → **"Add PostgreSQL"**
-3. Railway will automatically create a PostgreSQL instance
-4. The `DATABASE_URL` will be automatically available to your services
-
----
-
-## Step 4: Deploy Backend Service
-
-1. Click **"+ New"** → **"GitHub Repo"**
-2. Select your repository
-3. Click **"Add variables"** and set:
-
-   | Variable | Value |
-   |----------|-------|
-   | `NODE_ENV` | `production` |
-   | `JWT_ACCESS_SECRET` | *(generate: `openssl rand -base64 32`)* |
-   | `JWT_REFRESH_SECRET` | *(generate: `openssl rand -base64 32`)* |
-   | `PHI_ENCRYPTION_KEY` | *(generate: `openssl rand -hex 32`)* |
-   | `CORS_ORIGIN` | `https://ownmyhealth.io` |
-   | `JWT_ACCESS_EXPIRES_IN` | `15m` |
-   | `JWT_REFRESH_EXPIRES_IN` | `7d` |
-
-4. Go to **Settings** → **General**:
-   - Set **Root Directory** to: `backend`
-   - Set **Watch Paths** to: `/backend/**`
-
-5. Go to **Settings** → **Networking**:
-   - Click **"Generate Domain"** (you'll get something like `backend-xxx.railway.app`)
-   - Note this URL for the frontend config
-
-6. Click **"Connect"** next to the PostgreSQL database to link `DATABASE_URL`
-
----
-
-## Step 5: Deploy Frontend Service
-
-1. Click **"+ New"** → **"GitHub Repo"**
-2. Select the same repository
-3. Click **"Add variables"** and set:
-
-   | Variable | Value |
-   |----------|-------|
-   | `VITE_API_URL` | `https://YOUR-BACKEND-URL.railway.app/api/v1` |
-
-   *(Use the backend URL from Step 4)*
-
-4. Go to **Settings** → **General**:
-   - Keep **Root Directory** empty (uses project root)
-   - Ensure it detects the `package.json`
-
-5. Go to **Settings** → **Networking**:
-   - Click **"Generate Domain"**
-
----
-
-## Step 6: Configure Custom Domain
-
-### For Frontend (ownmyhealth.io):
-
-1. In Railway, select your **frontend service**
-2. Go to **Settings** → **Networking**
-3. Click **"Custom Domain"**
-4. Enter: `ownmyhealth.io`
-5. Railway will show you DNS records to add
-
-### For Backend (api.ownmyhealth.io):
-
-1. Select your **backend service**
-2. Go to **Settings** → **Networking**
-3. Click **"Custom Domain"**
-4. Enter: `api.ownmyhealth.io`
-5. Railway will show you DNS records to add
-
-### Add DNS Records at Your Domain Registrar:
-
-Go to your domain registrar (where you bought ownmyhealth.io) and add:
-
-| Type | Name | Value |
-|------|------|-------|
-| CNAME | `@` or blank | `your-frontend.railway.app` |
-| CNAME | `api` | `your-backend.railway.app` |
-
-*Note: Some registrars don't allow CNAME for root domain. Use their "ALIAS" or "ANAME" feature, or use a subdomain like `www.ownmyhealth.io`*
-
----
-
-## Step 7: Update Backend CORS
-
-After setting up the custom domain, update the backend's `CORS_ORIGIN`:
+## Directory Structure
 
 ```
+/var/www/app/
+├── .env                    # Frontend environment variables
+├── dist/                   # Built frontend (served by Nginx)
+├── index.html              # Entry point with crypto polyfill
+├── src/                    # Frontend source
+├── package.json
+│
+└── backend/
+    ├── .env                # Backend environment variables
+    ├── dist/               # Compiled TypeScript
+    │   └── generated/      # Prisma client (copied here)
+    ├── src/                # Backend source
+    ├── prisma/
+    │   └── schema.prisma   # Database schema
+    └── package.json
+```
+
+---
+
+## Environment Variables
+
+### Frontend (`/var/www/app/.env`)
+
+```bash
+VITE_API_URL=https://ownmyhealth.io/api/v1
+```
+
+### Backend (`/var/www/app/backend/.env`)
+
+```bash
+# Database
+DATABASE_URL=postgresql://ownmyhealth:OwnMyHealth2024@localhost:5432/ownmyhealth
+
+# Security
+NODE_ENV=development          # NOTE: Set to 'production' for real use
+JWT_ACCESS_SECRET=<generated>
+JWT_REFRESH_SECRET=<generated>
+PHI_ENCRYPTION_KEY=<64-char-hex>
+
+# Server
+PORT=3001
 CORS_ORIGIN=https://ownmyhealth.io
+
+# JWT Expiration
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+```
+
+> **Note:** `NODE_ENV=development` allows demo account login. Change to `production` and disable demo for real deployment.
+
+---
+
+## Key Configuration Files
+
+### Nginx (`/etc/nginx/sites-available/ownmyhealth`)
+
+```nginx
+server {
+    listen 80;
+    server_name ownmyhealth.io www.ownmyhealth.io;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ownmyhealth.io www.ownmyhealth.io;
+
+    # SSL Configuration (Let's Encrypt)
+    ssl_certificate /etc/letsencrypt/live/ownmyhealth.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/ownmyhealth.io/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Frontend (static files)
+    root /var/www/app/dist;
+    index index.html;
+
+    # API proxy to backend
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # SPA fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+### PM2 Process Manager
+
+The backend runs as a PM2 process named `ownmyhealth-backend`.
+
+```bash
+# View status
+pm2 status
+
+# View logs
+pm2 logs ownmyhealth-backend
+
+# Restart
+pm2 restart ownmyhealth-backend
+
+# Stop
+pm2 stop ownmyhealth-backend
+
+# Start (if not running)
+cd /var/www/app/backend
+pm2 start dist/index.js --name ownmyhealth-backend
+pm2 save
 ```
 
 ---
 
-## Step 8: Run Database Migrations
+## Common Operations
 
-Railway will automatically run migrations on deploy (configured in `railway.toml`).
+### Rebuild Frontend
 
-To run manually:
-1. Go to your backend service
-2. Open the **"Command"** tab
-3. Run: `npx prisma migrate deploy`
+```bash
+cd /var/www/app
+npm run build
+```
+
+### Rebuild Backend
+
+```bash
+cd /var/www/app/backend
+npm run build
+# Copy Prisma client to dist
+cp -r node_modules/.prisma dist/
+cp -r node_modules/@prisma dist/
+pm2 restart ownmyhealth-backend
+```
+
+### Restart Nginx
+
+```bash
+nginx -t                      # Test configuration
+systemctl restart nginx       # Restart
+systemctl status nginx        # Check status
+```
+
+### Database Operations
+
+```bash
+# Connect to PostgreSQL
+sudo -u postgres psql -d ownmyhealth
+
+# Run migrations
+cd /var/www/app/backend
+npx prisma migrate deploy
+
+# Reset database (DESTRUCTIVE)
+npx prisma migrate reset
+
+# Open Prisma Studio
+npx prisma studio
+```
+
+### Pull Latest Code
+
+```bash
+cd /var/www/app
+git pull origin claude/analyze-project-016vBAbATRFw1zFjWoPrxevp
+
+# Rebuild frontend
+npm install
+npm run build
+
+# Rebuild backend
+cd backend
+npm install
+npm run build
+cp -r node_modules/.prisma dist/
+cp -r node_modules/@prisma dist/
+npx prisma migrate deploy
+pm2 restart ownmyhealth-backend
+```
 
 ---
 
-## Step 9: Verify Deployment
+## SSL Certificate
 
-1. Visit https://ownmyhealth.io - Frontend should load
-2. Visit https://api.ownmyhealth.io/api/v1/health - Should return health check
-3. Try logging in/registering
+SSL is managed by Let's Encrypt via Certbot. Certificates auto-renew.
+
+```bash
+# Check certificate status
+certbot certificates
+
+# Force renewal
+certbot renew --force-renewal
+
+# Test renewal (dry run)
+certbot renew --dry-run
+```
 
 ---
 
-## Security Checklist
+## DNS Configuration (Porkbun)
 
-- [x] All secrets generated uniquely (not example values)
-- [x] `PHI_ENCRYPTION_KEY` backed up securely (CRITICAL - data loss if lost!)
-- [x] HTTPS enabled (Railway does this automatically)
-- [x] CORS restricted to your domain only
-- [x] Production environment variables set
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | @ | 165.227.76.212 | 600 |
+| A | www | 165.227.76.212 | 600 |
+
+---
+
+## Database Details
+
+| Item | Value |
+|------|-------|
+| **Host** | localhost |
+| **Port** | 5432 |
+| **Database** | ownmyhealth |
+| **Username** | ownmyhealth |
+| **Password** | OwnMyHealth2024 |
+
+```bash
+# Connection string
+postgresql://ownmyhealth:OwnMyHealth2024@localhost:5432/ownmyhealth
+```
+
+---
+
+## Logs
+
+```bash
+# Backend application logs
+pm2 logs ownmyhealth-backend
+pm2 logs ownmyhealth-backend --lines 100
+
+# Nginx access logs
+tail -f /var/log/nginx/access.log
+
+# Nginx error logs
+tail -f /var/log/nginx/error.log
+
+# System logs
+journalctl -u nginx -f
+```
 
 ---
 
 ## Troubleshooting
 
-### Backend not connecting to database
-- Ensure PostgreSQL is connected to the backend service
-- Check `DATABASE_URL` is properly set
+### Backend won't start
 
-### Frontend can't reach backend (CORS error)
-- Verify `CORS_ORIGIN` in backend matches your frontend domain exactly
-- Include `https://` in the CORS_ORIGIN
+```bash
+# Check PM2 logs
+pm2 logs ownmyhealth-backend --lines 50
 
-### 500 errors on backend
-- Check Railway logs: Click on backend service → "Logs"
-- Verify all environment variables are set
-- Ensure PHI_ENCRYPTION_KEY is exactly 64 hex characters
+# Check if port 3001 is in use
+lsof -i :3001
 
-### Domain not working
-- DNS propagation can take up to 48 hours
-- Verify CNAME records are correct
-- Try https://dnschecker.org to verify DNS
+# Verify environment variables
+cat /var/www/app/backend/.env
+
+# Verify Prisma client exists
+ls /var/www/app/backend/dist/generated/
+```
+
+### Frontend shows blank page
+
+```bash
+# Check if dist exists
+ls /var/www/app/dist/
+
+# Check Nginx configuration
+nginx -t
+
+# Check frontend .env
+cat /var/www/app/.env
+```
+
+### API returns 502 Bad Gateway
+
+```bash
+# Backend not running - restart it
+pm2 restart ownmyhealth-backend
+
+# Check if backend is listening
+curl http://localhost:3001/api/v1/health
+```
+
+### Database connection failed
+
+```bash
+# Check PostgreSQL is running
+systemctl status postgresql
+
+# Test connection
+sudo -u postgres psql -d ownmyhealth -c "SELECT 1;"
+
+# Check backend .env DATABASE_URL
+cat /var/www/app/backend/.env | grep DATABASE_URL
+```
+
+### CORS errors
+
+```bash
+# Verify CORS_ORIGIN in backend .env
+cat /var/www/app/backend/.env | grep CORS_ORIGIN
+
+# Should be: CORS_ORIGIN=https://ownmyhealth.io
+```
+
+### crypto.randomUUID not defined
+
+This was fixed by adding a polyfill in `index.html`. If it reappears:
+
+```html
+<!-- Add to index.html <head> section -->
+<script>
+  if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
+    crypto.randomUUID = function() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+  }
+</script>
+```
 
 ---
 
-## Monthly Cost Estimate
+## Security Checklist
 
-| Service | Estimated Cost |
-|---------|---------------|
-| Frontend | ~$0-5/month |
-| Backend | ~$5-10/month |
-| PostgreSQL | ~$5-10/month |
-| **Total** | **~$10-25/month** |
-
-*Railway offers $5 free credit monthly, so small apps may run free!*
+- [ ] Change `NODE_ENV` to `production`
+- [ ] Enable firewall: `ufw allow 22,80,443 && ufw enable`
+- [ ] Change database password from default
+- [ ] Disable demo account login
+- [ ] Set up automated backups
+- [ ] Configure fail2ban
+- [ ] Review and rotate JWT secrets
 
 ---
 
-## Support
+## Backup & Recovery
 
-- Railway Docs: https://docs.railway.app
-- Railway Discord: https://discord.gg/railway
+### Database Backup
+
+```bash
+# Create backup
+pg_dump -U ownmyhealth -d ownmyhealth > backup_$(date +%Y%m%d).sql
+
+# Restore backup
+psql -U ownmyhealth -d ownmyhealth < backup_20240115.sql
+```
+
+### Full Server Snapshot
+
+Create DigitalOcean droplet snapshots via the control panel for full server backups.
+
+---
+
+## Cost Estimate
+
+| Item | Monthly Cost |
+|------|-------------|
+| DigitalOcean Droplet (Basic) | $6-12 |
+| Domain (ownmyhealth.io) | ~$1 |
+| **Total** | **~$7-13/month** |
+
+---
+
+## Quick Reference
+
+```bash
+# SSH in
+ssh root@165.227.76.212
+
+# Check everything is running
+pm2 status && systemctl status nginx && systemctl status postgresql
+
+# View backend logs
+pm2 logs ownmyhealth-backend
+
+# Restart backend
+pm2 restart ownmyhealth-backend
+
+# Restart nginx
+systemctl restart nginx
+
+# Rebuild and deploy frontend
+cd /var/www/app && npm run build
+
+# Rebuild and deploy backend
+cd /var/www/app/backend && npm run build && pm2 restart ownmyhealth-backend
+```
+
+---
+
+## Next Steps (TODO)
+
+1. **Security Hardening**
+   - Set `NODE_ENV=production`
+   - Enable UFW firewall
+   - Set up fail2ban
+   - Change default database password
+
+2. **Email Service**
+   - Integrate SendGrid or AWS SES
+   - Enable email verification
+   - Enable password reset
+
+3. **CI/CD Pipeline**
+   - Set up GitHub Actions
+   - Automated deployment on push
+
+4. **Healthcare.gov API**
+   - Insurance plan search
+   - Plan comparison
+
+5. **AWS Textract**
+   - Medical document scanning
+   - OCR for lab reports
