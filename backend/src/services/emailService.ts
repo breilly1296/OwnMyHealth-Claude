@@ -37,7 +37,7 @@ async function getSendGridClient() {
       sgMail = sendgrid.default;
       sgMail.setApiKey(config.email.sendgridApiKey);
       logger.info('SendGrid client initialized', { prefix: 'Email' });
-    } catch (error) {
+    } catch {
       logger.warn('SendGrid package not installed. Emails will be logged only.', { prefix: 'Email' });
       return null;
     }
