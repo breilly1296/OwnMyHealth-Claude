@@ -142,13 +142,22 @@ app.get('/', (_req, res) => {
   });
 });
 
-// 404 handler
-app.use(notFoundHandler);
+// Health check endpoint for Docker/Kubernetes/monitoring
+// This endpoint does NOT require authentication
+app.get('/health', async (_req, res) => {
+  const dbHealth = await checkDatabaseHealth();
+  const isHealthy = dbHealth.connected;
 
-// Error handler (must be last)
-app.use(errorHandler);
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'healthy' : 'unhealthy',
+    timestamp: new Date().toISOString(),
+    checks: {
+      database: dbHealth.connected ? 'connected' : 'disconnected',
+    },
+  });
+});
 
-// Database health check endpoint
+// Legacy database health check endpoint (kept for backwards compatibility)
 app.get('/api/health/db', async (_req, res) => {
   const health = await checkDatabaseHealth();
   res.status(health.connected ? 200 : 503).json({
@@ -156,6 +165,12 @@ app.get('/api/health/db', async (_req, res) => {
     data: health,
   });
 });
+
+// 404 handler
+app.use(notFoundHandler);
+
+// Error handler (must be last)
+app.use(errorHandler);
 
 // Initialize database and start server
 async function startServer() {
@@ -181,10 +196,10 @@ async function startServer() {
 ║   Database:    Connected                              ║
 ║                                                       ║
 ║   Endpoints:                                          ║
-║   • GET  /api/${config.apiVersion}/health              - Health check       ║
+║   • GET  /health                      - Health check (Docker) ║
 ║   • GET  /api/${config.apiVersion}/biomarkers          - Biomarkers API     ║
 ║   • GET  /api/${config.apiVersion}/insurance           - Insurance API      ║
-║   • GET  /api/health/db               - DB health check   ║
+║   • GET  /api/${config.apiVersion}/health              - API health check   ║
 ║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
       `);
