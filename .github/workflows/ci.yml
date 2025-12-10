@@ -90,6 +90,88 @@ jobs:
           path: backend/dist/
           retention-days: 7
 
+  # E2E Tests with Playwright
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ownmyhealth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=prisma/schema.prisma
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ownmyhealth_test
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ownmyhealth_test
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: true
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ownmyhealth_test
+          JWT_SECRET: e2e-test-jwt-secret-key-for-testing
+          PHI_ENCRYPTION_KEY: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+          ALLOW_DEMO_ACCOUNT: true
+          DEMO_PASSWORD: Demo123!
+          NODE_ENV: test
+          E2E_BASE_URL: http://localhost:5173
+          E2E_API_URL: http://localhost:3001/api/v1
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
+
   # Security audit
   security:
     name: Security Audit
