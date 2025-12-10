@@ -516,16 +516,13 @@ export async function demoLogin(
   req: Request,
   res: Response
 ): Promise<void> {
-  // Only allow in development
-  if (config.isProduction) {
-    throw new BadRequestError('Demo login is not available in production');
+  // Demo mode is ONLY available in development - never in production
+  if (!config.demo.enabled) {
+    throw new BadRequestError('Demo mode is disabled in production');
   }
 
-  const DEMO_EMAIL = 'demo@ownmyhealth.com';
-  const DEMO_PASSWORD = 'Demo123!';
-
   // Validate that demo user exists in the database
-  const demoUser = await findUserByEmail(DEMO_EMAIL);
+  const demoUser = await findUserByEmail(config.demo.email);
   if (!demoUser) {
     logger.warn('Demo login attempted but demo user does not exist. Run seed script.');
     throw new BadRequestError(
@@ -534,7 +531,7 @@ export async function demoLogin(
   }
 
   // Use attemptLogin for proper security flow (which has demo bypass built in)
-  const result = await attemptLogin(DEMO_EMAIL, DEMO_PASSWORD);
+  const result = await attemptLogin(config.demo.email, config.demo.password);
 
   if (!result.success) {
     throw new BadRequestError(result.error || 'Demo login failed');

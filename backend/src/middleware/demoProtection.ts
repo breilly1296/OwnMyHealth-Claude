@@ -12,9 +12,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError } from './errorHandler.js';
-
-// Demo account email - must match authService.ts
-const DEMO_ACCOUNT_EMAIL = 'demo@ownmyhealth.com';
+import { config } from '../config/index.js';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -28,7 +26,7 @@ interface AuthenticatedRequest extends Request {
  * Check if the current user is the demo account
  */
 export function isDemoAccount(req: AuthenticatedRequest): boolean {
-  return req.user?.email?.toLowerCase() === DEMO_ACCOUNT_EMAIL;
+  return req.user?.email?.toLowerCase() === config.demo.email.toLowerCase();
 }
 
 /**

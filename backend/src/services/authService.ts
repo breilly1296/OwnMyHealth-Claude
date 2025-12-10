@@ -176,22 +176,21 @@ export function generateAccessToken(user: User): string {
   });
 }
 
-// Demo account configuration - exported so other modules can use the same constant
-export const DEMO_ACCOUNT_EMAIL = 'demo@ownmyhealth.com';
+// Demo account configuration
 export const DEMO_SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days for demo accounts
 
 /**
  * Check if a user is the demo account
  */
 export function isDemoUser(user: User): boolean {
-  return user.email.toLowerCase() === DEMO_ACCOUNT_EMAIL;
+  return user.email.toLowerCase() === config.demo.email.toLowerCase();
 }
 
 /**
  * Check if an email is the demo account (for use before user lookup)
  */
 export function isDemoEmail(email: string): boolean {
-  return email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL;
+  return email.toLowerCase().trim() === config.demo.email.toLowerCase();
 }
 
 /**
@@ -204,8 +203,8 @@ export async function generateRefreshToken(user: User, metadata?: SessionMetadat
   const prisma = getPrismaClient();
   const tokenId = uuidv4();
 
-  // Demo users get a longer session (30 days) when demo account is allowed
-  const isDemo = isDemoUser(user) && config.allowDemoAccount;
+  // Demo users get a longer session (30 days) when demo mode is enabled
+  const isDemo = isDemoUser(user) && config.demo.enabled;
   const sessionDuration = isDemo ? DEMO_SESSION_DURATION_MS : config.cookie.maxAge.refreshToken;
   const tokenExpiry = isDemo ? '30d' : config.jwt.refreshExpiresIn;
 
@@ -541,9 +540,9 @@ export async function attemptLogin(
 ): Promise<LoginAttemptResult> {
   const user = await findUserByEmail(email);
 
-  // DEMO ACCOUNT: Zero restrictions - only works when demo account is allowed
-  const isDemoAccount = email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL;
-  if (isDemoAccount && config.allowDemoAccount) {
+  // DEMO ACCOUNT: Zero restrictions - only works when demo mode is enabled (development only)
+  const isDemoAccount = isDemoEmail(email);
+  if (isDemoAccount && config.demo.enabled) {
     if (!user) {
       // Demo user doesn't exist yet - will be created by initializeDemoUser
       return {
@@ -580,11 +579,11 @@ export async function attemptLogin(
     };
   }
 
-  // Block demo account login attempts when demo is not allowed
-  if (isDemoAccount && !config.allowDemoAccount) {
+  // Block demo account login attempts when demo mode is disabled (production)
+  if (isDemoAccount && !config.demo.enabled) {
     return {
       success: false,
-      error: 'Demo account is not available',
+      error: 'Demo mode is disabled in production',
     };
   }
 
@@ -929,20 +928,20 @@ export async function findUserByResetToken(token: string): Promise<User | null> 
 // ============================================
 
 /**
- * Initialize demo user if it doesn't exist (when demo account is allowed)
+ * Initialize demo user if it doesn't exist (when demo mode is enabled)
  * This is exported so it can be called from app.ts after database initialization
  */
 export async function initializeDemoUser(): Promise<void> {
-  // Only create demo user when demo account is allowed
-  if (!config.allowDemoAccount) {
+  // Only create demo user when demo mode is enabled (development only)
+  if (!config.demo.enabled) {
     return;
   }
 
   try {
     const prisma = getPrismaClient();
-    const existingUser = await findUserByEmail(DEMO_ACCOUNT_EMAIL);
+    const existingUser = await findUserByEmail(config.demo.email);
     if (!existingUser) {
-      const { user } = await createUser(DEMO_ACCOUNT_EMAIL, 'Demo123!', 'PATIENT');
+      const { user } = await createUser(config.demo.email, config.demo.password, 'PATIENT');
       // Auto-verify demo user so they can login without email verification
       await prisma.user.update({
         where: { id: user.id },
@@ -953,7 +952,8 @@ export async function initializeDemoUser(): Promise<void> {
           isActive: true,
         },
       });
-      logger.info(`Demo user created (auto-verified) - email: ${DEMO_ACCOUNT_EMAIL}, password: Demo123!`, { prefix: 'DEMO' });
+      // Note: Password intentionally not logged for security
+      logger.info(`Demo user created (auto-verified) - email: ${config.demo.email}`, { prefix: 'DEMO' });
     } else {
       // Ensure existing demo user is always in a valid state
       await prisma.user.update({
@@ -966,7 +966,7 @@ export async function initializeDemoUser(): Promise<void> {
           lastFailedLogin: null,
         },
       });
-      logger.info(`Demo user verified - email: ${DEMO_ACCOUNT_EMAIL}`, { prefix: 'DEMO' });
+      logger.info(`Demo user verified - email: ${config.demo.email}`, { prefix: 'DEMO' });
     }
   } catch {
     // Database might not be ready yet, that's okay

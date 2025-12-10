@@ -80,10 +80,15 @@ export const config = {
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
 
-  // Demo Account - allows demo login even in production
-  // Set ALLOW_DEMO_ACCOUNT=true to enable demo account in production
-  // This is separate from NODE_ENV so you can have production security + demo access
-  allowDemoAccount: process.env.ALLOW_DEMO_ACCOUNT === 'true' || process.env.NODE_ENV === 'development',
+  // Demo Account - ONLY available in development, never in production
+  // This is a security measure to prevent demo credentials from being used in production
+  demo: {
+    enabled: process.env.NODE_ENV === 'development',
+    email: 'demo@ownmyhealth.com',
+    // Password should be changed in any deployed/shared environment
+    // Generate with: openssl rand -base64 16
+    password: process.env.DEMO_PASSWORD || 'Demo123!',
+  },
 } as const;
 
 // Validate critical configuration in production
