@@ -7,6 +7,8 @@
  * - Database: Prisma client and connection management
  * - Encryption: PHI encryption/decryption (AES-256-GCM)
  * - Audit Logging: HIPAA-compliant access logging
+ * - Health Analysis: Biomarker analysis and health scoring
+ * - CMS Marketplace: Healthcare.gov API integration
  *
  * @module services/index
  */
@@ -55,3 +57,14 @@ export {
   type PriorityAction,
   type InternalAnalysis,
 } from './healthAnalysisService.js';
+
+// CMS Marketplace API (Healthcare.gov)
+export {
+  cmsMarketplaceService,
+  CMSMarketplaceError,
+  type CMSPlanDetails,
+  type CMSBenefit,
+  type CMSProvider,
+  type CMSProviderSearchParams,
+  type CMSProviderSearchResult,
+} from './cmsMarketplaceService.js';

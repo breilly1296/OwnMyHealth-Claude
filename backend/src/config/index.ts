@@ -73,6 +73,15 @@ export const config = {
     frontendUrl: process.env.FRONTEND_URL || 'https://ownmyhealth.io',
   },
 
+  // CMS Marketplace API (Healthcare.gov)
+  // API documentation: https://developer.cms.gov/marketplace-api/
+  cms: {
+    apiKey: process.env.CMS_API_KEY || '',
+    baseUrl: process.env.CMS_API_BASE_URL || 'https://marketplace.api.healthcare.gov/api/v1',
+    enabled: !!process.env.CMS_API_KEY,
+    timeout: parseInt(process.env.CMS_API_TIMEOUT_MS || '30000', 10),
+  },
+
   // API Versioning
   apiVersion: 'v1',
 
