@@ -34,7 +34,8 @@ import {
   ResetPasswordPage,
   ForgotPasswordPage,
 } from './components/auth';
-import { ErrorBoundary } from './components/common';
+import { ErrorBoundary, AdminOnly } from './components/common';
+import { AdminPanel } from './components/admin';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { authApi } from './services/api';
 import { Loader2, Heart } from 'lucide-react';
@@ -44,8 +45,8 @@ type AuthView = 'login' | 'register' | 'forgot-password';
 
 /** URL-based routes that should be handled regardless of auth state */
 interface SpecialRoute {
-  type: 'verify-email' | 'reset-password';
-  token: string;
+  type: 'verify-email' | 'reset-password' | 'admin';
+  token?: string;
 }
 
 /**
@@ -64,7 +65,27 @@ function getSpecialRoute(): SpecialRoute | null {
     return { type: 'reset-password', token };
   }
 
+  if (path === '/admin' || path.startsWith('/admin/')) {
+    return { type: 'admin' };
+  }
+
   return null;
+}
+
+/**
+ * Navigate to admin panel
+ */
+function navigateToAdmin() {
+  window.history.pushState({}, '', '/admin');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+/**
+ * Navigate to home/dashboard
+ */
+function navigateToHome() {
+  window.history.pushState({}, '', '/');
+  window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
 /**
@@ -94,9 +115,9 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Handle special routes first (verify-email, reset-password)
+  // Handle special routes first (verify-email, reset-password, admin)
   if (specialRoute) {
-    if (specialRoute.type === 'verify-email') {
+    if (specialRoute.type === 'verify-email' && specialRoute.token) {
       return (
         <VerifyEmailPage
           token={specialRoute.token}
@@ -112,7 +133,7 @@ function AppContent() {
       );
     }
 
-    if (specialRoute.type === 'reset-password') {
+    if (specialRoute.type === 'reset-password' && specialRoute.token) {
       return (
         <ResetPasswordPage
           token={specialRoute.token}
@@ -126,6 +147,44 @@ function AppContent() {
           }}
         />
       );
+    }
+
+    // Admin panel route - requires authentication and ADMIN role
+    if (specialRoute.type === 'admin') {
+      if (!isAuthenticated) {
+        // Redirect to login if not authenticated
+        navigateToLogin();
+        setSpecialRoute(null);
+      } else {
+        return (
+          <AdminOnly
+            fallback={
+              <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+                  <p className="text-slate-600 mb-4">You do not have permission to access the admin panel.</p>
+                  <button
+                    onClick={() => {
+                      navigateToHome();
+                      setSpecialRoute(null);
+                    }}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"
+                  >
+                    Return to Dashboard
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            <AdminPanel
+              onBack={() => {
+                navigateToHome();
+                setSpecialRoute(null);
+              }}
+            />
+          </AdminOnly>
+        );
+      }
     }
   }
 

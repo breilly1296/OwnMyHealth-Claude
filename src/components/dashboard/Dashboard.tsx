@@ -35,6 +35,8 @@ import { DNAUploadModal, DNAAnalysisPanel } from '../dna';
 import { HealthAnalyticsDashboard } from '../analytics';
 // Dashboard components
 import { CollapsibleNavGroup } from './index';
+// Common components
+import { AdminOnly } from '../common';
 // Utils
 import { performAIAnalysis } from '../../utils/ai';
 import { analyzeHealthNeeds } from '../../utils/health';
@@ -1042,6 +1044,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 Upload your lab reports to automatically extract and track biomarkers over time.
               </p>
             </div>
+
+            {/* Admin Panel Link - Only visible to admins */}
+            <AdminOnly>
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    window.history.pushState({}, '', '/admin');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors group"
+                >
+                  <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-sm font-semibold text-purple-900 group-hover:text-purple-700">Admin Panel</span>
+                    <p className="text-xs text-purple-600">Manage users & system</p>
+                  </div>
+                </button>
+              </div>
+            </AdminOnly>
           </div>
         </aside>
 
