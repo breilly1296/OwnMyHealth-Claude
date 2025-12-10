@@ -506,7 +506,7 @@ export async function changePassword(
 }
 
 /**
- * Demo login (for development only)
+ * Demo login (when demo account is enabled)
  * POST /api/v1/auth/demo
  *
  * This endpoint uses the standard attemptLogin flow for security.
@@ -516,13 +516,18 @@ export async function demoLogin(
   req: Request,
   res: Response
 ): Promise<void> {
-  // Only allow in development
-  if (config.isProduction) {
-    throw new BadRequestError('Demo login is not available in production');
+  // Only allow when demo account is enabled
+  if (!config.allowDemoAccount) {
+    throw new BadRequestError('Demo login is not available');
+  }
+
+  // Ensure demo password is configured
+  if (!config.demoPassword) {
+    logger.error('Demo login attempted but DEMO_PASSWORD is not configured');
+    throw new BadRequestError('Demo account is not properly configured');
   }
 
   const DEMO_EMAIL = 'demo@ownmyhealth.com';
-  const DEMO_PASSWORD = 'Demo123!';
 
   // Validate that demo user exists in the database
   const demoUser = await findUserByEmail(DEMO_EMAIL);
@@ -534,7 +539,7 @@ export async function demoLogin(
   }
 
   // Use attemptLogin for proper security flow (which has demo bypass built in)
-  const result = await attemptLogin(DEMO_EMAIL, DEMO_PASSWORD);
+  const result = await attemptLogin(DEMO_EMAIL, config.demoPassword);
 
   if (!result.success) {
     throw new BadRequestError(result.error || 'Demo login failed');

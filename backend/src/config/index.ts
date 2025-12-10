@@ -84,6 +84,11 @@ export const config = {
   // Set ALLOW_DEMO_ACCOUNT=true to enable demo account in production
   // This is separate from NODE_ENV so you can have production security + demo access
   allowDemoAccount: process.env.ALLOW_DEMO_ACCOUNT === 'true' || process.env.NODE_ENV === 'development',
+
+  // Demo password - configurable via environment variable
+  // In development, defaults to 'Demo123!' for convenience
+  // In production with demo enabled, MUST be set to a secure value
+  demoPassword: process.env.DEMO_PASSWORD || (process.env.NODE_ENV === 'development' ? 'Demo123!' : undefined),
 } as const;
 
 // Validate critical configuration in production
@@ -169,5 +174,13 @@ if (config.isProduction) {
   const corsOrigin = config.cors.origin;
   if (Array.isArray(corsOrigin) && corsOrigin.some(o => o.includes('localhost'))) {
     process.stderr.write(`${new Date().toISOString()} WARN [Security] CORS origin contains localhost URLs in production\n`);
+  }
+
+  // Validate demo password is set if demo account is enabled in production
+  if (config.allowDemoAccount && !config.demoPassword) {
+    throw new Error(
+      'DEMO_PASSWORD must be set when ALLOW_DEMO_ACCOUNT=true in production. ' +
+      'Use a secure password or disable demo account.'
+    );
   }
 }

@@ -938,11 +938,17 @@ export async function initializeDemoUser(): Promise<void> {
     return;
   }
 
+  // Require demo password to be configured
+  if (!config.demoPassword) {
+    logger.warn('Demo account enabled but DEMO_PASSWORD not configured - skipping demo user initialization', { prefix: 'DEMO' });
+    return;
+  }
+
   try {
     const prisma = getPrismaClient();
     const existingUser = await findUserByEmail(DEMO_ACCOUNT_EMAIL);
     if (!existingUser) {
-      const { user } = await createUser(DEMO_ACCOUNT_EMAIL, 'Demo123!', 'PATIENT');
+      const { user } = await createUser(DEMO_ACCOUNT_EMAIL, config.demoPassword, 'PATIENT');
       // Auto-verify demo user so they can login without email verification
       await prisma.user.update({
         where: { id: user.id },
@@ -953,12 +959,14 @@ export async function initializeDemoUser(): Promise<void> {
           isActive: true,
         },
       });
-      logger.info(`Demo user created (auto-verified) - email: ${DEMO_ACCOUNT_EMAIL}, password: Demo123!`, { prefix: 'DEMO' });
+      logger.info(`Demo user created (auto-verified) - email: ${DEMO_ACCOUNT_EMAIL}`, { prefix: 'DEMO' });
     } else {
-      // Ensure existing demo user is always in a valid state
+      // Update password hash if it changed and ensure user is in a valid state
+      const newPasswordHash = await hashPassword(config.demoPassword);
       await prisma.user.update({
         where: { id: existingUser.id },
         data: {
+          passwordHash: newPasswordHash,
           emailVerified: true,
           isActive: true,
           failedLoginAttempts: 0,
