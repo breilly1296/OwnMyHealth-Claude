@@ -56,9 +56,38 @@ export const createMockPrismaClient = () => ({
     delete: vi.fn(),
     deleteMany: vi.fn(),
   },
+  biomarker: {
+    create: vi.fn(),
+    createMany: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    count: vi.fn(),
+  },
+  biomarkerHistory: {
+    create: vi.fn(),
+    createMany: vi.fn(),
+    findMany: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+  userEncryptionKey: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
+  },
   auditLog: {
     create: vi.fn(),
     findMany: vi.fn(),
+    count: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+  systemConfig: {
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
   },
   $connect: vi.fn(),
   $disconnect: vi.fn(),
@@ -72,14 +101,19 @@ export const mockPrisma = createMockPrismaClient();
 
 // Helper to reset all mocks
 export const resetPrismaMocks = () => {
-  Object.values(mockPrisma.user).forEach((fn) => {
-    if (typeof fn === 'function' && 'mockReset' in fn) {
-      (fn as ReturnType<typeof vi.fn>).mockReset();
-    }
-  });
-  Object.values(mockPrisma.session).forEach((fn) => {
-    if (typeof fn === 'function' && 'mockReset' in fn) {
-      (fn as ReturnType<typeof vi.fn>).mockReset();
-    }
-  });
+  const resetModel = (model: Record<string, unknown>) => {
+    Object.values(model).forEach((fn) => {
+      if (typeof fn === 'function' && 'mockReset' in fn) {
+        (fn as ReturnType<typeof vi.fn>).mockReset();
+      }
+    });
+  };
+
+  resetModel(mockPrisma.user);
+  resetModel(mockPrisma.session);
+  resetModel(mockPrisma.biomarker);
+  resetModel(mockPrisma.biomarkerHistory);
+  resetModel(mockPrisma.userEncryptionKey);
+  resetModel(mockPrisma.auditLog);
+  resetModel(mockPrisma.systemConfig);
 };
