@@ -27,7 +27,4 @@ Thumbs.db
 # Coverage
 coverage/
 
-# Test
-__tests__/
-
 /src/generated/prisma
