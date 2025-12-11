@@ -1,10 +1,11 @@
 name: CI
 
 on:
+  workflow_call:
   push:
-    branches: [main, develop, 'claude/**']
+    branches: [main, master, develop, 'claude/**']
   pull_request:
-    branches: [main, develop]
+    branches: [main, master, develop]
 
 env:
   NODE_VERSION: '20'
@@ -13,7 +14,8 @@ jobs:
   # Frontend Tests and Build
   frontend:
     name: Frontend CI
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_call: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -22,7 +24,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_call: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -49,7 +52,8 @@ jobs:
   # Backend Tests and Build
   backend:
     name: Backend CI
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_call: ubuntu-latest
 
     defaults:
       run:
@@ -62,7 +66,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_call: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -93,7 +98,8 @@ jobs:
   # Security audit
   security:
     name: Security Audit
-    runs-on: ubuntu-latest
+    runs-on:
+  workflow_call: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -102,7 +108,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version:
+  workflow_call: ${{ env.NODE_VERSION }}
 
       - name: Audit frontend dependencies
         run: npm audit --audit-level=high
