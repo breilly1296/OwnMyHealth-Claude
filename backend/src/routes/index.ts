@@ -94,5 +94,6 @@ router.use('/upload', uploadRoutes);      // PDF upload and parsing
 
 // External API integration routes
 router.use('/marketplace', marketplaceRoutes);  // CMS Marketplace (Healthcare.gov) integration
+router.use('/cms', cmsRoutes);                  // CMS API key testing (no auth required)
 
 export default router;

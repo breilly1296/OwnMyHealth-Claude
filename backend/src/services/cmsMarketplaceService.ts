@@ -114,6 +114,7 @@ interface FetchOptions {
 
 /**
  * Make authenticated request to CMS Marketplace API
+ * Authentication is via 'apikey' query parameter (not Authorization header)
  */
 async function cmsRequest<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   if (!config.cms.enabled) {
@@ -122,7 +123,10 @@ async function cmsRequest<T>(endpoint: string, options: FetchOptions = {}): Prom
 
   const url = new URL(`${config.cms.baseUrl}${endpoint}`);
 
-  // Add query parameters
+  // Add API key as query parameter (CMS API requires this format)
+  url.searchParams.append('apikey', config.cms.apiKey);
+
+  // Add additional query parameters
   if (options.params) {
     Object.entries(options.params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -133,7 +137,6 @@ async function cmsRequest<T>(endpoint: string, options: FetchOptions = {}): Prom
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${config.cms.apiKey}`,
   };
 
   const fetchOptions: RequestInit = {

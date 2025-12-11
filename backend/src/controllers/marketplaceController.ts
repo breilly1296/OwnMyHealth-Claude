@@ -354,14 +354,13 @@ export async function testCMSApiKey(
   // Test the API connection
   try {
     // Make a simple API call to verify the key works
-    // Using the health check endpoint or a lightweight endpoint
-    const testUrl = `${config.cms.baseUrl}/health`;
+    // Using a lightweight provider search endpoint with the apikey query parameter
+    const testUrl = `${config.cms.baseUrl}/counties/by/zip/10001?apikey=${encodeURIComponent(config.cms.apiKey)}`;
 
     const fetchResponse = await fetch(testUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.cms.apiKey}`,
       },
       signal: AbortSignal.timeout(config.cms.timeout),
     });
