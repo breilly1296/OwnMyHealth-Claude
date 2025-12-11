@@ -21,6 +21,8 @@ import {
   type CMSBenefit,
   type CMSProviderSearchResult,
   type CMSProvider,
+  type CMSPlanSearchResult,
+  type CMSPlanSearchParams,
 } from '../services/cmsMarketplaceService.js';
 import { logger } from '../utils/logger.js';
 
@@ -32,6 +34,78 @@ function requireCMSConfig(): void {
     throw new BadRequestError(
       'Healthcare.gov Marketplace API is not configured. Contact your administrator.'
     );
+  }
+}
+
+// ============================================
+// Plan Search Endpoints
+// ============================================
+
+/**
+ * POST /api/v1/marketplace/plans/search
+ * Search for health insurance plans based on location and household info
+ */
+export async function searchPlans(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  requireCMSConfig();
+
+  const { zipcode, age, income, householdSize, gender, usesTobacco, year } = req.body;
+
+  // Validate required fields
+  if (!zipcode || typeof zipcode !== 'string') {
+    throw new BadRequestError('Zipcode is required');
+  }
+
+  if (!/^\d{5}$/.test(zipcode)) {
+    throw new BadRequestError('Invalid zipcode format. Must be 5 digits.');
+  }
+
+  if (!age || typeof age !== 'number' || age < 0 || age > 120) {
+    throw new BadRequestError('Valid age is required (0-120)');
+  }
+
+  if (!income || typeof income !== 'number' || income < 0) {
+    throw new BadRequestError('Valid income is required (must be 0 or greater)');
+  }
+
+  if (!householdSize || typeof householdSize !== 'number' || householdSize < 1 || householdSize > 10) {
+    throw new BadRequestError('Valid household size is required (1-10)');
+  }
+
+  logger.info(`User ${req.user!.id} searching plans for zipcode ${zipcode}`, {
+    prefix: 'Marketplace',
+    data: { age, income, householdSize },
+  });
+
+  try {
+    const searchParams: CMSPlanSearchParams = {
+      zipcode,
+      age,
+      income,
+      householdSize,
+      gender: gender as 'Male' | 'Female' | undefined,
+      usesTobacco: usesTobacco as boolean | undefined,
+      year: year as number | undefined,
+    };
+
+    const result = await cmsMarketplaceService.searchPlans(searchParams);
+
+    const response: ApiResponse<CMSPlanSearchResult> = {
+      success: true,
+      data: result,
+    };
+
+    res.json(response);
+  } catch (error) {
+    if (error instanceof CMSMarketplaceError) {
+      if (error.statusCode === 404) {
+        throw new BadRequestError(`No plans found for zipcode ${zipcode}. This may be an invalid zipcode or an area without marketplace coverage.`);
+      }
+      throw new BadRequestError(`CMS API error: ${error.message}`);
+    }
+    throw error;
   }
 }
 

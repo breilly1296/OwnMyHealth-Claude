@@ -2,9 +2,10 @@
  * Marketplace Routes
  *
  * REST API endpoints for CMS Marketplace (Healthcare.gov) integration.
- * Provides coverage lookup and provider search functionality.
+ * Provides plan search, coverage lookup, and provider search functionality.
  *
  * Routes:
+ * - POST /plans/search           - Search for health insurance plans
  * - GET /plans/:planId           - Get detailed plan information
  * - GET /plans/:planId/benefits  - Get plan benefits breakdown
  * - GET /providers               - Search for providers by location
@@ -62,11 +63,32 @@ const networkCheckSchema = z.object({
   planId: z.string().min(1, 'Plan ID is required'),
 });
 
+const planSearchSchema = z.object({
+  zipcode: z.string().regex(/^\d{5}$/, 'Zipcode must be 5 digits'),
+  age: z.number().int().min(0).max(120),
+  income: z.number().min(0),
+  householdSize: z.number().int().min(1).max(10),
+  gender: z.enum(['Male', 'Female']).optional(),
+  usesTobacco: z.boolean().optional(),
+  year: z.number().int().min(2024).max(2030).optional(),
+});
+
 // ============================================
 // All routes require authentication
 // ============================================
 
 router.use(authenticate);
+
+// ============================================
+// Plan Search Routes
+// ============================================
+
+// POST /api/v1/marketplace/plans/search - Search for health insurance plans
+router.post(
+  '/plans/search',
+  validate(planSearchSchema, 'body'),
+  asyncHandler(marketplaceController.searchPlans)
+);
 
 // ============================================
 // Coverage Lookup Routes

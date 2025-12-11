@@ -39,10 +39,12 @@ import {
   Sparkles,
   Info,
   AlertCircle,
-  Search
+  Search,
+  ShoppingCart
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
 import MarketplaceProviderSearch from './MarketplaceProviderSearch';
+import MarketplacePlanSearch from './MarketplacePlanSearch';
 
 interface InsuranceHubProps {
   insurancePlans: InsurancePlan[];
@@ -52,7 +54,7 @@ interface InsuranceHubProps {
   onViewPlanDetails: () => void;
 }
 
-type TabType = 'plans' | 'costs' | 'learn' | 'providers';
+type TabType = 'plans' | 'costs' | 'find-plans' | 'providers' | 'learn';
 
 export default function InsuranceHub({
   insurancePlans,
@@ -80,6 +82,7 @@ export default function InsuranceHub({
   const tabs = [
     { id: 'plans' as TabType, label: 'My Plans', icon: Shield },
     { id: 'costs' as TabType, label: 'Cost Analysis', icon: CreditCard },
+    { id: 'find-plans' as TabType, label: 'Find Plans', icon: ShoppingCart },
     { id: 'providers' as TabType, label: 'Find Providers', icon: Search },
     { id: 'learn' as TabType, label: 'Learn & Save', icon: Lightbulb },
   ];
@@ -404,6 +407,11 @@ export default function InsuranceHub({
               </>
             )}
           </div>
+        )}
+
+        {/* Find Plans Tab */}
+        {activeTab === 'find-plans' && (
+          <MarketplacePlanSearch />
         )}
 
         {/* Providers Tab */}

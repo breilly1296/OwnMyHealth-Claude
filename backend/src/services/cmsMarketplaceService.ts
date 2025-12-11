@@ -2,8 +2,8 @@
  * CMS Marketplace API Service
  *
  * Integration with Healthcare.gov Marketplace API for:
+ * - Plan Search: Search for health insurance plans by location and household
  * - Coverage Lookup: Fetch detailed plan information by plan ID
- * - Provider Search: Find in-network healthcare providers
  *
  * API Documentation: https://developer.cms.gov/marketplace-api/
  *
@@ -16,6 +16,71 @@ import { logger } from '../utils/logger.js';
 // ============================================
 // Types
 // ============================================
+
+// Plan Search Types
+export interface CMSPlanSearchParams {
+  zipcode: string;
+  age: number;
+  income: number;
+  householdSize: number;
+  gender?: 'Male' | 'Female';
+  usesTobacco?: boolean;
+  year?: number;
+}
+
+export interface CMSCountyInfo {
+  fips: string;
+  name: string;
+  state: string;
+  zipcode: string;
+}
+
+export interface CMSPlanSearchResult {
+  plans: CMSSearchedPlan[];
+  total: number;
+  facetGroups?: CMSFacetGroup[];
+  ranges?: {
+    premiums?: { min: number; max: number };
+    deductibles?: { min: number; max: number };
+  };
+}
+
+export interface CMSSearchedPlan {
+  id: string;
+  name: string;
+  issuer: {
+    id: string;
+    name: string;
+  };
+  metalLevel: 'catastrophic' | 'bronze' | 'silver' | 'gold' | 'platinum';
+  type: string;
+  premium: number;
+  premiumWithCredit: number;
+  deductible: number;
+  moopAmount: number;
+  ehbPremium?: number;
+  pediatricDentalCoverage?: boolean;
+  hsaEligible?: boolean;
+  benefits?: CMSBenefitSummary[];
+  qualityRating?: {
+    globalRating?: number;
+    globalRatingStr?: string;
+  };
+  brochureUrl?: string;
+  formularyUrl?: string;
+  networkUrl?: string;
+}
+
+export interface CMSBenefitSummary {
+  name: string;
+  covered: boolean;
+  costSharingDisplay?: string;
+}
+
+export interface CMSFacetGroup {
+  name: string;
+  facets: { value: string; count: number }[];
+}
 
 export interface CMSPlanDetails {
   id: string;
@@ -200,6 +265,102 @@ export class CMSMarketplaceError extends Error {
 }
 
 // ============================================
+// Plan Search Service
+// ============================================
+
+/**
+ * Get county FIPS code from zipcode
+ * Required for plan search API
+ *
+ * @param zipcode - 5-digit US zipcode
+ * @returns County information including FIPS code
+ */
+export async function getCountyByZipcode(zipcode: string): Promise<CMSCountyInfo> {
+  logger.info(`Looking up county for zipcode: ${zipcode}`, { prefix: 'CMS' });
+
+  const data = await cmsRequest<CMSCountyRawResponse[]>(`/counties/by/zip/${zipcode}`);
+
+  if (!data || data.length === 0) {
+    throw new CMSMarketplaceError(
+      `No county found for zipcode ${zipcode}`,
+      404,
+      'COUNTY_NOT_FOUND'
+    );
+  }
+
+  // Return the first county (some zipcodes span multiple counties)
+  const county = data[0];
+  return {
+    fips: county.fips,
+    name: county.name,
+    state: county.state,
+    zipcode: zipcode,
+  };
+}
+
+/**
+ * Search for health insurance plans
+ *
+ * @param params - Search parameters including location, age, income, household size
+ * @returns List of available plans with pricing
+ */
+export async function searchPlans(params: CMSPlanSearchParams): Promise<CMSPlanSearchResult> {
+  const year = params.year || new Date().getFullYear();
+
+  logger.info(`Searching plans for zipcode: ${params.zipcode}`, {
+    prefix: 'CMS',
+    data: { age: params.age, income: params.income, householdSize: params.householdSize },
+  });
+
+  // First, get the county FIPS code from the zipcode
+  const county = await getCountyByZipcode(params.zipcode);
+
+  // Build the plan search request body
+  const requestBody = {
+    household: {
+      income: params.income,
+      people: [
+        {
+          age: params.age,
+          aptc_eligible: true,
+          gender: params.gender || 'Male',
+          uses_tobacco: params.usesTobacco || false,
+        },
+      ],
+    },
+    market: 'Individual',
+    place: {
+      countyfips: county.fips,
+      state: county.state,
+      zipcode: params.zipcode,
+    },
+    year: year,
+  };
+
+  // Add additional household members if householdSize > 1
+  // For simplicity, we add them as dependents with estimated ages
+  if (params.householdSize > 1) {
+    for (let i = 1; i < params.householdSize; i++) {
+      // Add spouse/partner as same age, children as 10 years old
+      const isSpouse = i === 1;
+      requestBody.household.people.push({
+        age: isSpouse ? params.age : 10,
+        aptc_eligible: true,
+        gender: isSpouse ? (params.gender === 'Male' ? 'Female' : 'Male') : 'Male',
+        uses_tobacco: false,
+      });
+    }
+  }
+
+  const data = await cmsRequest<CMSPlanSearchRawResponse>('/plans/search', {
+    method: 'POST',
+    body: requestBody,
+  });
+
+  return transformPlanSearchResponse(data);
+}
+
+// ============================================
 // Coverage Lookup Service
 // ============================================
 
@@ -346,6 +507,58 @@ export async function checkProviderNetwork(
 // ============================================
 
 // Raw response types from CMS API (snake_case)
+
+// County lookup response
+interface CMSCountyRawResponse {
+  fips: string;
+  name: string;
+  state: string;
+}
+
+// Plan search response
+interface CMSPlanSearchRawResponse {
+  plans: CMSPlanSearchRawPlan[];
+  total: number;
+  facet_groups?: {
+    name: string;
+    facets: { value: string; count: number }[];
+  }[];
+  ranges?: {
+    premiums?: { min: number; max: number };
+    deductibles?: { min: number; max: number };
+  };
+}
+
+interface CMSPlanSearchRawPlan {
+  id: string;
+  name: string;
+  issuer: {
+    id: string;
+    name: string;
+  };
+  metal_level: string;
+  type: string;
+  premium: number;
+  premium_w_credit: number;
+  deductible: number;
+  moop: number;
+  ehb_premium?: number;
+  pediatric_dental_coverage?: boolean;
+  hsa_eligible?: boolean;
+  benefits?: {
+    name: string;
+    covered: boolean;
+    cost_sharing?: string;
+  }[];
+  quality_rating?: {
+    global_rating?: number;
+    global_rating_string?: string;
+  };
+  brochure_url?: string;
+  formulary_url?: string;
+  network_url?: string;
+}
+
 interface CMSPlanRawResponse {
   plan_id: string;
   plan_name: string;
@@ -405,6 +618,45 @@ interface CMSProviderSearchRawResponse {
 interface CMSNetworkCheckResponse {
   in_network: boolean;
   tier?: string;
+}
+
+function transformPlanSearchResponse(raw: CMSPlanSearchRawResponse): CMSPlanSearchResult {
+  return {
+    plans: raw.plans.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      issuer: plan.issuer,
+      metalLevel: plan.metal_level.toLowerCase() as CMSSearchedPlan['metalLevel'],
+      type: plan.type,
+      premium: plan.premium,
+      premiumWithCredit: plan.premium_w_credit,
+      deductible: plan.deductible,
+      moopAmount: plan.moop,
+      ehbPremium: plan.ehb_premium,
+      pediatricDentalCoverage: plan.pediatric_dental_coverage,
+      hsaEligible: plan.hsa_eligible,
+      benefits: plan.benefits?.map((b) => ({
+        name: b.name,
+        covered: b.covered,
+        costSharingDisplay: b.cost_sharing,
+      })),
+      qualityRating: plan.quality_rating
+        ? {
+            globalRating: plan.quality_rating.global_rating,
+            globalRatingStr: plan.quality_rating.global_rating_string,
+          }
+        : undefined,
+      brochureUrl: plan.brochure_url,
+      formularyUrl: plan.formulary_url,
+      networkUrl: plan.network_url,
+    })),
+    total: raw.total,
+    facetGroups: raw.facet_groups?.map((fg) => ({
+      name: fg.name,
+      facets: fg.facets,
+    })),
+    ranges: raw.ranges,
+  };
 }
 
 function transformPlanResponse(raw: CMSPlanRawResponse): CMSPlanDetails {
@@ -526,6 +778,10 @@ export async function healthCheck(): Promise<{ healthy: boolean; message: string
 // ============================================
 
 export const cmsMarketplaceService = {
+  // Plan Search
+  getCountyByZipcode,
+  searchPlans,
+
   // Coverage Lookup
   getPlanDetails,
   getPlanBenefits,

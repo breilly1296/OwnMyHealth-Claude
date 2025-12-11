@@ -1285,6 +1285,60 @@ export const adminApi = {
 // MARKETPLACE API (Healthcare.gov)
 // ============================================
 
+// Plan Search Types
+export interface MarketplacePlanSearchParams {
+  zipcode: string;
+  age: number;
+  income: number;
+  householdSize: number;
+  gender?: 'Male' | 'Female';
+  usesTobacco?: boolean;
+  year?: number;
+}
+
+export interface MarketplaceSearchedPlan {
+  id: string;
+  name: string;
+  issuer: {
+    id: string;
+    name: string;
+  };
+  metalLevel: 'catastrophic' | 'bronze' | 'silver' | 'gold' | 'platinum';
+  type: string;
+  premium: number;
+  premiumWithCredit: number;
+  deductible: number;
+  moopAmount: number;
+  ehbPremium?: number;
+  pediatricDentalCoverage?: boolean;
+  hsaEligible?: boolean;
+  benefits?: {
+    name: string;
+    covered: boolean;
+    costSharingDisplay?: string;
+  }[];
+  qualityRating?: {
+    globalRating?: number;
+    globalRatingStr?: string;
+  };
+  brochureUrl?: string;
+  formularyUrl?: string;
+  networkUrl?: string;
+}
+
+export interface MarketplacePlanSearchResult {
+  plans: MarketplaceSearchedPlan[];
+  total: number;
+  facetGroups?: {
+    name: string;
+    facets: { value: string; count: number }[];
+  }[];
+  ranges?: {
+    premiums?: { min: number; max: number };
+    deductibles?: { min: number; max: number };
+  };
+}
+
 export interface MarketplacePlanDetails {
   id: string;
   name: string;
@@ -1365,6 +1419,15 @@ export interface MarketplaceProviderSearchResult {
 }
 
 export const marketplaceApi = {
+  // Search for health insurance plans
+  async searchPlans(params: MarketplacePlanSearchParams): Promise<MarketplacePlanSearchResult> {
+    const response = await apiFetch<MarketplacePlanSearchResult>('/marketplace/plans/search', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    return response.data;
+  },
+
   // Get plan details from Healthcare.gov
   async getPlanDetails(planId: string, year?: number): Promise<MarketplacePlanDetails> {
     const params = year ? `?year=${year}` : '';
