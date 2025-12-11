@@ -283,3 +283,162 @@ export async function healthCheck(
 
   res.json(response);
 }
+
+// ============================================
+// API Key Test Endpoint (No Auth Required)
+// ============================================
+
+interface CMSTestResult {
+  configured: boolean;
+  apiKeyPresent: boolean;
+  apiKeyLength?: number;
+  connectionTest: {
+    success: boolean;
+    statusCode?: number;
+    message: string;
+    responseTime?: number;
+  };
+  baseUrl: string;
+  timestamp: string;
+}
+
+/**
+ * GET /api/v1/cms/test
+ * Test CMS API key configuration and connectivity
+ *
+ * This endpoint:
+ * 1. Checks if CMS_API_KEY is present in environment
+ * 2. Makes a test request to the CMS API to verify the key works
+ * 3. Returns detailed status for debugging
+ *
+ * Does NOT require authentication - used for deployment verification
+ */
+export async function testCMSApiKey(
+  _req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const startTime = Date.now();
+
+  const result: CMSTestResult = {
+    configured: config.cms.enabled,
+    apiKeyPresent: !!config.cms.apiKey,
+    apiKeyLength: config.cms.apiKey ? config.cms.apiKey.length : undefined,
+    connectionTest: {
+      success: false,
+      message: 'Not tested',
+    },
+    baseUrl: config.cms.baseUrl,
+    timestamp: new Date().toISOString(),
+  };
+
+  // If API key is not configured, return early
+  if (!config.cms.enabled || !config.cms.apiKey) {
+    result.connectionTest = {
+      success: false,
+      message: 'CMS_API_KEY environment variable is not set',
+    };
+
+    const response: ApiResponse<CMSTestResult> = {
+      success: false,
+      data: result,
+      error: {
+        code: 'CMS_NOT_CONFIGURED',
+        message: 'CMS Marketplace API is not configured',
+      },
+    };
+
+    res.status(503).json(response);
+    return;
+  }
+
+  // Test the API connection
+  try {
+    // Make a simple API call to verify the key works
+    // Using the health check endpoint or a lightweight endpoint
+    const testUrl = `${config.cms.baseUrl}/health`;
+
+    const fetchResponse = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.cms.apiKey}`,
+      },
+      signal: AbortSignal.timeout(config.cms.timeout),
+    });
+
+    const responseTime = Date.now() - startTime;
+
+    if (fetchResponse.ok) {
+      result.connectionTest = {
+        success: true,
+        statusCode: fetchResponse.status,
+        message: 'CMS API key is valid and API is accessible',
+        responseTime,
+      };
+
+      logger.info('CMS API key test successful', {
+        prefix: 'CMS',
+        data: { statusCode: fetchResponse.status, responseTime },
+      });
+
+      const response: ApiResponse<CMSTestResult> = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } else {
+      const errorText = await fetchResponse.text();
+
+      result.connectionTest = {
+        success: false,
+        statusCode: fetchResponse.status,
+        message: fetchResponse.status === 401 || fetchResponse.status === 403
+          ? 'API key is invalid or unauthorized'
+          : `API returned error: ${fetchResponse.status} - ${errorText.substring(0, 200)}`,
+        responseTime,
+      };
+
+      logger.warn('CMS API key test failed', {
+        prefix: 'CMS',
+        data: { statusCode: fetchResponse.status, error: errorText.substring(0, 200) },
+      });
+
+      const response: ApiResponse<CMSTestResult> = {
+        success: false,
+        data: result,
+        error: {
+          code: 'CMS_API_ERROR',
+          message: result.connectionTest.message,
+        },
+      };
+
+      res.status(fetchResponse.status === 401 || fetchResponse.status === 403 ? 401 : 502).json(response);
+    }
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    result.connectionTest = {
+      success: false,
+      message: `Connection failed: ${errorMessage}`,
+      responseTime,
+    };
+
+    logger.error('CMS API connection test failed', {
+      prefix: 'CMS',
+      data: { error: errorMessage, responseTime },
+    });
+
+    const response: ApiResponse<CMSTestResult> = {
+      success: false,
+      data: result,
+      error: {
+        code: 'CMS_CONNECTION_ERROR',
+        message: `Failed to connect to CMS API: ${errorMessage}`,
+      },
+    };
+
+    res.status(502).json(response);
+  }
+}
