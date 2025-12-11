@@ -14,8 +14,7 @@ jobs:
   # Frontend Tests and Build
   frontend:
     name: Frontend CI
-    runs-on:
-  workflow_call: ubuntu-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -24,8 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version:
-  workflow_call: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -52,8 +50,7 @@ jobs:
   # Backend Tests and Build
   backend:
     name: Backend CI
-    runs-on:
-  workflow_call: ubuntu-latest
+    runs-on: ubuntu-latest
 
     defaults:
       run:
@@ -66,8 +63,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version:
-  workflow_call: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -98,8 +94,7 @@ jobs:
   # Security audit
   security:
     name: Security Audit
-    runs-on:
-  workflow_call: ubuntu-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -108,8 +103,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version:
-  workflow_call: ${{ env.NODE_VERSION }}
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit frontend dependencies
         run: npm audit --audit-level=high
