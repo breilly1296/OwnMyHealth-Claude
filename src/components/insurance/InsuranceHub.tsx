@@ -4,13 +4,16 @@
  * A comprehensive insurance management dashboard that provides users with tools to:
  * - View and manage their insurance plans
  * - Analyze healthcare costs with projections and breakdowns
+ * - Find in-network healthcare providers via Healthcare.gov
  * - Learn about insurance terms and discover money-saving strategies
  *
- * Features three main tabs:
+ * Features four main tabs:
  * 1. My Plans - Display uploaded insurance plans with coverage details and accuracy scores
  * 2. Cost Analysis - Show cost projections (premiums, deductibles, copays, coinsurance)
  *    along with a visual breakdown and health profile summary
- * 3. Learn & Save - Provide optimization tips with potential savings, an expandable
+ * 3. Find Providers - Search for healthcare providers by location, specialty, and check
+ *    if they're in-network for your plan (via CMS Marketplace API)
+ * 4. Learn & Save - Provide optimization tips with potential savings, an expandable
  *    glossary of insurance terms, and educational modules
  *
  * Stats grid shows: active plans count, covered services, estimated annual cost,
@@ -35,9 +38,11 @@ import {
   Plus,
   Sparkles,
   Info,
-  AlertCircle
+  AlertCircle,
+  Search
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
+import MarketplaceProviderSearch from './MarketplaceProviderSearch';
 
 interface InsuranceHubProps {
   insurancePlans: InsurancePlan[];
@@ -47,7 +52,7 @@ interface InsuranceHubProps {
   onViewPlanDetails: () => void;
 }
 
-type TabType = 'plans' | 'costs' | 'learn';
+type TabType = 'plans' | 'costs' | 'learn' | 'providers';
 
 export default function InsuranceHub({
   insurancePlans,
@@ -75,6 +80,7 @@ export default function InsuranceHub({
   const tabs = [
     { id: 'plans' as TabType, label: 'My Plans', icon: Shield },
     { id: 'costs' as TabType, label: 'Cost Analysis', icon: CreditCard },
+    { id: 'providers' as TabType, label: 'Find Providers', icon: Search },
     { id: 'learn' as TabType, label: 'Learn & Save', icon: Lightbulb },
   ];
 
@@ -398,6 +404,11 @@ export default function InsuranceHub({
               </>
             )}
           </div>
+        )}
+
+        {/* Providers Tab */}
+        {activeTab === 'providers' && (
+          <MarketplaceProviderSearch insurancePlans={insurancePlans} />
         )}
 
         {/* Learn Tab */}

@@ -1281,5 +1281,139 @@ export const adminApi = {
   },
 };
 
+// ============================================
+// MARKETPLACE API (Healthcare.gov)
+// ============================================
+
+export interface MarketplacePlanDetails {
+  id: string;
+  name: string;
+  issuer: {
+    id: string;
+    name: string;
+  };
+  metalLevel: 'catastrophic' | 'bronze' | 'silver' | 'gold' | 'platinum';
+  type: string;
+  premium: number;
+  deductibles: {
+    individual: number;
+    family: number;
+  };
+  outOfPocketMax: {
+    individual: number;
+    family: number;
+  };
+  benefits: MarketplaceBenefit[];
+  network: {
+    url?: string;
+    tier?: string;
+  };
+  formularyUrl?: string;
+  brochureUrl?: string;
+}
+
+export interface MarketplaceBenefit {
+  name: string;
+  covered: boolean;
+  costSharing?: {
+    copay?: number;
+    coinsurance?: number;
+    deductibleApplies?: boolean;
+  };
+  explanation?: string;
+}
+
+export interface MarketplaceProvider {
+  npi: string;
+  name: {
+    first?: string;
+    middle?: string;
+    last?: string;
+    full: string;
+  };
+  specialty?: string[];
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  phone?: string;
+  acceptingNewPatients?: boolean;
+  gender?: string;
+  languages?: string[];
+  facilityType?: string;
+  distance?: number;
+}
+
+export interface MarketplaceProviderSearchParams {
+  zipcode: string;
+  planId?: string;
+  specialty?: string;
+  type?: 'individual' | 'facility';
+  radius?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface MarketplaceProviderSearchResult {
+  providers: MarketplaceProvider[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export const marketplaceApi = {
+  // Get plan details from Healthcare.gov
+  async getPlanDetails(planId: string, year?: number): Promise<MarketplacePlanDetails> {
+    const params = year ? `?year=${year}` : '';
+    const response = await apiFetch<MarketplacePlanDetails>(`/marketplace/plans/${planId}${params}`);
+    return response.data;
+  },
+
+  // Get plan benefits
+  async getPlanBenefits(planId: string, year?: number): Promise<MarketplaceBenefit[]> {
+    const params = year ? `?year=${year}` : '';
+    const response = await apiFetch<MarketplaceBenefit[]>(`/marketplace/plans/${planId}/benefits${params}`);
+    return response.data;
+  },
+
+  // Search for providers
+  async searchProviders(params: MarketplaceProviderSearchParams): Promise<MarketplaceProviderSearchResult> {
+    const searchParams = new URLSearchParams();
+    searchParams.set('zipcode', params.zipcode);
+    if (params.planId) searchParams.set('planId', params.planId);
+    if (params.specialty) searchParams.set('specialty', params.specialty);
+    if (params.type) searchParams.set('type', params.type);
+    if (params.radius) searchParams.set('radius', params.radius.toString());
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+
+    const response = await apiFetch<MarketplaceProviderSearchResult>(`/marketplace/providers?${searchParams}`);
+    return response.data;
+  },
+
+  // Get provider by NPI
+  async getProviderByNPI(npi: string): Promise<MarketplaceProvider> {
+    const response = await apiFetch<MarketplaceProvider>(`/marketplace/providers/${npi}`);
+    return response.data;
+  },
+
+  // Check if provider is in-network for a plan
+  async checkProviderNetwork(npi: string, planId: string): Promise<{ inNetwork: boolean; networkTier?: string }> {
+    const response = await apiFetch<{ inNetwork: boolean; networkTier?: string }>(
+      `/marketplace/providers/${npi}/network-check?planId=${encodeURIComponent(planId)}`
+    );
+    return response.data;
+  },
+
+  // Check API health
+  async healthCheck(): Promise<{ healthy: boolean; message: string }> {
+    const response = await apiFetch<{ healthy: boolean; message: string }>('/marketplace/health');
+    return response.data;
+  },
+};
+
 // Export error type for consumers
 export type { ApiError };
