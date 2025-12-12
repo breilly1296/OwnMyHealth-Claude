@@ -116,6 +116,8 @@ export async function searchPlans(
       household_size,
       age,
       is_tobacco_user,
+      gender,
+      people,
       metal_levels,
       plan_types,
       issuers,
@@ -177,6 +179,8 @@ export async function searchPlans(
       household_size,
       age,
       is_tobacco_user,
+      gender,
+      people,
       filter: {
         metal_level: metal_levels,
         type: plan_types,

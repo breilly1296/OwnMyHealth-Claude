@@ -20,6 +20,13 @@ export interface CMSCounty {
   zipcode?: string;
 }
 
+export interface CMSHouseholdPerson {
+  age: number;
+  aptc_eligible?: boolean;
+  gender?: 'Male' | 'Female';
+  uses_tobacco?: boolean;
+}
+
 export interface CMSPlanSearchParams {
   zipcode: string;
   fips: string;
@@ -32,6 +39,8 @@ export interface CMSPlanSearchParams {
   household_size?: number;
   age?: number | number[];
   is_tobacco_user?: boolean | boolean[];
+  gender?: 'Male' | 'Female';
+  people?: CMSHouseholdPerson[];
   filter?: {
     metal_level?: ('Catastrophic' | 'Bronze' | 'Silver' | 'Gold' | 'Platinum')[];
     type?: ('HMO' | 'PPO' | 'EPO' | 'POS')[];
@@ -235,12 +244,14 @@ class CMSMarketplaceService {
 
   /**
    * Search for marketplace health insurance plans
+   * Uses POST with request body as required by CMS API
    */
   async searchPlans(params: CMSPlanSearchParams): Promise<MarketplacePlanSearchResult> {
     try {
-      const queryParams = this.buildPlanSearchQuery(params);
-      const response = await this.makeRequest<CMSPlanSearchResponse>(
-        `/plans/search?${queryParams}`
+      const requestBody = this.buildPlanSearchBody(params);
+      const response = await this.makePostRequest<CMSPlanSearchResponse>(
+        '/plans/search',
+        requestBody
       );
 
       return this.transformPlanSearchResponse(response, params.offset || 0, params.limit || 10);
@@ -408,15 +419,16 @@ class CMSMarketplaceService {
 
   // Private helper methods
 
+  /**
+   * Make a GET request to the CMS API
+   * API key is passed as query parameter
+   */
   private async makeRequest<T>(endpoint: string): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const separator = endpoint.includes("?") ? "&" : "?";
+    const url = `${this.baseUrl}${endpoint}${separator}apikey=${encodeURIComponent(this.apiKey)}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-
-    if (this.apiKey) {
-      headers['apikey'] = this.apiKey;
-    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -441,89 +453,100 @@ class CMSMarketplaceService {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(`CMS API request timed out after ${this.timeout}ms`);
       }
+throw error;
+    }
+  }
+
+  /**
+   * Make a POST request to the CMS API
+   * API key is passed as query parameter
+   */
+  private async makePostRequest<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}?apikey=${encodeURIComponent(this.apiKey)}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`CMS API error: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      return await response.json() as T;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`CMS API request timed out after ${this.timeout}ms`);
+      }
       throw error;
     }
   }
 
-  private buildPlanSearchQuery(params: CMSPlanSearchParams): string {
-    const query = new URLSearchParams();
+  /**
+   * Build the request body for plan search POST request
+   */
+  private buildPlanSearchBody(params: CMSPlanSearchParams): Record<string, unknown> {
+    // Build people array for household
+    let people: CMSHouseholdPerson[];
 
-    query.append('zipcode', params.zipcode);
-    query.append('fips', params.fips);
-    query.append('state', params.state);
+    if (params.people && params.people.length > 0) {
+      people = params.people;
+    } else {
+      const ages = Array.isArray(params.age) ? params.age : (params.age ? [params.age] : [30]);
+      const tobaccoUsers = Array.isArray(params.is_tobacco_user)
+        ? params.is_tobacco_user
+        : (params.is_tobacco_user !== undefined ? [params.is_tobacco_user] : [false]);
 
-    if (params.market) {
-      query.append('market', params.market);
+      people = ages.map((age, index) => ({
+        age,
+        aptc_eligible: params.aptc_eligible ?? true,
+        gender: params.gender || 'Male',
+        uses_tobacco: tobaccoUsers[index] ?? tobaccoUsers[0] ?? false,
+      }));
     }
 
-    if (params.year) {
-      query.append('year', params.year.toString());
-    }
+    const body: Record<string, unknown> = {
+      place: {
+        zipcode: params.zipcode,
+        state: params.state,
+        countyfips: params.fips,
+      },
+      market: params.market || 'Individual',
+      year: params.year || new Date().getFullYear(),
+      household: {
+        income: params.income || 50000,
+        people,
+      },
+    };
 
-    if (params.aptc_eligible !== undefined) {
-      query.append('aptc_eligible', params.aptc_eligible.toString());
-    }
-
-    if (params.csr_eligible !== undefined) {
-      query.append('csr_eligible', params.csr_eligible.toString());
-    }
-
-    if (params.income) {
-      query.append('income', params.income.toString());
-    }
-
-    if (params.household_size) {
-      query.append('household_size', params.household_size.toString());
-    }
-
-    // Handle age - can be single value or array for multiple enrollees
-    if (params.age) {
-      if (Array.isArray(params.age)) {
-        params.age.forEach(a => query.append('age', a.toString()));
-      } else {
-        query.append('age', params.age.toString());
-      }
-    }
-
-    // Handle tobacco user - can be single value or array
-    if (params.is_tobacco_user !== undefined) {
-      if (Array.isArray(params.is_tobacco_user)) {
-        params.is_tobacco_user.forEach(t => query.append('is_tobacco_user', t.toString()));
-      } else {
-        query.append('is_tobacco_user', params.is_tobacco_user.toString());
-      }
-    }
-
-    // Handle filters
+    // Add filters if provided
     if (params.filter) {
-      if (params.filter.metal_level) {
-        params.filter.metal_level.forEach(m => query.append('metal_level', m));
-      }
-      if (params.filter.type) {
-        params.filter.type.forEach(t => query.append('type', t));
-      }
-      if (params.filter.issuer) {
-        params.filter.issuer.forEach(i => query.append('issuer', i));
-      }
+      const filter: Record<string, unknown> = {};
+      if (params.filter.metal_level) filter.metal_level = params.filter.metal_level;
+      if (params.filter.type) filter.type = params.filter.type;
+      if (params.filter.issuer) filter.issuer = params.filter.issuer;
+      if (Object.keys(filter).length > 0) body.filter = filter;
     }
 
-    if (params.offset) {
-      query.append('offset', params.offset.toString());
-    }
+    if (params.offset !== undefined) body.offset = params.offset;
+    if (params.limit !== undefined) body.limit = params.limit;
+    if (params.order) body.order = params.order;
+    if (params.order_by) body.order_by = params.order_by;
 
-    if (params.limit) {
-      query.append('limit', params.limit.toString());
-    }
-
-    if (params.order) {
-      query.append('order', params.order);
-    }
-
-    if (params.order_by) {
-      query.append('order_by', params.order_by);
-    }
-
-    return query.toString();
+    return body;
   }
 
   /**
