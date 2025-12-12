@@ -67,8 +67,8 @@ export interface CMSPlan {
   pediatric_ehb_premium?: number;
   aptc_eligible?: boolean;
   hsa_eligible?: boolean;
-  deductibles: CMSDeductible[];
-  moops: CMSMoop[];
+  deductibles?: CMSDeductible[];
+  moops?: CMSMoop[];
   benefits?: CMSBenefit[];
   quality_rating?: {
     global_rating?: number;
@@ -601,9 +601,9 @@ throw error;
       premium: plan.premium,
       premiumWithCredit: plan.premium_w_credit,
       // BUG FIX: deductibles is an array, not a single value
-      deductible: plan.deductibles?.[0]?.amount || 0,
+      deductible: Number(plan.deductibles?.[0]?.amount) || 0,
       // BUG FIX: moops is an array, not a single value
-      outOfPocketMax: plan.moops?.[0]?.amount || 0,
+      outOfPocketMax: Number(plan.moops?.[0]?.amount) || 0,
       hsaEligible: plan.hsa_eligible || false,
       qualityRating: plan.quality_rating?.global_rating,
       benefits: (plan.benefits || []).map(benefit => this.transformBenefit(benefit)),
