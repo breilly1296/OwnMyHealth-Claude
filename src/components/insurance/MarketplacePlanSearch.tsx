@@ -367,7 +367,7 @@ export default function MarketplacePlanSearch() {
                     </div>
                     <div>
                       <p className="text-xs text-slate-400 mb-1">Out-of-Pocket Max</p>
-                      <p className="font-semibold text-slate-900">{formatCurrency(plan.moopAmount)}</p>
+                      <p className="font-semibold text-slate-900">{formatCurrency(plan.outOfPocketMax)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400 mb-1">Annual Premium</p>

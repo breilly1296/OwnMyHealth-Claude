@@ -1308,7 +1308,7 @@ export interface MarketplaceSearchedPlan {
   premium: number;
   premiumWithCredit: number;
   deductible: number;
-  moopAmount: number;
+  outOfPocketMax: number;
   ehbPremium?: number;
   pediatricDentalCoverage?: boolean;
   hsaEligible?: boolean;
