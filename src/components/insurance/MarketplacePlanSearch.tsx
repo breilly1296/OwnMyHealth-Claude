@@ -298,9 +298,9 @@ export default function MarketplacePlanSearch() {
           <h3 className="font-semibold text-slate-900">
             {results.total} plan{results.total !== 1 ? 's' : ''} found
           </h3>
-          {results.ranges?.premiums && (
+          {results.priceRanges?.premium && (
             <span className="text-sm text-slate-500">
-              Premiums from {formatCurrency(results.ranges.premiums.min)}/mo to {formatCurrency(results.ranges.premiums.max)}/mo
+              Premiums from {formatCurrency(results.priceRanges.premium.min)}/mo to {formatCurrency(results.priceRanges.premium.max)}/mo
             </span>
           )}
         </div>
