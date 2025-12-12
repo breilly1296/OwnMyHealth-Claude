@@ -127,13 +127,13 @@ export async function searchPlans(
       sort_order,
     } = req.body;
 
-    // Validate required fields
-    if (!zipcode || !fips || !state) {
+    // Validate required fields - only zipcode is required, fips/state are looked up
+    if (!zipcode) {
       const response: ApiResponse = {
         success: false,
         error: {
           code: 'MISSING_REQUIRED_FIELDS',
-          message: 'zipcode, fips, and state are required',
+          message: 'zipcode is required',
         },
       };
       res.status(400).json(response);
@@ -153,24 +153,38 @@ export async function searchPlans(
       return;
     }
 
-    // Validate state format
-    if (!/^[A-Z]{2}$/.test(state)) {
-      const response: ApiResponse = {
-        success: false,
-        error: {
-          code: 'INVALID_STATE',
-          message: 'State must be a 2-letter code (e.g., CA, NY)',
-        },
-      };
-      res.status(400).json(response);
-      return;
+    // Look up fips and state from zipcode if not provided
+    let resolvedFips = fips;
+    let resolvedState = state;
+
+    if (!resolvedFips || !resolvedState) {
+      const service = getCMSMarketplaceService();
+      const counties = await service.getCountiesByZipcode(zipcode);
+
+      if (counties.length === 0) {
+        const response: ApiResponse = {
+          success: false,
+          error: {
+            code: 'INVALID_ZIPCODE',
+            message: 'No counties found for ZIP code ' + zipcode,
+          },
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      // Use the first county (most common case)
+      const county = counties[0];
+      resolvedFips = county.fips;
+      resolvedState = county.state;
+      logger.info('Resolved ZIP ' + zipcode + ' to FIPS ' + resolvedFips + ', state ' + resolvedState);
     }
 
     // Build search parameters
     const searchParams: CMSPlanSearchParams = {
       zipcode,
-      fips,
-      state,
+      fips: resolvedFips,
+      state: resolvedState,
       market,
       year: year || new Date().getFullYear(),
       aptc_eligible,
@@ -201,7 +215,7 @@ export async function searchPlans(
       const auditService = getAuditLogService(prisma);
       await auditService.logAccess(RESOURCE_TYPE, 'search', { req, userId }, {
         zipcode,
-        state,
+        state: resolvedState,
         plansFound: result.total,
         page,
       });
