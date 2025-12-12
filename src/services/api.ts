@@ -1299,43 +1299,43 @@ export interface MarketplacePlanSearchParams {
 export interface MarketplaceSearchedPlan {
   id: string;
   name: string;
-  issuer: {
-    id: string;
-    name: string;
-  };
-  metalLevel: 'catastrophic' | 'bronze' | 'silver' | 'gold' | 'platinum';
-  type: string;
+  issuer: string;
+  issuerId: string;
+  metalLevel: string;
+  planType: string;
   premium: number;
-  premiumWithCredit: number;
+  premiumWithCredit?: number;
   deductible: number;
   outOfPocketMax: number;
-  ehbPremium?: number;
-  pediatricDentalCoverage?: boolean;
   hsaEligible?: boolean;
   benefits?: {
     name: string;
     covered: boolean;
-    costSharingDisplay?: string;
+    costSharing?: string;
+    hasLimits?: boolean;
   }[];
-  qualityRating?: {
-    globalRating?: number;
-    globalRatingStr?: string;
+  qualityRating?: number;
+  urls?: {
+    brochure?: string;
+    formulary?: string;
+    network?: string;
+    benefits?: string;
   };
-  brochureUrl?: string;
-  formularyUrl?: string;
-  networkUrl?: string;
 }
 
 export interface MarketplacePlanSearchResult {
   plans: MarketplaceSearchedPlan[];
   total: number;
-  facetGroups?: {
-    name: string;
-    facets: { value: string; count: number }[];
-  }[];
-  ranges?: {
-    premiums?: { min: number; max: number };
-    deductibles?: { min: number; max: number };
+  page: number;
+  limit: number;
+  filters: {
+    metalLevels: Array<{ value: string; count: number }>;
+    planTypes: Array<{ value: string; count: number }>;
+    issuers: Array<{ value: string; count: number }>;
+  };
+  priceRanges: {
+    premium: { min: number; max: number };
+    deductible: { min: number; max: number };
   };
 }
 

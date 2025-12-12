@@ -327,12 +327,12 @@ export default function MarketplacePlanSearch() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-900">{plan.name}</h4>
-                        <p className="text-sm text-slate-500">{plan.issuer.name}</p>
+                        <p className="text-sm text-slate-500">{plan.issuer}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${metalStyle.bg} ${metalStyle.text} capitalize`}>
                             {plan.metalLevel}
                           </span>
-                          <span className="text-xs text-slate-400">{plan.type}</span>
+                          <span className="text-xs text-slate-400">{plan.planType}</span>
                           {plan.hsaEligible && (
                             <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-lg">
                               HSA Eligible
@@ -344,16 +344,16 @@ export default function MarketplacePlanSearch() {
 
                     <div className="text-right">
                       <div className="text-2xl font-bold text-slate-900">
-                        {formatCurrency(plan.premiumWithCredit)}<span className="text-sm font-normal text-slate-500">/mo</span>
+                        {formatCurrency(plan.premiumWithCredit ?? plan.premium)}<span className="text-sm font-normal text-slate-500">/mo</span>
                       </div>
-                      {plan.premium !== plan.premiumWithCredit && (
+                      {plan.premiumWithCredit && plan.premium !== plan.premiumWithCredit && (
                         <p className="text-xs text-slate-400 line-through">
                           {formatCurrency(plan.premium)}/mo without credit
                         </p>
                       )}
-                      {plan.qualityRating?.globalRating && (
+                      {plan.qualityRating && (
                         <div className="mt-2">
-                          {renderStars(plan.qualityRating.globalRating)}
+                          {renderStars(plan.qualityRating)}
                         </div>
                       )}
                     </div>
@@ -371,11 +371,11 @@ export default function MarketplacePlanSearch() {
                     </div>
                     <div>
                       <p className="text-xs text-slate-400 mb-1">Annual Premium</p>
-                      <p className="font-semibold text-slate-900">{formatCurrency(plan.premiumWithCredit * 12)}</p>
+                      <p className="font-semibold text-slate-900">{formatCurrency((plan.premiumWithCredit ?? plan.premium) * 12)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-400 mb-1">Est. Annual Cost</p>
-                      <p className="font-semibold text-slate-900">{formatCurrency((plan.premiumWithCredit * 12) + plan.deductible)}</p>
+                      <p className="font-semibold text-slate-900">{formatCurrency(((plan.premiumWithCredit ?? plan.premium) * 12) + plan.deductible)}</p>
                     </div>
                   </div>
 
@@ -437,9 +437,9 @@ export default function MarketplacePlanSearch() {
 
                     {/* External Links */}
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
-                      {plan.brochureUrl && (
+                      {plan.urls?.brochure && (
                         <a
-                          href={plan.brochureUrl}
+                          href={plan.urls?.brochure}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
@@ -449,9 +449,9 @@ export default function MarketplacePlanSearch() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
-                      {plan.formularyUrl && (
+                      {plan.urls?.formulary && (
                         <a
-                          href={plan.formularyUrl}
+                          href={plan.urls?.formulary}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
@@ -461,9 +461,9 @@ export default function MarketplacePlanSearch() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
-                      {plan.networkUrl && (
+                      {plan.urls?.network && (
                         <a
-                          href={plan.networkUrl}
+                          href={plan.urls?.network}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
