@@ -65,9 +65,26 @@ export const config = {
 
   // CMS Healthcare.gov Marketplace API
   cms: {
+    enabled: !!process.env.CMS_API_KEY,
     apiKey: process.env.CMS_API_KEY || '',
     baseUrl: process.env.CMS_BASE_URL || 'https://marketplace.api.healthcare.gov/api/v1',
     timeout: parseInt(process.env.CMS_TIMEOUT || '30000', 10),
+  },
+
+  // Demo Account Configuration
+  demo: {
+    enabled: process.env.DEMO_ACCOUNT_ENABLED === 'true',
+    email: process.env.DEMO_EMAIL || 'demo@ownmyhealth.com',
+    password: process.env.DEMO_PASSWORD || 'demo123456',
+  },
+
+  // Email Configuration (SendGrid)
+  email: {
+    enabled: !!process.env.SENDGRID_API_KEY,
+    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+    fromEmail: process.env.EMAIL_FROM || 'noreply@ownmyhealth.com',
+    fromName: process.env.EMAIL_FROM_NAME || 'OwnMyHealth',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
 
   // API Versioning

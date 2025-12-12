@@ -60,11 +60,17 @@ export {
 
 // CMS Marketplace API (Healthcare.gov)
 export {
-  cmsMarketplaceService,
-  CMSMarketplaceError,
-  type CMSPlanDetails,
+  getCMSMarketplaceService,
+  type CMSCounty,
+  type CMSPlanSearchParams,
+  type CMSPlan,
+  type CMSDeductible,
+  type CMSMoop,
   type CMSBenefit,
-  type CMSProvider,
-  type CMSProviderSearchParams,
-  type CMSProviderSearchResult,
+  type CMSCostSharing,
+  type CMSPlanSearchResponse,
+  type CMSFacetGroup,
+  type TransformedPlan,
+  type TransformedBenefit,
+  type MarketplacePlanSearchResult,
 } from './cmsMarketplaceService.js';

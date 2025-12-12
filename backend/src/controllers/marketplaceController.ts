@@ -695,3 +695,60 @@ export async function comparePlans(
     res.status(500).json(response);
   }
 }
+
+
+/**
+ * GET /cms/test
+ * Test CMS API key configuration and connectivity
+ * This endpoint does NOT require authentication
+ */
+export async function testCMSApiKey(
+  _req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const service = getCMSMarketplaceService();
+
+    // Test with a known valid ZIP code (Austin, TX)
+    const testZipcode = '78701';
+    const counties = await service.getCountiesByZipcode(testZipcode);
+
+    if (counties.length > 0) {
+      const response: ApiResponse<{
+        status: string;
+        message: string;
+        testZipcode: string;
+        countiesFound: number;
+      }> = {
+        success: true,
+        data: {
+          status: 'connected',
+          message: 'CMS API key is valid and working',
+          testZipcode,
+          countiesFound: counties.length,
+        },
+      };
+      res.json(response);
+    } else {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'CMS_API_NO_DATA',
+          message: 'CMS API connected but returned no data for test ZIP code',
+        },
+      };
+      res.status(500).json(response);
+    }
+  } catch (error) {
+    logger.error('CMS API key test failed', { data: { error } });
+    const response: ApiResponse = {
+      success: false,
+      error: {
+        code: 'CMS_API_ERROR',
+        message: 'CMS API key test failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+    };
+    res.status(500).json(response);
+  }
+}
