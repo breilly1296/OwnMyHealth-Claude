@@ -90,6 +90,7 @@ export function validateCsrfToken(
     '/auth/reset-password',
     '/auth/verify-email',
     '/auth/resend-verification',
+    '/marketplace/plans/search',
   ];
 
   const isPublicAuthRoute = publicAuthRoutes.some(route =>
