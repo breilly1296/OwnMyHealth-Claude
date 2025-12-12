@@ -425,26 +425,24 @@ export async function getHealthNeedsSummary(
 
   const prisma = getPrismaClient();
 
-  // Count by status
-  const statusCounts = await prisma.healthNeed.groupBy({
-    by: ['status'],
-    where: { userId },
-    _count: { status: true },
-  });
-
-  // Count by urgency
-  const urgencyCounts = await prisma.healthNeed.groupBy({
-    by: ['urgency'],
-    where: { userId },
-    _count: { urgency: true },
-  });
-
-  // Count by type
-  const typeCounts = await prisma.healthNeed.groupBy({
-    by: ['needType'],
-    where: { userId },
-    _count: { needType: true },
-  });
+  // Run all count queries in parallel to avoid N+1 pattern
+  const [statusCounts, urgencyCounts, typeCounts] = await Promise.all([
+    prisma.healthNeed.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { status: true },
+    }),
+    prisma.healthNeed.groupBy({
+      by: ['urgency'],
+      where: { userId },
+      _count: { urgency: true },
+    }),
+    prisma.healthNeed.groupBy({
+      by: ['needType'],
+      where: { userId },
+      _count: { needType: true },
+    }),
+  ]);
 
   const summary = {
     byStatus: Object.fromEntries(

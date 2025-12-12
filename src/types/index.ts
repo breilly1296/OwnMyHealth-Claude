@@ -497,3 +497,6 @@ export interface ProviderRecommendation {
   }[];
   timeframe: string;
 }
+
+// Re-export DNA types for consistent importing
+export * from './dna';

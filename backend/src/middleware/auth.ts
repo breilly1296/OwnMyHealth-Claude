@@ -122,27 +122,7 @@ export function optionalAuth(
   }
 }
 
-/**
- * Role-based authorization middleware
- * Must be used after authenticate middleware
- */
-export function requireRole(...roles: string[]) {
-  return (
-    req: AuthenticatedRequest,
-    _res: Response,
-    next: NextFunction
-  ): void => {
-    if (!req.user) {
-      return next(new UnauthorizedError('Authentication required'));
-    }
-
-    if (!roles.includes(req.user.role)) {
-      return next(new UnauthorizedError('Insufficient permissions'));
-    }
-
-    next();
-  };
-}
+// Note: requireRole is exported from rbac.ts - use that instead for type-safe role checking
 
 /**
  * Generate JWT token (legacy support for other parts of the app)

@@ -113,8 +113,9 @@ export function setOnAuthFailure(callback: () => void) {
 /**
  * Attempt to refresh the access token using the refresh token cookie
  * Returns true if refresh succeeded, false otherwise
+ * Exported for use by other modules (e.g., uploadUtils)
  */
-async function attemptTokenRefresh(): Promise<boolean> {
+export async function attemptTokenRefresh(): Promise<boolean> {
   // If already refreshing, wait for that to complete
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
@@ -211,7 +212,8 @@ async function apiFetch<T>(
         } as ApiError;
       }
       // For successful non-JSON responses (like 204 No Content)
-      return { success: true, data: null as unknown as T };
+      // Return success with undefined data - caller should handle this case
+      return { success: true, data: undefined } as ApiResponse<T>;
     }
 
     if (!response.ok) {
@@ -354,6 +356,35 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+  },
+
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const response = await apiFetch<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    return response.data;
+  },
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await apiFetch<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return response.data;
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const response = await apiFetch<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+    return response.data;
+  },
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    const response = await apiFetch<{ message: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return response.data;
   },
 };
 
@@ -1246,6 +1277,203 @@ export const adminApi = {
 
     const query = searchParams.toString();
     const response = await apiFetch<{ logs: unknown[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(`/admin/audit-logs${query ? `?${query}` : ''}`);
+    return response.data;
+  },
+};
+
+// ============================================
+// MARKETPLACE API (Healthcare.gov)
+// ============================================
+
+// Plan Search Types
+export interface MarketplacePlanSearchParams {
+  zipcode: string;
+  age: number;
+  income: number;
+  householdSize: number;
+  gender?: 'Male' | 'Female';
+  usesTobacco?: boolean;
+  year?: number;
+}
+
+export interface MarketplaceSearchedPlan {
+  id: string;
+  name: string;
+  issuer: {
+    id: string;
+    name: string;
+  };
+  metalLevel: 'catastrophic' | 'bronze' | 'silver' | 'gold' | 'platinum';
+  type: string;
+  premium: number;
+  premiumWithCredit: number;
+  deductible: number;
+  moopAmount: number;
+  ehbPremium?: number;
+  pediatricDentalCoverage?: boolean;
+  hsaEligible?: boolean;
+  benefits?: {
+    name: string;
+    covered: boolean;
+    costSharingDisplay?: string;
+  }[];
+  qualityRating?: {
+    globalRating?: number;
+    globalRatingStr?: string;
+  };
+  brochureUrl?: string;
+  formularyUrl?: string;
+  networkUrl?: string;
+}
+
+export interface MarketplacePlanSearchResult {
+  plans: MarketplaceSearchedPlan[];
+  total: number;
+  facetGroups?: {
+    name: string;
+    facets: { value: string; count: number }[];
+  }[];
+  ranges?: {
+    premiums?: { min: number; max: number };
+    deductibles?: { min: number; max: number };
+  };
+}
+
+export interface MarketplacePlanDetails {
+  id: string;
+  name: string;
+  issuer: {
+    id: string;
+    name: string;
+  };
+  metalLevel: 'catastrophic' | 'bronze' | 'silver' | 'gold' | 'platinum';
+  type: string;
+  premium: number;
+  deductibles: {
+    individual: number;
+    family: number;
+  };
+  outOfPocketMax: {
+    individual: number;
+    family: number;
+  };
+  benefits: MarketplaceBenefit[];
+  network: {
+    url?: string;
+    tier?: string;
+  };
+  formularyUrl?: string;
+  brochureUrl?: string;
+}
+
+export interface MarketplaceBenefit {
+  name: string;
+  covered: boolean;
+  costSharing?: {
+    copay?: number;
+    coinsurance?: number;
+    deductibleApplies?: boolean;
+  };
+  explanation?: string;
+}
+
+export interface MarketplaceProvider {
+  npi: string;
+  name: {
+    first?: string;
+    middle?: string;
+    last?: string;
+    full: string;
+  };
+  specialty?: string[];
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  phone?: string;
+  acceptingNewPatients?: boolean;
+  gender?: string;
+  languages?: string[];
+  facilityType?: string;
+  distance?: number;
+}
+
+export interface MarketplaceProviderSearchParams {
+  zipcode: string;
+  planId?: string;
+  specialty?: string;
+  type?: 'individual' | 'facility';
+  radius?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface MarketplaceProviderSearchResult {
+  providers: MarketplaceProvider[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export const marketplaceApi = {
+  // Search for health insurance plans
+  async searchPlans(params: MarketplacePlanSearchParams): Promise<MarketplacePlanSearchResult> {
+    const response = await apiFetch<MarketplacePlanSearchResult>('/marketplace/plans/search', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    return response.data;
+  },
+
+  // Get plan details from Healthcare.gov
+  async getPlanDetails(planId: string, year?: number): Promise<MarketplacePlanDetails> {
+    const params = year ? `?year=${year}` : '';
+    const response = await apiFetch<MarketplacePlanDetails>(`/marketplace/plans/${planId}${params}`);
+    return response.data;
+  },
+
+  // Get plan benefits
+  async getPlanBenefits(planId: string, year?: number): Promise<MarketplaceBenefit[]> {
+    const params = year ? `?year=${year}` : '';
+    const response = await apiFetch<MarketplaceBenefit[]>(`/marketplace/plans/${planId}/benefits${params}`);
+    return response.data;
+  },
+
+  // Search for providers
+  async searchProviders(params: MarketplaceProviderSearchParams): Promise<MarketplaceProviderSearchResult> {
+    const searchParams = new URLSearchParams();
+    searchParams.set('zipcode', params.zipcode);
+    if (params.planId) searchParams.set('planId', params.planId);
+    if (params.specialty) searchParams.set('specialty', params.specialty);
+    if (params.type) searchParams.set('type', params.type);
+    if (params.radius) searchParams.set('radius', params.radius.toString());
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+
+    const response = await apiFetch<MarketplaceProviderSearchResult>(`/marketplace/providers?${searchParams}`);
+    return response.data;
+  },
+
+  // Get provider by NPI
+  async getProviderByNPI(npi: string): Promise<MarketplaceProvider> {
+    const response = await apiFetch<MarketplaceProvider>(`/marketplace/providers/${npi}`);
+    return response.data;
+  },
+
+  // Check if provider is in-network for a plan
+  async checkProviderNetwork(npi: string, planId: string): Promise<{ inNetwork: boolean; networkTier?: string }> {
+    const response = await apiFetch<{ inNetwork: boolean; networkTier?: string }>(
+      `/marketplace/providers/${npi}/network-check?planId=${encodeURIComponent(planId)}`
+    );
+    return response.data;
+  },
+
+  // Check API health
+  async healthCheck(): Promise<{ healthy: boolean; message: string }> {
+    const response = await apiFetch<{ healthy: boolean; message: string }>('/marketplace/health');
     return response.data;
   },
 };

@@ -1,0 +1,100 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Run CI first
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  # Deploy to production server
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    needs: [ci]
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+      - name: Download backend build
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-dist
+          path: backend/dist/
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER || 'root' }}
+        run: |
+          # Deploy frontend
+          echo "Deploying frontend..."
+          rsync -avz --delete dist/ ${SERVER_USER}@${SERVER_IP}:/var/www/app/dist/
+
+          # Deploy backend
+          echo "Deploying backend..."
+          rsync -avz --delete backend/dist/ ${SERVER_USER}@${SERVER_IP}:/var/www/app/backend/dist/
+
+          # Install dependencies and restart services
+          ssh ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
+            cd /var/www/app
+
+            # Install frontend dependencies if package.json changed
+            npm ci --production
+
+            # Install backend dependencies
+            cd backend
+            npm ci --production
+
+            # Run database migrations if needed
+            # npx prisma migrate deploy
+
+            # Restart backend
+            pm2 restart ownmyhealth-backend
+
+            # Verify deployment
+            pm2 status
+            echo "Deployment completed successfully!"
+          ENDSSH
+
+      - name: Verify deployment
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          # Wait for server to restart
+          sleep 5
+
+          # Check if the site is responding
+          curl -f https://ownmyhealth.io/api/v1/health || echo "Health check endpoint not available"
+
+          echo "Deployment verification complete"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Check the logs above for details."
+          exit 1

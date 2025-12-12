@@ -13,10 +13,11 @@ import { getPrismaClient } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
-import { parseDNAFile, analyzeTraits, getTraitSummary } from '../services/dnaParser.js';
+import { parseDNAFile, analyzeTraits, getTraitSummary, type ParsedVariant } from '../services/dnaParser.js';
 import { getFile, type MulterFile } from '../types/multer.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { dnaControllerLogger } from '../utils/logger.js';
+import { toNumber } from '../utils/numberConversion.js';
 import type {
   DNAData as PrismaDNAData,
   DNAVariant as PrismaDNAVariant,
@@ -24,15 +25,6 @@ import type {
 } from '../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'DNAData';
-
-// Helper to convert Prisma Decimal to number
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value && typeof value === 'object' && 'toNumber' in value) {
-    return (value as { toNumber: () => number }).toNumber();
-  }
-  return Number(value);
-}
 
 // Response types with decrypted values
 interface DNAUploadResponse {
@@ -364,7 +356,7 @@ export async function uploadDNA(
   try {
     // Store variants in batches for efficiency (PHI encrypted)
     const BATCH_SIZE = 1000;
-    const variantBatches = [];
+    const variantBatches: ParsedVariant[][] = [];
 
     for (let i = 0; i < parsingResult.variants.length; i += BATCH_SIZE) {
       const batch = parsingResult.variants.slice(i, i + BATCH_SIZE);

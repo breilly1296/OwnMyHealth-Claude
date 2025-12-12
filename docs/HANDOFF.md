@@ -272,18 +272,29 @@ Master Key (env var)
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| Backend Unit Tests | 308 | ✅ All passing |
-| Frontend Unit Tests | 114 | ✅ All passing |
-| **Total** | **422** | ✅ |
+| Backend Unit Tests | 0 | ⚠️ Not yet implemented |
+| Frontend Unit Tests | 7 | ✅ All passing |
+| **Total** | **7** | ⚠️ |
 
-**Test Areas Covered:**
-- Encryption/decryption
+> **Note:** Test coverage is a known gap. Backend test suite is planned for ThoughtBot engagement. Priority areas for testing include encryption/decryption, authentication flows, and cascade delete behavior.
+
+**Frontend Tests (7 total):**
+- AuthContext.test.tsx
+- useAuth.test.ts
+- Button.test.tsx
+- LoginPage.test.tsx
+- Dashboard.test.tsx
+- BiomarkerSummary.test.tsx
+- AddMeasurementModal.test.tsx
+
+**Backend Tests Needed (ThoughtBot scope):**
+- Encryption/decryption round-trip
+- Authentication flows (login, register, logout, refresh)
 - Biomarker CRUD operations
-- Normal range calculations
-- DNA parsing
+- DNA parsing and storage
 - PDF parsing
-- Authentication flows
 - Audit logging
+- Cascade delete verification
 - Input validation
 
 ### Lint Status

@@ -263,8 +263,7 @@ const MOCK_PROVIDERS: HealthcareProvider[] = [
 
 // Enhanced search function with condition-based filtering
 export async function searchProviders(criteria: ProviderSearchCriteria): Promise<ProviderSearchResult> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Minimal delay to maintain async behavior (removed 1000ms artificial delay)
 
   // Filter providers based on criteria
   let filteredProviders = MOCK_PROVIDERS.filter(provider => {
@@ -387,9 +386,7 @@ export function getRecommendedSpecialistsFromBiomarkers(
 }
 
 export async function getProviderDetails(providerId: string): Promise<HealthcareProvider | null> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+  // Removed 500ms artificial delay - returns immediately for better UX
   return MOCK_PROVIDERS.find(provider => provider.id === providerId) || null;
 }
 
@@ -402,9 +399,7 @@ export async function checkInsuranceAcceptance(
   coinsurance?: number;
   notes?: string;
 }> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
+  // Removed 300ms artificial delay - returns immediately for better UX
   const provider = MOCK_PROVIDERS.find(p => p.id === providerId);
   if (!provider) {
     return { accepted: false };
@@ -604,8 +599,7 @@ export async function getCurrentLocation(): Promise<{ lat: number; lng: number }
 
 export async function geocodeAddress(_address: string): Promise<{ lat: number; lng: number } | null> {
   // In production, this would use a real geocoding service
-  // For now, return San Francisco coordinates
-  await new Promise(resolve => setTimeout(resolve, 500));
+  // For now, return San Francisco coordinates (removed 500ms artificial delay)
   return { lat: 37.7749, lng: -122.4194 };
 }
 

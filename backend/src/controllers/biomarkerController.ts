@@ -15,18 +15,14 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
+import { processBatch } from '../utils/batchProcessor.js';
+import { toNumber } from '../utils/numberConversion.js';
 import type { Biomarker as PrismaBiomarker, DataSourceType } from '../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
 
-// Helper to convert Prisma Decimal to number
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value && typeof value === 'object' && 'toNumber' in value) {
-    return (value as { toNumber: () => number }).toNumber();
-  }
-  return Number(value);
-}
+// Batch size for concurrent decryption operations
+const DECRYPT_BATCH_SIZE = 20;
 
 // Response type for biomarkers (with decrypted values)
 interface BiomarkerResponse {
@@ -140,9 +136,11 @@ export async function getBiomarkers(
     orderBy: { measurementDate: 'desc' },
   });
 
-  // Decrypt all biomarkers
-  const decryptedBiomarkers = await Promise.all(
-    biomarkers.map((b) => toResponse(b, userSalt))
+  // Decrypt all biomarkers with controlled concurrency
+  const decryptedBiomarkers = await processBatch(
+    biomarkers,
+    (b) => toResponse(b, userSalt),
+    DECRYPT_BATCH_SIZE
   );
 
   // Audit log: READ access to biomarker list
@@ -500,16 +498,19 @@ export async function bulkCreateBiomarkers(
     }
   });
 
-  // If no valid items, return error
+  // If no valid items, return error with proper error object format
   if (validBiomarkerData.length === 0) {
     res.status(400).json({
       success: false,
-      error: 'All biomarkers failed validation',
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'All biomarkers failed validation',
+        details: failedItems,
+      },
       meta: {
         total: inputs.length,
         succeeded: 0,
         failed: failedItems.length,
-        failedItems,
       },
     });
     return;
@@ -525,16 +526,19 @@ export async function bulkCreateBiomarkers(
     const errorMessage = dbError instanceof Error ? dbError.message : 'Database error';
     res.status(500).json({
       success: false,
-      error: `Failed to create biomarkers: ${errorMessage}`,
-      meta: {
-        total: inputs.length,
-        succeeded: 0,
-        failed: inputs.length,
-        failedItems: validBiomarkerData.map((_, i) => ({
+      error: {
+        code: 'DATABASE_ERROR',
+        message: 'Failed to create biomarkers',
+        details: validBiomarkerData.map((_, i) => ({
           index: i,
           name: validBiomarkerData[i].name,
           error: errorMessage,
         })),
+      },
+      meta: {
+        total: inputs.length,
+        succeeded: 0,
+        failed: inputs.length,
       },
     });
     return;

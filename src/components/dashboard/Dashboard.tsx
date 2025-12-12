@@ -17,7 +17,7 @@
  * @module components/dashboard/Dashboard
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Upload, Brain, FileText, Shield, Dna, Loader2, LogOut, User, ChevronDown } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
 import type { DNAVariant, DNAFileInfo } from '../../types/dna';
@@ -96,17 +96,33 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // Error state for user feedback
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Helper to show error toast
+  // Helper to show error toast with proper cleanup
   const showErrorToast = useCallback((message: string) => {
     dashboardLogger.error(message);
     setErrorMessage(message);
     setShowError(true);
+
+    // Clear any existing timeout to prevent memory leaks
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+
     // Auto-hide after 5 seconds
-    setTimeout(() => {
+    errorTimeoutRef.current = setTimeout(() => {
       setShowError(false);
       setErrorMessage(null);
     }, 5000);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
   }, []);
 
   // ============================================
@@ -397,6 +413,22 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   };
 
   // ============================================
+  // Memoized Computed Values
+  // ============================================
+
+  // Memoize biomarker filtering to avoid recalculating on every render
+  const { inRangeCount, outOfRangeCount, outOfRangeBiomarkers } = useMemo(() => {
+    const outOfRange = biomarkers.filter(
+      b => b.value < b.normalRange.min || b.value > b.normalRange.max
+    );
+    return {
+      inRangeCount: biomarkers.length - outOfRange.length,
+      outOfRangeCount: outOfRange.length,
+      outOfRangeBiomarkers: outOfRange,
+    };
+  }, [biomarkers]);
+
+  // ============================================
   // Loading State
   // ============================================
 
@@ -416,9 +448,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // ============================================
 
   const renderDashboardContent = () => {
-    const inRangeCount = biomarkers.filter(b => b.value >= b.normalRange.min && b.value <= b.normalRange.max).length;
-    const outOfRangeCount = biomarkers.filter(b => b.value < b.normalRange.min || b.value > b.normalRange.max).length;
-    const outOfRangeBiomarkers = biomarkers.filter(b => b.value < b.normalRange.min || b.value > b.normalRange.max);
+    // Use memoized values for biomarker counts (computed above)
     const scoreColor = aiAnalysis.overallHealthScore >= 70 ? '#22c55e' : aiAnalysis.overallHealthScore >= 50 ? '#f59e0b' : '#ef4444';
 
     return (

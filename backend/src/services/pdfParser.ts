@@ -7,6 +7,7 @@
  */
 
 import { BadRequestError, InternalServerError } from '../middleware/errorHandler.js';
+import { pdfLogger } from '../utils/logger.js';
 
 /**
  * PDF Parse Result interface
@@ -69,14 +70,12 @@ interface ExtractionLog {
 }
 
 function logExtraction(log: ExtractionLog): void {
-  console.log(`[pdfParser] Extracted biomarker:`, {
+  // Use structured logger instead of console.log to prevent PHI leaks in production
+  pdfLogger.debug('Extracted biomarker', {
     name: log.biomarkerName,
-    value: log.extractedValue,
-    unit: log.extractedUnit,
-    range: log.extractedRange,
     confidence: log.confidence.toFixed(2),
-    factors: log.confidenceFactors,
-    rawMatch: log.rawMatch.substring(0, 100),
+    factors: log.confidenceFactors.join(', '),
+    // Note: value, unit, and range omitted to prevent PHI in logs
   });
 }
 
@@ -274,11 +273,11 @@ interface SBCExtractionLog {
 }
 
 function logSBCExtraction(log: SBCExtractionLog): void {
-  console.log(`[pdfParser:SBC] Extracted ${log.field}:`, {
-    value: log.extractedValue,
+  // Use structured logger instead of console.log to prevent PHI leaks in production
+  pdfLogger.debug(`SBC extracted ${log.field}`, {
     confidence: log.confidence.toFixed(2),
     source: log.source,
-    rawMatch: log.rawMatch.substring(0, 80),
+    // Note: value omitted to prevent PHI in logs
   });
 }
 
@@ -1015,7 +1014,7 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
   try {
     pdf = await getPdfParser();
   } catch (error) {
-    console.error('[pdfParser] Failed to load PDF parser:', error);
+    pdfLogger.error('Failed to load PDF parser', { error: error instanceof Error ? error.message : 'Unknown error' });
     throw new InternalServerError('PDF parsing service is unavailable');
   }
 
@@ -1024,7 +1023,7 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
     text = pdfResult.text;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[pdfParser] Failed to parse PDF "${filename}":`, errorMsg);
+    pdfLogger.error('Failed to parse PDF', { filename, error: errorMsg });
     throw new BadRequestError(`Unable to parse PDF file. The file may be corrupted, password-protected, or in an unsupported format.`);
   }
 
@@ -1032,7 +1031,7 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
     throw new BadRequestError('PDF file appears to be empty or contains no extractable text. Please ensure the PDF contains readable text (not scanned images).');
   }
 
-  console.log(`[pdfParser] Parsing lab report: ${filename} (${text.length} chars extracted)`);
+  pdfLogger.info('Parsing lab report', { filename, textLength: text.length });
 
   const biomarkers: ParsedBiomarker[] = [];
   const foundNames = new Set<string>();
@@ -1041,7 +1040,7 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
   const labName = extractLabName(text);
   const reportDate = extractDate(text);
 
-  console.log(`[pdfParser] Lab: ${labName || 'Unknown'}, Date: ${reportDate}`);
+  pdfLogger.info('Lab report metadata', { labName: labName || 'Unknown', reportDate });
 
   // STRATEGY 1: Search for known biomarkers using comprehensive patterns
   for (const definition of BIOMARKER_DEFINITIONS) {
@@ -1232,10 +1231,10 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
     return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
   });
 
-  console.log(`[pdfParser] Extraction complete: ${biomarkers.length} biomarkers found`);
+  pdfLogger.info('Lab report extraction complete', { biomarkersFound: biomarkers.length });
   if (biomarkers.length > 0) {
     const avgConfidence = biomarkers.reduce((sum, b) => sum + b.extractionConfidence, 0) / biomarkers.length;
-    console.log(`[pdfParser] Average extraction confidence: ${(avgConfidence * 100).toFixed(1)}%`);
+    pdfLogger.info('Average extraction confidence', { confidence: `${(avgConfidence * 100).toFixed(1)}%` });
   }
 
   return {
@@ -1518,7 +1517,7 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
   try {
     pdf = await getPdfParser();
   } catch (error) {
-    console.error('[pdfParser:SBC] Failed to load PDF parser:', error);
+    pdfLogger.error('SBC: Failed to load PDF parser', { error: error instanceof Error ? error.message : 'Unknown error' });
     throw new InternalServerError('PDF parsing service is unavailable');
   }
 
@@ -1527,7 +1526,7 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
     text = pdfResult.text;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[pdfParser:SBC] Failed to parse SBC PDF "${filename}":`, errorMsg);
+    pdfLogger.error('SBC: Failed to parse PDF', { filename, error: errorMsg });
     throw new BadRequestError(`Unable to parse SBC PDF file. The file may be corrupted, password-protected, or in an unsupported format.`);
   }
 
@@ -1535,7 +1534,7 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
     throw new BadRequestError('SBC PDF file appears to be empty or contains no extractable text. Please ensure the PDF contains readable text.');
   }
 
-  console.log(`[pdfParser:SBC] Parsing SBC document: ${filename} (${text.length} chars extracted)`);
+  pdfLogger.info('Parsing SBC document', { filename, textLength: text.length });
 
   // ============================================
   // EXTRACT PLAN IDENTIFICATION
@@ -1761,7 +1760,7 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
   // CALCULATE CONFIDENCE & BUILD RESULT
   // ============================================
 
-  const { confidence, factors } = calculateEnhancedSBCConfidence(text, {
+  const { confidence } = calculateEnhancedSBCConfidence(text, {
     planName: !!planName,
     insurerName: !!insurerName,
     deductible: !!deductible,
@@ -1769,13 +1768,13 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
     benefitCount: benefits.length,
   });
 
-  console.log(`[pdfParser:SBC] Extraction complete:`);
-  console.log(`  Plan: ${planName || 'Unknown'} (${planType || 'Unknown type'})`);
-  console.log(`  Insurer: ${insurerName || 'Unknown'}`);
-  console.log(`  Deductible: $${deductible || 'N/A'} individual / $${deductibleFamily || 'N/A'} family`);
-  console.log(`  OOP Max: $${outOfPocketMax || 'N/A'} individual / $${outOfPocketMaxFamily || 'N/A'} family`);
-  console.log(`  Benefits extracted: ${benefits.length}`);
-  console.log(`  Confidence: ${(confidence * 100).toFixed(1)}% (${factors.join(', ')})`);
+  pdfLogger.info('SBC extraction complete', {
+    planName: planName || 'Unknown',
+    planType: planType || 'Unknown',
+    benefitsExtracted: benefits.length,
+    confidence: `${(confidence * 100).toFixed(1)}%`,
+    // Note: Financial details (deductible, OOP max) omitted from logs
+  });
 
   const plan: ParsedInsurancePlan = {
     planName,

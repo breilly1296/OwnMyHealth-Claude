@@ -35,6 +35,7 @@ import {
   User,
   SessionMetadata,
 } from '../services/authService.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService.js';
 
 // ============================================
 // Audit Logging Helper
@@ -171,14 +172,8 @@ export async function register(
   // Create user (starts as unverified with verification token)
   const { user, verificationToken } = await createUser(email, password);
 
-  // Log verification URL (dev only - in production, this would send an email)
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const verificationUrl = `${baseUrl}/api/v1/auth/verify-email?token=${verificationToken}`;
-  logger.devBox('📧 EMAIL VERIFICATION REQUIRED', [
-    `Email: ${user.email}`,
-    `Verification URL: ${verificationUrl}`,
-    'Token expires in 24 hours',
-  ]);
+  // Send verification email
+  await sendVerificationEmail(user.email, verificationToken);
 
   // NOTE: We intentionally DO NOT generate tokens on registration.
   // Users must verify their email first, then log in to get tokens.
@@ -521,16 +516,13 @@ export async function demoLogin(
   req: Request,
   res: Response
 ): Promise<void> {
-  // Only allow in development
-  if (config.isProduction) {
-    throw new BadRequestError('Demo login is not available in production');
+  // Demo mode is ONLY available in development - never in production
+  if (!config.demo.enabled) {
+    throw new BadRequestError('Demo mode is disabled in production');
   }
 
-  const DEMO_EMAIL = 'demo@ownmyhealth.com';
-  const DEMO_PASSWORD = 'Demo123!';
-
   // Validate that demo user exists in the database
-  const demoUser = await findUserByEmail(DEMO_EMAIL);
+  const demoUser = await findUserByEmail(config.demo.email);
   if (!demoUser) {
     logger.warn('Demo login attempted but demo user does not exist. Run seed script.');
     throw new BadRequestError(
@@ -539,7 +531,7 @@ export async function demoLogin(
   }
 
   // Use attemptLogin for proper security flow (which has demo bypass built in)
-  const result = await attemptLogin(DEMO_EMAIL, DEMO_PASSWORD);
+  const result = await attemptLogin(config.demo.email, config.demo.password);
 
   if (!result.success) {
     throw new BadRequestError(result.error || 'Demo login failed');
@@ -645,15 +637,9 @@ export async function resendVerification(
     return;
   }
 
-  // Log verification URL (dev only - in production, would send email)
+  // Send verification email if token was generated
   if (result.token) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const verificationUrl = `${baseUrl}/api/v1/auth/verify-email?token=${result.token}`;
-    logger.devBox('📧 VERIFICATION EMAIL RESENT', [
-      `Email: ${email}`,
-      `Verification URL: ${verificationUrl}`,
-      'Token expires in 24 hours',
-    ]);
+    await sendVerificationEmail(email, result.token);
   }
 
   // Always return success (don't reveal if user exists)
@@ -690,15 +676,9 @@ export async function forgotPassword(
     tokenGenerated: !!result.token,
   });
 
-  // Log reset URL (dev only - in production, would send email)
+  // Send password reset email if token was generated
   if (result.token) {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const resetUrl = `${baseUrl}/api/v1/auth/reset-password?token=${result.token}`;
-    logger.devBox('🔐 PASSWORD RESET REQUESTED', [
-      `Email: ${email}`,
-      `Reset URL: ${resetUrl}`,
-      'Token expires in 1 hour',
-    ]);
+    await sendPasswordResetEmail(email, result.token);
   }
 
   // Always return success (don't reveal if user exists)

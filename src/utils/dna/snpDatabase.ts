@@ -853,9 +853,7 @@ const SNP_DATABASE: Record<string, Record<string, Omit<GeneticTrait, 'id' | 'rsi
 
 // Function to analyze DNA variants and return genetic traits
 export async function analyzeVariants(variants: DNAVariant[]): Promise<GeneticTrait[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
+  // Removed 1500ms artificial delay - processes immediately for better UX
   const results: GeneticTrait[] = [];
   
   // Create a map for faster lookup
