@@ -30,10 +30,10 @@ router.get(
   asyncHandler(healthController.analyzeHealth)
 );
 
-// GET /api/v1/health/needs - Get health needs
+// GET /api/v1/health/needs - Analyze and derive health needs from biomarkers
 router.get(
   '/needs',
-  asyncHandler(healthController.getHealthNeeds)
+  asyncHandler(healthController.analyzeHealthNeeds)
 );
 
 // GET /api/v1/health/providers - Get provider recommendations

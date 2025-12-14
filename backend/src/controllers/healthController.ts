@@ -53,8 +53,8 @@ export async function analyzeHealth(
   res.json(response);
 }
 
-// Get health needs (conditions + actions)
-export async function getHealthNeeds(
+// Analyze and derive health needs from biomarkers (conditions + actions)
+export async function analyzeHealthNeeds(
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
