@@ -20,7 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
 import { getPrismaClient } from './database.js';
 import { logger } from '../utils/logger.js';
-import type { User as PrismaUser, UserRole } from '../generated/prisma/index.js';
+import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
 
 // Email verification token expiration (24 hours)
 const EMAIL_VERIFICATION_EXPIRATION_HOURS = 24;

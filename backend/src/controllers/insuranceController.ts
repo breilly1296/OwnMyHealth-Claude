@@ -16,7 +16,7 @@ import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseBooleanParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { toNumber } from '../utils/numberConversion.js';
-import type { InsurancePlan as PrismaInsurancePlan, InsuranceBenefit as PrismaInsuranceBenefit } from '../generated/prisma/index.js';
+import type { InsurancePlan as PrismaInsurancePlan, InsuranceBenefit as PrismaInsuranceBenefit } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'InsurancePlan';
 

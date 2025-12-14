@@ -14,7 +14,7 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseStringParam } from '../utils/queryHelpers.js';
-import type { HealthGoal as PrismaHealthGoal, GoalProgressHistory, Prisma } from '../generated/prisma/index.js';
+import type { HealthGoal as PrismaHealthGoal, GoalProgressHistory, Prisma } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'HealthGoal';
 

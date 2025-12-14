@@ -14,7 +14,7 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseStringParam } from '../utils/queryHelpers.js';
-import type { HealthNeed as PrismaHealthNeed } from '../generated/prisma/index.js';
+import type { HealthNeed as PrismaHealthNeed } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'HealthNeed';
 

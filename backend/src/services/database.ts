@@ -20,7 +20,7 @@
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { logger } from '../utils/logger.js';
-import { PrismaClient } from '../generated/prisma';
+import { PrismaClient } from '../../generated/prisma';
 import { getAuditLogService, AuditLogService } from './auditLog.js';
 import { getEncryptionService, EncryptionService } from './encryption.js';
 

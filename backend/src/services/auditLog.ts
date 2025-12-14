@@ -1,4 +1,4 @@
-import { PrismaClient, AuditAction, ActorType } from '../generated/prisma';
+import { PrismaClient, AuditAction, ActorType } from '../../generated/prisma';
 import { getEncryptionService } from './encryption.js';
 import { Request } from 'express';
 import { logger } from '../utils/logger.js';

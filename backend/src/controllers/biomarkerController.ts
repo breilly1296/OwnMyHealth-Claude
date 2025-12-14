@@ -17,7 +17,7 @@ import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { processBatch } from '../utils/batchProcessor.js';
 import { toNumber } from '../utils/numberConversion.js';
-import type { Biomarker as PrismaBiomarker, DataSourceType } from '../generated/prisma/index.js';
+import type { Biomarker as PrismaBiomarker, DataSourceType } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
 

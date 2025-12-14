@@ -22,7 +22,7 @@ import type {
   DNAData as PrismaDNAData,
   DNAVariant as PrismaDNAVariant,
   GeneticTrait as PrismaGeneticTrait,
-} from '../generated/prisma/index.js';
+} from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'DNAData';
 
