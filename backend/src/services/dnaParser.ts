@@ -1025,6 +1025,12 @@ export async function parseDNAFile(
     warnings.push(`High number of invalid lines (${invalidLines}/${lineNumber}). File may be corrupted or in unexpected format.`);
   }
 
+  // SECURITY: Clear sensitive DNA data from memory
+  // Zero out the input buffer to prevent data lingering in memory
+  buffer.fill(0);
+  // Clear the lines array (allows garbage collection of string data)
+  lines.length = 0;
+
   return {
     success: variants.length > 0,
     source,
