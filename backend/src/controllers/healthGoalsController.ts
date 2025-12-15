@@ -294,38 +294,43 @@ export async function createHealthGoal(
     ? calculateProgress(startValue, currentValue, targetValue, direction || 'DECREASE')
     : 0;
 
-  const goal = await prisma.healthGoal.create({
-    data: {
-      userId,
-      name,
-      descriptionEncrypted,
-      category,
-      targetValue,
-      currentValue: currentValue ?? null,
-      startValue,
-      unit,
-      direction: direction || 'DECREASE',
-      relatedBiomarkerId: relatedBiomarkerId || null,
-      startDate: new Date(startDate),
-      targetDate: new Date(targetDate),
-      status: 'ACTIVE',
-      progress,
-      milestones: milestones ? JSON.stringify(milestones) : null,
-      reminderFrequency: reminderFrequency || null,
-    },
-  });
-
-  // Create initial progress history entry if currentValue provided
-  if (currentValue !== undefined) {
-    await prisma.goalProgressHistory.create({
+  // Transaction ensures goal and initial history are created atomically
+  const goal = await prisma.$transaction(async (tx) => {
+    const newGoal = await tx.healthGoal.create({
       data: {
-        goalId: goal.id,
-        value: currentValue,
+        userId,
+        name,
+        descriptionEncrypted,
+        category,
+        targetValue,
+        currentValue: currentValue ?? null,
+        startValue,
+        unit,
+        direction: direction || 'DECREASE',
+        relatedBiomarkerId: relatedBiomarkerId || null,
+        startDate: new Date(startDate),
+        targetDate: new Date(targetDate),
+        status: 'ACTIVE',
         progress,
-        noteEncrypted: encryptionService.encrypt('Initial value', userSalt),
+        milestones: milestones ? JSON.stringify(milestones) : null,
+        reminderFrequency: reminderFrequency || null,
       },
     });
-  }
+
+    // Create initial progress history entry if currentValue provided
+    if (currentValue !== undefined) {
+      await tx.goalProgressHistory.create({
+        data: {
+          goalId: newGoal.id,
+          value: currentValue,
+          progress,
+          noteEncrypted: encryptionService.encrypt('Initial value', userSalt),
+        },
+      });
+    }
+
+    return newGoal;
+  });
 
   // Audit log
   const auditService = getAuditLogService(prisma);
