@@ -485,47 +485,52 @@ export async function processDNAFile(
   });
 
   try {
-    // Create variants with encrypted genotype
-    for (const variant of variants) {
-      await prisma.dNAVariant.create({
+    // Transaction ensures all operations succeed or fail together
+    await prisma.$transaction(async (tx) => {
+      // Bulk create variants with encrypted genotype - O(1) instead of O(n)
+      if (variants.length > 0) {
+        await tx.dNAVariant.createMany({
+          data: variants.map(variant => ({
+            dnaDataId: uploadId,
+            rsid: variant.rsid,
+            chromosome: variant.chromosome,
+            position: variant.position,
+            genotypeEncrypted: encryptionService.encrypt(variant.genotype, userSalt),
+          })),
+        });
+      }
+
+      // Bulk create traits with encrypted fields - O(1) instead of O(n)
+      if (traits.length > 0) {
+        await tx.geneticTrait.createMany({
+          data: traits.map(trait => ({
+            dnaDataId: uploadId,
+            traitName: trait.traitName,
+            category: trait.category,
+            rsid: trait.rsid,
+            riskLevel: trait.riskLevel as 'HIGH' | 'MODERATE' | 'LOW' | 'PROTECTIVE' | 'UNKNOWN',
+            descriptionEncrypted: encryptionService.encrypt(trait.description, userSalt),
+            recommendationsEncrypted: trait.recommendations
+              ? encryptionService.encrypt(trait.recommendations, userSalt)
+              : null,
+            confidence: trait.confidence,
+            citationCount: trait.citationCount,
+          })),
+        });
+      }
+
+      // Update upload with final stats
+      await tx.dNAData.update({
+        where: { id: uploadId },
         data: {
-          dnaDataId: uploadId,
-          rsid: variant.rsid,
-          chromosome: variant.chromosome,
-          position: variant.position,
-          genotypeEncrypted: encryptionService.encrypt(variant.genotype, userSalt),
+          totalVariants: variants.length,
+          validVariants: variants.length,
+          processingStatus: 'COMPLETED',
+          processedAt: new Date(),
         },
       });
-    }
-
-    // Create traits with encrypted fields
-    for (const trait of traits) {
-      await prisma.geneticTrait.create({
-        data: {
-          dnaDataId: uploadId,
-          traitName: trait.traitName,
-          category: trait.category,
-          rsid: trait.rsid,
-          riskLevel: trait.riskLevel as 'HIGH' | 'MODERATE' | 'LOW' | 'PROTECTIVE' | 'UNKNOWN',
-          descriptionEncrypted: encryptionService.encrypt(trait.description, userSalt),
-          recommendationsEncrypted: trait.recommendations
-            ? encryptionService.encrypt(trait.recommendations, userSalt)
-            : null,
-          confidence: trait.confidence,
-          citationCount: trait.citationCount,
-        },
-      });
-    }
-
-    // Update upload with final stats
-    await prisma.dNAData.update({
-      where: { id: uploadId },
-      data: {
-        totalVariants: variants.length,
-        validVariants: variants.length,
-        processingStatus: 'COMPLETED',
-        processedAt: new Date(),
-      },
+    }, {
+      timeout: 60000, // 1 minute timeout for processing
     });
   } catch (error) {
     // Mark as failed on error

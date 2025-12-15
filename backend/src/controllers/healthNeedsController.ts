@@ -495,22 +495,29 @@ export async function bulkCreateHealthNeeds(
   const userSalt = await getUserEncryptionSalt(userId);
   const auditService = getAuditLogService(prisma);
 
+  // Transaction ensures all creates succeed or fail together
+  const createdRecords = await prisma.$transaction(async (tx) => {
+    const records: { created: PrismaHealthNeed; need: typeof needs[number] }[] = [];
+    for (const need of needs) {
+      const created = await tx.healthNeed.create({
+        data: {
+          userId,
+          needType: need.needType as 'CONDITION' | 'ACTION' | 'SERVICE' | 'FOLLOW_UP',
+          name: need.name,
+          descriptionEncrypted: encryptionService.encrypt(need.description, userSalt),
+          urgency: need.urgency as 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE',
+          status: 'PENDING',
+          relatedBiomarkerIds: need.relatedBiomarkerIds || [],
+        },
+      });
+      records.push({ created, need });
+    }
+    return records;
+  });
+
+  // Build response and audit logs outside transaction (non-critical)
   const createdNeeds: HealthNeedResponse[] = [];
-
-  for (const need of needs) {
-    const created = await prisma.healthNeed.create({
-      data: {
-        userId,
-        needType: need.needType as 'CONDITION' | 'ACTION' | 'SERVICE' | 'FOLLOW_UP',
-        name: need.name,
-        descriptionEncrypted: encryptionService.encrypt(need.description, userSalt),
-        urgency: need.urgency as 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE',
-        status: 'PENDING',
-        relatedBiomarkerIds: need.relatedBiomarkerIds || [],
-      },
-    });
-
-    // Audit log: CREATE health need (for each in bulk)
+  for (const { created, need } of createdRecords) {
     await auditService.logCreate(RESOURCE_TYPE, created.id, {
       needType: need.needType,
       name: need.name,
