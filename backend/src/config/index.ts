@@ -72,10 +72,11 @@ export const config = {
   },
 
   // Demo Account Configuration
+  // SECURITY: No hardcoded fallbacks - must be explicitly configured via env vars
   demo: {
     enabled: process.env.DEMO_ACCOUNT_ENABLED === 'true',
-    email: process.env.DEMO_EMAIL || 'demo@ownmyhealth.com',
-    password: process.env.DEMO_PASSWORD || 'demo123456',
+    email: process.env.DEMO_EMAIL || '',
+    password: process.env.DEMO_PASSWORD || '',
   },
 
   // Email Configuration (SendGrid)
@@ -178,5 +179,16 @@ if (config.isProduction) {
   const corsOrigin = config.cors.origin;
   if (Array.isArray(corsOrigin) && corsOrigin.some(o => o.includes('localhost'))) {
     process.stderr.write(`${new Date().toISOString()} WARN [Security] CORS origin contains localhost URLs in production\n`);
+  }
+
+  // Validate demo account configuration
+  if (config.demo.enabled) {
+    process.stderr.write(`${new Date().toISOString()} WARN [Security] Demo account is enabled in production - this is not recommended\n`);
+    if (!config.demo.email || !config.demo.password) {
+      throw new Error(
+        'DEMO_ACCOUNT_ENABLED is true but DEMO_EMAIL or DEMO_PASSWORD is not set. ' +
+        'Either disable demo mode or provide credentials via environment variables.'
+      );
+    }
   }
 }
