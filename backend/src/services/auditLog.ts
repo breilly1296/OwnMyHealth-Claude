@@ -471,4 +471,47 @@ export function getAuditLogService(prisma: PrismaClient): AuditLogService {
   return auditLogServiceInstance;
 }
 
+// ============================================
+// Audit Log Cleanup Scheduler
+// ============================================
+
+let auditCleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Start the audit log cleanup scheduler
+ * Runs daily to remove logs older than 7-year retention period
+ */
+export function startAuditCleanup(prisma: PrismaClient): void {
+  if (auditCleanupInterval) {
+    return; // Already running
+  }
+
+  const service = getAuditLogService(prisma);
+
+  // Run cleanup daily (every 24 hours)
+  auditCleanupInterval = setInterval(async () => {
+    try {
+      const count = await service.cleanupOldLogs();
+      if (count > 0) {
+        console.log(`[AuditLog] Cleaned up ${count} old audit logs`);
+      }
+    } catch (error) {
+      console.error('[AuditLog] Cleanup failed:', error);
+    }
+  }, 24 * 60 * 60 * 1000);
+
+  console.log('[AuditLog] Cleanup scheduler started (runs daily)');
+}
+
+/**
+ * Stop the audit log cleanup scheduler
+ */
+export function stopAuditCleanup(): void {
+  if (auditCleanupInterval) {
+    clearInterval(auditCleanupInterval);
+    auditCleanupInterval = null;
+    console.log('[AuditLog] Cleanup scheduler stopped');
+  }
+}
+
 export default AuditLogService;

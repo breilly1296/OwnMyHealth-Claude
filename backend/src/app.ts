@@ -49,8 +49,9 @@ import routes from './routes/index.js';
 import { standardLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { csrfProtection, csrfTokenHandler } from './middleware/csrf.js';
-import { initializeDatabase, disconnectDatabase, checkDatabaseHealth } from './services/database.js';
+import { initializeDatabase, disconnectDatabase, checkDatabaseHealth, getPrismaClient } from './services/database.js';
 import { initializeDemoUser, startSessionCleanup, stopSessionCleanup } from './services/authService.js';
+import { startAuditCleanup, stopAuditCleanup } from './services/auditLog.js';
 import { logger } from './utils/logger.js';
 
 // SECURITY: Get safe CORS origins for the environment
@@ -184,6 +185,9 @@ async function startServer() {
     // Start session cleanup scheduler
     startSessionCleanup();
 
+    // Start audit log cleanup scheduler (runs daily)
+    startAuditCleanup(getPrismaClient());
+
     const server = app.listen(config.port, () => {
       logger.startup(`
 ╔═══════════════════════════════════════════════════════╗
@@ -209,6 +213,7 @@ async function startServer() {
     const gracefulShutdown = async (signal: string) => {
       logger.startup(`${signal} received, shutting down gracefully...`);
       stopSessionCleanup();
+      stopAuditCleanup();
       server.close(async () => {
         await disconnectDatabase();
         logger.startup('Server closed');
