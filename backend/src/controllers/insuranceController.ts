@@ -461,16 +461,20 @@ export async function comparePlans(
 function compareBenefits(plans: InsurancePlanResponse[]) {
   const allServices = new Set<string>();
 
-  plans.forEach((plan) => {
+  // Pre-build benefit lookup maps for O(1) access instead of O(n) find()
+  const planBenefitMaps = plans.map((plan) => {
+    const benefitMap = new Map<string, typeof plan.benefits[number]>();
     plan.benefits.forEach((benefit) => {
       allServices.add(benefit.serviceName);
+      benefitMap.set(benefit.serviceName, benefit);
     });
+    return { plan, benefitMap };
   });
 
   return Array.from(allServices).map((serviceName) => ({
     serviceName,
-    coverage: plans.map((plan) => {
-      const benefit = plan.benefits.find((b) => b.serviceName === serviceName);
+    coverage: planBenefitMaps.map(({ plan, benefitMap }) => {
+      const benefit = benefitMap.get(serviceName); // O(1) instead of O(n)
       return {
         planId: plan.id,
         planName: plan.planName,
