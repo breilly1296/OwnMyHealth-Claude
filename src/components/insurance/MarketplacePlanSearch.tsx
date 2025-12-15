@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import {
   marketplaceApi,
-  type MarketplaceSearchedPlan,
   type MarketplacePlanSearchResult,
   type MarketplacePlanSearchParams
 } from '../../services/api';
