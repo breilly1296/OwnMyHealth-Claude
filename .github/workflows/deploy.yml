@@ -64,11 +64,11 @@ jobs:
             cd /var/www/app
 
             # Install frontend dependencies if package.json changed
-            npm ci --production
+            npm install --production
 
             # Install backend dependencies
             cd backend
-            npm ci --production
+            npm install --production
 
             # Run database migrations if needed
             # npx prisma migrate deploy
