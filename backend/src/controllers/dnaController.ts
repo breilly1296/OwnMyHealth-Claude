@@ -13,7 +13,7 @@ import { getPrismaClient } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
-import { parseDNAFile, analyzeTraits, getTraitSummary, type ParsedVariant } from '../services/dnaParser.js';
+import { parseDNAFile, analyzeTraits, getTraitSummary } from '../services/dnaParser.js';
 import { getFile, type MulterFile } from '../types/multer.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { dnaControllerLogger } from '../utils/logger.js';
@@ -341,35 +341,27 @@ export async function uploadDNA(
 
   dnaControllerLogger.info(`Parsed variants`, { validVariants: parsingResult.validVariants, traitsCount: traits.length });
 
-  // Create upload record
-  const upload = await prisma.dNAData.create({
-    data: {
-      userId,
-      filename: file.originalname,
-      source: parsingResult.source,
-      totalVariants: parsingResult.totalLines,
-      validVariants: parsingResult.validVariants,
-      processingStatus: 'PROCESSING',
-    },
-  });
+  // All database operations in a single transaction for data integrity
+  const upload = await prisma.$transaction(async (tx) => {
+    // Create upload record
+    const uploadRecord = await tx.dNAData.create({
+      data: {
+        userId,
+        filename: file.originalname,
+        source: parsingResult.source,
+        totalVariants: parsingResult.totalLines,
+        validVariants: parsingResult.validVariants,
+        processingStatus: 'PROCESSING',
+      },
+    });
 
-  try {
     // Store variants in batches for efficiency (PHI encrypted)
     const BATCH_SIZE = 1000;
-    const variantBatches: ParsedVariant[][] = [];
-
     for (let i = 0; i < parsingResult.variants.length; i += BATCH_SIZE) {
       const batch = parsingResult.variants.slice(i, i + BATCH_SIZE);
-      variantBatches.push(batch);
-    }
-
-    dnaControllerLogger.debug(`Storing variants in batches`, { variantCount: parsingResult.variants.length, batchCount: variantBatches.length });
-
-    for (let batchIdx = 0; batchIdx < variantBatches.length; batchIdx++) {
-      const batch = variantBatches[batchIdx];
-      await prisma.dNAVariant.createMany({
+      await tx.dNAVariant.createMany({
         data: batch.map(v => ({
-          dnaDataId: upload.id,
+          dnaDataId: uploadRecord.id,
           rsid: v.rsid,
           chromosome: v.chromosome,
           position: v.position,
@@ -377,92 +369,84 @@ export async function uploadDNA(
         })),
       });
 
-      if ((batchIdx + 1) % 10 === 0) {
-        dnaControllerLogger.debug(`Stored batch progress`, { batch: batchIdx + 1, total: variantBatches.length });
+      if ((i / BATCH_SIZE + 1) % 10 === 0) {
+        dnaControllerLogger.debug(`Stored batch progress`, { batch: Math.floor(i / BATCH_SIZE) + 1, total: Math.ceil(parsingResult.variants.length / BATCH_SIZE) });
       }
     }
 
-    // Store genetic traits (PHI encrypted) - PERFORMANCE: Use createMany for O(1) instead of O(n)
+    // Store genetic traits (PHI encrypted)
     dnaControllerLogger.debug(`Storing genetic traits`, { count: traits.length });
 
     if (traits.length > 0) {
-      const traitData = traits.map(trait => ({
-        dnaDataId: upload.id,
-        traitName: trait.traitName,
-        category: trait.category,
-        rsid: trait.rsid,
-        riskLevel: trait.riskLevel,
-        descriptionEncrypted: encryptionService.encrypt(trait.description, userSalt),
-        recommendationsEncrypted: encryptionService.encrypt(trait.recommendations, userSalt),
-        confidence: trait.confidence,
-        citationCount: trait.citationCount,
-      }));
-
-      await prisma.geneticTrait.createMany({
-        data: traitData,
+      await tx.geneticTrait.createMany({
+        data: traits.map(trait => ({
+          dnaDataId: uploadRecord.id,
+          traitName: trait.traitName,
+          category: trait.category,
+          rsid: trait.rsid,
+          riskLevel: trait.riskLevel,
+          descriptionEncrypted: encryptionService.encrypt(trait.description, userSalt),
+          recommendationsEncrypted: encryptionService.encrypt(trait.recommendations, userSalt),
+          confidence: trait.confidence,
+          citationCount: trait.citationCount,
+        })),
       });
     }
 
     // Update status to completed
-    await prisma.dNAData.update({
-      where: { id: upload.id },
+    await tx.dNAData.update({
+      where: { id: uploadRecord.id },
       data: {
         processingStatus: 'COMPLETED',
         processedAt: new Date(),
       },
     });
 
-    // Audit log: CREATE DNA upload with parsing results
-    const auditService = getAuditLogService(prisma);
-    await auditService.logCreate(RESOURCE_TYPE, upload.id, {
-      filename: upload.filename,
-      source: upload.source,
+    return uploadRecord;
+  }, {
+    timeout: 120000, // 2 minutes for large DNA files
+  });
+
+  // Audit log (outside transaction - non-critical)
+  const auditService = getAuditLogService(prisma);
+  await auditService.logCreate(RESOURCE_TYPE, upload.id, {
+    filename: upload.filename,
+    source: upload.source,
+    validVariants: parsingResult.validVariants,
+    traitsIdentified: traits.length,
+    highRiskTraits: traitSummary.byRisk['HIGH'] || 0,
+  }, { req, userId });
+
+  // Build response
+  const responseData: DNAUploadResultResponse = {
+    ...toDNAUploadResponse({
+      ...upload,
+      processingStatus: 'COMPLETED',
+      processedAt: new Date(),
+    }),
+    parsingResult: {
+      source: parsingResult.source,
+      totalLines: parsingResult.totalLines,
       validVariants: parsingResult.validVariants,
-      traitsIdentified: traits.length,
-      highRiskTraits: traitSummary.byRisk['HIGH'] || 0,
-    }, { req, userId });
+      invalidLines: parsingResult.invalidLines,
+      processingTimeMs: parsingResult.processingTimeMs,
+      errors: parsingResult.errors,
+      warnings: parsingResult.warnings,
+    },
+    traitSummary: {
+      total: traitSummary.total,
+      byRisk: traitSummary.byRisk,
+      byCategory: traitSummary.byCategory,
+      highPriorityCount: traitSummary.highPriority.length,
+    },
+  };
 
-    // Build response
-    const responseData: DNAUploadResultResponse = {
-      ...toDNAUploadResponse({
-        ...upload,
-        processingStatus: 'COMPLETED',
-        processedAt: new Date(),
-      }),
-      parsingResult: {
-        source: parsingResult.source,
-        totalLines: parsingResult.totalLines,
-        validVariants: parsingResult.validVariants,
-        invalidLines: parsingResult.invalidLines,
-        processingTimeMs: parsingResult.processingTimeMs,
-        errors: parsingResult.errors,
-        warnings: parsingResult.warnings,
-      },
-      traitSummary: {
-        total: traitSummary.total,
-        byRisk: traitSummary.byRisk,
-        byCategory: traitSummary.byCategory,
-        highPriorityCount: traitSummary.highPriority.length,
-      },
-    };
+  const response: ApiResponse<DNAUploadResultResponse> = {
+    success: true,
+    data: responseData,
+  };
 
-    const response: ApiResponse<DNAUploadResultResponse> = {
-      success: true,
-      data: responseData,
-    };
-
-    res.status(201).json(response);
-
-  } catch (error) {
-    // Mark as failed on error
-    await prisma.dNAData.update({
-      where: { id: upload.id },
-      data: { processingStatus: 'FAILED' },
-    });
-
-    dnaControllerLogger.error(`Failed to process DNA file`, { error: error instanceof Error ? error.message : 'Unknown error' });
-    throw error;
-  }
+  res.status(201).json(response);
 }
 
 // Process DNA file (called by background job or manually)
