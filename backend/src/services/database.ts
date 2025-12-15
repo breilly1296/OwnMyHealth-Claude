@@ -44,10 +44,10 @@ function getDatabaseConfig() {
         return decoded.databaseUrl;
       }
     } catch {
-      logger.warn('Failed to parse Prisma Postgres URL, using default connection', { prefix: 'Database' });
+      logger.warn('Failed to parse Prisma Postgres URL', { prefix: 'Database' });
     }
-    // Fallback to localhost
-    return 'postgres://postgres:postgres@localhost:5432/ownmyhealth';
+    // No fallback - require valid DATABASE_URL
+    throw new Error('Invalid Prisma Postgres URL format. Please check DATABASE_URL.');
   }
 
   return databaseUrl;
