@@ -402,7 +402,6 @@ export interface BiomarkerData {
   normalRange: {
     min: number;
     max: number;
-    unit: string;
     source?: string;
   };
   description?: string;
