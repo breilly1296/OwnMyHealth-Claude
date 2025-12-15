@@ -19,6 +19,7 @@ import { parsePagination, parseStringParam, createPaginationMeta } from '../util
 import { dnaControllerLogger } from '../utils/logger.js';
 import { toNumber } from '../utils/numberConversion.js';
 import type {
+  Prisma,
   DNAData as PrismaDNAData,
   DNAVariant as PrismaDNAVariant,
   GeneticTrait as PrismaGeneticTrait,
@@ -253,9 +254,15 @@ export async function getGeneticTraits(
 ): Promise<void> {
   const userId = req.user!.id;
   const { id } = req.params;
+  const { category, riskLevel, page, limit } = req.query;
 
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
+
+  // Parse pagination and filters
+  const pagination = parsePagination(page, limit, { defaultLimit: 50 });
+  const categoryFilter = parseStringParam(category);
+  const riskLevelFilter = parseStringParam(riskLevel);
 
   // Verify ownership
   const upload = await prisma.dNAData.findFirst({
@@ -266,10 +273,27 @@ export async function getGeneticTraits(
     throw new NotFoundError('DNA upload not found');
   }
 
-  const traits = await prisma.geneticTrait.findMany({
-    where: { dnaDataId: id },
-    orderBy: [{ riskLevel: 'asc' }, { category: 'asc' }],
-  });
+  // Build where clause with proper Prisma types
+  const where: Prisma.GeneticTraitWhereInput = { dnaDataId: id };
+
+  if (categoryFilter) {
+    where.category = categoryFilter;
+  }
+  if (riskLevelFilter) {
+    // Cast string to RiskLevel enum
+    where.riskLevel = riskLevelFilter as 'LOW' | 'MODERATE' | 'HIGH' | 'PROTECTIVE' | 'UNKNOWN';
+  }
+
+  // Get total count and paginated traits in parallel
+  const [total, traits] = await Promise.all([
+    prisma.geneticTrait.count({ where }),
+    prisma.geneticTrait.findMany({
+      where,
+      skip: pagination.skip,
+      take: pagination.take,
+      orderBy: [{ riskLevel: 'asc' }, { category: 'asc' }],
+    }),
+  ]);
 
   const decryptedTraits = traits.map((t) => toTraitResponse(t, userSalt));
 
@@ -277,11 +301,13 @@ export async function getGeneticTraits(
   const auditService = getAuditLogService(prisma);
   await auditService.logAccess('GeneticTrait', id, { req, userId }, {
     count: traits.length,
+    total,
   });
 
   const response: ApiResponse<GeneticTraitResponse[]> = {
     success: true,
     data: decryptedTraits,
+    meta: createPaginationMeta(total, pagination),
   };
 
   res.json(response);
