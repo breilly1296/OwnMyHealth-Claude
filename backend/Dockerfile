@@ -38,7 +38,7 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/src/generated ./src/generated 2>/dev/null || true
+COPY --from=builder /app/generated ./generated
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 USER nodejs
