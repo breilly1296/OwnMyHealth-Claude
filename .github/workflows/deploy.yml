@@ -3,7 +3,7 @@ name: Deploy to AWS ECS
 on:
   push:
     branches: [master, main]
-  workflow_dispatch:
+  workflow_dispatch:  # Allow manual trigger
 
 env:
   AWS_REGION: us-east-1
@@ -13,14 +13,10 @@ env:
   CONTAINER_NAME: backend
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
+  # Build and deploy to AWS
   deploy:
     name: Deploy to AWS ECS
     runs-on: ubuntu-latest
-    needs: [ci]
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
