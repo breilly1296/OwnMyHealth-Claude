@@ -1,207 +1,267 @@
 # OwnMyHealth
 
-A comprehensive HIPAA-compliant personal health management platform that empowers users to aggregate, analyze, and take control of their health data.
+A privacy-first, HIPAA-compliant osteoporosis management platform that empowers patients to track health biomarkers, navigate insurance coverage, and make informed healthcare decisions.
 
-## Overview
+## Project Overview
 
-OwnMyHealth enables users to:
-- **Aggregate Health Data**: Upload lab reports, manually enter biomarkers, sync with health devices
-- **Analyze Genetics**: Upload DNA files (23andMe, AncestryDNA) for trait analysis and risk assessment
-- **Manage Insurance**: Parse and compare insurance plans, track benefits utilization
-- **Get AI Insights**: Receive personalized health recommendations and trend analysis
-- **Track Goals**: Set and monitor health goals with progress tracking
-- **Connect Providers**: Share health data with healthcare providers via consent management
+OwnMyHealth bridges the gap between health data and insurance navigation for patients with chronic conditions, specifically targeting osteoporosis management. The platform enables users to:
+
+- **Track Biomarkers** - Upload lab reports (PDF) or manually enter results; monitor bone density, vitamin D, calcium, and other key metrics over time
+- **Navigate Insurance** - Parse Summary of Benefits (SBC) documents, search Healthcare.gov Marketplace plans, understand coverage for specific treatments
+- **Analyze Genetics** - Import 23andMe/AncestryDNA files for trait analysis and health risk insights
+- **Get Actionable Insights** - AI-powered health scoring, provider recommendations, and personalized action items
+
+## Current Status
+
+**Production-Ready** with core features complete:
+
+| Component | Status |
+|-----------|--------|
+| User Authentication | Complete (JWT, CSRF, session management) |
+| Biomarker Management | Complete (CRUD, history, trends, PDF parsing) |
+| Insurance Navigation | Complete (SBC parsing, plan comparison) |
+| CMS Marketplace API | Integrated (Healthcare.gov plan search) |
+| DNA Analysis | Complete (23andMe format, trait interpretation) |
+| PHI Encryption | Complete (AES-256-GCM, per-user keys) |
+| Audit Logging | Complete (HIPAA-compliant, 7-year retention) |
+| Health Goals | Complete (tracking, milestones, progress) |
 
 ## Tech Stack
 
 ### Frontend
-- **React 18** with TypeScript
-- **Vite** for build tooling
-- **Tailwind CSS** for styling
-- **Chart.js & Recharts** for data visualization
-- **jsPDF & html2canvas** for report generation
-- **Tesseract.js** for OCR processing
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| React | 18.3 | UI framework |
+| TypeScript | 5.5 | Type safety |
+| Vite | 5.4 | Build tooling |
+| Tailwind CSS | 3.4 | Styling |
+| Chart.js / Recharts | - | Data visualization |
 
 ### Backend
-- **Express.js** with TypeScript
-- **PostgreSQL** with Prisma ORM 7
-- **JWT** authentication (httpOnly cookies)
-- **AES-256-GCM** encryption for PHI
-- **Zod** for input validation
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Express.js | 4.18 | Web framework |
+| TypeScript | 5.3 | Type safety |
+| Prisma | 7.0 | ORM |
+| PostgreSQL | - | Database |
+| Zod | 3.22 | Runtime validation |
 
-## Project Structure
+### Security
+| Technology | Purpose |
+|------------|---------|
+| AES-256-GCM | PHI encryption at rest |
+| bcryptjs | Password hashing (12 rounds) |
+| JWT | Access/refresh token authentication |
+| Helmet | HTTP security headers |
+| express-rate-limit | Brute force protection |
+
+## Security Features
+
+### Implemented
+
+- **PHI Encryption** - All Protected Health Information encrypted with AES-256-GCM using per-user derived keys
+- **Audit Logging** - Every PHI access logged with user, action, timestamp, and IP address (HIPAA-compliant)
+- **Rate Limiting** - 100 requests/15min globally, 5/min on auth endpoints
+- **Authentication** - JWT tokens in httpOnly cookies with 15-min access / 7-day refresh rotation
+- **Account Protection** - Lockout after 5 failed attempts, bcrypt password hashing
+- **Input Validation** - Zod schemas for all API endpoints
+- **CORS Protection** - Restricted to configured origins
+- **RBAC** - Role-based access control (Patient, Provider, Admin)
+- **CSRF Protection** - Token validation on state-changing requests
+- **SQL Injection Prevention** - Parameterized queries via Prisma ORM
+
+### Production Validation
+
+The backend enforces security on startup:
+- Rejects default/placeholder secrets
+- Validates JWT secret length (32+ chars)
+- Validates PHI encryption key format (64 hex chars)
+- Warns on insecure CORS configurations
+
+## Architecture
+
+### Data Protection Strategy
+
+The platform uses field-level encryption for PHI separation:
 
 ```
-OwnMyHealth-Claude/
-├── src/                          # Frontend React application
-│   ├── components/               # React components by feature
-│   │   ├── analytics/           # Health analytics & trends
-│   │   ├── auth/                # Login & registration
-│   │   ├── biomarkers/          # Biomarker management
-│   │   ├── common/              # Shared components
-│   │   ├── dashboard/           # Main dashboard
-│   │   ├── dna/                 # DNA analysis
-│   │   ├── health/              # Health insights
-│   │   ├── insurance/           # Insurance management
-│   │   └── upload/              # File upload handlers
-│   ├── contexts/                # React context providers
-│   ├── hooks/                   # Custom React hooks
-│   ├── services/                # API services
-│   ├── types/                   # TypeScript definitions
-│   └── utils/                   # Utility functions
-├── backend/                      # Express.js API server
-│   ├── src/
-│   │   ├── controllers/         # Route handlers
-│   │   ├── routes/              # API endpoint definitions
-│   │   ├── services/            # Business logic
-│   │   ├── middleware/          # Express middleware
-│   │   └── types/               # Backend types
-│   └── prisma/                  # Database schema & migrations
-├── docs/                         # Documentation
-└── e2e/                          # End-to-end tests
+┌─────────────────────────────────────────────────────────────┐
+│                    PostgreSQL Database                       │
+├─────────────────────────────────────────────────────────────┤
+│  Public Data              │  PHI (Encrypted at App Layer)   │
+│  ─────────────────        │  ──────────────────────────────  │
+│  • email                  │  • firstNameEncrypted            │
+│  • role                   │  • lastNameEncrypted             │
+│  • createdAt              │  • dateOfBirthEncrypted          │
+│  • planType               │  • biomarker valueEncrypted      │
+│  • metalLevel             │  • DNA genotypeEncrypted         │
+│  • deductible             │  • insurance memberIdEncrypted   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Quick Start
+### System Architecture
+
+```
+┌─────────────────┐     HTTPS      ┌─────────────────┐
+│   React SPA     │ ◄────────────► │  Express API    │
+│   (Vite)        │   httpOnly     │  (Node.js)      │
+│   Port 5173     │   Cookies      │  Port 3001      │
+└─────────────────┘                └────────┬────────┘
+                                           │
+                           ┌───────────────┼───────────────┐
+                           │               │               │
+                           ▼               ▼               ▼
+                    ┌──────────┐    ┌──────────┐    ┌──────────┐
+                    │ Prisma   │    │ CMS API  │    │ SendGrid │
+                    │ + PG     │    │ (Plans)  │    │ (Email)  │
+                    └──────────┘    └──────────┘    └──────────┘
+```
+
+## Launch States
+
+Initial launch targeting Healthcare.gov Marketplace states:
+
+| State | Code | Notes |
+|-------|------|-------|
+| Florida | FL | Large senior population |
+| Texas | TX | High osteoporosis prevalence |
+| Georgia | GA | Growing healthcare market |
+| North Carolina | NC | Dense specialist network |
+
+CMS Marketplace API integration enables real-time plan search for these FFM (Federally Facilitated Marketplace) states.
+
+## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
-- PostgreSQL database
+- PostgreSQL 14+
 - npm or yarn
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/breilly1296/OwnMyHealth-Claude.git
-   cd OwnMyHealth-Claude
-   ```
+```bash
+# Clone repository
+git clone https://github.com/breilly1296/OwnMyHealth.git
+cd OwnMyHealth
 
-2. **Install dependencies**
-   ```bash
-   # Frontend
-   npm install
+# Install frontend dependencies
+npm install
 
-   # Backend
-   cd backend
-   npm install
-   ```
+# Install backend dependencies
+cd backend
+npm install
 
-3. **Configure environment**
-   ```bash
-   # Backend configuration
-   cp backend/.env.example backend/.env
-   # Edit backend/.env with your database credentials and secrets
-   ```
+# Configure environment
+cp .env.example .env
+# Edit .env with your database credentials and secrets
 
-4. **Set up database**
-   ```bash
-   cd backend
-   npx prisma generate
-   npx prisma db push
-   ```
+# Setup database
+npx prisma generate
+npx prisma db push
 
-5. **Start development servers**
-   ```bash
-   # Terminal 1 - Backend
-   cd backend
-   npm run dev
-
-   # Terminal 2 - Frontend
-   npm run dev
-   ```
-
-6. **Open the application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3001
-
-## Environment Variables
-
-### Backend (.env)
-```env
-NODE_ENV=development
-PORT=3001
-DATABASE_URL=postgresql://user:password@localhost:5432/ownmyhealth
-JWT_ACCESS_SECRET=your-access-secret
-JWT_REFRESH_SECRET=your-refresh-secret
-PHI_ENCRYPTION_KEY=your-64-char-hex-key
+# Start development servers
+npm run dev          # Backend (Terminal 1)
+cd .. && npm run dev # Frontend (Terminal 2)
 ```
 
-See `backend/.env.example` for full configuration options.
+### Environment Variables
 
-### Frontend (.env)
+**Required for production:**
+
 ```env
-VITE_API_URL=http://localhost:3001/api/v1
+NODE_ENV=production
+DATABASE_URL=postgresql://user:pass@host:5432/ownmyhealth
+
+# Generate with: openssl rand -base64 32
+JWT_ACCESS_SECRET=<your-32-char-min-secret>
+JWT_REFRESH_SECRET=<your-32-char-min-secret>
+
+# Generate with: openssl rand -hex 32
+PHI_ENCRYPTION_KEY=<64-hex-char-key>
+
+CORS_ORIGIN=https://yourdomain.com
 ```
 
-## Key Features
+**Optional integrations:**
 
-### Biomarker Tracking
-- Upload lab report PDFs for automatic extraction
-- Manual biomarker entry with normal range tracking
-- Historical trend analysis and visualization
-- Out-of-range alerts and recommendations
+```env
+CMS_API_KEY=<healthcare.gov-api-key>
+SENDGRID_API_KEY=<sendgrid-api-key>
+```
 
-### Genetic Analysis
-- Support for 23andMe, AncestryDNA, and raw VCF files
-- Variant analysis with clinical significance
-- Trait risk assessment with recommendations
-- Secure encrypted storage of genetic data
+### Demo Login
 
-### Insurance Management
-- Summary of Benefits and Coverage (SBC) parsing
-- Plan comparison tools
-- Benefits utilization tracking
-- Cost estimation and analysis
+```
+Email: demo@ownmyhealth.com
+Password: Demo123!
+```
 
-### Health Insights
-- AI-powered health risk assessment
-- Biomarker correlation detection
-- Provider recommendations based on conditions
-- Predictive trend analysis
+Or use `POST /api/v1/auth/demo` for automatic demo authentication.
 
-### Goal Tracking
-- Set health goals with measurable targets
-- Progress tracking and milestones
-- Goal history and achievement records
+## Project Structure
 
-## Security & Compliance
+```
+OwnMyHealth/
+├── src/                          # Frontend React application
+│   ├── components/
+│   │   ├── auth/                 # Login, registration
+│   │   ├── biomarker/            # Biomarker panels, trends
+│   │   ├── dashboard/            # Main dashboard views
+│   │   ├── dna/                  # DNA analysis panels
+│   │   ├── health/               # Health insights, recommendations
+│   │   ├── insurance/            # Insurance hub, plan comparison
+│   │   │   ├── MarketplacePlanSearch.tsx   # CMS API integration
+│   │   │   └── InsuranceHub.tsx            # Main insurance UI
+│   │   └── common/               # Shared components
+│   ├── contexts/                 # React contexts (Auth)
+│   ├── hooks/                    # Custom hooks (useApi, useRBAC)
+│   ├── services/                 # API client
+│   └── utils/                    # Utilities (parsing, analysis)
+│
+├── backend/
+│   ├── src/
+│   │   ├── controllers/          # Request handlers
+│   │   ├── routes/               # API endpoint definitions
+│   │   ├── middleware/           # Auth, validation, rate limiting
+│   │   ├── services/
+│   │   │   ├── authService.ts    # JWT, sessions, passwords
+│   │   │   ├── encryption.ts     # AES-256-GCM PHI encryption
+│   │   │   ├── auditLog.ts       # HIPAA audit trail
+│   │   │   └── cmsMarketplaceService.ts  # Healthcare.gov API
+│   │   └── config/               # Environment configuration
+│   └── prisma/
+│       └── schema.prisma         # Database schema
+│
+├── docs/                         # Documentation
+│   ├── ARCHITECTURE.md           # System architecture
+│   ├── SECURITY_HARDENING.md     # Production security guide
+│   ├── API.md                    # API reference
+│   └── DEVELOPMENT.md            # Developer guide
+│
+└── CLAUDE.md                     # AI assistant context
+```
 
-### HIPAA Compliance
-- Complete audit logging of all data access
-- PHI encrypted at rest using AES-256-GCM
-- Row-Level Security (RLS) policies
-- Consent management for provider access
-
-### Authentication
-- JWT tokens in httpOnly, Secure, SameSite cookies
-- Account lockout after failed attempts
-- Session management with secure refresh
-
-### Data Protection
-- Encrypted fields: names, DOB, contact info, biomarker values, genetic data
-- Per-user encryption keys
-- No PHI in local storage or logs
-
-## API Overview
+## API Reference
 
 Base URL: `/api/v1`
 
-| Endpoint | Description |
-|----------|-------------|
-| `/auth/*` | Authentication (login, register, logout) |
-| `/biomarkers/*` | Biomarker CRUD operations |
-| `/insurance/*` | Insurance plan management |
-| `/dna/*` | DNA data upload and analysis |
-| `/health/*` | Health analysis and insights |
-| `/health-goals/*` | Goal tracking |
-| `/health-needs/*` | Health needs assessment |
-| `/upload/*` | File upload handlers |
+| Endpoint | Methods | Description |
+|----------|---------|-------------|
+| `/auth/*` | POST | Authentication (login, register, logout, refresh) |
+| `/biomarkers` | GET, POST | Biomarker management |
+| `/biomarkers/:id` | GET, PUT, DELETE | Single biomarker operations |
+| `/insurance/plans` | GET, POST | Insurance plan management |
+| `/marketplace/plans/search` | POST | CMS Marketplace plan search |
+| `/marketplace/counties/:zip` | GET | County/FIPS lookup by ZIP |
+| `/dna` | GET, POST | DNA file upload and analysis |
+| `/health/analysis` | GET | Full health analysis |
+| `/health/needs` | GET | Identified health needs |
+| `/health-goals` | GET, POST | Health goal tracking |
 
 See [docs/API.md](docs/API.md) for complete API documentation.
 
-## Development
-
-### Scripts
+## Scripts
 
 **Frontend:**
 ```bash
@@ -216,31 +276,16 @@ npm run lint         # Lint code
 npm run dev          # Start with hot reload
 npm run build        # Compile TypeScript
 npm test             # Run tests
-npm run lint         # Lint code
+npx prisma studio    # Database GUI
 ```
 
-### Testing
-```bash
-# Frontend tests
-npm test
-npm run test:coverage
+## Documentation
 
-# Backend tests
-cd backend
-npm test
-```
-
-## Architecture
-
-For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Security Hardening Guide](docs/SECURITY_HARDENING.md)
+- [API Reference](docs/API.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [Deployment Guide](DEPLOY.md)
 
 ## License
 
@@ -248,4 +293,4 @@ This project is private and proprietary.
 
 ## Support
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/breilly1296/OwnMyHealth-Claude/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/breilly1296/OwnMyHealth/issues) page.
