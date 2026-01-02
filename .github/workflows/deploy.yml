@@ -6,15 +6,13 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: ${{ secrets.GCP_REGION }}
   SERVICE: ownmyhealth-backend
   REPOSITORY: ownmyhealth
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,29 +21,35 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Verify Service Account
+      - name: Verify Configuration
         run: |
           echo "=== Authenticated as ==="
           gcloud config get-value account
-          echo ""
-          echo "Expected: github-deploy@ownmyhealth-prod.iam.gserviceaccount.com"
+          echo "=== Project ==="
+          gcloud config get-value project
+          echo "=== Expected ==="
+          echo "Account: github-deploy@ownmyhealth-prod.iam.gserviceaccount.com"
+          echo "Project: ownmyhealth-prod"
 
       - name: Build and Push with Cloud Build
         run: |
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+          IMAGE="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
           echo "Building image: $IMAGE"
           gcloud builds submit backend \
             --tag "$IMAGE" \
-            --project ${{ env.PROJECT_ID }}
+            --project "${{ secrets.GCP_PROJECT_ID }}"
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
-            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
-            --region ${{ env.REGION }} \
-            --project ${{ env.PROJECT_ID }} \
+            --image "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
+            --region "${{ secrets.GCP_REGION }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
             --platform managed
