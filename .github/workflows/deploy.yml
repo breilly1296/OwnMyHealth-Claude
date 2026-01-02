@@ -46,7 +46,8 @@ jobs:
           echo "Building image: $IMAGE"
           gcloud builds submit backend \
             --tag "$IMAGE" \
-            --project "${{ env.PROJECT_ID }}"
+            --project "${{ env.PROJECT_ID }}" \
+            --suppress-logs
 
       - name: Deploy to Cloud Run
         run: |
