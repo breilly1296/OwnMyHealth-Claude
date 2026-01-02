@@ -44,10 +44,39 @@ jobs:
         run: |
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
           echo "Building image: $IMAGE"
-          gcloud builds submit backend \
+
+          # Submit build asynchronously and capture build ID
+          BUILD_ID=$(gcloud builds submit backend \
             --tag "$IMAGE" \
             --project "${{ env.PROJECT_ID }}" \
-            --suppress-logs
+            --async \
+            --format='value(id)')
+
+          echo "Build submitted: $BUILD_ID"
+
+          # Poll for build completion
+          while true; do
+            STATUS=$(gcloud builds describe "$BUILD_ID" \
+              --project "${{ env.PROJECT_ID }}" \
+              --format='value(status)')
+
+            echo "Build status: $STATUS"
+
+            case "$STATUS" in
+              SUCCESS)
+                echo "Build completed successfully"
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                echo "Build failed with status: $STATUS"
+                exit 1
+                ;;
+              *)
+                echo "Build in progress, waiting 15s..."
+                sleep 15
+                ;;
+            esac
+          done
 
       - name: Deploy to Cloud Run
         run: |
