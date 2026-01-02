@@ -27,6 +27,24 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Debug Auth
+        run: |
+          echo "=== Credentials file check ==="
+          if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+            echo "GOOGLE_APPLICATION_CREDENTIALS is set"
+            ls -la "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null || echo "File does not exist!"
+            echo "First 50 chars of creds file:"
+            head -c 50 "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null || echo "Cannot read file"
+          else
+            echo "GOOGLE_APPLICATION_CREDENTIALS is NOT set"
+          fi
+          echo ""
+          echo "=== gcloud auth list ==="
+          gcloud auth list
+          echo ""
+          echo "=== Active account ==="
+          gcloud config get-value account
+
       - name: Configure Docker
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
