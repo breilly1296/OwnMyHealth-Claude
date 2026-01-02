@@ -10,11 +10,11 @@ env:
   REGION: us-central1
   SERVICE: ownmyhealth-backend
   REPOSITORY: ownmyhealth
+  FRONTEND_BUCKET: ownmyhealth-frontend
 
 jobs:
-  deploy:
+  deploy-backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,38 +30,21 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Verify Configuration
-        run: |
-          echo "=== Authenticated as ==="
-          gcloud config get-value account
-          echo "=== Project ==="
-          gcloud config get-value project
-          echo "=== Expected ==="
-          echo "Account: github-deploy@ownmyhealth-prod.iam.gserviceaccount.com"
-          echo "Project: ownmyhealth-prod"
-
       - name: Build and Push with Cloud Build
         run: |
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
           echo "Building image: $IMAGE"
-
-          # Submit build asynchronously and capture build ID
           BUILD_ID=$(gcloud builds submit backend \
             --tag "$IMAGE" \
             --project "${{ env.PROJECT_ID }}" \
             --async \
             --format='value(id)')
-
           echo "Build submitted: $BUILD_ID"
-
-          # Poll for build completion
           while true; do
             STATUS=$(gcloud builds describe "$BUILD_ID" \
               --project "${{ env.PROJECT_ID }}" \
               --format='value(status)')
-
             echo "Build status: $STATUS"
-
             case "$STATUS" in
               SUCCESS)
                 echo "Build completed successfully"
@@ -85,3 +68,40 @@ jobs:
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
             --platform managed
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://api.ownmyhealth.io/api/v1
+
+      - name: Deploy to Cloud Storage
+        run: |
+          gsutil -m rm -r gs://${{ env.FRONTEND_BUCKET }}/** || true
+          gsutil -m cp -r dist/* gs://${{ env.FRONTEND_BUCKET }}/
+          gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://${{ env.FRONTEND_BUCKET }}/index.html
