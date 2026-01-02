@@ -1,4 +1,4 @@
-name: Deploy to AWS ECS
+name: Deploy to Cloud Run
 
 on:
   push:
@@ -6,85 +6,39 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: ownmyhealth-backend
-  ECS_CLUSTER: ownmyhealth
-  ECS_SERVICE: backend
-  CONTAINER_NAME: backend
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  SERVICE: ownmyhealth-backend
+  REPOSITORY: ownmyhealth
 
 jobs:
   deploy:
-    name: Deploy to AWS ECS
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build, tag, and push backend image to ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push
         run: |
           cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} .
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
 
-      - name: Download, clean, and update task definition
-        id: task-def
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Deploy to Cloud Run
         run: |
-          # Download current task definition
-          aws ecs describe-task-definition --task-definition ownmyhealth-backend --query taskDefinition > raw.json
-
-          # Debug: show what fields exist
-          echo "Fields in raw task definition:"
-          jq 'keys' raw.json
-
-          # Remove ALL fields that AWS rejects on registration and update image
-          jq --arg IMAGE "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" '
-            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .enableFaultInjection, .deregisteredAt) |
-            .containerDefinitions[0].image = $IMAGE
-          ' raw.json > task-definition.json
-
-          # Debug: show cleaned task definition
-          echo "Cleaned task definition:"
-          cat task-definition.json
-
-          # Register the new task definition directly
-          NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://task-definition.json)
-          NEW_REVISION=$(echo $NEW_TASK_DEF | jq -r '.taskDefinition.taskDefinitionArn')
-          echo "New task definition ARN: $NEW_REVISION"
-          echo "task-definition-arn=$NEW_REVISION" >> $GITHUB_OUTPUT
-
-      - name: Deploy to Amazon ECS
-        run: |
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.task-def.outputs.task-definition-arn }} \
-            --force-new-deployment
-
-          echo "Waiting for service stability..."
-          aws ecs wait services-stable \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }}
-
-          echo "Deployment complete!"
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed
