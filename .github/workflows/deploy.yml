@@ -27,22 +27,25 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Login to Artifact Registry
+      - name: Verify Service Account
         run: |
-          gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin ${{ env.REGION }}-docker.pkg.dev
+          echo "=== Authenticated as ==="
+          gcloud config get-value account
+          echo ""
+          echo "Expected: github-deploy@ownmyhealth-prod.iam.gserviceaccount.com"
 
-      - name: Build and Push
+      - name: Build and Push with Cloud Build
         run: |
-          cd backend
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
           echo "Building image: $IMAGE"
-          docker build -t "$IMAGE" .
-          echo "Pushing image: $IMAGE"
-          docker push "$IMAGE"
+          gcloud builds submit backend \
+            --tag "$IMAGE" \
+            --project ${{ env.PROJECT_ID }}
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
             --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
             --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
             --platform managed
