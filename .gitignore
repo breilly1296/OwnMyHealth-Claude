@@ -37,3 +37,7 @@ coverage
 nul
 *.local
 cookies.txt
+
+# Obsidian
+.obsidian/
+scratchpad.md.md
