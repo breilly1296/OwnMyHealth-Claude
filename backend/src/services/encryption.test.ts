@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EncryptionService, validateEncryptionKey, getEncryptionService } from './encryption.js';
-import { logger } from '../utils/logger.js'; // Import the logger
+import { EncryptionService, validateEncryptionKey } from './encryption.js';
 
-vi.mock('../utils/logger.js'); // Mock the logger module
+vi.mock('../utils/logger.js');
 
 // Mock PHI_ENCRYPTION_KEY for testing
 const TEST_PHI_ENCRYPTION_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
@@ -373,16 +372,16 @@ describe('encryption.ts', () => {
         notes: null, // Null value
         isActive: true, // Boolean
       };
-      const fieldsToEncrypt = ['name', 'address', 'notes', 'isActive'];
+      const fieldsToEncrypt = ['name', 'address', 'notes', 'isActive'] as (keyof typeof data)[];
 
-      const encryptedData = service.encryptFields(data, fieldsToEncrypt as any, userSalt);
+      const encryptedData = service.encryptFields(data, fieldsToEncrypt, userSalt);
 
       expect(encryptedData.name).not.toBe('Test User');
       expect(encryptedData.address).toBe(''); // Empty string remains empty
       expect(encryptedData.notes).toBeNull(); // Null remains null
       expect(encryptedData.isActive).toBe(true); // Boolean remains boolean
 
-      const decryptedData = service.decryptFields(encryptedData, fieldsToEncrypt as any, userSalt);
+      const decryptedData = service.decryptFields(encryptedData, fieldsToEncrypt, userSalt);
       expect(decryptedData.name).toBe('Test User');
       expect(decryptedData.address).toBe('');
       expect(decryptedData.notes).toBeNull();

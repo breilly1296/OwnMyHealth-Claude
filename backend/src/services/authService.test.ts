@@ -61,8 +61,32 @@ const MOCK_DEMO_USER: PrismaUser = {
   id: 'demo-user-id-456',
 };
 
+// Mock Prisma client type for testing
+interface MockPrismaClient {
+  user: {
+    findUnique: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
+  session: {
+    create: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    deleteMany: ReturnType<typeof vi.fn>;
+  };
+}
+
+// JWT payload type for mocking
+interface MockJwtPayload {
+  id: string;
+  email: string;
+  role: string;
+  type: string;
+  jti?: string;
+}
+
 describe('authService', () => {
-  let mockPrisma: any;
+  let mockPrisma: MockPrismaClient;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -114,7 +138,8 @@ describe('authService', () => {
     // Mock jsonwebtoken
     vi.mocked(jwt.sign).mockImplementation((payload, secret, options) => {
         const expiresIn = (options as jwt.SignOptions).expiresIn;
-        return `mock-jwt-token-${(payload as any).type}-${expiresIn}`;
+        const payloadObj = payload as MockJwtPayload;
+        return `mock-jwt-token-${payloadObj.type}-${expiresIn}`;
     });
     vi.mocked(jwt.verify).mockImplementation((token, secret) => {
         if (token.includes('mock-jwt-token-access') && secret === MOCK_ACCESS_SECRET) {
@@ -353,9 +378,9 @@ describe('authService', () => {
         const testRefreshToken = 'mock-jwt-token-refresh-test';
 
         // jwt.verify is synchronous, use mockReturnValue not mockResolvedValue
-        vi.mocked(jwt.verify).mockReturnValue({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'old-jti' } as any);
+        vi.mocked(jwt.verify).mockReturnValue({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'old-jti' } as MockJwtPayload);
         // jwt.decode is used by revokeRefreshToken to get the jti
-        vi.mocked(jwt.decode).mockReturnValueOnce({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'old-jti' } as any);
+        vi.mocked(jwt.decode).mockReturnValueOnce({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'old-jti' } as MockJwtPayload);
         mockPrisma.session.findUnique.mockResolvedValueOnce({
             id: 'old-jti',
             userId: MOCK_USER_ID,
@@ -664,7 +689,7 @@ describe('authService', () => {
 
     it('should handle non-existent user with timing attack protection', async () => {
         mockPrisma.user.findUnique.mockResolvedValueOnce(null);
-        vi.spyOn(global, 'setTimeout').mockImplementation((cb: any) => cb());
+        vi.spyOn(global, 'setTimeout').mockImplementation((cb: () => void) => { cb(); return 0 as unknown as NodeJS.Timeout; });
         vi.mocked(bcrypt.compare).mockResolvedValueOnce(false); // for timing safe dummy hash
         const result = await authService.attemptLogin('nonexistent@example.com', MOCK_PASSWORD);
         expect(result.success).toBe(false);
@@ -1011,8 +1036,8 @@ describe('authService', () => {
   // ============================================
   describe('Token Cleanup', () => {
     let now: Date;
-    let setIntervalSpy: any;
-    let clearIntervalSpy: any;
+    let setIntervalSpy: ReturnType<typeof vi.spyOn>;
+    let clearIntervalSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         now = new Date();
