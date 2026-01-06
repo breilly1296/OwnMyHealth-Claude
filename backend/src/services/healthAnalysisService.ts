@@ -80,6 +80,17 @@ export interface TrendAnalysis {
   prediction: string;
 }
 
+/** Historical biomarker value for trend analysis */
+export interface HistoricalValue {
+  value: number;
+  date: string;
+}
+
+/** Biomarker with historical data for trend analysis */
+export interface BiomarkerWithHistory extends DecryptedBiomarker {
+  history?: HistoricalValue[];
+}
+
 export interface HealthAnalysisResult {
   overallHealthScore: number;
   riskAssessments: RiskAssessment[];
@@ -189,17 +200,122 @@ export function generateRiskAssessments(biomarkers: DecryptedBiomarker[]): RiskA
 }
 
 /**
- * Generate trend analyses for biomarkers
- * Note: Simplified version - returns stable trends since historical comparison not yet implemented
+ * Determine if a value change represents improvement
+ * Improvement means moving toward the normal range
  */
-export function generateTrendAnalyses(biomarkers: DecryptedBiomarker[]): TrendAnalysis[] {
-  return biomarkers.map(biomarker => ({
-    biomarkerId: biomarker.id,
-    biomarkerName: biomarker.name,
-    trend: 'stable' as const,
-    percentChange: 0,
-    prediction: `Continue monitoring ${biomarker.name} levels`,
-  }));
+function isImproving(
+  currentValue: number,
+  previousValue: number,
+  normalMin: number,
+  normalMax: number
+): boolean {
+  const normalMid = (normalMin + normalMax) / 2;
+  const currentDistance = Math.abs(currentValue - normalMid);
+  const previousDistance = Math.abs(previousValue - normalMid);
+  return currentDistance < previousDistance;
+}
+
+/**
+ * Generate prediction message based on trend and current status
+ */
+function generatePrediction(
+  biomarkerName: string,
+  trend: 'improving' | 'stable' | 'declining',
+  isCurrentlyOutOfRange: boolean,
+  percentChange: number
+): string {
+  if (trend === 'improving') {
+    if (isCurrentlyOutOfRange) {
+      return `${biomarkerName} is trending toward normal range. Continue current management.`;
+    }
+    return `${biomarkerName} is improving and within normal range. Maintain current lifestyle.`;
+  }
+
+  if (trend === 'declining') {
+    if (isCurrentlyOutOfRange) {
+      return `${biomarkerName} is moving further from normal range. Consider consulting your healthcare provider.`;
+    }
+    return `${biomarkerName} is declining (${Math.abs(percentChange).toFixed(1)}% change). Monitor closely.`;
+  }
+
+  // Stable
+  if (isCurrentlyOutOfRange) {
+    return `${biomarkerName} remains out of range. Follow up with your healthcare provider.`;
+  }
+  return `${biomarkerName} is stable and within normal range. Continue monitoring.`;
+}
+
+/**
+ * Generate trend analyses for biomarkers
+ * Compares current values to historical data to determine trends
+ *
+ * @param biomarkers - Current biomarker values, optionally with history
+ * @returns Array of trend analyses for each biomarker
+ */
+export function generateTrendAnalyses(biomarkers: (DecryptedBiomarker | BiomarkerWithHistory)[]): TrendAnalysis[] {
+  return biomarkers.map(biomarker => {
+    const biomarkerWithHistory = biomarker as BiomarkerWithHistory;
+    const history = biomarkerWithHistory.history;
+
+    // If no historical data, return stable with appropriate message
+    if (!history || history.length === 0) {
+      return {
+        biomarkerId: biomarker.id,
+        biomarkerName: biomarker.name,
+        trend: 'stable' as const,
+        percentChange: 0,
+        prediction: `Continue monitoring ${biomarker.name} levels. Add more readings for trend analysis.`,
+      };
+    }
+
+    // Sort history by date (oldest first) and get the most recent previous value
+    const sortedHistory = [...history].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Get the previous value (most recent in history)
+    const previousValue = sortedHistory[sortedHistory.length - 1].value;
+    const currentValue = biomarker.value;
+
+    // Calculate percent change
+    const percentChange = previousValue !== 0
+      ? ((currentValue - previousValue) / previousValue) * 100
+      : 0;
+
+    // Determine trend based on direction relative to normal range
+    const { normalRange } = biomarker;
+    let trend: 'improving' | 'stable' | 'declining';
+
+    // Use 5% threshold for "stable" classification
+    const STABILITY_THRESHOLD = 5;
+
+    if (Math.abs(percentChange) < STABILITY_THRESHOLD) {
+      trend = 'stable';
+    } else if (isImproving(currentValue, previousValue, normalRange.min, normalRange.max)) {
+      trend = 'improving';
+    } else {
+      trend = 'declining';
+    }
+
+    // Check if currently out of range
+    const isCurrentlyOutOfRange = currentValue < normalRange.min || currentValue > normalRange.max;
+
+    // Generate contextual prediction
+    const prediction = generatePrediction(
+      biomarker.name,
+      trend,
+      isCurrentlyOutOfRange,
+      percentChange
+    );
+
+    return {
+      biomarkerId: biomarker.id,
+      biomarkerName: biomarker.name,
+      trend,
+      percentChange: Math.round(percentChange * 10) / 10, // Round to 1 decimal
+      prediction,
+    };
+  });
 }
 
 /**

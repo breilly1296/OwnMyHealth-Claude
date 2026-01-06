@@ -11,11 +11,12 @@ export default defineConfig({
     include: [
       'src/__tests__/**/*.test.{ts,tsx}',
       'src/__tests__/**/*.spec.{ts,tsx}',
+      'backend/src/**/*.test.{ts,tsx}',
+      'backend/src/**/*.spec.{ts,tsx}',
     ],
     exclude: [
       'node_modules',
       'dist',
-      'backend',
     ],
     coverage: {
       provider: 'v8',

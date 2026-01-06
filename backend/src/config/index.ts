@@ -181,14 +181,12 @@ if (config.isProduction) {
     process.stderr.write(`${new Date().toISOString()} WARN [Security] CORS origin contains localhost URLs in production\n`);
   }
 
-  // Validate demo account configuration
+  // Block demo account in production - security risk
   if (config.demo.enabled) {
-    process.stderr.write(`${new Date().toISOString()} WARN [Security] Demo account is enabled in production - this is not recommended\n`);
-    if (!config.demo.email || !config.demo.password) {
-      throw new Error(
-        'DEMO_ACCOUNT_ENABLED is true but DEMO_EMAIL or DEMO_PASSWORD is not set. ' +
-        'Either disable demo mode or provide credentials via environment variables.'
-      );
-    }
+    throw new Error(
+      'DEMO_ACCOUNT_ENABLED cannot be true in production. ' +
+      'Demo mode bypasses security controls and is only for development/testing. ' +
+      'Set DEMO_ACCOUNT_ENABLED=false or remove it from environment variables.'
+    );
   }
 }

@@ -493,14 +493,14 @@ export function startAuditCleanup(prisma: PrismaClient): void {
     try {
       const count = await service.cleanupOldLogs();
       if (count > 0) {
-        console.log(`[AuditLog] Cleaned up ${count} old audit logs`);
+        logger.info(`Cleaned up ${count} old audit logs`, { prefix: 'AuditLog' });
       }
     } catch (error) {
-      console.error('[AuditLog] Cleanup failed:', error);
+      logger.error('Cleanup failed', { prefix: 'AuditLog', data: { error } });
     }
   }, 24 * 60 * 60 * 1000);
 
-  console.log('[AuditLog] Cleanup scheduler started (runs daily)');
+  logger.info('Cleanup scheduler started (runs daily)', { prefix: 'AuditLog' });
 }
 
 /**
@@ -510,7 +510,7 @@ export function stopAuditCleanup(): void {
   if (auditCleanupInterval) {
     clearInterval(auditCleanupInterval);
     auditCleanupInterval = null;
-    console.log('[AuditLog] Cleanup scheduler stopped');
+    logger.info('Cleanup scheduler stopped', { prefix: 'AuditLog' });
   }
 }
 

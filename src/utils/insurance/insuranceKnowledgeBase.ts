@@ -580,44 +580,176 @@ export class InsuranceKnowledgeBase {
     return requirements;
   }
 
-  // Placeholder methods for other normalization functions
+  /**
+   * Determine network type based on provider count
+   * - Narrow: < 5,000 providers
+   * - Standard: 5,000 - 50,000 providers
+   * - Broad: 50,000 - 200,000 providers
+   * - National: > 200,000 providers or multi-state coverage
+   */
+  private determineNetworkType(
+    providerCount?: number,
+    geographicCoverage?: string[]
+  ): 'narrow' | 'standard' | 'broad' | 'national' {
+    // Check for national coverage indicators
+    const hasNationalCoverage = geographicCoverage?.some(area =>
+      area.toLowerCase().includes('nationwide') ||
+      area.toLowerCase().includes('national') ||
+      area.toLowerCase().includes('all states')
+    );
+
+    if (hasNationalCoverage || (providerCount && providerCount > 200000)) {
+      return 'national';
+    }
+
+    if (!providerCount) {
+      return 'standard'; // Default when no data available
+    }
+
+    if (providerCount < 5000) return 'narrow';
+    if (providerCount < 50000) return 'standard';
+    return 'broad';
+  }
+
+  /**
+   * Generate specialty access information based on available data
+   */
+  private generateSpecialtyAccess(
+    specialtyCount?: number,
+    planType?: string
+  ): SpecialtyAccess[] {
+    const commonSpecialties = [
+      'Cardiology', 'Dermatology', 'Endocrinology', 'Gastroenterology',
+      'Neurology', 'Orthopedics', 'Psychiatry', 'Rheumatology'
+    ];
+
+    // Determine base availability based on specialty count and plan type
+    let baseAvailability: 'excellent' | 'good' | 'limited' | 'poor' = 'good';
+    if (specialtyCount && specialtyCount > 100) baseAvailability = 'excellent';
+    else if (specialtyCount && specialtyCount < 20) baseAvailability = 'limited';
+
+    // HMO plans typically require referrals
+    const requiresReferral = planType?.toUpperCase() === 'HMO';
+
+    return commonSpecialties.map(specialty => ({
+      specialty,
+      availability: baseAvailability,
+      requiresReferral
+    }));
+  }
+
+  /**
+   * Normalize network information from InsurancePlan format
+   */
   private normalizeNetwork(network: NetworkInfo): NormalizedNetwork {
+    if (!network) {
+      return {
+        networkType: 'standard',
+        geographicCoverage: ['Unknown'],
+        specialtyAccess: []
+      };
+    }
+
+    const networkType = this.determineNetworkType(
+      network.providerCount,
+      network.geographicCoverage
+    );
+
     return {
-      networkType: 'standard',
-      geographicCoverage: network?.geographicCoverage || ['Unknown'],
-      specialtyAccess: []
+      networkName: network.networkName,
+      networkType,
+      providerCount: network.providerCount,
+      geographicCoverage: network.geographicCoverage?.length > 0
+        ? network.geographicCoverage
+        : ['Unknown'],
+      specialtyAccess: this.generateSpecialtyAccess(network.specialtyCount)
     };
   }
 
+  /**
+   * Normalize network information from extracted document data
+   */
   private normalizeExtractedNetwork(network: NetworkInformation): NormalizedNetwork {
+    if (!network) {
+      return {
+        networkType: 'standard',
+        geographicCoverage: ['Unknown'],
+        specialtyAccess: []
+      };
+    }
+
+    const networkType = this.determineNetworkType(
+      network.providerCount,
+      network.geographicCoverage
+    );
+
     return {
-      networkName: network?.providerNetworkName,
-      networkType: 'standard',
-      geographicCoverage: network?.geographicCoverage || ['Unknown'],
-      specialtyAccess: []
+      networkName: network.providerNetworkName,
+      networkType,
+      providerCount: network.providerCount,
+      geographicCoverage: network.geographicCoverage?.length
+        ? network.geographicCoverage
+        : ['Unknown'],
+      specialtyAccess: this.generateSpecialtyAccess(),
+      pharmacyNetwork: network.pharmacyNetwork
     };
   }
 
+  /**
+   * Map service description to standardized service code
+   */
+  private mapServiceToCode(serviceDescription: string): string {
+    const desc = serviceDescription.toLowerCase();
+
+    // Map common service descriptions to codes
+    if (desc.includes('primary care') || desc.includes('pcp')) return 'PC001';
+    if (desc.includes('specialist') || desc.includes('specialty')) return 'SP001';
+    if (desc.includes('emergency')) return 'ER001';
+    if (desc.includes('urgent care')) return 'UC001';
+    if (desc.includes('preventive') || desc.includes('wellness')) return 'PV001';
+    if (desc.includes('mental health') || desc.includes('behavioral')) return 'MH001';
+    if (desc.includes('prescription') || desc.includes('pharmacy')) return 'RX001';
+    if (desc.includes('hospital') || desc.includes('inpatient')) return 'HO001';
+    if (desc.includes('surgery') || desc.includes('surgical')) return 'SU001';
+    if (desc.includes('lab') || desc.includes('diagnostic')) return 'DI001';
+    if (desc.includes('imaging') || desc.includes('x-ray') || desc.includes('mri')) return 'IM001';
+    if (desc.includes('rehabilitation') || desc.includes('therapy')) return 'RH001';
+    if (desc.includes('dental')) return 'DE001';
+    if (desc.includes('vision') || desc.includes('eye')) return 'VI001';
+
+    return 'GENERAL';
+  }
+
+  /**
+   * Normalize limitations from InsurancePlan format
+   */
   private normalizeLimitations(limitations: InsuranceLimitation[]): NormalizedLimitation[] {
-    return limitations?.map(limitation => ({
+    if (!limitations?.length) return [];
+
+    return limitations.map(limitation => ({
       id: limitation.id,
-      serviceCode: 'GENERAL',
+      serviceCode: this.mapServiceToCode(limitation.serviceName || limitation.description || ''),
       limitationType: this.mapLimitationType(limitation.limitType),
       limitValue: limitation.limitValue,
       description: limitation.description,
       exceptions: limitation.exceptions || []
-    })) || [];
+    }));
   }
 
+  /**
+   * Normalize limitations from extracted document data
+   */
   private normalizeExtractedLimitations(limitations: LimitationInformation[]): NormalizedLimitation[] {
-    return limitations?.map(limitation => ({
+    if (!limitations?.length) return [];
+
+    return limitations.map(limitation => ({
       id: crypto.randomUUID(),
-      serviceCode: 'GENERAL',
+      serviceCode: this.mapServiceToCode(limitation.service || limitation.description || ''),
       limitationType: limitation.type,
       limitValue: limitation.value,
       description: limitation.description,
       exceptions: []
-    })) || [];
+    }));
   }
 
   private mapLimitationType(limitType: string): 'annual' | 'lifetime' | 'per_visit' | 'per_service' {

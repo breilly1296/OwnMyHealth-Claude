@@ -31,55 +31,49 @@ router.get(
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
 
+    // Use Prisma include for efficient single-query join
     const relationships = await prisma.providerPatient.findMany({
       where: {
         providerId,
         status: { in: ['ACTIVE', 'PENDING'] },
       },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            email: true,
+            firstNameEncrypted: true,
+            lastNameEncrypted: true,
+            createdAt: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Get patient details for each relationship
-    const patientIds = relationships.map((r) => r.patientId);
-    const patients = await prisma.user.findMany({
-      where: { id: { in: patientIds } },
-      select: {
-        id: true,
-        email: true,
-        firstNameEncrypted: true,
-        lastNameEncrypted: true,
-        createdAt: true,
+    // Transform to response format
+    const result = relationships.map((rel) => ({
+      relationshipId: rel.id,
+      patientId: rel.patientId,
+      patient: {
+        id: rel.patient.id,
+        email: rel.patient.email,
+        // Note: firstName/lastName would need decryption in a real app
+        createdAt: rel.patient.createdAt,
       },
-    });
-
-    // Combine relationship data with patient info
-    const result = relationships.map((rel) => {
-      const patient = patients.find((p) => p.id === rel.patientId);
-      return {
-        relationshipId: rel.id,
-        patientId: rel.patientId,
-        patient: patient
-          ? {
-              id: patient.id,
-              email: patient.email,
-              // Note: firstName/lastName would need decryption in a real app
-              createdAt: patient.createdAt,
-            }
-          : null,
-        permissions: {
-          canViewBiomarkers: rel.canViewBiomarkers,
-          canViewInsurance: rel.canViewInsurance,
-          canViewDna: rel.canViewDna,
-          canViewHealthNeeds: rel.canViewHealthNeeds,
-          canEditData: rel.canEditData,
-        },
-        relationshipType: rel.relationshipType,
-        status: rel.status,
-        consentGrantedAt: rel.consentGrantedAt,
-        consentExpiresAt: rel.consentExpiresAt,
-        createdAt: rel.createdAt,
-      };
-    });
+      permissions: {
+        canViewBiomarkers: rel.canViewBiomarkers,
+        canViewInsurance: rel.canViewInsurance,
+        canViewDna: rel.canViewDna,
+        canViewHealthNeeds: rel.canViewHealthNeeds,
+        canEditData: rel.canEditData,
+      },
+      relationshipType: rel.relationshipType,
+      status: rel.status,
+      consentGrantedAt: rel.consentGrantedAt,
+      consentExpiresAt: rel.consentExpiresAt,
+      createdAt: rel.createdAt,
+    }));
 
     const response: ApiResponse<typeof result> = {
       success: true,

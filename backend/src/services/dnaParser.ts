@@ -1086,6 +1086,11 @@ export async function parseDNAFileStream(
           source = detectFileFormat(firstLines);
         }
 
+        // SECURITY: Clear format detection lines after use to prevent DNA data lingering
+        if (lineNumber === 21 && firstLines.length > 0) {
+          firstLines.length = 0;
+        }
+
         try {
           const variant = parseLine(line, source, lineNumber);
           if (variant) {

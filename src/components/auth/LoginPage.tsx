@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { Heart, Eye, EyeOff, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -53,8 +54,9 @@ export default function LoginPage({
 
     try {
       await onLogin(email, password);
-    } catch {
-      // Error is handled by parent component
+    } catch (error) {
+      logger.error('Login failed', { error });
+      // Error display is handled by parent component via error prop
     }
   };
 
@@ -62,8 +64,9 @@ export default function LoginPage({
     if (onDemoLogin) {
       try {
         await onDemoLogin();
-      } catch {
-        // Error is handled by parent component
+      } catch (error) {
+        logger.error('Demo login failed', { error });
+        // Error display is handled by parent component via error prop
       }
     }
   };

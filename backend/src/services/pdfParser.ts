@@ -8,42 +8,9 @@
 
 import { BadRequestError, InternalServerError } from '../middleware/errorHandler.js';
 import { pdfLogger } from '../utils/logger.js';
+import { secureParsePdf, type PDFParseResult } from '../utils/securePdfParsing.js';
 
-/**
- * PDF Parse Result interface
- * Properly types the return value from pdf-parse library
- */
-interface PDFParseResult {
-  /** Number of pages in the PDF */
-  numpages: number;
-  /** Number of rendered pages */
-  numrender: number;
-  /** PDF version information */
-  info: PDFInfo;
-  /** PDF metadata */
-  metadata: unknown;
-  /** Extracted text content from all pages */
-  text: string;
-  /** PDF version string */
-  version: string;
-}
-
-/**
- * PDF Info interface
- */
-interface PDFInfo {
-  PDFFormatVersion?: string;
-  IsAcroFormPresent?: boolean;
-  IsXFAPresent?: boolean;
-  Title?: string;
-  Author?: string;
-  Subject?: string;
-  Keywords?: string;
-  Creator?: string;
-  Producer?: string;
-  CreationDate?: string;
-  ModDate?: string;
-}
+// PDFParseResult interface imported from securePdfParsing.ts
 
 /**
  * PDF Parser function type
@@ -1007,10 +974,8 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
     throw new BadRequestError('PDF file is empty or invalid');
   }
 
+  // Get the PDF parser
   let pdf: PDFParser;
-  let pdfResult: PDFParseResult;
-  let text: string;
-
   try {
     pdf = await getPdfParser();
   } catch (error) {
@@ -1018,14 +983,9 @@ export async function parseLabReport(buffer: Buffer, filename: string): Promise<
     throw new InternalServerError('PDF parsing service is unavailable');
   }
 
-  try {
-    pdfResult = await pdf(buffer);
-    text = pdfResult.text;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    pdfLogger.error('Failed to parse PDF', { filename, error: errorMsg });
-    throw new BadRequestError(`Unable to parse PDF file. The file may be corrupted, password-protected, or in an unsupported format.`);
-  }
+  // Use secure parsing with timeout and validation (protects against PDF bombs)
+  const pdfResult = await secureParsePdf(buffer, filename, pdf);
+  const text = pdfResult.text;
 
   if (!text || text.trim().length === 0) {
     throw new BadRequestError('PDF file appears to be empty or contains no extractable text. Please ensure the PDF contains readable text (not scanned images).');
@@ -1510,10 +1470,8 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
     throw new BadRequestError('PDF file is empty or invalid');
   }
 
+  // Get the PDF parser
   let pdf: PDFParser;
-  let pdfResult: PDFParseResult;
-  let text: string;
-
   try {
     pdf = await getPdfParser();
   } catch (error) {
@@ -1521,14 +1479,9 @@ export async function parseSBC(buffer: Buffer, filename: string): Promise<{
     throw new InternalServerError('PDF parsing service is unavailable');
   }
 
-  try {
-    pdfResult = await pdf(buffer);
-    text = pdfResult.text;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    pdfLogger.error('SBC: Failed to parse PDF', { filename, error: errorMsg });
-    throw new BadRequestError(`Unable to parse SBC PDF file. The file may be corrupted, password-protected, or in an unsupported format.`);
-  }
+  // Use secure parsing with timeout and validation (protects against PDF bombs)
+  const pdfResult = await secureParsePdf(buffer, filename, pdf);
+  const text = pdfResult.text;
 
   if (!text || text.trim().length === 0) {
     throw new BadRequestError('SBC PDF file appears to be empty or contains no extractable text. Please ensure the PDF contains readable text.');
