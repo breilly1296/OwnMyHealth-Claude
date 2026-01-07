@@ -37,6 +37,11 @@ vi.mock('../../services/uploadUtils', () => ({
   setUploadAuthFailureCallback: vi.fn(),
 }));
 
+// Mock LabUploadModal to avoid transitive import issues
+vi.mock('../../components/upload/LabUploadModal', () => ({
+  default: () => null,
+}));
+
 vi.mock('../../utils/insurance', () => ({
   generatePersonalizedInsuranceGuide: vi.fn(() => ({
     userProfile: {
