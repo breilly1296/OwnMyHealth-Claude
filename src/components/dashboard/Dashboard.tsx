@@ -160,8 +160,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // ============================================
 
   const filteredBiomarkers = useMemo(() => {
-    if (['Dashboard', 'Insurance', 'Insurance Guide', 'Knowledge Base'].includes(selectedCategory)) return biomarkers;
-    return biomarkers.filter(b => b.category === selectedCategory);
+    // Defensive null check to prevent "Cannot read properties of undefined" errors
+    const safeBiomarkers = biomarkers || [];
+    if (['Dashboard', 'Insurance', 'Insurance Guide', 'Knowledge Base'].includes(selectedCategory)) return safeBiomarkers;
+    return safeBiomarkers.filter(b => b.category === selectedCategory);
   }, [biomarkers, selectedCategory]);
 
   // ============================================
@@ -317,11 +319,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   // Memoize biomarker filtering to avoid recalculating on every render
   const { inRangeCount, outOfRangeCount, outOfRangeBiomarkers } = useMemo(() => {
-    const outOfRange = biomarkers.filter(
+    // Defensive null check to prevent "Cannot read properties of undefined" errors
+    const safeBiomarkers = biomarkers || [];
+    const outOfRange = safeBiomarkers.filter(
       b => b.value < b.normalRange.min || b.value > b.normalRange.max
     );
     return {
-      inRangeCount: biomarkers.length - outOfRange.length,
+      inRangeCount: safeBiomarkers.length - outOfRange.length,
       outOfRangeCount: outOfRange.length,
       outOfRangeBiomarkers: outOfRange,
     };
@@ -450,7 +454,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <span className="text-xs text-slate-400">Last updated</span>
             </div>
             <div className={`${outOfRangeCount > 0 ? '' : 'grid grid-cols-1 md:grid-cols-2'} divide-y md:divide-y-0 divide-slate-100`}>
-              {biomarkers
+              {(biomarkers || [])
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .slice(0, outOfRangeCount > 0 ? 4 : 6)
                 .map((biomarker, idx) => {
@@ -507,8 +511,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   };
 
   const renderCategoryContent = () => {
-    const outOfRangeBiomarkers = filteredBiomarkers.filter(b => b.value < b.normalRange.min || b.value > b.normalRange.max);
-    const inRangeBiomarkers = filteredBiomarkers.filter(b => b.value >= b.normalRange.min && b.value <= b.normalRange.max);
+    // Defensive null check to prevent "Cannot read properties of undefined" errors
+    const safeFilteredBiomarkers = filteredBiomarkers || [];
+    const outOfRangeBiomarkers = safeFilteredBiomarkers.filter(b => b.value < b.normalRange.min || b.value > b.normalRange.max);
+    const inRangeBiomarkers = safeFilteredBiomarkers.filter(b => b.value >= b.normalRange.min && b.value <= b.normalRange.max);
 
     return (
       <div className="max-w-6xl mx-auto animate-fade-in">
@@ -662,7 +668,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </div>
           )}
 
-          {filteredBiomarkers.length === 0 && (
+          {safeFilteredBiomarkers.length === 0 && (
             <div className="text-center py-16 bg-white rounded-2xl border border-slate-200/60">
               <Activity className="w-12 h-12 mx-auto mb-4 text-slate-300" />
               <h3 className="text-lg font-semibold text-slate-900 mb-2">No {selectedCategory} Data</h3>

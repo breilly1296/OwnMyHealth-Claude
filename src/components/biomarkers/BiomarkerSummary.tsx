@@ -26,7 +26,9 @@ interface BiomarkerSummaryProps {
 }
 
 export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSummaryProps) {
-  const categoryBiomarkers = biomarkers.filter(b => b.category === category);
+  // Defensive null check to prevent "Cannot read properties of undefined" errors
+  const safeBiomarkers = biomarkers || [];
+  const categoryBiomarkers = safeBiomarkers.filter(b => b.category === category);
   const outOfRange = categoryBiomarkers.filter(b =>
     b.value < b.normalRange.min || b.value > b.normalRange.max
   );
