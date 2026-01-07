@@ -9,6 +9,8 @@
  * - Uses Document AI Form Parser or OCR processor
  * - Extracts biomarkers using pattern matching
  * - Includes confidence scoring
+ *
+ * @module services/ocrService
  */
 
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
