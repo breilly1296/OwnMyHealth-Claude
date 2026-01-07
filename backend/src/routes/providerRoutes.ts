@@ -13,6 +13,8 @@ import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { getPrismaClient } from '../services/database.js';
+import { getEncryptionService } from '../services/encryption.js';
+import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -128,6 +130,14 @@ router.post(
       }
     }
 
+    // Encrypt the message if provided (using provider's encryption salt)
+    let encryptedNotes: string | null = null;
+    if (message && message.trim()) {
+      const encryptionService = getEncryptionService();
+      const providerSalt = await getUserEncryptionSalt(providerId);
+      encryptedNotes = encryptionService.encrypt(message, providerSalt);
+    }
+
     // Create or update the relationship
     const relationship = await prisma.providerPatient.upsert({
       where: {
@@ -141,12 +151,12 @@ router.post(
         patientId: patient.id,
         relationshipType: relationshipType || 'PRIMARY_CARE',
         status: 'PENDING',
-        notesEncrypted: message, // Should be encrypted in production
+        notesEncrypted: encryptedNotes,
       },
       update: {
         status: 'PENDING',
         relationshipType: relationshipType || 'PRIMARY_CARE',
-        notesEncrypted: message,
+        notesEncrypted: encryptedNotes,
       },
     });
 
