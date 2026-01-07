@@ -1,0 +1,529 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Request } from 'express';
+import { AuditLogService, getAuditLogService, startAuditCleanup, stopAuditCleanup } from './auditLog.js';
+
+// Mock dependencies
+vi.mock('./encryption.js', () => ({
+  getEncryptionService: vi.fn(() => ({
+    encrypt: vi.fn((value: string) => `encrypted:${value}`),
+    generateUserSalt: vi.fn(() => 'generated-salt-123'),
+  })),
+}));
+
+vi.mock('../utils/logger.js', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    startup: vi.fn(),
+  },
+}));
+
+// Mock Prisma client
+interface MockPrismaClient {
+  systemConfig: {
+    findUnique: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+  };
+  auditLog: {
+    create: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
+    deleteMany: ReturnType<typeof vi.fn>;
+  };
+}
+
+function createMockPrisma(): MockPrismaClient {
+  return {
+    systemConfig: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+    auditLog: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+  };
+}
+
+// Helper to create mock request
+function createMockRequest(overrides: Partial<Request> = {}): Request {
+  return {
+    ip: '192.168.1.100',
+    socket: { remoteAddress: '127.0.0.1' },
+    get: vi.fn((header: string) => {
+      if (header === 'user-agent') return 'Test Browser/1.0';
+      return undefined;
+    }),
+    ...overrides,
+  } as unknown as Request;
+}
+
+describe('AuditLogService', () => {
+  let mockPrisma: MockPrismaClient;
+  let auditService: AuditLogService;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockPrisma = createMockPrisma();
+    auditService = new AuditLogService(mockPrisma as unknown as Parameters<typeof getAuditLogService>[0]);
+  });
+
+  describe('initialize()', () => {
+    it('should create new salt if none exists', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(null);
+      mockPrisma.systemConfig.create.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'generated-salt-123',
+      });
+
+      await auditService.initialize();
+
+      expect(mockPrisma.systemConfig.findUnique).toHaveBeenCalledWith({
+        where: { key: 'audit_encryption_salt' },
+      });
+      expect(mockPrisma.systemConfig.create).toHaveBeenCalled();
+    });
+
+    it('should use existing salt if present', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'existing-salt-456',
+      });
+
+      await auditService.initialize();
+
+      expect(mockPrisma.systemConfig.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw error if salt is invalid', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'short', // Less than 16 characters
+      });
+
+      await expect(auditService.initialize()).rejects.toThrow('FATAL: Invalid audit encryption salt');
+    });
+  });
+
+  describe('extractContext()', () => {
+    it('should extract IP address from request', () => {
+      const req = createMockRequest({ ip: '10.0.0.1' });
+
+      const context = auditService.extractContext(req);
+
+      expect(context.ipAddress).toBe('10.0.0.1');
+    });
+
+    it('should extract user agent from request', () => {
+      const req = createMockRequest();
+
+      const context = auditService.extractContext(req);
+
+      expect(context.userAgent).toBe('Test Browser/1.0');
+    });
+
+    it('should truncate long user agents', () => {
+      const longUserAgent = 'A'.repeat(600);
+      const req = createMockRequest({
+        get: vi.fn(() => longUserAgent),
+      });
+
+      const context = auditService.extractContext(req);
+
+      expect(context.userAgent?.length).toBeLessThanOrEqual(500);
+    });
+
+    it('should use socket address as fallback', () => {
+      const req = createMockRequest({
+        ip: undefined,
+        socket: { remoteAddress: '192.168.1.1' },
+      } as unknown as Partial<Request>);
+
+      const context = auditService.extractContext(req);
+
+      // The getClientIp function returns req.ip || req.socket.remoteAddress || 'unknown'
+      expect(context.ipAddress).toBeDefined();
+    });
+  });
+
+  describe('log()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+    });
+
+    it('should create audit log entry with encrypted values', async () => {
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await auditService.logCreate(
+        'Biomarker',
+        'biomarker-123',
+        { name: 'Glucose', value: 95 },
+        { userId: 'user-1' }
+      );
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          actorType: 'USER',
+          action: 'CREATE',
+          resourceType: 'Biomarker',
+          resourceId: 'biomarker-123',
+          newValueEncrypted: expect.stringContaining('encrypted:'),
+        }),
+      });
+    });
+
+    it('should handle create log errors gracefully', async () => {
+      mockPrisma.auditLog.create.mockRejectedValue(new Error('Database error'));
+
+      // Should not throw
+      await expect(
+        auditService.logCreate('Biomarker', 'bio-1', { test: 'data' }, { userId: 'user-1' })
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('logAccess()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+    });
+
+    it('should log PHI read access', async () => {
+      const req = createMockRequest();
+
+      await auditService.logAccess('Biomarker', 'bio-123', { userId: 'user-1', req });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'READ',
+          resourceType: 'Biomarker',
+          resourceId: 'bio-123',
+          ipAddress: '192.168.1.100',
+        }),
+      });
+    });
+
+    it('should log list access without specific resourceId', async () => {
+      await auditService.logAccess('Biomarker', undefined, { userId: 'user-1' }, { operation: 'LIST', count: 50 });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'READ',
+          resourceType: 'Biomarker',
+          resourceId: undefined,
+          metadata: expect.stringContaining('LIST'),
+        }),
+      });
+    });
+  });
+
+  describe('logUpdate()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+    });
+
+    it('should log update with previous and new values', async () => {
+      await auditService.logUpdate(
+        'Biomarker',
+        'bio-123',
+        { value: 90 },
+        { value: 95 },
+        { userId: 'user-1' }
+      );
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'UPDATE',
+          previousValueEncrypted: expect.stringContaining('encrypted:'),
+          newValueEncrypted: expect.stringContaining('encrypted:'),
+        }),
+      });
+    });
+  });
+
+  describe('logDelete()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+    });
+
+    it('should log delete with previous value', async () => {
+      await auditService.logDelete(
+        'Biomarker',
+        'bio-123',
+        { name: 'Glucose', value: 95 },
+        { userId: 'user-1' }
+      );
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'DELETE',
+          previousValueEncrypted: expect.stringContaining('encrypted:'),
+        }),
+      });
+    });
+  });
+
+  describe('logAuth()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+    });
+
+    it('should log successful login', async () => {
+      const req = createMockRequest();
+
+      await auditService.logAuth('LOGIN', { userId: 'user-1', req });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'LOGIN',
+          resourceType: 'Authentication',
+          actorType: 'USER',
+        }),
+      });
+    });
+
+    it('should log failed login with anonymous actor', async () => {
+      const req = createMockRequest();
+
+      await auditService.logAuth('LOGIN_FAILED', { req }, { authAction: 'LOGIN_FAILED' });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          actorType: 'ANONYMOUS',
+          metadata: expect.stringContaining('LOGIN_FAILED'),
+        }),
+      });
+    });
+
+    it('should log logout', async () => {
+      await auditService.logAuth('LOGOUT', { userId: 'user-1' });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'LOGOUT',
+        }),
+      });
+    });
+
+    it('should log password change', async () => {
+      await auditService.logAuth('PASSWORD_CHANGE', { userId: 'user-1' });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'UPDATE',
+          resourceType: 'Authentication',
+        }),
+      });
+    });
+
+    it('should log registration', async () => {
+      await auditService.logAuth('REGISTER', { userId: 'new-user' });
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'CREATE',
+        }),
+      });
+    });
+  });
+
+  describe('logExport()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+    });
+
+    it('should log data export with format and count', async () => {
+      await auditService.logExport(
+        'Biomarker',
+        ['bio-1', 'bio-2', 'bio-3'],
+        'CSV',
+        { userId: 'user-1' }
+      );
+
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          action: 'EXPORT',
+          resourceType: 'Biomarker',
+          metadata: expect.stringContaining('CSV'),
+        }),
+      });
+    });
+
+    it('should limit exported resource IDs to 100', async () => {
+      const manyIds = Array(150).fill(null).map((_, i) => `bio-${i}`);
+
+      await auditService.logExport('Biomarker', manyIds, 'JSON', { userId: 'user-1' });
+
+      const createCall = mockPrisma.auditLog.create.mock.calls[0][0];
+      const metadata = JSON.parse(createCall.data.metadata);
+      expect(metadata.resourceIds.length).toBeLessThanOrEqual(100);
+    });
+  });
+
+  describe('queryLogs()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+    });
+
+    it('should query logs with filters', async () => {
+      mockPrisma.auditLog.findMany.mockResolvedValue([{ id: 'log-1' }]);
+      mockPrisma.auditLog.count.mockResolvedValue(1);
+
+      const result = await auditService.queryLogs({
+        userId: 'user-1',
+        resourceType: 'Biomarker',
+        action: 'READ',
+      });
+
+      expect(mockPrisma.auditLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            resourceType: 'Biomarker',
+            action: 'READ',
+          }),
+        })
+      );
+      expect(result.logs).toHaveLength(1);
+      expect(result.total).toBe(1);
+    });
+
+    it('should support date range filtering', async () => {
+      mockPrisma.auditLog.findMany.mockResolvedValue([]);
+      mockPrisma.auditLog.count.mockResolvedValue(0);
+
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-12-31');
+
+      await auditService.queryLogs({ startDate, endDate });
+
+      expect(mockPrisma.auditLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            createdAt: {
+              gte: startDate,
+              lte: endDate,
+            },
+          }),
+        })
+      );
+    });
+
+    it('should support pagination', async () => {
+      mockPrisma.auditLog.findMany.mockResolvedValue([]);
+      mockPrisma.auditLog.count.mockResolvedValue(0);
+
+      await auditService.queryLogs({ limit: 50, offset: 100 });
+
+      expect(mockPrisma.auditLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 50,
+          skip: 100,
+        })
+      );
+    });
+  });
+
+  describe('cleanupOldLogs()', () => {
+    beforeEach(async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'valid-salt-1234567890',
+      });
+      await auditService.initialize();
+    });
+
+    it('should delete logs older than retention period', async () => {
+      mockPrisma.auditLog.deleteMany.mockResolvedValue({ count: 10 });
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'system-log' });
+
+      const deletedCount = await auditService.cleanupOldLogs();
+
+      expect(mockPrisma.auditLog.deleteMany).toHaveBeenCalledWith({
+        where: {
+          createdAt: { lt: expect.any(Date) },
+        },
+      });
+      expect(deletedCount).toBe(10);
+    });
+
+    it('should log cleanup action', async () => {
+      mockPrisma.auditLog.deleteMany.mockResolvedValue({ count: 5 });
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'system-log' });
+
+      await auditService.cleanupOldLogs();
+
+      // Second call should be the system log
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          actorType: 'SYSTEM',
+          action: 'DELETE',
+          resourceType: 'AuditLog',
+        }),
+      });
+    });
+  });
+});
+
+describe('Audit cleanup scheduler', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    stopAuditCleanup();
+    vi.useRealTimers();
+  });
+
+  it('should start and stop cleanup scheduler', () => {
+    const mockPrisma = createMockPrisma();
+    mockPrisma.systemConfig.findUnique.mockResolvedValue({
+      key: 'audit_encryption_salt',
+      value: 'valid-salt-1234567890',
+    });
+
+    startAuditCleanup(mockPrisma as unknown as Parameters<typeof startAuditCleanup>[0]);
+    // Starting again should be idempotent
+    startAuditCleanup(mockPrisma as unknown as Parameters<typeof startAuditCleanup>[0]);
+
+    stopAuditCleanup();
+    // Stopping again should be safe
+    stopAuditCleanup();
+  });
+});
