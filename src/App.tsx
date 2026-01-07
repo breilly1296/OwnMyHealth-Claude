@@ -94,6 +94,15 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // SECURITY: Clear sensitive tokens from URL immediately after reading
+  // This prevents token leakage via browser history, Referer headers, and server logs
+  useEffect(() => {
+    if (specialRoute?.token) {
+      // Clear the query string but keep the path (e.g., /verify-email or /reset-password)
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [specialRoute]);
+
   // Handle special routes first (verify-email, reset-password)
   if (specialRoute) {
     if (specialRoute.type === 'verify-email') {
