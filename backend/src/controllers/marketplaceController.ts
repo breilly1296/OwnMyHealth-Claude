@@ -11,6 +11,8 @@ import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import {
   getCMSMarketplaceService,
+  validatePathParam,
+  validateZipcode,
   type CMSCounty,
   type CMSPlanSearchParams,
   type MarketplacePlanSearchResult,
@@ -259,16 +261,19 @@ export async function getPlanDetails(
   const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
   const userId = req.user?.id;
 
+  // SECURITY: Defense-in-depth validation (also validated in service layer)
+  const safePlanId = validatePathParam(planId, 'planId');
+
   try {
     const service = getCMSMarketplaceService();
-    const plan = await service.getPlanDetails(planId, year);
+    const plan = await service.getPlanDetails(safePlanId, year);
 
     if (!plan) {
       const response: ApiResponse = {
         success: false,
         error: {
           code: 'NOT_FOUND',
-          message: `Plan ${planId} not found`,
+          message: `Plan ${safePlanId} not found`,
         },
       };
       res.status(404).json(response);
@@ -279,7 +284,7 @@ export async function getPlanDetails(
     if (userId) {
       const prisma = getPrismaClient();
       const auditService = getAuditLogService(prisma);
-      await auditService.logAccess(RESOURCE_TYPE, planId, { req, userId }, {
+      await auditService.logAccess(RESOURCE_TYPE, safePlanId, { req, userId }, {
         planName: plan.name,
         issuer: plan.issuer,
       });
@@ -315,6 +320,9 @@ export async function estimatePlanPremium(
   const { planId } = req.params;
   const userId = req.user?.id;
 
+  // SECURITY: Defense-in-depth validation (also validated in service layer)
+  const safePlanId = validatePathParam(planId, 'planId');
+
   try {
     const { zipcode, fips, age, income, household_size, is_tobacco_user } = req.body;
 
@@ -331,11 +339,15 @@ export async function estimatePlanPremium(
       return;
     }
 
+    // SECURITY: Validate zipcode and fips
+    const safeZipcode = validateZipcode(zipcode);
+    const safeFips = validatePathParam(fips, 'fips');
+
     const service = getCMSMarketplaceService();
     const estimate = await service.estimatePremium({
-      planId,
-      zipcode,
-      fips,
+      planId: safePlanId,
+      zipcode: safeZipcode,
+      fips: safeFips,
       age,
       income,
       household_size,
@@ -406,9 +418,13 @@ export async function checkProviderInNetwork(
 ): Promise<void> {
   const { planId, providerId } = req.params;
 
+  // SECURITY: Defense-in-depth validation (also validated in service layer)
+  const safePlanId = validatePathParam(planId, 'planId');
+  const safeProviderId = validatePathParam(providerId, 'providerId');
+
   try {
     const service = getCMSMarketplaceService();
-    const inNetwork = await service.checkProviderNetwork(planId, providerId);
+    const inNetwork = await service.checkProviderNetwork(safePlanId, safeProviderId);
 
     const response: ApiResponse<{
       planId: string;
@@ -417,14 +433,14 @@ export async function checkProviderInNetwork(
     }> = {
       success: true,
       data: {
-        planId,
-        providerId,
+        planId: safePlanId,
+        providerId: safeProviderId,
         inNetwork,
       },
     };
     res.json(response);
   } catch (error) {
-    logger.error('Failed to check provider network', { data: { planId, providerId, error } });
+    logger.error('Failed to check provider network', { data: { planId: safePlanId, providerId: safeProviderId, error } });
     const response: ApiResponse = {
       success: false,
       error: {
@@ -447,9 +463,13 @@ export async function checkDrugCoverage(
 ): Promise<void> {
   const { planId, rxcui } = req.params;
 
+  // SECURITY: Defense-in-depth validation (also validated in service layer)
+  const safePlanId = validatePathParam(planId, 'planId');
+  const safeRxcui = validatePathParam(rxcui, 'rxcui');
+
   try {
     const service = getCMSMarketplaceService();
-    const coverage = await service.checkDrugCoverage(planId, rxcui);
+    const coverage = await service.checkDrugCoverage(safePlanId, safeRxcui);
 
     if (!coverage) {
       const response: ApiResponse = {
@@ -476,8 +496,8 @@ export async function checkDrugCoverage(
     }> = {
       success: true,
       data: {
-        planId,
-        rxcui,
+        planId: safePlanId,
+        rxcui: safeRxcui,
         covered: coverage.covered,
         tier: coverage.tier,
         restrictions: {
@@ -489,7 +509,7 @@ export async function checkDrugCoverage(
     };
     res.json(response);
   } catch (error) {
-    logger.error('Failed to check drug coverage', { data: { planId, rxcui, error } });
+    logger.error('Failed to check drug coverage', { data: { planId: safePlanId, rxcui: safeRxcui, error } });
     const response: ApiResponse = {
       success: false,
       error: {

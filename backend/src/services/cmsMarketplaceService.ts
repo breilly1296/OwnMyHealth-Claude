@@ -11,6 +11,83 @@
 
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
+
+// =============================================================================
+// Input Validation - SECURITY: Prevent SSRF and Path Traversal
+// =============================================================================
+
+/**
+ * Validate a path parameter to prevent path traversal and argument injection.
+ * Only allows alphanumeric characters, hyphens, and underscores.
+ * Rejects: ../, /, ?, &, =, and other URL-special characters.
+ *
+ * @throws BadRequestError if validation fails
+ */
+function validatePathParam(param: string, paramName: string): string {
+  if (!param || typeof param !== 'string') {
+    throw new BadRequestError(`${paramName} is required`);
+  }
+
+  // Reject path traversal and URL-special characters
+  if (/[./\\?&#=%]/.test(param)) {
+    logger.warn('Path traversal attempt blocked', { data: { paramName, pattern: 'URL-special chars' } });
+    throw new BadRequestError(`Invalid ${paramName}: contains illegal characters`);
+  }
+
+  // Only allow alphanumeric, hyphens, and underscores
+  if (!/^[a-zA-Z0-9_-]+$/.test(param)) {
+    logger.warn('Invalid path parameter', { data: { paramName } });
+    throw new BadRequestError(`Invalid ${paramName}: must contain only letters, numbers, hyphens, and underscores`);
+  }
+
+  return param;
+}
+
+/**
+ * Validate ZIP code format (5 digits or 9 digits with hyphen)
+ */
+function validateZipcode(zipcode: string): string {
+  if (!zipcode || typeof zipcode !== 'string') {
+    throw new BadRequestError('ZIP code is required');
+  }
+
+  // Only allow 5-digit or ZIP+4 format
+  if (!/^\d{5}(-\d{4})?$/.test(zipcode)) {
+    throw new BadRequestError('Invalid ZIP code format');
+  }
+
+  return zipcode;
+}
+
+/**
+ * Validate state code (2 uppercase letters)
+ */
+function validateState(state: string): string {
+  if (!state || typeof state !== 'string') {
+    throw new BadRequestError('State is required');
+  }
+
+  if (!/^[A-Z]{2}$/.test(state.toUpperCase())) {
+    throw new BadRequestError('Invalid state code: must be 2 letters');
+  }
+
+  return state.toUpperCase();
+}
+
+/**
+ * Validate year parameter (4 digits, reasonable range)
+ */
+function validateYear(year: number | undefined): number {
+  const currentYear = new Date().getFullYear();
+  const yearValue = year || currentYear;
+
+  if (!Number.isInteger(yearValue) || yearValue < 2014 || yearValue > currentYear + 2) {
+    throw new BadRequestError(`Invalid year: must be between 2014 and ${currentYear + 2}`);
+  }
+
+  return yearValue;
+}
 
 // CMS API Types
 export interface CMSCounty {
@@ -207,9 +284,12 @@ class CMSMarketplaceService {
    * We must access data.counties[0] instead of data[0].
    */
   async getCountyByZipcode(zipcode: string): Promise<CMSCounty | null> {
+    // SECURITY: Validate input to prevent path traversal
+    const safeZipcode = validateZipcode(zipcode);
+
     try {
       const response = await this.makeRequest<{ counties: CMSCounty[] }>(
-        `/counties/by/zip/${zipcode}`
+        `/counties/by/zip/${safeZipcode}`
       );
 
       // BUG FIX: Access data.counties, not data directly
@@ -229,9 +309,12 @@ class CMSMarketplaceService {
    * Get all counties for a ZIP code (some ZIPs span multiple counties)
    */
   async getCountiesByZipcode(zipcode: string): Promise<CMSCounty[]> {
+    // SECURITY: Validate input to prevent path traversal
+    const safeZipcode = validateZipcode(zipcode);
+
     try {
       const response = await this.makeRequest<{ counties: CMSCounty[] }>(
-        `/counties/by/zip/${zipcode}`
+        `/counties/by/zip/${safeZipcode}`
       );
 
       // BUG FIX: Access data.counties, not data directly
@@ -265,10 +348,13 @@ class CMSMarketplaceService {
    * Get detailed information about a specific plan
    */
   async getPlanDetails(planId: string, year?: number): Promise<TransformedPlan | null> {
+    // SECURITY: Validate inputs to prevent path traversal and argument injection
+    const safePlanId = validatePathParam(planId, 'planId');
+    const safeYear = validateYear(year);
+
     try {
-      const yearParam = year || new Date().getFullYear();
       const response = await this.makeRequest<CMSPlan>(
-        `/plans/${planId}?year=${yearParam}`
+        `/plans/${safePlanId}?year=${safeYear}`
       );
 
       if (!response) {
@@ -286,10 +372,13 @@ class CMSMarketplaceService {
    * Get available metal levels for a location
    */
   async getMetalLevels(state: string, year?: number): Promise<string[]> {
+    // SECURITY: Validate inputs to prevent argument injection
+    const safeState = validateState(state);
+    const safeYear = validateYear(year);
+
     try {
-      const yearParam = year || new Date().getFullYear();
       const response = await this.makeRequest<{ metal_levels: string[] }>(
-        `/metal-levels?state=${state}&year=${yearParam}`
+        `/metal-levels?state=${safeState}&year=${safeYear}`
       );
 
       return response.metal_levels || [];
@@ -303,10 +392,13 @@ class CMSMarketplaceService {
    * Get available issuers for a location
    */
   async getIssuers(state: string, year?: number): Promise<Array<{ id: string; name: string }>> {
+    // SECURITY: Validate inputs to prevent argument injection
+    const safeState = validateState(state);
+    const safeYear = validateYear(year);
+
     try {
-      const yearParam = year || new Date().getFullYear();
       const response = await this.makeRequest<{ issuers: Array<{ id: string; name: string }> }>(
-        `/issuers?state=${state}&year=${yearParam}`
+        `/issuers?state=${safeState}&year=${safeYear}`
       );
 
       return response.issuers || [];
@@ -328,10 +420,15 @@ class CMSMarketplaceService {
     household_size: number;
     is_tobacco_user?: boolean | boolean[];
   }): Promise<{ premium: number; aptc: number; premiumWithCredit: number } | null> {
+    // SECURITY: Validate inputs to prevent path traversal and argument injection
+    const safePlanId = validatePathParam(params.planId, 'planId');
+    const safeZipcode = validateZipcode(params.zipcode);
+    const safeFips = validatePathParam(params.fips, 'fips');
+
     try {
       const queryParams = new URLSearchParams({
-        zipcode: params.zipcode,
-        fips: params.fips,
+        zipcode: safeZipcode,
+        fips: safeFips,
         income: params.income.toString(),
         household_size: params.household_size.toString(),
       });
@@ -356,7 +453,7 @@ class CMSMarketplaceService {
         premium: number;
         aptc: number;
         premium_w_credit: number;
-      }>(`/plans/${params.planId}/premium?${queryParams.toString()}`);
+      }>(`/plans/${safePlanId}/premium?${queryParams.toString()}`);
 
       return {
         premium: response.premium,
@@ -373,9 +470,13 @@ class CMSMarketplaceService {
    * Check if a provider is in a plan's network
    */
   async checkProviderNetwork(planId: string, providerId: string): Promise<boolean> {
+    // SECURITY: Validate inputs to prevent path traversal
+    const safePlanId = validatePathParam(planId, 'planId');
+    const safeProviderId = validatePathParam(providerId, 'providerId');
+
     try {
       const response = await this.makeRequest<{ in_network: boolean }>(
-        `/plans/${planId}/providers/${providerId}`
+        `/plans/${safePlanId}/providers/${safeProviderId}`
       );
 
       return response.in_network || false;
@@ -395,6 +496,10 @@ class CMSMarketplaceService {
     stepTherapy?: boolean;
     quantityLimit?: boolean;
   } | null> {
+    // SECURITY: Validate inputs to prevent path traversal
+    const safePlanId = validatePathParam(planId, 'planId');
+    const safeRxcui = validatePathParam(rxcui, 'rxcui');
+
     try {
       const response = await this.makeRequest<{
         covered: boolean;
@@ -402,7 +507,7 @@ class CMSMarketplaceService {
         prior_authorization?: boolean;
         step_therapy?: boolean;
         quantity_limit?: boolean;
-      }>(`/plans/${planId}/drugs/${rxcui}`);
+      }>(`/plans/${safePlanId}/drugs/${safeRxcui}`);
 
       return {
         covered: response.covered,
@@ -651,5 +756,13 @@ export function getCMSMarketplaceService(): CMSMarketplaceService {
   }
   return serviceInstance;
 }
+
+// Export validation functions for defense-in-depth use in controllers
+export {
+  validatePathParam,
+  validateZipcode,
+  validateState,
+  validateYear,
+};
 
 export default CMSMarketplaceService;
