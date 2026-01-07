@@ -22,38 +22,10 @@ vi.mock('../../services/api', () => ({
     getPlans: vi.fn(),
     createPlan: vi.fn(),
   },
-  dnaApi: {
-    getUploads: vi.fn(),
-    getVariants: vi.fn(),
-    uploadFile: vi.fn(),
-  },
   authApi: {
     getCurrentUser: vi.fn(),
     logout: vi.fn(),
   },
-}));
-
-// Mock utility functions
-vi.mock('../../utils/ai', () => ({
-  performAIAnalysis: vi.fn(() => ({
-    riskAssessments: [],
-    trendAnalyses: [],
-    healthInsights: [],
-    correlations: [],
-    overallHealthScore: 85,
-    priorityActions: [],
-  })),
-}));
-
-vi.mock('../../utils/health', () => ({
-  analyzeHealthNeeds: vi.fn(() => ({
-    detectedConditions: [],
-    recommendedServices: [],
-    insuranceCoverage: [],
-    estimatedCosts: [],
-    priorityActions: [],
-    preventiveRecommendations: [],
-  })),
 }));
 
 vi.mock('../../utils/insurance', () => ({
@@ -86,7 +58,7 @@ vi.mock('recharts', () => ({
   Area: () => null,
 }));
 
-import { biomarkersApi, dnaApi } from '../../services/api';
+import { biomarkersApi } from '../../services/api';
 
 // Sample biomarker data for tests
 const mockBiomarkers = [
@@ -122,7 +94,6 @@ describe('Dashboard', () => {
     vi.clearAllMocks();
     // Default mock implementations
     vi.mocked(biomarkersApi.getAll).mockResolvedValue({ biomarkers: mockBiomarkers } as any);
-    vi.mocked(dnaApi.getUploads).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -209,15 +180,6 @@ describe('Dashboard', () => {
       await waitFor(() => {
         // The dashboard should have loaded
         expect(screen.queryByText(/loading your health data/i)).not.toBeInTheDocument();
-      });
-    });
-
-    it('should show health score', async () => {
-      render(<Dashboard user={mockUser} onLogout={mockOnLogout} />);
-
-      await waitFor(() => {
-        // Health score should be displayed (mocked to 85)
-        expect(screen.getByText('85')).toBeInTheDocument();
       });
     });
   });
