@@ -25,19 +25,35 @@
  * @module App
  */
 
-import React, { useState, useEffect } from 'react';
-import { Dashboard } from './components/dashboard';
-import {
-  LoginPage,
-  RegisterPage,
-  VerifyEmailPage,
-  ResetPasswordPage,
-  ForgotPasswordPage,
-} from './components/auth';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ErrorBoundary } from './components/common';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { authApi } from './services/api';
 import { Loader2, Heart } from 'lucide-react';
+
+// Lazy load heavy components for code splitting
+// Import directly from files to enable proper tree-shaking
+const Dashboard = lazy(() => import('./components/dashboard/Dashboard'));
+const LoginPage = lazy(() => import('./components/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./components/auth/RegisterPage'));
+const VerifyEmailPage = lazy(() => import('./components/auth/VerifyEmailPage'));
+const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
+const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
+
+/** Loading fallback for lazy-loaded components */
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/25">
+          <Heart className="w-8 h-8 text-white" />
+        </div>
+        <Loader2 className="w-6 h-6 animate-spin text-brand-500 mx-auto mb-3" />
+        <p className="text-slate-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 /** Possible authentication views when user is not logged in */
 type AuthView = 'login' | 'register' | 'forgot-password';
@@ -107,33 +123,37 @@ function AppContent() {
   if (specialRoute) {
     if (specialRoute.type === 'verify-email') {
       return (
-        <VerifyEmailPage
-          token={specialRoute.token}
-          onSuccess={() => {
-            navigateToLogin();
-            setSpecialRoute(null);
-          }}
-          onNavigateToLogin={() => {
-            navigateToLogin();
-            setSpecialRoute(null);
-          }}
-        />
+        <Suspense fallback={<LoadingFallback />}>
+          <VerifyEmailPage
+            token={specialRoute.token}
+            onSuccess={() => {
+              navigateToLogin();
+              setSpecialRoute(null);
+            }}
+            onNavigateToLogin={() => {
+              navigateToLogin();
+              setSpecialRoute(null);
+            }}
+          />
+        </Suspense>
       );
     }
 
     if (specialRoute.type === 'reset-password') {
       return (
-        <ResetPasswordPage
-          token={specialRoute.token}
-          onSuccess={() => {
-            navigateToLogin();
-            setSpecialRoute(null);
-          }}
-          onNavigateToLogin={() => {
-            navigateToLogin();
-            setSpecialRoute(null);
-          }}
-        />
+        <Suspense fallback={<LoadingFallback />}>
+          <ResetPasswordPage
+            token={specialRoute.token}
+            onSuccess={() => {
+              navigateToLogin();
+              setSpecialRoute(null);
+            }}
+            onNavigateToLogin={() => {
+              navigateToLogin();
+              setSpecialRoute(null);
+            }}
+          />
+        </Suspense>
       );
     }
   }
@@ -216,37 +236,47 @@ function AppContent() {
   if (!isAuthenticated) {
     if (authView === 'register') {
       return (
-        <RegisterPage
-          onRegister={handleRegister}
-          onSwitchToLogin={switchToLogin}
-          error={error}
-          isLoading={isAuthLoading}
-        />
+        <Suspense fallback={<LoadingFallback />}>
+          <RegisterPage
+            onRegister={handleRegister}
+            onSwitchToLogin={switchToLogin}
+            error={error}
+            isLoading={isAuthLoading}
+          />
+        </Suspense>
       );
     }
 
     if (authView === 'forgot-password') {
       return (
-        <ForgotPasswordPage
-          onNavigateToLogin={switchToLogin}
-        />
+        <Suspense fallback={<LoadingFallback />}>
+          <ForgotPasswordPage
+            onNavigateToLogin={switchToLogin}
+          />
+        </Suspense>
       );
     }
 
     return (
-      <LoginPage
-        onLogin={handleLogin}
-        onDemoLogin={handleDemoLogin}
-        onSwitchToRegister={switchToRegister}
-        onForgotPassword={switchToForgotPassword}
-        error={error}
-        isLoading={isAuthLoading}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <LoginPage
+          onLogin={handleLogin}
+          onDemoLogin={handleDemoLogin}
+          onSwitchToRegister={switchToRegister}
+          onForgotPassword={switchToForgotPassword}
+          error={error}
+          isLoading={isAuthLoading}
+        />
+      </Suspense>
     );
   }
 
   // Authenticated - show dashboard
-  return <Dashboard user={user} onLogout={logout} />;
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Dashboard user={user} onLogout={logout} />
+    </Suspense>
+  );
 }
 
 function App() {
