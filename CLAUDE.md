@@ -75,6 +75,37 @@ Must match Prisma schema exactly. Current encrypted fields:
 - Health Goals/Progress: descriptions, notes
 - Audit Log: previous/new values
 
+### Row-Level Security (RLS)
+Database-level access control ensures users can only access their own data.
+
+**How it works:**
+1. Application sets `app.current_user_id` session variable before queries
+2. PostgreSQL RLS policies check this variable against `user_id` in tables
+3. System operations use `app.is_admin = true` to bypass RLS
+
+**Usage in code:**
+```typescript
+import { withRLSContext, withRLSTransaction } from './services/database.js';
+
+// Simple query with RLS
+const biomarkers = await withRLSContext(userId, async () => {
+  return prisma.biomarker.findMany();
+});
+
+// Transaction with RLS
+await withRLSTransaction(userId, async (tx) => {
+  await tx.biomarker.create({ data: {...} });
+  await tx.auditLog.create({ data: {...} });
+});
+
+// System operation (bypasses RLS)
+await withRLSContext(null, async () => {
+  return prisma.user.findMany(); // Admin access
+});
+```
+
+**Migration:** `backend/prisma/migrations/20260107_add_rls_policies/`
+
 ### Product Guidelines
 1. **No medical advice** - always include disclaimers
 2. **Keep it simple** - avoid feature creep, no AI/ML
@@ -84,6 +115,8 @@ Must match Prisma schema exactly. Current encrypted fields:
 | File | Purpose |
 |------|---------|
 | `backend/prisma/schema.prisma` | Database models, encrypted field definitions |
+| `backend/prisma/migrations/20260107_add_rls_policies/` | Row-Level Security policies |
+| `backend/src/services/database.ts` | Prisma client, RLS context management |
 | `backend/src/services/encryption.ts` | PHI encryption, PHI_FIELDS mapping |
 | `backend/src/services/auditLog.ts` | HIPAA audit trail creation |
 | `backend/src/middleware/auth.ts` | JWT verification, route protection |
@@ -114,6 +147,7 @@ npx prisma studio    # Database GUI
 - [ ] Auth middleware on all protected routes?
 - [ ] PHI encrypted before storage?
 - [ ] Audit logs created for PHI access?
+- [ ] RLS context set for database queries? (`withRLSContext` or `withRLSTransaction`)
 - [ ] Input validated and sanitized?
 - [ ] Errors handled without leaking data?
 - [ ] No console.log with sensitive data?

@@ -4,14 +4,14 @@
  * Central export point for all backend services.
  *
  * Services:
- * - Database: Prisma client and connection management
+ * - Database: Prisma client, connection management, RLS context
  * - Encryption: PHI encryption/decryption (AES-256-GCM)
  * - Audit Logging: SOC 2-compliant access logging
  *
  * @module services/index
  */
 
-// Database and Prisma
+// Database, Prisma, and RLS
 export {
   initializeDatabase,
   disconnectDatabase,
@@ -19,6 +19,12 @@ export {
   getAuditService,
   getEncryption,
   checkDatabaseHealth,
+  // RLS context management
+  setRLSContext,
+  setAdminContext,
+  clearRLSContext,
+  withRLSContext,
+  withRLSTransaction,
 } from './database.js';
 
 // Encryption
