@@ -58,15 +58,18 @@ function log(level: LogLevel, message: string, options?: LogOptions): void {
 
   const formattedMessage = `${timestamp} ${level.toUpperCase()} ${prefix} ${message}`;
 
+  // SECURITY: Use explicit format string to prevent format-string injection.
+  // If formattedMessage contains % specifiers (%s, %d, %o), they would be
+  // interpreted as format strings if passed as the first argument directly.
   switch (level) {
     case 'error':
-      console.error(formattedMessage, sanitizedData ?? '');
+      console.error('%s', formattedMessage, sanitizedData ?? '');
       break;
     case 'warn':
-      console.warn(formattedMessage, sanitizedData ?? '');
+      console.warn('%s', formattedMessage, sanitizedData ?? '');
       break;
     default:
-      console.log(formattedMessage, sanitizedData ? JSON.stringify(sanitizedData) : '');
+      console.log('%s', formattedMessage, sanitizedData ? JSON.stringify(sanitizedData) : '');
   }
 }
 
@@ -105,7 +108,8 @@ export const logger = {
    * Log startup messages (always shown)
    */
   startup: (message: string) => {
-    console.log(message);
+    // SECURITY: Use format string to prevent format-string injection
+    console.log('%s', message);
   },
 
   /**
@@ -114,11 +118,12 @@ export const logger = {
   devBox: (title: string, lines: string[]) => {
     if (config.isProduction) return;
 
+    // SECURITY: Use format string to prevent format-string injection
     console.log('');
     console.log('═══════════════════════════════════════════════════════════════');
-    console.log(title);
+    console.log('%s', title);
     console.log('═══════════════════════════════════════════════════════════════');
-    lines.forEach(line => console.log(line));
+    lines.forEach(line => console.log('%s', line));
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('');
   },
