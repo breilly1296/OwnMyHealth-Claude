@@ -290,13 +290,13 @@ export function extractDateFromText(text: string): string | null {
   // Common date patterns in lab reports
   const datePatterns = [
     // Collection/Specimen date
-    /(?:collection|specimen|collected|drawn|test)\s*date[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+    /(?:collection|specimen|collected|drawn|test)\s*date[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
     // Report date
-    /(?:report|reported|result)\s*date[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+    /(?:report|reported|result)\s*date[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
     // ISO format
-    /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/,
+    /(\d{4}[/-]\d{1,2}[/-]\d{1,2})/,
     // US format
-    /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/,
+    /(\d{1,2}[/-]\d{1,2}[/-]\d{4})/,
     // Written month format
     /((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})/i,
   ];

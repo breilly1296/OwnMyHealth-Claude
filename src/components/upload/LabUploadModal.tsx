@@ -65,7 +65,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     setResult(null);
   }, []);
 
-  const processFile = async (file: File) => {
+  const processFile = useCallback(async (file: File) => {
     setIsProcessing(true);
     setError(null);
     setResult(null);
@@ -134,7 +134,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [onSuccess, onClose, resetState]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -146,7 +146,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     if (file) {
       processFile(file);
     }
-  }, [isProcessing]);
+  }, [isProcessing, processFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();

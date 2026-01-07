@@ -26,6 +26,9 @@ vi.mock('../../services/api', () => ({
     getCurrentUser: vi.fn(),
     logout: vi.fn(),
   },
+  setOnAuthFailure: vi.fn(),
+  getAuthToken: vi.fn(),
+  attemptTokenRefresh: vi.fn(),
 }));
 
 vi.mock('../../utils/insurance', () => ({
