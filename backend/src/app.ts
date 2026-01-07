@@ -77,7 +77,14 @@ function getSafeCorsOrigins(): string | string[] {
 // Create Express app
 const app = express();
 
-// Trust proxy (for rate limiting behind reverse proxy)
+// SECURITY: Trust proxy - REQUIRED for secure IP address handling
+// Cloud Run / load balancers set X-Forwarded-For headers. With trust proxy enabled,
+// Express correctly parses these headers and sets req.ip to the real client IP.
+// This is CRITICAL for:
+// - Rate limiting (prevents all requests appearing from load balancer IP)
+// - Audit logging (see auditLog.ts getClientIp - relies on this for HIPAA compliance)
+// - IP-based security controls
+// The value '1' means trust the first proxy hop (Cloud Run's load balancer)
 app.set('trust proxy', 1);
 
 // Security middleware

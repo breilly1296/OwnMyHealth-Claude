@@ -147,13 +147,19 @@ export class AuditLogService {
   }
 
   /**
-   * Get client IP address (handling proxies)
+   * Get client IP address from request
+   *
+   * SECURITY: Uses Express's req.ip which respects the 'trust proxy' setting.
+   * When trust proxy is enabled (see app.ts), Express correctly extracts the
+   * client IP from X-Forwarded-For based on the proxy hop count configured.
+   * This prevents IP spoofing attacks where malicious clients inject fake
+   * X-Forwarded-For headers.
+   *
+   * IMPORTANT: The Express app MUST have 'trust proxy' configured for this
+   * to work securely. Without it, req.ip would return the load balancer's IP.
+   * See app.ts: app.set('trust proxy', 1)
    */
   private getClientIp(req: Request): string {
-    const forwarded = req.get('x-forwarded-for');
-    if (forwarded) {
-      return forwarded.split(',')[0].trim();
-    }
     return req.ip || req.socket.remoteAddress || 'unknown';
   }
 
