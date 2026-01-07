@@ -262,6 +262,25 @@ export interface MarketplacePlanSearchResult {
   };
 }
 
+/**
+ * SECURITY NOTE: CMS Marketplace API Key Authentication
+ *
+ * The CMS Marketplace API ONLY supports API key authentication via query parameter.
+ * Header-based authentication (X-API-Key, Authorization) is NOT supported.
+ * See: https://developer.cms.gov/marketplace-api/api-spec
+ *
+ * This means the API key appears in URLs, which poses risks:
+ * - URLs may be logged by proxies, load balancers, and monitoring tools
+ * - Error messages could expose the key if URLs are included
+ *
+ * Mitigations implemented:
+ * 1. HTTPS encrypts URL in transit (only domain visible via SNI)
+ * 2. API key is redacted from all error messages and logs
+ * 3. Outbound requests are server-side only (no browser history/Referer risks)
+ * 4. CMS rate-limits API keys, limiting impact of compromise
+ *
+ * If CMS adds header support in the future, update makeRequest/makePostRequest.
+ */
 class CMSMarketplaceService {
   private baseUrl: string;
   private apiKey: string;
@@ -275,6 +294,13 @@ class CMSMarketplaceService {
     if (!this.apiKey && config.isProduction) {
       logger.warn('CMS_API_KEY is not configured - Marketplace API calls will fail');
     }
+  }
+
+  /**
+   * Redact API key from URLs to prevent accidental exposure in logs/errors
+   */
+  private redactApiKeyFromUrl(url: string): string {
+    return url.replace(/apikey=[^&]+/, 'apikey=[REDACTED]');
   }
 
   /**
@@ -526,10 +552,12 @@ class CMSMarketplaceService {
 
   /**
    * Make a GET request to the CMS API
-   * API key is passed as query parameter
+   *
+   * SECURITY: API key is passed as query parameter (CMS API requirement).
+   * Error messages use redacted URLs to prevent key exposure.
    */
   private async makeRequest<T>(endpoint: string): Promise<T> {
-    const separator = endpoint.includes("?") ? "&" : "?";
+    const separator = endpoint.includes('?') ? '&' : '?';
     const url = `${this.baseUrl}${endpoint}${separator}apikey=${encodeURIComponent(this.apiKey)}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -549,22 +577,28 @@ class CMSMarketplaceService {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`CMS API error: ${response.status} ${response.statusText} - ${errorBody}`);
+        // SECURITY: Use redacted URL in error message to prevent API key leakage
+        const safeUrl = this.redactApiKeyFromUrl(url);
+        throw new Error(`CMS API error: ${response.status} ${response.statusText} - ${safeUrl} - ${errorBody}`);
       }
 
       return await response.json() as T;
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`CMS API request timed out after ${this.timeout}ms`);
+        // SECURITY: Use redacted URL in timeout error
+        const safeUrl = this.redactApiKeyFromUrl(url);
+        throw new Error(`CMS API request timed out after ${this.timeout}ms: ${safeUrl}`);
       }
-throw error;
+      throw error;
     }
   }
 
   /**
    * Make a POST request to the CMS API
-   * API key is passed as query parameter
+   *
+   * SECURITY: API key is passed as query parameter (CMS API requirement).
+   * Error messages use redacted URLs to prevent key exposure.
    */
   private async makePostRequest<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
     const url = `${this.baseUrl}${endpoint}?apikey=${encodeURIComponent(this.apiKey)}`;
@@ -587,14 +621,18 @@ throw error;
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`CMS API error: ${response.status} ${response.statusText} - ${errorBody}`);
+        // SECURITY: Use redacted URL in error message to prevent API key leakage
+        const safeUrl = this.redactApiKeyFromUrl(url);
+        throw new Error(`CMS API error: ${response.status} ${response.statusText} - ${safeUrl} - ${errorBody}`);
       }
 
       return await response.json() as T;
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`CMS API request timed out after ${this.timeout}ms`);
+        // SECURITY: Use redacted URL in timeout error
+        const safeUrl = this.redactApiKeyFromUrl(url);
+        throw new Error(`CMS API request timed out after ${this.timeout}ms: ${safeUrl}`);
       }
       throw error;
     }
