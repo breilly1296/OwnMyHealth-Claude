@@ -14,9 +14,11 @@ import { getAuditLogService } from '../services/auditLog.js';
 import { parseLabReport, parseSBC } from '../services/pdfParser.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
+import { processDocument, extractDateFromText, extractLabNameFromText } from '../services/ocrService.js';
 
 const LAB_REPORT_RESOURCE = 'LabReportUpload';
 const SBC_RESOURCE = 'SBCUpload';
+const LAB_OCR_RESOURCE = 'LabResultOCR';
 
 // Extend request to include multer file
 interface UploadRequest extends AuthenticatedRequest {
@@ -51,6 +53,26 @@ interface SBCUploadResponse {
     benefitsCount: number;
   };
   extractionConfidence: number;
+}
+
+interface LabResultOCRResponse {
+  biomarkersCreated: number;
+  biomarkers: {
+    id: string;
+    name: string;
+    value: number;
+    unit: string;
+    category: string;
+    isOutOfRange: boolean;
+  }[];
+  labName?: string;
+  reportDate?: string;
+  extractionConfidence: number;
+  ocrMetadata: {
+    processingTimeMs: number;
+    pageCount: number;
+    documentType: string;
+  };
 }
 
 /**
@@ -279,6 +301,162 @@ export async function uploadSBC(
         benefitsCount: createdPlan.benefits.length,
       },
       extractionConfidence: parsedPlan.extractionConfidence,
+    },
+  };
+
+  res.status(201).json(response);
+}
+
+/**
+ * Upload and process a lab result using OCR (Google Document AI)
+ * Supports PDF and image files (PNG, JPG, TIFF)
+ * POST /api/v1/upload/lab-results-ocr
+ */
+export async function uploadLabResultOCR(
+  req: UploadRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+  const file = req.file;
+
+  if (!file) {
+    throw new ValidationError('No file uploaded');
+  }
+
+  // Supported MIME types for OCR
+  const supportedTypes = [
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/tiff',
+    'image/gif',
+    'image/webp',
+  ];
+
+  if (!supportedTypes.includes(file.mimetype)) {
+    throw new ValidationError(
+      'Only PDF and image files (PNG, JPG, TIFF) are accepted for OCR processing'
+    );
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    throw new ValidationError('File size must be less than 10MB');
+  }
+
+  const prisma = getPrismaClient();
+  const encryptionService = getEncryptionService();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const auditService = getAuditLogService(prisma);
+
+  // Process document using Document AI OCR
+  const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname);
+
+  if (ocrResult.biomarkers.length === 0) {
+    // Audit log: failed extraction
+    await auditService.logAccess(LAB_OCR_RESOURCE, undefined, { req, userId }, {
+      operation: 'OCR_PARSE_FAILED',
+      filename: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      reason: 'No biomarkers extracted from OCR text',
+      ocrConfidence: ocrResult.confidence,
+    });
+
+    throw new ValidationError(
+      'Could not extract any biomarkers from the document. Please ensure it is a valid lab report with readable text.'
+    );
+  }
+
+  // Extract date and lab name from OCR text
+  const reportDate = extractDateFromText(ocrResult.text) || new Date().toISOString();
+  const labName = extractLabNameFromText(ocrResult.text);
+
+  // Create biomarkers in database
+  const createdBiomarkers: {
+    id: string;
+    name: string;
+    value: number;
+    unit: string;
+    category: string;
+    isOutOfRange: boolean;
+  }[] = [];
+
+  for (const biomarker of ocrResult.biomarkers) {
+    // Encrypt the value
+    const valueEncrypted = encryptionService.encrypt(biomarker.value.toString(), userSalt);
+
+    // Encrypt notes if present
+    const notes = labName
+      ? `OCR extracted from: ${labName}`
+      : 'OCR extracted from uploaded document';
+    const notesEncrypted = encryptionService.encrypt(notes, userSalt);
+
+    // Check if out of range
+    const isOutOfRange =
+      biomarker.value < biomarker.normalRange.min ||
+      biomarker.value > biomarker.normalRange.max;
+
+    const created = await prisma.biomarker.create({
+      data: {
+        userId,
+        category: biomarker.category,
+        name: biomarker.name,
+        unit: biomarker.unit,
+        valueEncrypted,
+        notesEncrypted,
+        normalRangeMin: biomarker.normalRange.min,
+        normalRangeMax: biomarker.normalRange.max,
+        normalRangeSource: biomarker.normalRange.source || 'OCR Extraction',
+        measurementDate: new Date(reportDate),
+        isOutOfRange,
+      },
+    });
+
+    createdBiomarkers.push({
+      id: created.id,
+      name: biomarker.name,
+      value: biomarker.value,
+      unit: biomarker.unit,
+      category: biomarker.category,
+      isOutOfRange,
+    });
+  }
+
+  // Calculate average extraction confidence
+  const avgConfidence =
+    ocrResult.biomarkers.reduce((sum, b) => sum + b.confidence, 0) /
+    ocrResult.biomarkers.length;
+
+  // Audit log: successful upload and extraction
+  await auditService.logCreate(
+    LAB_OCR_RESOURCE,
+    'BATCH',
+    {
+      filename: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      biomarkersExtracted: createdBiomarkers.length,
+      labName,
+      extractionConfidence: avgConfidence,
+      ocrConfidence: ocrResult.confidence,
+      processingTimeMs: ocrResult.metadata.processingTimeMs,
+    },
+    { req, userId }
+  );
+
+  const response: ApiResponse<LabResultOCRResponse> = {
+    success: true,
+    data: {
+      biomarkersCreated: createdBiomarkers.length,
+      biomarkers: createdBiomarkers,
+      labName: labName || undefined,
+      reportDate,
+      extractionConfidence: avgConfidence,
+      ocrMetadata: {
+        processingTimeMs: ocrResult.metadata.processingTimeMs,
+        pageCount: ocrResult.pageCount,
+        documentType: ocrResult.metadata.documentType || file.mimetype,
+      },
     },
   };
 

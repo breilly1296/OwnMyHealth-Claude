@@ -31,3 +31,5 @@ coverage/
 __tests__/
 
 /src/generated/prisma
+
+gcp-ocr-key.json

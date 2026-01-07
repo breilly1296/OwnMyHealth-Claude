@@ -16,7 +16,7 @@ import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
-import { uploadLabReport, uploadSBC } from '../controllers/uploadController.js';
+import { uploadLabReport, uploadSBC, uploadLabResultOCR } from '../controllers/uploadController.js';
 
 const router = Router();
 
@@ -36,6 +36,31 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only PDF files are accepted'));
+    }
+  },
+});
+
+// Configure multer for OCR uploads (PDFs and images)
+const uploadOCR = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1, // Only allow single file upload
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept PDF and image files for OCR
+    const allowedTypes = [
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+      'image/tiff',
+      'image/gif',
+      'image/webp',
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and image files (PNG, JPG, TIFF) are accepted'));
     }
   },
 });
@@ -66,6 +91,33 @@ router.post(
   authenticate,
   upload.single('file'),
   asyncHandler(uploadSBC)
+);
+
+/**
+ * POST /api/v1/upload/lab-results-ocr
+ * Upload and process a lab result using OCR (Google Document AI)
+ *
+ * Request: multipart/form-data with 'file' field containing PDF or image (PNG, JPG, TIFF)
+ * Response: Created biomarkers and OCR extraction metadata
+ *
+ * Supported formats:
+ * - PDF files
+ * - PNG images
+ * - JPEG images
+ * - TIFF images
+ *
+ * Extracts bone health biomarkers:
+ * - Calcium
+ * - Vitamin D
+ * - PTH (Parathyroid Hormone)
+ * - Phosphorus
+ * - Alkaline Phosphatase
+ */
+router.post(
+  '/lab-results-ocr',
+  authenticate,
+  uploadOCR.single('file'),
+  asyncHandler(uploadLabResultOCR)
 );
 
 export default router;

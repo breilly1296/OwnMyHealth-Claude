@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ownmyhealth-prod",
+  "private_key_id": "109ec48bab8a95f27168f8d6e406ce28ac4794bc",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCcNK56PlcLcZvc\ncobruIhT0nIki6ne4cL0xuiyrDxGwRHgmJtEOM6PG9JiaSJOn/rjBRuJn6SZtM0v\nSZ+7WqNKGxvSKWPcMENaGG1uQToiFmc6NQbRXP+0nTVokhOKX8d/tleISYs8DOzn\nCMP7iIQetosHLhvXcfLmedg3HztRwipls0ct6cpddjJg7A9w6OJlRd2jrlaPM82F\nW0NmZkzkzzIi8rCw1Q0DmJxT1HS2s/rBfoHwJEa2HwWePC6Ech2C26Fp0AeHLuEy\nP+KwbMnVMsNweKYcNfAsS6K3QLVbP8mfbnJpLMwJ0s8NJHO20KD+PWSCLtza4TTm\nyoXZFLx7AgMBAAECggEAIKzQdpfFw4oPTWzTlklykv4pjEV+0jWtf2CAWqe2sCJA\n6BdkG0A6zSrHtnhBierjI0v1N7OiTdjJNwQSmrFaCO1kw3CPCAc8f4MumOqiC3Fe\nRInFFFR81L4x5t7voXlplOiCpOqlanlVsPpfbKVg5b/Pkz/s6QNYCSght14cHXzJ\nklR/SuD9pyjpNwUBqSKuu03dTbfAtMfRCDgB1AMJ4MGoCAsoC6kfU5EEMYEHwE78\nyBl3c0JkHJ27pMqvnjm83puQOsW8zGu2ZrZ167Q+y6UtYpMlkpzbrps+CQWN6emF\ne5rI3L2nF8ayXRxu6+vn4s+/uDQ6wG9fzklUGF9QcQKBgQDII9YXRFumCgVHWJ+d\nGN1E+kRoP1aFDegrc2CEOKodK4S62b9Oaf31j8d7x6kOocyZ0orDhRxevLy39a8L\nQDg0Hj92ouLQqvq8NzHKBj+ACALbpl6IHLIVEVGkgvBaVkr/moNeO8PtDqRyO1rQ\nlYEPnmHPGs+v0txEmDZPZm3OcwKBgQDHzbYXVJtySVi/Qx399zvQjBpzlqF1znIy\nt6J0tPlFS8I5tIQSbkHxlm6NY0UDuFek7F7YymuBb5LjTQsRD6cTy36z6WFpPULJ\nwDwnJxCKNa/DyncvWcH/Owp9G2RWeQ/qNenbNlhF50wgSEu4ADlUtVW4LOelNDMF\nc7zIq3gP2QKBgQCna8sBRa7BE+rchxdmjFE1DYJCDpHq1fpctrSLhvdPVYM/5z0w\ndFv8mp0OP7R9R/5mwwhPjL9xxMK9xKj8aWlat97w+EtysUT0Q9vDmzxtdsYlRmQX\nyqFyHD3Gt74mY79zWKcCIk7AtJn98QcEK7x9+0jovg30kBiwzP/Jpe6/XwKBgGdy\n7vCtcb5+k2CT05eGxoV3xMpMF1TzitUPlyFuAhIK44kVGbyhMatwA9VYrIb8jwRp\nDcKZK4hcyGS/oxc2T39EQVnNYA4pFcd3rK1o4HtuyI5K6eKuSm9nlkqoQA81pzPQ\nrkA9pv6qfxPH2sxt8UEWkkdFmLpEiJYuEnSjswohAoGAU4QaYYngb6rj1x3xR8hu\nEA5vuxNUajo0kw0+ToTWqsWXDKR7pkLztmz/++N/tgHBjFLcgA4hc1KyvhPxjvpz\nyMACMHGjiL4Th2f8fhHw/yoOJu7uf93nvecxz5/06tHqpNblsccrfRducF+gRJnJ\n8tFA2wJkdCAtmQszFkqSt8Y=\n-----END PRIVATE KEY-----\n",
+  "client_email": "ocr-service@ownmyhealth-prod.iam.gserviceaccount.com",
+  "client_id": "103282594191225273640",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ocr-service%40ownmyhealth-prod.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

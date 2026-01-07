@@ -25,7 +25,7 @@ import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, Biom
 // Insurance components
 import { InsuranceSBCUpload, InsurancePlanViewer, EnhancedInsuranceUpload, InsurancePlanCompare, InsuranceHub, InsuranceKnowledgeBase } from '../insurance';
 // Upload components
-import { PDFUploadModal, ClinicalFileUpload } from '../upload';
+import { PDFUploadModal, ClinicalFileUpload, LabUploadModal } from '../upload';
 // Dashboard components
 import { CollapsibleNavGroup } from './index';
 // Data (for demo mode / fallback)
@@ -56,6 +56,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [selectedCategory, setSelectedCategory] = useState('Dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
+  const [isLabUploadModalOpen, setIsLabUploadModalOpen] = useState(false);
   const [isClinicalUploadOpen, setIsClinicalUploadOpen] = useState(false);
   const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
   const [isSBCUploadOpen, setIsSBCUploadOpen] = useState(false);
@@ -243,6 +244,30 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     handlePDFExtract(extractedBiomarkers);
   }, [handlePDFExtract]);
 
+  // Handler for server-side OCR upload success (Google Document AI)
+  const handleLabOCRSuccess = useCallback((extractedBiomarkers: { id: string; name: string; value: number; unit: string; category: string; isOutOfRange: boolean }[]) => {
+    // Fetch updated biomarkers from server since they were saved server-side
+    const fetchUpdatedBiomarkers = async () => {
+      try {
+        const result = await biomarkersApi.getAll();
+        setBiomarkers(result.biomarkers as unknown as Biomarker[]);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Failed to refresh biomarkers';
+        dashboardLogger.error('Error refreshing biomarkers after OCR upload', { error: errorMsg });
+        // If refresh fails, at least show the returned data locally
+        const newBiomarkers = extractedBiomarkers.map(b => ({
+          ...b,
+          date: new Date().toISOString().split('T')[0],
+          description: `${b.name} measurement`,
+          normalRange: { min: 0, max: 100, source: 'OCR' }, // Placeholder, actual values from server
+          history: [],
+        })) as Biomarker[];
+        setBiomarkers(prev => [...prev, ...newBiomarkers]);
+      }
+    };
+    fetchUpdatedBiomarkers();
+  }, []);
+
   const handleInsurancePlanExtracted = useCallback(async (plan: InsurancePlan) => {
     if (DEMO_MODE) {
       setInsurancePlans(prev => [...prev, plan]);
@@ -395,16 +420,26 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           </div>
 
           {/* Quick Actions */}
-          <div className="col-span-12 md:col-span-6 grid grid-cols-2 gap-3">
+          <div className="col-span-12 md:col-span-6 grid grid-cols-3 gap-3">
             <button
-              onClick={() => setIsPDFModalOpen(true)}
+              onClick={() => setIsLabUploadModalOpen(true)}
               className="bg-white rounded-2xl border border-slate-200/60 p-4 hover:border-brand-300 hover:shadow-sm transition-all group text-left"
             >
               <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
                 <FileUp className="w-4 h-4 text-brand-600" />
               </div>
-              <p className="text-sm font-medium text-slate-900">Upload Report</p>
-              <p className="text-xs text-slate-400 mt-0.5">PDF or image</p>
+              <p className="text-sm font-medium text-slate-900">Lab OCR</p>
+              <p className="text-xs text-slate-400 mt-0.5">Auto-extract</p>
+            </button>
+            <button
+              onClick={() => setIsPDFModalOpen(true)}
+              className="bg-white rounded-2xl border border-slate-200/60 p-4 hover:border-slate-300 hover:shadow-sm transition-all group text-left"
+            >
+              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center mb-3 group-hover:bg-slate-200 transition-colors">
+                <FileUp className="w-4 h-4 text-slate-600" />
+              </div>
+              <p className="text-sm font-medium text-slate-900">Upload PDF</p>
+              <p className="text-xs text-slate-400 mt-0.5">Local OCR</p>
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
@@ -820,6 +855,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         isOpen={isPDFModalOpen}
         onClose={() => setIsPDFModalOpen(false)}
         onExtract={handlePDFExtract}
+      />
+
+      <LabUploadModal
+        isOpen={isLabUploadModalOpen}
+        onClose={() => setIsLabUploadModalOpen(false)}
+        onSuccess={handleLabOCRSuccess}
       />
 
       <ClinicalFileUpload

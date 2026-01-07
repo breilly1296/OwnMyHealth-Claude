@@ -40,3 +40,18 @@ export {
   getAuditLogService,
 } from './auditLog.js';
 
+// OCR Service (Google Document AI)
+export {
+  processDocument,
+  checkOCRConfiguration,
+  extractDateFromText,
+  extractLabNameFromText,
+} from './ocrService.js';
+
+// Biomarker Patterns
+export {
+  BONE_HEALTH_BIOMARKERS,
+  extractBiomarkersFromText,
+  validateBiomarkerValue,
+  normalizeUnit,
+} from './biomarkerPatterns.js';
