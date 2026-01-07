@@ -93,11 +93,24 @@ export function validateCsrfToken(
     '/marketplace/plans/search',
   ];
 
+  // Skip CSRF for file upload routes - they require Bearer token auth
+  // and are multipart/form-data which is harder to exploit via CSRF
+  const uploadRoutes = [
+    '/upload/lab-report',
+    '/upload/insurance-sbc',
+    '/upload/lab-results-ocr',
+    '/insurance/upload-sbc',
+  ];
+
   const isPublicAuthRoute = publicAuthRoutes.some(route =>
     req.path.endsWith(route)
   );
 
-  if (isPublicAuthRoute) {
+  const isUploadRoute = uploadRoutes.some(route =>
+    req.path.endsWith(route)
+  );
+
+  if (isPublicAuthRoute || isUploadRoute) {
     return next();
   }
 
