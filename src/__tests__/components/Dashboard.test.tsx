@@ -31,6 +31,12 @@ vi.mock('../../services/api', () => ({
   attemptTokenRefresh: vi.fn(),
 }));
 
+// Mock uploadUtils to avoid api.ts import issues
+vi.mock('../../services/uploadUtils', () => ({
+  uploadFile: vi.fn(),
+  setUploadAuthFailureCallback: vi.fn(),
+}));
+
 vi.mock('../../utils/insurance', () => ({
   generatePersonalizedInsuranceGuide: vi.fn(() => ({
     userProfile: {
