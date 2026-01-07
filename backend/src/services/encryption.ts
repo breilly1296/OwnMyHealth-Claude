@@ -24,8 +24,11 @@
  * - User: name, DOB, phone, address
  * - Biomarker: values, notes
  * - Insurance: member ID, group ID
- * - DNA: genotype data, recommendations
- * - Health Needs: descriptions, action plans
+ * - Provider-Patient: relationship notes
+ * - DNA: genotype data, trait descriptions/recommendations
+ * - Health Needs: descriptions
+ * - Health Goals: descriptions, progress notes
+ * - Audit Log: previous/new values (for PHI change tracking)
  *
  * Security Requirements:
  * - Key must be 256 bits (64 hex characters)
@@ -356,29 +359,35 @@ export function getEncryptionService(): EncryptionService {
 }
 
 // PHI field mappings for each model (must match Prisma schema exactly)
+// IMPORTANT: Keep this in sync with prisma/schema.prisma encrypted fields
 export const PHI_FIELDS = {
+  // User profile PHI
   User: [
     'firstNameEncrypted',
     'lastNameEncrypted',
     'dateOfBirthEncrypted',
     'phoneEncrypted',
-    'addressEncrypted', // Single address field in schema
+    'addressEncrypted',
   ],
+  // Health data PHI
   Biomarker: [
     'valueEncrypted',
     'notesEncrypted',
   ],
   BiomarkerHistory: [
     'valueEncrypted',
-    'notesEncrypted',
+    // Note: BiomarkerHistory does NOT have notesEncrypted in schema
   ],
+  // Insurance PHI
   InsurancePlan: [
     'memberIdEncrypted',
-    'groupIdEncrypted', // Changed from groupNumberEncrypted to match schema
+    'groupIdEncrypted',
   ],
-  DNAData: [
-    'rawDataPathEncrypted',
+  // Provider-Patient relationship PHI
+  ProviderPatient: [
+    'notesEncrypted',
   ],
+  // DNA/Genetic PHI (schema still supports even if frontend removed)
   DNAVariant: [
     'genotypeEncrypted',
   ],
@@ -386,11 +395,19 @@ export const PHI_FIELDS = {
     'descriptionEncrypted',
     'recommendationsEncrypted',
   ],
+  // Health needs PHI
   HealthNeed: [
     'descriptionEncrypted',
-    'notesEncrypted',
-    'actionPlanEncrypted',
+    // Note: HealthNeed only has descriptionEncrypted in schema
   ],
+  // Health goals PHI
+  HealthGoal: [
+    'descriptionEncrypted',
+  ],
+  GoalProgressHistory: [
+    'noteEncrypted',
+  ],
+  // Audit log PHI (for change tracking)
   AuditLog: [
     'previousValueEncrypted',
     'newValueEncrypted',

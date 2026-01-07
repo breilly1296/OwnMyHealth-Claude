@@ -63,14 +63,6 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
 
-  // CMS Healthcare.gov Marketplace API
-  cms: {
-    enabled: !!process.env.CMS_API_KEY,
-    apiKey: process.env.CMS_API_KEY || '',
-    baseUrl: process.env.CMS_BASE_URL || 'https://marketplace.api.healthcare.gov/api/v1',
-    timeout: parseInt(process.env.CMS_TIMEOUT || '30000', 10),
-  },
-
   // Demo Account Configuration
   // SECURITY: No hardcoded fallbacks - must be explicitly configured via env vars
   demo: {
