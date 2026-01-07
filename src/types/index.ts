@@ -51,7 +51,7 @@ export interface MeasurementOption {
 export interface ClinicalFile {
   id: string;
   name: string;
-  type: 'DEXA' | '23andMe' | 'EKG' | 'Lab Report' | 'Other';
+  type: 'DEXA' | 'EKG' | 'Lab Report' | 'Other';
   uploadDate: string;
   processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
   extractedData?: ExtractedData[];
@@ -245,85 +245,4 @@ export interface InsuranceOptimizationTip {
   userSpecific: boolean;
 }
 
-// Provider Directory Types
-export interface HealthcareProvider {
-  id: string;
-  name: string;
-  specialty: string;
-  credentials: string[];
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
-  phone: string;
-  website?: string;
-  rating: number;
-  reviewCount: number;
-  acceptingNewPatients: boolean;
-  languages: string[];
-  hospitalAffiliations: string[];
-  insuranceAccepted: string[];
-  distance?: number;
-  nextAvailableAppointment?: string;
-  profileImage?: string;
-  education: EducationInfo[];
-  boardCertifications: string[];
-}
-
-export interface EducationInfo {
-  institution: string;
-  degree: string;
-  year: number;
-}
-
-export interface ProviderSearchCriteria {
-  specialty: string;
-  location: {
-    lat: number;
-    lng: number;
-    radius: number;
-  };
-  insurancePlans: string[];
-  acceptingNewPatients?: boolean;
-  minRating?: number;
-  languages?: string[];
-  gender?: 'male' | 'female';
-}
-
-export interface ProviderSearchResult {
-  providers: HealthcareProvider[];
-  totalCount: number;
-  searchCriteria: ProviderSearchCriteria;
-  suggestions: ProviderSuggestion[];
-}
-
-export interface ProviderSuggestion {
-  type: 'specialty' | 'location' | 'insurance' | 'availability';
-  message: string;
-  action: string;
-}
-
-export interface ProviderRecommendation {
-  specialty: string;
-  reason: string;
-  urgency: 'urgent' | 'routine' | 'preventive';
-  expectedCosts: {
-    consultation: number;
-    followUp: number;
-    diagnostics: number;
-  };
-  insuranceCoverage: {
-    planName: string;
-    copay: number;
-    coinsurance: number;
-    covered: boolean;
-  }[];
-  timeframe: string;
-}
 

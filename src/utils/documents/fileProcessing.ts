@@ -19,11 +19,6 @@ const BIOMARKER_PATTERNS = {
     'QRS Duration': /qrs\s+duration[:\s]+([0-9]+)\s*ms/gi,
     'RR Interval': /rr\s+interval[:\s]+([0-9]+)\s*ms/gi
   },
-  '23andMe': {
-    'APOE': /apoe[:\s]+([a-z0-9/]+)/gi,
-    'MTHFR': /mthfr[:\s]+([a-z0-9/]+)/gi,
-    'COMT': /comt[:\s]+([a-z0-9/]+)/gi
-  },
   LabReport: {
     'Glucose': /glucose[:\s]+([0-9.]+)\s*(mg\/dl|mmol\/l)/gi,
     'Cholesterol': /cholesterol[:\s]+([0-9.]+)\s*(mg\/dl|mmol\/l)/gi,
@@ -125,13 +120,10 @@ export function detectFileType(fileName: string, text: string): string {
   if (lowerName.includes('ekg') || lowerName.includes('ecg') || lowerText.includes('qt interval') || lowerText.includes('electrocardiogram')) {
     return 'EKG';
   }
-  if (lowerName.includes('23andme') || lowerText.includes('23andme') || lowerText.includes('genetic')) {
-    return '23andMe';
-  }
   if (lowerText.includes('glucose') || lowerText.includes('cholesterol') || lowerText.includes('hemoglobin')) {
     return 'Lab Report';
   }
-  
+
   return 'Other';
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, X, FileText, Activity, Dna, Heart, Loader2, CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import { Upload, X, FileText, Activity, Heart, Loader2, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import type { ClinicalFile, ProcessingResult, Biomarker } from '../../types';
 import { processClinicalFile } from '../../utils/documents/fileProcessing';
 
@@ -11,7 +11,6 @@ interface ClinicalFileUploadProps {
 
 const FILE_TYPE_ICONS = {
   'DEXA': Activity,
-  '23andMe': Dna,
   'EKG': Heart,
   'Lab Report': FileText,
   'Other': FileText
@@ -19,7 +18,6 @@ const FILE_TYPE_ICONS = {
 
 const FILE_TYPE_COLORS = {
   'DEXA': 'text-purple-600 bg-purple-100',
-  '23andMe': 'text-green-600 bg-green-100',
   'EKG': 'text-red-600 bg-red-100',
   'Lab Report': 'text-blue-600 bg-blue-100',
   'Other': 'text-gray-600 bg-gray-100'
@@ -93,10 +91,9 @@ export default function ClinicalFileUpload({ isOpen, onClose, onExtract }: Clini
 
   const detectFileTypeFromBiomarkers = (biomarkers: Partial<Biomarker>[]): ClinicalFile['type'] => {
     const categories = biomarkers.map(b => b.category);
-    
+
     if (categories.includes('Body Composition')) return 'DEXA';
     if (categories.includes('EKG')) return 'EKG';
-    if (biomarkers.some(b => b.name?.includes('genetic') || b.name?.includes('SNP'))) return '23andMe';
     return 'Lab Report';
   };
 
@@ -143,7 +140,7 @@ export default function ClinicalFileUpload({ isOpen, onClose, onExtract }: Clini
           <div>
             <h2 className="text-2xl font-semibold text-gray-900">Upload Clinical Files</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Upload DEXA scans, EKG reports, 23andMe data, and lab results for automatic data extraction
+              Upload DEXA scans, EKG reports, and lab results for automatic data extraction
             </p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -187,10 +184,6 @@ export default function ClinicalFileUpload({ isOpen, onClose, onExtract }: Clini
               <div className="flex items-center">
                 <Heart className="w-4 h-4 mr-1 text-red-500" />
                 EKG Reports
-              </div>
-              <div className="flex items-center">
-                <Dna className="w-4 h-4 mr-1 text-green-500" />
-                23andMe Data
               </div>
               <div className="flex items-center">
                 <FileText className="w-4 h-4 mr-1 text-blue-500" />
