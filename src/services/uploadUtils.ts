@@ -22,8 +22,28 @@ interface ApiError {
 // Import auth functions from api.ts - reuse attemptTokenRefresh to avoid duplication
 import { getAuthToken, attemptTokenRefresh, setOnAuthFailure } from './api';
 
-// Re-export setOnAuthFailure for backward compatibility
-export const setUploadAuthFailureCallback = setOnAuthFailure;
+// Local reference to auth failure callback
+let onAuthFailureCallback: (() => void) | null = null;
+
+// Re-export setOnAuthFailure and track locally for backward compatibility
+export function setUploadAuthFailureCallback(callback: () => void) {
+  onAuthFailureCallback = callback;
+  setOnAuthFailure(callback);
+}
+
+/**
+ * Get CSRF token from cookie
+ */
+function getCsrfToken(): string | null {
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'csrf_token') {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
+}
 
 /**
  * Get user-friendly error message based on status code
@@ -102,9 +122,19 @@ export async function uploadFile<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    // Build headers with auth token and CSRF token
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      headers,
       body: formData,
       credentials: 'include',
       signal: controller.signal,
