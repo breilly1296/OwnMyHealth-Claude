@@ -233,7 +233,8 @@ export async function searchPlans(
     };
     res.json(response);
   } catch (error) {
-    logger.error('Failed to search plans', { data: { body: req.body, error } });
+    // Note: req.body not logged to prevent sensitive data exposure (income, age, household info)
+    logger.error('Failed to search plans', { data: { error: error instanceof Error ? error.message : 'Unknown error' } });
     const response: ApiResponse = {
       success: false,
       error: {
@@ -381,7 +382,8 @@ export async function estimatePlanPremium(
     };
     res.json(response);
   } catch (error) {
-    logger.error('Failed to estimate premium', { data: { planId, body: req.body, error } });
+    // Note: req.body not logged to prevent sensitive data exposure (income, age, household info)
+    logger.error('Failed to estimate premium', { data: { planId, error: error instanceof Error ? error.message : 'Unknown error' } });
     const response: ApiResponse = {
       success: false,
       error: {
@@ -701,7 +703,8 @@ export async function comparePlans(
     };
     res.json(response);
   } catch (error) {
-    logger.error('Failed to compare plans', { data: { body: req.body, error } });
+    // Note: req.body not logged to prevent sensitive data exposure
+    logger.error('Failed to compare plans', { data: { error: error instanceof Error ? error.message : 'Unknown error' } });
     const response: ApiResponse = {
       success: false,
       error: {
