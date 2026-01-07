@@ -436,6 +436,14 @@ export async function comparePlans(
 
   const decryptedPlans = plans.map((p) => toResponse(p, userSalt));
 
+  // Audit log: READ access to multiple plans for comparison
+  const auditService = getAuditLogService(prisma);
+  await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
+    operation: 'COMPARE',
+    count: plans.length,
+    planIds: planIds.slice(0, 10), // Limit logged IDs
+  });
+
   // Create comparison matrix
   const comparison = {
     plans: decryptedPlans.map((p) => ({
@@ -523,6 +531,15 @@ export async function searchBenefits(
         benefit,
       }))
   );
+
+  // Audit log: SEARCH access to insurance benefits
+  const auditService = getAuditLogService(prisma);
+  await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
+    operation: 'SEARCH_BENEFITS',
+    searchTerm: query.substring(0, 100), // Limit logged search term
+    plansSearched: plans.length,
+    resultsFound: results.length,
+  });
 
   const response: ApiResponse<typeof results> = {
     success: true,

@@ -394,7 +394,7 @@ export async function logoutAll(
   req: Request,
   res: Response
 ): Promise<void> {
-  const authReq = req as Request & { user?: { id: string } };
+  const authReq = req as Request & { user?: { id: string; email?: string } };
 
   if (!authReq.user) {
     throw new UnauthorizedError('Not authenticated');
@@ -405,6 +405,13 @@ export async function logoutAll(
 
   // Clear cookies
   clearAuthCookies(res);
+
+  // Audit log: logout from all devices (security-relevant event)
+  const auditService = getAuditService();
+  await auditService.logAuth('LOGOUT', { req, userId: authReq.user.id }, {
+    authAction: 'LOGOUT_ALL_DEVICES',
+    email: authReq.user.email,
+  });
 
   const response: ApiResponse = {
     success: true,
