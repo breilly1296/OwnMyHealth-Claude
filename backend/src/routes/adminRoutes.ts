@@ -35,6 +35,7 @@ router.use(requireRole('ADMIN'));
  */
 router.get(
   '/users',
+  validate(schemas.admin.listUsersQuery, 'query'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -456,6 +457,7 @@ router.get(
  */
 router.get(
   '/audit-logs',
+  validate(schemas.admin.auditLogQuery, 'query'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const page = parseInt(req.query.page as string) || 1;

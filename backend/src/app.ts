@@ -49,6 +49,7 @@ import routes from './routes/index.js';
 import { standardLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { csrfProtection, csrfTokenHandler } from './middleware/csrf.js';
+import { requireJsonContentType } from './middleware/validation.js';
 import { initializeDatabase, disconnectDatabase, checkDatabaseHealth, getPrismaClient } from './services/database.js';
 import { initializeDemoUser, startSessionCleanup, stopSessionCleanup } from './services/authService.js';
 import { startAuditCleanup, stopAuditCleanup } from './services/auditLog.js';
@@ -130,6 +131,9 @@ if (config.isDevelopment) {
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Content-Type validation for JSON requests
+app.use(requireJsonContentType);
 
 // API routes
 app.use(`/api/${config.apiVersion}`, routes);

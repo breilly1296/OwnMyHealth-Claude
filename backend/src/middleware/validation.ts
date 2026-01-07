@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodIssue } from 'zod';
-import { ValidationError } from './errorHandler.js';
+import { ValidationError, BadRequestError } from './errorHandler.js';
 
 /**
  * Validation error detail structure
@@ -161,6 +161,44 @@ export function validate<TSchema extends z.ZodTypeAny>(
 }
 
 // ============================================
+// Content-Type Validation Middleware
+// ============================================
+
+/**
+ * Middleware to validate Content-Type header for JSON requests
+ * Ensures POST/PUT/PATCH requests have application/json content type
+ * Skips validation for multipart/form-data (file uploads)
+ */
+export function requireJsonContentType(req: Request, _res: Response, next: NextFunction): void {
+  const methods = ['POST', 'PUT', 'PATCH'];
+
+  if (!methods.includes(req.method)) {
+    return next();
+  }
+
+  const contentType = req.get('Content-Type') || '';
+
+  // Skip for multipart (file uploads) - they have their own content type
+  if (contentType.includes('multipart/form-data')) {
+    return next();
+  }
+
+  // Skip for empty bodies (some DELETE requests may include body)
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return next();
+  }
+
+  // Require JSON content type for requests with body
+  if (!contentType.includes('application/json')) {
+    throw new BadRequestError(
+      'Content-Type must be application/json for requests with body'
+    );
+  }
+
+  next();
+}
+
+// ============================================
 // Common Schemas
 // ============================================
 
@@ -171,9 +209,19 @@ export const schemas = {
     limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
   }),
 
-  // UUID parameter
+  // UUID parameter (for :id routes)
   uuidParam: z.object({
     id: uuid,
+  }),
+
+  // Patient ID parameter (for :patientId routes)
+  patientIdParam: z.object({
+    patientId: uuid,
+  }),
+
+  // User ID parameter (for :userId routes in admin)
+  userIdParam: z.object({
+    userId: uuid,
   }),
 
   // ============================================

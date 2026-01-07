@@ -177,7 +177,7 @@ router.post(
  */
 router.get(
   '/patients/:patientId',
-  validate(schemas.uuidParam, 'params'),
+  validate(schemas.patientIdParam, 'params'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
@@ -250,7 +250,7 @@ router.get(
  */
 router.get(
   '/patients/:patientId/biomarkers',
-  validate(schemas.uuidParam, 'params'),
+  validate(schemas.patientIdParam, 'params'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
@@ -293,7 +293,7 @@ router.get(
  */
 router.get(
   '/patients/:patientId/health-needs',
-  validate(schemas.uuidParam, 'params'),
+  validate(schemas.patientIdParam, 'params'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
@@ -336,7 +336,7 @@ router.get(
  */
 router.delete(
   '/patients/:patientId',
-  validate(schemas.uuidParam, 'params'),
+  validate(schemas.patientIdParam, 'params'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
