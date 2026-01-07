@@ -1,5 +1,4 @@
 import type { Biomarker, BiomarkerCategory, NavGroup } from '../types';
-import type { DNAVariant, DNAFileInfo } from '../types/dna';
 
 // Sample biomarker data for each category with history for trend analysis
 export const initialBiomarkers: Biomarker[] = [
@@ -207,178 +206,9 @@ export const initialBiomarkers: Biomarker[] = [
   }
 ];
 
-// Sample DNA data for demonstration
-export const sampleDNAVariants: DNAVariant[] = [
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs429358',
-    chromosome: '19',
-    position: 45411941,
-    genotype: 'CT',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.98
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs7412',
-    chromosome: '19',
-    position: 45412079,
-    genotype: 'CC',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.99
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs1801133',
-    chromosome: '1',
-    position: 11856378,
-    genotype: 'CT',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.97
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs4680',
-    chromosome: '22',
-    position: 19951271,
-    genotype: 'AG',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.98
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs1800497',
-    chromosome: '11',
-    position: 113270828,
-    genotype: 'AG',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.96
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs53576',
-    chromosome: '3',
-    position: 8762685,
-    genotype: 'AA',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.97
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs6265',
-    chromosome: '11',
-    position: 27679916,
-    genotype: 'CT',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.98
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs1800955',
-    chromosome: '11',
-    position: 113346252,
-    genotype: 'CT',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.95
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs4633',
-    chromosome: '22',
-    position: 19950235,
-    genotype: 'CT',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.99
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs1801131',
-    chromosome: '1',
-    position: 11854476,
-    genotype: 'AC',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.97
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs1544410',
-    chromosome: '12',
-    position: 48239835,
-    genotype: 'AG',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.98
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs2282679',
-    chromosome: '4',
-    position: 72618334,
-    genotype: 'AC',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.96
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs4149056',
-    chromosome: '12',
-    position: 21331549,
-    genotype: 'TC',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.97
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs9939609',
-    chromosome: '16',
-    position: 53820527,
-    genotype: 'AT',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.98
-  },
-  {
-    id: crypto.randomUUID(),
-    rsid: 'rs1800562',
-    chromosome: '6',
-    position: 26093141,
-    genotype: 'GG',
-    sourceFile: 'sample_data.txt',
-    uploadDate: new Date().toISOString(),
-    confidence: 0.99
-  }
-];
-
-// Sample DNA file info
-export const sampleDNAFileInfo: DNAFileInfo = {
-  id: crypto.randomUUID(),
-  fileName: 'sample_dna_data.txt',
-  fileSize: 15482367,
-  source: '23andMe',
-  uploadDate: new Date().toISOString(),
-  processingStatus: 'completed',
-  totalVariants: 635287,
-  validVariants: 630145,
-  errors: [],
-  warnings: ['Some variants could not be validated against reference genome']
-};
-
 // Navigation groups for sidebar organization
 export const navGroups: NavGroup[] = [
   { id: 'overview', label: 'Overview', icon: 'LayoutDashboard', collapsible: false },
-  { id: 'insights', label: 'Health Insights', icon: 'Sparkles', collapsible: true },
   { id: 'insurance', label: 'Insurance & Coverage', icon: 'Shield', collapsible: true },
   { id: 'biomarkers', label: 'Biomarkers', icon: 'Activity', collapsible: true },
 ];
@@ -386,17 +216,11 @@ export const navGroups: NavGroup[] = [
 // Dashboard categories configuration
 export const categories: BiomarkerCategory[] = [
   // Overview - Always visible
-  { name: 'Dashboard', description: 'Overall health analysis and AI insights', icon: 'BarChart3', group: 'overview' },
-
-  // Health Insights
-  { name: 'Health Needs', description: 'Personalized health needs based on your data', icon: 'Heart', group: 'insights' },
-  { name: 'Health Analytics', description: 'Trends, correlations, and predictive insights', icon: 'TrendingUp', group: 'insights' },
-  { name: 'Genetics', description: 'DNA analysis and genetic health insights', icon: 'Dna', group: 'insights' },
+  { name: 'Dashboard', description: 'Track your biomarkers and health data', icon: 'BarChart3', group: 'overview' },
 
   // Insurance & Coverage
   { name: 'Insurance', description: 'Manage plans, track costs, and learn', icon: 'Shield', group: 'insurance' },
   { name: 'Knowledge Base', description: 'Intelligent insurance plan analysis and comparison', icon: 'Database', group: 'insurance' },
-  { name: 'Find Providers', description: 'Locate in-network doctors for your conditions', icon: 'Users', group: 'insurance' },
 
   // Biomarkers
   { name: 'Body Composition', description: 'Body composition measurements including body fat and lean mass', icon: 'Scale', group: 'biomarkers' },

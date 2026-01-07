@@ -31,11 +31,11 @@ export interface BiomarkerCategory {
   name: string;
   description: string;
   icon: string;
-  group?: 'overview' | 'insights' | 'insurance' | 'biomarkers';
+  group?: 'overview' | 'insurance' | 'biomarkers';
 }
 
 export interface NavGroup {
-  id: 'overview' | 'insights' | 'insurance' | 'biomarkers';
+  id: 'overview' | 'insurance' | 'biomarkers';
   label: string;
   icon: string;
   collapsible: boolean;
@@ -75,65 +75,6 @@ export interface ProcessingResult {
   errors?: string[];
   processingTime: number;
   confidence: number;
-}
-
-// AI Engine Types
-export interface RiskAssessment {
-  biomarkerId: string;
-  riskLevel: 'low' | 'moderate' | 'high' | 'critical';
-  riskScore: number; // 0-100
-  riskFactors: string[];
-  recommendations: string[];
-  clinicalSignificance: string;
-  urgency: 'routine' | 'follow-up' | 'urgent' | 'immediate';
-}
-
-export interface TrendAnalysis {
-  biomarkerId: string;
-  trendDirection: 'improving' | 'stable' | 'declining' | 'volatile';
-  trendStrength: number; // 0-1
-  changeRate: number; // percentage change per unit time
-  projectedValue?: number;
-  projectedDate?: string;
-  confidence: number;
-  significantChanges: TrendPoint[];
-}
-
-export interface TrendPoint {
-  date: string;
-  value: number;
-  changeFromPrevious: number;
-  significance: 'normal' | 'notable' | 'concerning';
-}
-
-export interface HealthInsight {
-  id: string;
-  type: 'risk' | 'trend' | 'correlation' | 'recommendation';
-  title: string;
-  description: string;
-  severity: 'info' | 'warning' | 'danger';
-  biomarkers: string[];
-  actionItems: string[];
-  references: string[];
-  createdAt: string;
-}
-
-export interface CorrelationAnalysis {
-  biomarker1: string;
-  biomarker2: string;
-  correlationCoefficient: number;
-  significance: number;
-  relationship: 'positive' | 'negative' | 'none';
-  clinicalRelevance: string;
-}
-
-export interface AIAnalysisResult {
-  riskAssessments: RiskAssessment[];
-  trendAnalyses: TrendAnalysis[];
-  healthInsights: HealthInsight[];
-  correlations: CorrelationAnalysis[];
-  overallHealthScore: number;
-  priorityActions: string[];
 }
 
 // Insurance SBC Types
@@ -225,118 +166,6 @@ export interface ComparisonMetric {
     value: string | number;
     rating: 'excellent' | 'good' | 'fair' | 'poor';
   }[];
-}
-
-// Health Needs Matching Types
-export interface HealthCondition {
-  id: string;
-  name: string;
-  description: string;
-  biomarkerIndicators: string[];
-  requiredServices: MedicalService[];
-  recommendedFrequency: ServiceFrequency;
-  severity: 'mild' | 'moderate' | 'severe';
-  urgency: 'routine' | 'follow-up' | 'urgent' | 'immediate';
-}
-
-export interface MedicalService {
-  id: string;
-  name: string;
-  category: 'Specialist Visit' | 'Diagnostic Test' | 'Imaging' | 'Lab Test' | 
-           'Procedure' | 'Therapy' | 'Medication' | 'Surgery';
-  description: string;
-  averageCost: number;
-  frequency: 'One-time' | 'Annual' | 'Bi-annual' | 'Quarterly' | 'Monthly' | 'As needed';
-  urgency: 'routine' | 'follow-up' | 'urgent' | 'immediate';
-  specialistType?: string;
-}
-
-export interface ServiceFrequency {
-  initial: string;
-  followUp: string;
-  monitoring: string;
-}
-
-export interface HealthNeedsAnalysis {
-  detectedConditions: DetectedCondition[];
-  recommendedServices: RecommendedService[];
-  insuranceCoverage: ServiceCoverage[];
-  estimatedCosts: CostEstimate[];
-  priorityActions: PriorityAction[];
-  preventiveRecommendations: PreventiveRecommendation[];
-}
-
-export interface DetectedCondition {
-  condition: HealthCondition;
-  confidence: number;
-  triggeringBiomarkers: Biomarker[];
-  severity: 'mild' | 'moderate' | 'severe';
-  riskFactors: string[];
-}
-
-export interface RecommendedService {
-  service: MedicalService;
-  reason: string;
-  urgency: 'routine' | 'follow-up' | 'urgent' | 'immediate';
-  estimatedCost: number;
-  frequency: string;
-  relatedConditions: string[];
-}
-
-export interface ServiceCoverage {
-  serviceId: string;
-  serviceName: string;
-  planCoverage: {
-    planId: string;
-    planName: string;
-    covered: boolean;
-    copay?: number;
-    coinsurance?: number;
-    deductibleApplies: boolean;
-    priorAuthRequired: boolean;
-    referralRequired: boolean;
-    estimatedOutOfPocket: number;
-  }[];
-  bestCoverage?: {
-    planId: string;
-    estimatedCost: number;
-  };
-}
-
-export interface CostEstimate {
-  serviceId: string;
-  serviceName: string;
-  frequency: string;
-  annualEstimate: number;
-  planComparison: {
-    planId: string;
-    planName: string;
-    estimatedAnnualCost: number;
-    savings?: number;
-  }[];
-}
-
-export interface PriorityAction {
-  id: string;
-  title: string;
-  description: string;
-  urgency: 'immediate' | 'urgent' | 'follow-up' | 'routine';
-  category: 'Medical Care' | 'Insurance' | 'Lifestyle' | 'Monitoring';
-  relatedServices: string[];
-  estimatedCost?: number;
-  timeframe: string;
-}
-
-export interface PreventiveRecommendation {
-  id: string;
-  title: string;
-  description: string;
-  category: 'Screening' | 'Lifestyle' | 'Monitoring' | 'Vaccination';
-  frequency: string;
-  ageRecommendation?: string;
-  riskFactors: string[];
-  estimatedCost?: number;
-  insuranceCoverage: 'Typically Covered' | 'Partially Covered' | 'Not Covered' | 'Unknown';
 }
 
 // Insurance Education Types
@@ -498,5 +327,3 @@ export interface ProviderRecommendation {
   timeframe: string;
 }
 
-// Re-export DNA types for consistent importing
-export * from './dna';

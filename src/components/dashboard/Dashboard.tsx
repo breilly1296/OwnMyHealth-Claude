@@ -7,7 +7,7 @@
  * - Navigate between different health categories (Blood Work, Vitamins, etc.)
  * - Upload lab reports (PDF) or manually enter biomarker data
  * - View AI-powered health insights and recommendations
- * - Access insurance information and genetic analysis
+ * - Access insurance information
  * - Manage their account and logout
  *
  * Data Flow:
@@ -18,31 +18,20 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Upload, Brain, FileText, Shield, Dna, Loader2, LogOut, User, ChevronDown } from 'lucide-react';
+import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
-import type { DNAVariant, DNAFileInfo } from '../../types/dna';
 // Biomarker components
-import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, BiomarkerActionPlan, BiomarkerInsurancePanel, BiomarkerDNAExplanation } from '../biomarkers';
-// Health components
-import { HealthReportSummary, HealthNeedsPanel, ProviderDirectoryPanel } from '../health';
+import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, BiomarkerActionPlan, BiomarkerInsurancePanel } from '../biomarkers';
 // Insurance components
 import { InsuranceSBCUpload, InsurancePlanViewer, EnhancedInsuranceUpload, InsurancePlanCompare, InsuranceHub, InsuranceKnowledgeBase } from '../insurance';
 // Upload components
 import { PDFUploadModal, ClinicalFileUpload } from '../upload';
-// DNA components
-import { DNAUploadModal, DNAAnalysisPanel } from '../dna';
-// Analytics components
-import { HealthAnalyticsDashboard } from '../analytics';
 // Dashboard components
 import { CollapsibleNavGroup } from './index';
-// Utils
-import { performAIAnalysis } from '../../utils/ai';
-import { analyzeHealthNeeds } from '../../utils/health';
-import { generatePersonalizedInsuranceGuide } from '../../utils/insurance';
 // Data (for demo mode / fallback)
-import { initialBiomarkers, sampleDNAVariants, sampleDNAFileInfo, categories, navGroups } from '../../data/sampleData';
+import { initialBiomarkers, categories, navGroups } from '../../data/sampleData';
 // API services
-import { biomarkersApi, insuranceApi, dnaApi } from '../../services/api';
+import { biomarkersApi, insuranceApi } from '../../services/api';
 // Logger
 import { dashboardLogger } from '../../utils/logger';
 
@@ -69,16 +58,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
   const [isClinicalUploadOpen, setIsClinicalUploadOpen] = useState(false);
   const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
-  const [isPlainEnglishOpen, setIsPlainEnglishOpen] = useState(false);
   const [isSBCUploadOpen, setIsSBCUploadOpen] = useState(false);
   const [isEnhancedUploadOpen, setIsEnhancedUploadOpen] = useState(false);
   const [isInsuranceViewerOpen, setIsInsuranceViewerOpen] = useState(false);
   const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(false);
-  const [isDNAUploadOpen, setIsDNAUploadOpen] = useState(false);
   const [selectedBiomarker, setSelectedBiomarker] = useState<Biomarker | null>(null);
   const [trendBiomarker, setTrendBiomarker] = useState<Biomarker | null>(null);
   const [selectedBiomarkerForInsurance, setSelectedBiomarkerForInsurance] = useState<Biomarker | null>(null);
-  const [selectedBiomarkerForDNA, setSelectedBiomarkerForDNA] = useState<Biomarker | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // ============================================
@@ -86,12 +72,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // ============================================
   const [biomarkers, setBiomarkers] = useState<Biomarker[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
-  const [dnaVariants, setDnaVariants] = useState<DNAVariant[]>([]);
-  const [dnaFileInfo, setDnaFileInfo] = useState<DNAFileInfo | null>(null);
 
   // Loading states
   const [isLoadingBiomarkers, setIsLoadingBiomarkers] = useState(true);
-  const [isLoadingDNA, setIsLoadingDNA] = useState(false);
 
   // Error state for user feedback
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -168,70 +151,18 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return () => {
       setBiomarkers([]);
       setInsurancePlans([]);
-      setDnaVariants([]);
-      setDnaFileInfo(null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showErrorToast]);
-
-  // Fetch DNA data when Genetics category is selected
-  useEffect(() => {
-    if (selectedCategory !== 'Genetics') return;
-
-    const fetchDNAData = async () => {
-      setIsLoadingDNA(true);
-
-      if (DEMO_MODE) {
-        setDnaVariants(sampleDNAVariants);
-        setDnaFileInfo(sampleDNAFileInfo);
-        setIsLoadingDNA(false);
-        return;
-      }
-
-      try {
-        const uploads = await dnaApi.getUploads();
-        if (uploads.length > 0) {
-          const latestUpload = uploads[0];
-          const variants = await dnaApi.getVariants(latestUpload.id);
-          setDnaFileInfo(latestUpload as unknown as DNAFileInfo);
-          setDnaVariants(variants.variants as unknown as DNAVariant[]);
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to load DNA data';
-        dashboardLogger.error('Error fetching DNA data', { error: errorMsg });
-        showErrorToast(`${errorMsg}. Using sample data for demonstration.`);
-        // Fall back to sample data
-        setDnaVariants(sampleDNAVariants);
-        setDnaFileInfo(sampleDNAFileInfo);
-      } finally {
-        setIsLoadingDNA(false);
-      }
-    };
-
-    fetchDNAData();
-   
-  }, [selectedCategory, showErrorToast]);
 
   // ============================================
   // Computed Values (memoized, computed from fetched data)
   // ============================================
 
   const filteredBiomarkers = useMemo(() => {
-    if (['Dashboard', 'Health Needs', 'Health Analytics', 'Insurance', 'Insurance Guide', 'Knowledge Base', 'Find Providers', 'Genetics'].includes(selectedCategory)) return biomarkers;
+    if (['Dashboard', 'Insurance', 'Insurance Guide', 'Knowledge Base'].includes(selectedCategory)) return biomarkers;
     return biomarkers.filter(b => b.category === selectedCategory);
   }, [biomarkers, selectedCategory]);
-
-  const aiAnalysis = useMemo(() => {
-    return performAIAnalysis(biomarkers);
-  }, [biomarkers]);
-
-  const healthNeedsAnalysis = useMemo(() => {
-    return analyzeHealthNeeds(biomarkers, aiAnalysis.riskAssessments, insurancePlans);
-  }, [biomarkers, aiAnalysis.riskAssessments, insurancePlans]);
-
-  const insuranceGuide = useMemo(() => {
-    return generatePersonalizedInsuranceGuide(biomarkers, insurancePlans, healthNeedsAnalysis);
-  }, [biomarkers, insurancePlans, healthNeedsAnalysis]);
 
   // ============================================
   // Event Handlers
@@ -356,19 +287,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setIsTrendModalOpen(true);
   }, []);
 
-  const handleDNAVariantsExtracted = useCallback((variants: DNAVariant[], fileInfo: DNAFileInfo) => {
-    setDnaVariants(variants);
-    setDnaFileInfo(fileInfo);
-  }, []);
-
   const handleInsuranceClick = useCallback((biomarker: Biomarker, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedBiomarkerForInsurance(biomarker);
-  }, []);
-
-  const handleDNAClick = useCallback((biomarker: Biomarker, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedBiomarkerForDNA(biomarker);
   }, []);
 
   // ============================================
@@ -388,28 +309,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         ? `Value is above normal range (${biomarker.normalRange.max} ${biomarker.unit})`
         : 'Value is within normal range'
     };
-  };
-
-  const hasDNAMatch = (biomarker: Biomarker) => {
-    if (dnaVariants.length === 0) return false;
-
-    const biomarkerSNPs: Record<string, string[]> = {
-      'Glucose (Fasting)': ['rs7903146', 'rs1801282'],
-      'Total Cholesterol': ['rs429358', 'rs4149056'],
-      'LDL Cholesterol': ['rs429358'],
-      'HDL Cholesterol': ['rs1800588'],
-      'Vitamin D': ['rs2282679', 'rs1544410'],
-      'CRP': ['rs1205', 'rs1800795'],
-      'Homocysteine': ['rs1801133']
-    };
-
-    const relevantSNPs = biomarkerSNPs[biomarker.name] || [];
-    if (relevantSNPs.length === 0) return false;
-
-    return dnaVariants.some(variant =>
-      relevantSNPs.includes(variant.rsid.toLowerCase()) ||
-      relevantSNPs.includes(variant.rsid.toUpperCase())
-    );
   };
 
   // ============================================
@@ -448,9 +347,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // ============================================
 
   const renderDashboardContent = () => {
-    // Use memoized values for biomarker counts (computed above)
-    const scoreColor = aiAnalysis.overallHealthScore >= 70 ? '#22c55e' : aiAnalysis.overallHealthScore >= 50 ? '#f59e0b' : '#ef4444';
-
     return (
       <div className="animate-fade-in max-w-6xl mx-auto">
         {/* Header */}
@@ -458,49 +354,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           <p className="text-sm font-medium text-slate-400 mb-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <h1 className="text-3xl font-bold text-slate-900">Your Health Overview</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Your Health Data</h1>
         </div>
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-12 gap-5">
 
-          {/* Health Score - Large Card */}
-          <div className="col-span-12 md:col-span-5 bg-white rounded-2xl border border-slate-200/60 p-8">
-            <div className="flex items-center gap-6">
-              <div className="relative flex-shrink-0">
-                <svg className="w-28 h-28 -rotate-90">
-                  <circle cx="56" cy="56" r="48" fill="none" stroke="#f1f5f9" strokeWidth="10" />
-                  <circle
-                    cx="56" cy="56" r="48" fill="none"
-                    stroke={scoreColor}
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(aiAnalysis.overallHealthScore / 100) * 302} 302`}
-                    className="transition-all duration-1000"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-slate-900">{Math.round(aiAnalysis.overallHealthScore)}</span>
-                </div>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 mb-3">Health Score</h2>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-wellness-500" />
-                    <span className="text-sm text-slate-600">{inRangeCount} in range</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-sm text-slate-600">{outOfRangeCount} attention</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Quick Stats */}
-          <div className="col-span-6 md:col-span-2 bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
+          <div className="col-span-6 md:col-span-4 bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tracked</span>
             <div>
               <span className="text-4xl font-bold text-white">{biomarkers.length}</span>
@@ -508,7 +369,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </div>
           </div>
 
-          <div className="col-span-6 md:col-span-2 bg-wellness-500 rounded-2xl p-5 flex flex-col justify-between">
+          <div className="col-span-6 md:col-span-4 bg-wellness-500 rounded-2xl p-5 flex flex-col justify-between">
             <span className="text-xs font-medium text-wellness-100 uppercase tracking-wide">Normal</span>
             <div>
               <span className="text-4xl font-bold text-white">{inRangeCount}</span>
@@ -516,7 +377,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-3 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-5 flex flex-col justify-between">
+          <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-5 flex flex-col justify-between">
             <span className="text-xs font-medium text-red-100 uppercase tracking-wide">Needs Review</span>
             <div className="flex items-end justify-between">
               <div>
@@ -529,25 +390,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </div>
           </div>
 
-          {/* AI Insights */}
-          <div className="col-span-12 md:col-span-7 bg-white rounded-2xl border border-slate-200/60 p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                <Brain className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 mb-2">AI Health Summary</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {aiAnalysis.priorityActions.length > 0
-                    ? `Based on ${biomarkers.length} biomarkers, we recommend focusing on: ${aiAnalysis.priorityActions.slice(0, 2).join(' and ').toLowerCase()}.`
-                    : 'Your health metrics look good overall. Continue monitoring your biomarkers regularly.'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions - Compact */}
-          <div className="col-span-12 md:col-span-5 grid grid-cols-2 gap-3">
+          {/* Quick Actions */}
+          <div className="col-span-12 md:col-span-6 grid grid-cols-2 gap-3">
             <button
               onClick={() => setIsPDFModalOpen(true)}
               className="bg-white rounded-2xl border border-slate-200/60 p-4 hover:border-brand-300 hover:shadow-sm transition-all group text-left"
@@ -636,19 +480,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     );
   };
 
-  const renderHealthNeedsContent = () => {
-    return <HealthNeedsPanel analysis={healthNeedsAnalysis} insurancePlans={insurancePlans} />;
-  };
-
-  const renderHealthAnalyticsContent = () => {
-    return <HealthAnalyticsDashboard biomarkers={biomarkers} />;
-  };
-
   const renderInsuranceContent = () => {
     return (
       <InsuranceHub
         insurancePlans={insurancePlans}
-        guide={insuranceGuide}
         onUploadSBC={() => setIsSBCUploadOpen(true)}
         onSmartUpload={() => setIsEnhancedUploadOpen(true)}
         onViewPlanDetails={() => setIsInsuranceViewerOpen(true)}
@@ -660,7 +495,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return (
       <InsuranceHub
         insurancePlans={insurancePlans}
-        guide={insuranceGuide}
         onUploadSBC={() => setIsSBCUploadOpen(true)}
         onSmartUpload={() => setIsEnhancedUploadOpen(true)}
         onViewPlanDetails={() => setIsInsuranceViewerOpen(true)}
@@ -670,67 +504,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const renderKnowledgeBaseContent = () => {
     return <InsuranceKnowledgeBase plans={insurancePlans} />;
-  };
-
-  const renderProviderDirectoryContent = () => {
-    return (
-      <div className="space-y-6">
-        <ProviderDirectoryPanel
-          healthNeeds={healthNeedsAnalysis}
-          insurancePlans={insurancePlans}
-          biomarkers={biomarkers}
-        />
-      </div>
-    );
-  };
-
-  const renderGeneticsContent = () => {
-    if (isLoadingDNA) {
-      return (
-        <div className="max-w-6xl mx-auto animate-fade-in">
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200/60">
-            <Loader2 className="w-8 h-8 animate-spin text-wellness-500 mx-auto mb-4" />
-            <p className="text-slate-600">Loading genetic data...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (dnaVariants.length > 0 && dnaFileInfo) {
-      return (
-        <DNAAnalysisPanel
-          variants={dnaVariants}
-          fileInfo={dnaFileInfo}
-          insurancePlans={insurancePlans}
-        />
-      );
-    }
-
-    return (
-      <div className="max-w-6xl mx-auto animate-fade-in">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Genetic Insights</h1>
-          <p className="text-slate-500 mt-1">Upload your DNA data for personalized health insights</p>
-        </div>
-
-        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200/60">
-          <div className="w-16 h-16 bg-wellness-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <Dna className="w-8 h-8 text-wellness-600" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No Genetic Data Yet</h3>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
-            Upload your raw DNA data from 23andMe or AncestryDNA to unlock personalized genetic insights.
-          </p>
-          <button
-            onClick={() => setIsDNAUploadOpen(true)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Upload DNA Data
-          </button>
-        </div>
-      </div>
-    );
   };
 
   const renderCategoryContent = () => {
@@ -781,7 +554,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <div className="grid gap-3">
                 {outOfRangeBiomarkers.map((biomarker) => {
                   const isLow = biomarker.value < biomarker.normalRange.min;
-                  const hasGeneticMatch = hasDNAMatch(biomarker);
                   const isSelected = selectedBiomarker?.id === biomarker.id;
 
                   return (
@@ -798,14 +570,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             <h3 className="font-semibold text-slate-900">{biomarker.name}</h3>
                             {biomarker.sourceFile && (
                               <span className="text-2xs px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded">Auto</span>
-                            )}
-                            {hasGeneticMatch && (
-                              <button
-                                onClick={(e) => handleDNAClick(biomarker, e)}
-                                className="text-2xs px-1.5 py-0.5 bg-wellness-50 text-wellness-600 rounded hover:bg-wellness-100"
-                              >
-                                DNA
-                              </button>
                             )}
                           </div>
                           <p className="text-sm text-slate-500">{biomarker.description}</p>
@@ -859,7 +623,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </h2>
               <div className="bg-white rounded-xl border border-slate-200/60 divide-y divide-slate-100">
                 {inRangeBiomarkers.map((biomarker) => {
-                  const hasGeneticMatch = hasDNAMatch(biomarker);
                   const isSelected = selectedBiomarker?.id === biomarker.id;
 
                   return (
@@ -874,14 +637,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-slate-900">{biomarker.name}</span>
-                              {hasGeneticMatch && (
-                                <button
-                                  onClick={(e) => handleDNAClick(biomarker, e)}
-                                  className="text-2xs px-1.5 py-0.5 bg-wellness-50 text-wellness-600 rounded hover:bg-wellness-100"
-                                >
-                                  DNA
-                                </button>
-                              )}
                             </div>
                             <p className="text-xs text-slate-400 truncate">{biomarker.description}</p>
                           </div>
@@ -950,14 +705,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setIsPlainEnglishOpen(true)}
-                className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-wellness-500 to-wellness-600 rounded-xl hover:from-wellness-600 hover:to-wellness-700 focus:outline-none focus:ring-2 focus:ring-wellness-500 focus:ring-offset-2 transition-all duration-200 shadow-lg shadow-wellness-500/25"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Health Summary
-              </button>
-
               {/* User Menu */}
               {user && onLogout && (
                 <div className="relative">
@@ -1025,7 +772,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                       setSelectedCategory(category);
                       setSelectedBiomarker(null);
                     }}
-                    defaultExpanded={group.id === 'overview' || group.id === 'insights'}
+                    defaultExpanded={group.id === 'overview' || group.id === 'insurance'}
                   />
                 );
               })}
@@ -1048,13 +795,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         {/* Main Content */}
         <main className="flex-1 px-8 py-8 min-h-[calc(100vh-4rem)]">
           {selectedCategory === 'Dashboard' ? renderDashboardContent() :
-           selectedCategory === 'Health Needs' ? renderHealthNeedsContent() :
-           selectedCategory === 'Health Analytics' ? renderHealthAnalyticsContent() :
            selectedCategory === 'Insurance' ? renderInsuranceContent() :
            selectedCategory === 'Insurance Guide' ? renderInsuranceGuideContent() :
            selectedCategory === 'Knowledge Base' ? renderKnowledgeBaseContent() :
-           selectedCategory === 'Find Providers' ? renderProviderDirectoryContent() :
-           selectedCategory === 'Genetics' ? renderGeneticsContent() :
            renderCategoryContent()}
         </main>
       </div>
@@ -1103,19 +846,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         onClose={() => setIsKnowledgeBaseOpen(false)}
       />
 
-      <HealthReportSummary
-        biomarkers={biomarkers}
-        riskAssessments={aiAnalysis.riskAssessments}
-        isOpen={isPlainEnglishOpen}
-        onClose={() => setIsPlainEnglishOpen(false)}
-      />
-
-      <DNAUploadModal
-        isOpen={isDNAUploadOpen}
-        onClose={() => setIsDNAUploadOpen(false)}
-        onVariantsExtracted={handleDNAVariantsExtracted}
-      />
-
       {trendBiomarker && (
         <TrendModal
           isOpen={isTrendModalOpen}
@@ -1132,15 +862,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           biomarker={selectedBiomarkerForInsurance}
           insurancePlans={insurancePlans}
           onClose={() => setSelectedBiomarkerForInsurance(null)}
-        />
-      )}
-
-      {selectedBiomarkerForDNA && dnaVariants.length > 0 && (
-        <BiomarkerDNAExplanation
-          biomarker={selectedBiomarkerForDNA}
-          dnaVariants={dnaVariants}
-          isOpen={!!selectedBiomarkerForDNA}
-          onClose={() => setSelectedBiomarkerForDNA(null)}
         />
       )}
 
