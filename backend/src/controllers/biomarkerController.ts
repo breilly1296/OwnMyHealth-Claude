@@ -17,6 +17,7 @@ import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { processBatch } from '../utils/batchProcessor.js';
 import { toNumber } from '../utils/numberConversion.js';
+import { logger } from '../utils/logger.js';
 import type { Biomarker as PrismaBiomarker, DataSourceType } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
@@ -522,8 +523,16 @@ export async function bulkCreateBiomarkers(
       data: validBiomarkerData,
     });
   } catch (dbError) {
-    // Database error - all valid items failed
-    const errorMessage = dbError instanceof Error ? dbError.message : 'Database error';
+    // SECURITY: Log actual error server-side but don't expose to user
+    // Raw DB errors can reveal table names, constraints, and schema details
+    logger.error('Batch biomarker creation failed', {
+      data: {
+        userId,
+        count: validBiomarkerData.length,
+        error: dbError instanceof Error ? dbError.message : 'Unknown database error',
+      },
+    });
+
     res.status(500).json({
       success: false,
       error: {
@@ -532,7 +541,7 @@ export async function bulkCreateBiomarkers(
         details: validBiomarkerData.map((_, i) => ({
           index: i,
           name: validBiomarkerData[i].name,
-          error: errorMessage,
+          error: 'Database operation failed',
         })),
       },
       meta: {
