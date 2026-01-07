@@ -23,6 +23,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { bulkOperationLimiter } from '../middleware/rateLimiter.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
 
 const router = Router();
@@ -71,8 +72,10 @@ router.post(
 );
 
 // POST /api/v1/biomarkers/batch - Batch create biomarkers
+// Rate limited to 30/hour to prevent bulk data injection
 router.post(
   '/batch',
+  bulkOperationLimiter,
   validate(schemas.biomarker.batchCreate),
   asyncHandler(biomarkerController.bulkCreateBiomarkers)
 );

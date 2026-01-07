@@ -13,6 +13,7 @@ import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
+import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import { getPrismaClient } from '../services/database.js';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/index.js';
@@ -282,9 +283,11 @@ router.delete(
 /**
  * DELETE /api/v1/admin/users/:id/permanent
  * Permanently delete a user and all their data
+ * Rate limited to 10/hour due to destructive nature
  */
 router.delete(
   '/users/:id/permanent',
+  sensitiveLimiter,
   validate(schemas.uuidParam, 'params'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();

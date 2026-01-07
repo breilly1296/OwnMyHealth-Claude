@@ -15,9 +15,13 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { uploadLimiter } from '../middleware/rateLimiter.js';
 import { uploadLabReport, uploadSBC } from '../controllers/uploadController.js';
 
 const router = Router();
+
+// Apply upload rate limiting to all upload routes (20 uploads/hour)
+router.use(uploadLimiter);
 
 // Configure multer for memory storage (files stored in buffer)
 const upload = multer({

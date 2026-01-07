@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { uploadLimiter } from '../middleware/rateLimiter.js';
 import * as insuranceController from '../controllers/insuranceController.js';
 import { uploadSBC } from '../controllers/uploadController.js';
 
@@ -108,8 +109,10 @@ router.get(
 );
 
 // POST /api/v1/insurance/upload-sbc - Upload and parse SBC PDF
+// Rate limited to 20 uploads/hour to prevent abuse
 router.post(
   '/upload-sbc',
+  uploadLimiter,
   upload.single('file'),
   asyncHandler(uploadSBC)
 );

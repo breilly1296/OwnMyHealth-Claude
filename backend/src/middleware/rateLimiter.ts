@@ -87,3 +87,18 @@ export const sensitiveLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Bulk operations rate limiter (for batch creates, imports)
+export const bulkOperationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 30, // 30 bulk operations per hour
+  message: {
+    success: false,
+    error: {
+      code: 'BULK_RATE_LIMIT_EXCEEDED',
+      message: 'Too many bulk operations. Please try again later.',
+    },
+  } as ApiResponse,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
