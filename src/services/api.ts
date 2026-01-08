@@ -519,6 +519,14 @@ export const biomarkersApi = {
     }>('/biomarkers/summary');
     return response.data;
   },
+
+  async getGuidance(id: string, biomarker: unknown, allBiomarkers?: unknown[]): Promise<{ guidance: string }> {
+    const response = await apiFetch<{ guidance: string }>(`/biomarkers/${id}/guidance`, {
+      method: 'POST',
+      body: JSON.stringify({ biomarker, allBiomarkers }),
+    });
+    return response.data;
+  },
 };
 
 // ============================================

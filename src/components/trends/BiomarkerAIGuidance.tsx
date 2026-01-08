@@ -14,11 +14,10 @@
  * @module components/trends/BiomarkerAIGuidance
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Sparkles, AlertCircle, RefreshCw, BookOpen, Stethoscope, TrendingUp, MessageCircle, Heart } from 'lucide-react';
 import type { Biomarker } from '../../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+import { biomarkersApi } from '../../services/api';
 
 interface BiomarkerAIGuidanceProps {
   /** The biomarker to get guidance for */
@@ -40,71 +39,47 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
   const [guidance, setGuidance] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    const fetchGuidance = async () => {
-      // Check cache first
-      const cacheKey = `${biomarker.id}-${biomarker.value}`;
-      if (guidanceCache.has(cacheKey)) {
-        setGuidance(guidanceCache.get(cacheKey)!);
-        return;
-      }
+  const fetchGuidance = useCallback(async (skipCache = false) => {
+    // Check cache first
+    const cacheKey = `${biomarker.id}-${biomarker.value}`;
+    if (!skipCache && guidanceCache.has(cacheKey)) {
+      setGuidance(guidanceCache.get(cacheKey)!);
+      return;
+    }
 
-      // Cancel any in-flight request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      abortControllerRef.current = new AbortController();
+    setIsLoading(true);
+    setError(null);
 
-      setIsLoading(true);
-      setError(null);
+    try {
+      const result = await biomarkersApi.getGuidance(biomarker.id, biomarker, allBiomarkers);
 
-      try {
-        // Filter related biomarkers (same category, excluding current)
-        const relatedBiomarkers = allBiomarkers
-          .filter((b) => b.category === biomarker.category && b.id !== biomarker.id)
-          .slice(0, 5);
-
-        const response = await fetch(`${API_BASE_URL}/biomarkers/${biomarker.id}/guidance`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          signal: abortControllerRef.current.signal,
-          body: JSON.stringify({
-            biomarker,
-            relatedBiomarkers,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to get guidance');
-        }
-
-        const data = await response.json();
-        const guidanceText = data.guidance;
-
+      if (isMountedRef.current) {
         // Cache the result
-        guidanceCache.set(cacheKey, guidanceText);
-        setGuidance(guidanceText);
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          return; // Ignore abort errors
-        }
-        setError('Unable to load guidance. Please try again.');
-      } finally {
+        guidanceCache.set(cacheKey, result.guidance);
+        setGuidance(result.guidance);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        const message = err instanceof Error ? err.message : 'Unable to load guidance. Please try again.';
+        setError(message);
+      }
+    } finally {
+      if (isMountedRef.current) {
         setIsLoading(false);
       }
-    };
+    }
+  }, [biomarker, allBiomarkers]);
 
+  useEffect(() => {
+    isMountedRef.current = true;
     fetchGuidance();
 
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      isMountedRef.current = false;
     };
-  }, [biomarker.id, biomarker.value, biomarker, allBiomarkers]);
+  }, [fetchGuidance]);
 
   const handleRetry = () => {
     // Clear cache for this biomarker
@@ -112,40 +87,7 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
     guidanceCache.delete(cacheKey);
     setGuidance(null);
     setError(null);
-    // Re-trigger fetch by updating state
-    setIsLoading(true);
-
-    const fetchGuidance = async () => {
-      try {
-        const relatedBiomarkers = allBiomarkers
-          .filter((b) => b.category === biomarker.category && b.id !== biomarker.id)
-          .slice(0, 5);
-
-        const response = await fetch(`${API_BASE_URL}/biomarkers/${biomarker.id}/guidance`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            biomarker,
-            relatedBiomarkers,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to get guidance');
-        }
-
-        const data = await response.json();
-        guidanceCache.set(cacheKey, data.guidance);
-        setGuidance(data.guidance);
-      } catch {
-        setError('Unable to load guidance. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGuidance();
+    fetchGuidance(true);
   };
 
   // Parse guidance into sections
