@@ -165,4 +165,5 @@ PHI_ENCRYPTION_KEY=<64 hex chars>
 NODE_ENV=development|production
 PORT=3001
 CORS_ORIGIN=http://localhost:5173
+ANTHROPIC_API_KEY=<your-api-key>  # For AI biomarker guidance feature
 ```

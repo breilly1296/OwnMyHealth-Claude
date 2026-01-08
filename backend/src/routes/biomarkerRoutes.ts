@@ -32,10 +32,20 @@ import { logger } from '../utils/logger.js';
 
 const router = Router();
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Initialize Anthropic client lazily (only when API key is available)
+let anthropicClient: Anthropic | null = null;
+
+function getAnthropicClient(): Anthropic | null {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return null;
+  }
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+  }
+  return anthropicClient;
+}
 
 // All routes require authentication
 router.use(authenticate);
@@ -79,6 +89,15 @@ router.post(
   validate(schemas.uuidParam, 'params'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Check if Anthropic API key is configured
+      const anthropic = getAnthropicClient();
+      if (!anthropic) {
+        logger.warn('AI guidance requested but ANTHROPIC_API_KEY is not configured');
+        return res.status(503).json({
+          error: 'AI guidance is not available. Please configure ANTHROPIC_API_KEY.'
+        });
+      }
+
       const { biomarker, relatedBiomarkers } = req.body;
 
       if (!biomarker) {
