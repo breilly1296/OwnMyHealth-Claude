@@ -14,7 +14,7 @@
  */
 
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
-import pdf from 'pdf-parse';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 import { logger } from '../utils/logger.js';
 import { InternalServerError, BadRequestError } from '../middleware/errorHandler.js';
 import {
