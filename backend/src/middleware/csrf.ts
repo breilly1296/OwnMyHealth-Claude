@@ -102,6 +102,14 @@ export function validateCsrfToken(
     '/insurance/upload-sbc',
   ];
 
+  // Skip CSRF for settings routes - they require Bearer token auth
+  // Bearer tokens are not automatically sent by browsers, so CSRF protection is redundant
+  const settingsRoutes = [
+    '/settings/delete-data',
+    '/settings/delete-account',
+    '/settings/export-data',
+  ];
+
   const isPublicAuthRoute = publicAuthRoutes.some(route =>
     req.path.endsWith(route)
   );
@@ -110,7 +118,11 @@ export function validateCsrfToken(
     req.path.endsWith(route)
   );
 
-  if (isPublicAuthRoute || isUploadRoute) {
+  const isSettingsRoute = settingsRoutes.some(route =>
+    req.path.endsWith(route)
+  );
+
+  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute) {
     return next();
   }
 
@@ -123,8 +135,14 @@ export function validateCsrfToken(
   const cookieToken = req.cookies[CSRF_COOKIE_NAME];
   const headerToken = req.headers[CSRF_HEADER_NAME] as string;
 
+  // Debug logging for CSRF validation
+  console.log(`[CSRF] Validating ${req.method} ${req.path}`);
+  console.log(`[CSRF] Cookie token: ${cookieToken ? cookieToken.substring(0, 8) + '...' : 'MISSING'}`);
+  console.log(`[CSRF] Header token: ${headerToken ? headerToken.substring(0, 8) + '...' : 'MISSING'}`);
+
   // Validate tokens exist and match
   if (!cookieToken || !headerToken) {
+    console.log(`[CSRF] BLOCKED - Token missing. Cookie: ${!!cookieToken}, Header: ${!!headerToken}`);
     throw new ForbiddenError('CSRF token missing');
   }
 
