@@ -18,6 +18,7 @@ import React, { useMemo } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Activity, Target, Calendar, BarChart2 } from 'lucide-react';
 import type { Biomarker } from '../../types';
 import { BiomarkerChart } from '../biomarkers';
+import BiomarkerAIGuidance from './BiomarkerAIGuidance';
 
 interface TrendDetailModalProps {
   /** Controls modal visibility */
@@ -26,6 +27,8 @@ interface TrendDetailModalProps {
   onClose: () => void;
   /** The biomarker to display trends for */
   biomarker: Biomarker;
+  /** All biomarkers for context (used by AI guidance) */
+  allBiomarkers?: Biomarker[];
 }
 
 interface TrendStats {
@@ -38,7 +41,7 @@ interface TrendStats {
   isImproving: boolean | null;
 }
 
-export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDetailModalProps) {
+export default function TrendDetailModal({ isOpen, onClose, biomarker, allBiomarkers = [] }: TrendDetailModalProps) {
   // Calculate comprehensive statistics
   const stats = useMemo<TrendStats>(() => {
     const history = biomarker.history || [];
@@ -262,6 +265,11 @@ export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDe
           {/* Chart */}
           <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-700">
             <BiomarkerChart biomarker={biomarker} height={280} />
+          </div>
+
+          {/* AI Guidance Section */}
+          <div className="px-4 md:px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+            <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={allBiomarkers} />
           </div>
 
           {/* History Table */}
