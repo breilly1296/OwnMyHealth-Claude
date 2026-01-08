@@ -234,7 +234,7 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Inflammation Markers', description: 'Inflammation and immune response', icon: 'Flame', group: 'biomarkers' },
   { name: 'Electrolytes', description: 'Electrolyte balance', icon: 'Bolt', group: 'biomarkers' },
 
-  // Biomarkers - New categories
+  // Biomarkers - Specialized panels
   { name: 'Thyroid', description: 'Thyroid function and hormone levels', icon: 'Waves', group: 'biomarkers' },
   { name: 'Diabetes', description: 'Blood sugar and diabetes markers', icon: 'Candy', group: 'biomarkers' },
   { name: 'Cardiac', description: 'Heart health and cardiac markers', icon: 'Heart', group: 'biomarkers' },
@@ -242,4 +242,13 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Bone Health', description: 'Bone density and metabolism markers', icon: 'Bone', group: 'biomarkers' },
   { name: 'Coagulation', description: 'Blood clotting and coagulation factors', icon: 'Timer', group: 'biomarkers' },
   { name: 'Autoimmune', description: 'Autoimmune markers and antibodies', icon: 'ShieldAlert', group: 'biomarkers' },
+
+  // Biomarkers - Diagnostic categories
+  { name: 'Tumor Markers', description: 'Cancer screening and monitoring markers', icon: 'Target', group: 'biomarkers' },
+  { name: 'Pancreatic', description: 'Pancreatic enzyme and function tests', icon: 'Cherry', group: 'biomarkers' },
+  { name: 'Urinalysis', description: 'Urine analysis and kidney screening', icon: 'TestTube', group: 'biomarkers' },
+  { name: 'Infectious Disease', description: 'Viral, bacterial, and pathogen testing', icon: 'Bug', group: 'biomarkers' },
+  { name: 'Blood Gas', description: 'Arterial blood gas and acid-base balance', icon: 'Wind', group: 'biomarkers' },
+  { name: 'Allergy', description: 'Allergy and immunoglobulin testing', icon: 'Flower2', group: 'biomarkers' },
+  { name: 'Genetic', description: 'Genetic markers and mutations', icon: 'Dna', group: 'biomarkers' },
 ];

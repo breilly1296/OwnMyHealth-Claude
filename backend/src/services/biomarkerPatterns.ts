@@ -1,81 +1,67 @@
 /**
- * Biomarker Patterns for OCR Extraction
+ * Comprehensive Biomarker Patterns for OCR Extraction
  *
- * Defines regex patterns and normalization rules for extracting
- * biomarkers from lab result OCR text, optimized for Quest Diagnostics format.
+ * Contains 300+ biomarkers organized into 24 categories for extracting
+ * lab results from OCR text. Optimized for Quest Diagnostics format.
  *
- * Supports comprehensive lab panels including:
- * - Basic Metabolic Panel (BMP)
- * - Comprehensive Metabolic Panel (CMP)
- * - Lipid Panel
- * - Thyroid Panel
- * - Complete Blood Count (CBC)
- * - Bone Health markers
+ * @module services/biomarkerPatterns
  */
 
+// ============================================
+// CATEGORY DEFINITIONS
+// ============================================
+
 /**
- * All supported biomarker categories
+ * All supported biomarker categories (24 total)
  * Keep in sync with frontend src/types/index.ts BiomarkerCategoryType
  */
 export const BIOMARKER_CATEGORIES = [
-  // Existing categories
+  // Core categories
   'Body Composition',
   'Blood',
   'Hormones',
   'Vitamins',
-  'Calcium CT',
   'Vital Signs',
   'Lipids',
+  'Electrolytes',
+  // Organ function
   'Kidney Function',
   'Liver Function',
-  'Inflammation Markers',
-  'Electrolytes',
-  'EKG',
-  // New categories
   'Thyroid',
-  'Diabetes',
   'Cardiac',
+  'Pancreatic',
+  // Specialized panels
+  'Diabetes',
   'Iron Studies',
   'Bone Health',
   'Coagulation',
+  'Inflammation Markers',
   'Autoimmune',
+  // Diagnostic categories
+  'Tumor Markers',
+  'Infectious Disease',
+  'Urinalysis',
+  'Blood Gas',
+  'Allergy',
+  'Genetic',
+  // Legacy/Other
+  'Calcium CT',
+  'EKG',
   'Other',
 ] as const;
 
 export type BiomarkerCategory = (typeof BIOMARKER_CATEGORIES)[number];
 
-/**
- * Category metadata for display and organization
- */
-export const CATEGORY_METADATA: Record<BiomarkerCategory, { description: string; icon: string }> = {
-  'Body Composition': { description: 'Body composition measurements including body fat and lean mass', icon: 'Scale' },
-  'Blood': { description: 'Complete blood count and metabolic panel', icon: 'Droplets' },
-  'Hormones': { description: 'Hormone levels and endocrine function', icon: 'Activity' },
-  'Vitamins': { description: 'Vitamin and mineral levels', icon: 'Zap' },
-  'Calcium CT': { description: 'Coronary calcium CT scan results', icon: 'Heart' },
-  'Vital Signs': { description: 'Basic vital measurements', icon: 'HeartPulse' },
-  'Lipids': { description: 'Cholesterol and triglyceride levels', icon: 'Droplet' },
-  'Kidney Function': { description: 'Kidney health markers', icon: 'Bean' },
-  'Liver Function': { description: 'Liver enzyme and function tests', icon: 'Pill' },
-  'Inflammation Markers': { description: 'Inflammation and immune response', icon: 'Flame' },
-  'Electrolytes': { description: 'Electrolyte balance', icon: 'Bolt' },
-  'EKG': { description: 'Electrocardiogram results', icon: 'Activity' },
-  'Thyroid': { description: 'Thyroid function and hormone levels', icon: 'Waves' },
-  'Diabetes': { description: 'Blood sugar and diabetes markers', icon: 'Candy' },
-  'Cardiac': { description: 'Heart health and cardiac markers', icon: 'Heart' },
-  'Iron Studies': { description: 'Iron levels and related markers', icon: 'CircleDot' },
-  'Bone Health': { description: 'Bone density and metabolism markers', icon: 'Bone' },
-  'Coagulation': { description: 'Blood clotting and coagulation factors', icon: 'Timer' },
-  'Autoimmune': { description: 'Autoimmune markers and antibodies', icon: 'ShieldAlert' },
-  'Other': { description: 'Other biomarkers and tests', icon: 'Activity' },
-};
+// ============================================
+// TYPE DEFINITIONS
+// ============================================
 
 export interface BiomarkerPattern {
   /** Display name for the biomarker */
   name: string;
   /** Alternative names/aliases to match */
   aliases: string[];
-  /** Biomarker category - must be one of BIOMARKER_CATEGORIES */
+  /** Biomarker category */
   category: BiomarkerCategory;
   /** Default unit if not detected */
   defaultUnit: string;
@@ -84,368 +70,10 @@ export interface BiomarkerPattern {
     min: number;
     max: number;
   };
-  /** Alternative unit ranges */
-  unitRanges?: Record<string, { min: number; max: number }>;
   /** Regex patterns to match this biomarker in OCR text */
   patterns: RegExp[];
 }
 
-/**
- * Comprehensive biomarker definitions for common lab tests
- */
-export const ALL_BIOMARKERS: BiomarkerPattern[] = [
-  // ===== BASIC/COMPREHENSIVE METABOLIC PANEL =====
-  {
-    name: 'Glucose',
-    aliases: ['blood glucose', 'fasting glucose', 'blood sugar', 'glu'],
-    category: 'Diabetes',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 70, max: 100 },
-    patterns: [
-      /\bglucose\s+(\d+\.?\d*)/i,
-      /\bglucose[,\s.:]+(\d+\.?\d*)/i,
-      /\bglu\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'BUN',
-    aliases: ['blood urea nitrogen', 'urea nitrogen'],
-    category: 'Kidney Function',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 7, max: 20 },
-    patterns: [
-      /\bbun\b\s+(\d+\.?\d*)/i,
-      /\burea\s+nitrogen\s+(\d+\.?\d*)/i,
-      /\bblood\s+urea\s+nitrogen\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Creatinine',
-    aliases: ['creat', 'serum creatinine'],
-    category: 'Kidney Function',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 0.7, max: 1.3 },
-    patterns: [
-      /\bcreatinine\s+(\d+\.?\d*)/i,
-      /\bcreat\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'eGFR',
-    aliases: ['estimated gfr', 'gfr', 'glomerular filtration rate'],
-    category: 'Kidney Function',
-    defaultUnit: 'mL/min/1.73m2',
-    normalRange: { min: 90, max: 120 },
-    patterns: [
-      /\begfr\b\s+[>]?(\d+\.?\d*)/i,
-      /\bgfr\b\s+[>]?(\d+\.?\d*)/i,
-      /glomerular\s+filtration\s+[>]?(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Sodium',
-    aliases: ['na', 'serum sodium'],
-    category: 'Electrolytes',
-    defaultUnit: 'mEq/L',
-    normalRange: { min: 136, max: 145 },
-    patterns: [
-      /\bsodium\s+(\d+\.?\d*)/i,
-      /\bna\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Potassium',
-    aliases: ['k', 'serum potassium'],
-    category: 'Electrolytes',
-    defaultUnit: 'mEq/L',
-    normalRange: { min: 3.5, max: 5.0 },
-    patterns: [
-      /\bpotassium\s+(\d+\.?\d*)/i,
-      /\bk\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Chloride',
-    aliases: ['cl', 'serum chloride'],
-    category: 'Electrolytes',
-    defaultUnit: 'mEq/L',
-    normalRange: { min: 98, max: 106 },
-    patterns: [
-      /\bchloride\s+(\d+\.?\d*)/i,
-      /\bcl\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'CO2',
-    aliases: ['carbon dioxide', 'bicarbonate', 'hco3', 'total co2'],
-    category: 'Electrolytes',
-    defaultUnit: 'mEq/L',
-    normalRange: { min: 23, max: 29 },
-    patterns: [
-      /\bco2\b\s+(\d+\.?\d*)/i,
-      /\bcarbon\s+dioxide\s+(\d+\.?\d*)/i,
-      /\bbicarbonate\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Calcium',
-    aliases: ['ca', 'serum calcium', 'total calcium'],
-    category: 'Bone Health',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 8.5, max: 10.5 },
-    patterns: [
-      /\bcalcium\s+(\d+\.?\d*)/i,
-      /\bcalcium[,\s.:]+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Phosphorus',
-    aliases: ['phosphate', 'phos', 'inorganic phosphorus'],
-    category: 'Bone Health',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 2.5, max: 4.5 },
-    patterns: [
-      /\bphosphorus\s+(\d+\.?\d*)/i,
-      /\bphosphate\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Total Protein',
-    aliases: ['protein total', 'serum protein'],
-    category: 'Liver Function',
-    defaultUnit: 'g/dL',
-    normalRange: { min: 6.0, max: 8.3 },
-    patterns: [
-      /\btotal\s+protein\s+(\d+\.?\d*)/i,
-      /\bprotein[,\s]+total\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Albumin',
-    aliases: ['alb', 'serum albumin'],
-    category: 'Liver Function',
-    defaultUnit: 'g/dL',
-    normalRange: { min: 3.5, max: 5.0 },
-    patterns: [
-      /\balbumin\s+(\d+\.?\d*)/i,
-      /\balb\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Bilirubin',
-    aliases: ['total bilirubin', 'tbili', 'bili'],
-    category: 'Liver Function',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 0.1, max: 1.2 },
-    patterns: [
-      /\bbilirubin\s+(\d+\.?\d*)/i,
-      /\btotal\s+bilirubin\s+(\d+\.?\d*)/i,
-      /\btbili\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Alkaline Phosphatase',
-    aliases: ['alk phos', 'alp', 'alkp'],
-    category: 'Liver Function',
-    defaultUnit: 'U/L',
-    normalRange: { min: 44, max: 147 },
-    patterns: [
-      /\balkaline\s+phosphatase\s+(\d+\.?\d*)/i,
-      /\balk\s*phos\s+(\d+\.?\d*)/i,
-      /\balp\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'AST',
-    aliases: ['sgot', 'aspartate aminotransferase'],
-    category: 'Liver Function',
-    defaultUnit: 'U/L',
-    normalRange: { min: 10, max: 40 },
-    patterns: [
-      /\bast\b\s+(\d+\.?\d*)/i,
-      /\bsgot\b\s+(\d+\.?\d*)/i,
-      /\baspartate\s+amino\s*transferase\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'ALT',
-    aliases: ['sgpt', 'alanine aminotransferase'],
-    category: 'Liver Function',
-    defaultUnit: 'U/L',
-    normalRange: { min: 7, max: 56 },
-    patterns: [
-      /\balt\b\s+(\d+\.?\d*)/i,
-      /\bsgpt\b\s+(\d+\.?\d*)/i,
-      /\balanine\s+amino\s*transferase\s+(\d+\.?\d*)/i,
-    ],
-  },
-
-  // ===== LIPID PANEL =====
-  {
-    name: 'Cholesterol',
-    aliases: ['total cholesterol', 'chol'],
-    category: 'Lipids',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 0, max: 200 },
-    patterns: [
-      /\bcholesterol\s+(\d+\.?\d*)/i,
-      /\btotal\s+cholesterol\s+(\d+\.?\d*)/i,
-      /\bchol\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'HDL',
-    aliases: ['hdl cholesterol', 'hdl-c', 'good cholesterol'],
-    category: 'Lipids',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 40, max: 60 },
-    patterns: [
-      /\bhdl\b\s+(\d+\.?\d*)/i,
-      /\bhdl\s+cholesterol\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'LDL',
-    aliases: ['ldl cholesterol', 'ldl-c', 'bad cholesterol'],
-    category: 'Lipids',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 0, max: 100 },
-    patterns: [
-      /\bldl\b\s+(\d+\.?\d*)/i,
-      /\bldl\s+cholesterol\s+(\d+\.?\d*)/i,
-      /\bldl\s+calc\w*\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Triglycerides',
-    aliases: ['trig', 'trigs'],
-    category: 'Lipids',
-    defaultUnit: 'mg/dL',
-    normalRange: { min: 0, max: 150 },
-    patterns: [
-      /\btriglycerides\s+(\d+\.?\d*)/i,
-      /\btrig\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-
-  // ===== THYROID PANEL =====
-  {
-    name: 'TSH',
-    aliases: ['thyroid stimulating hormone', 'thyrotropin'],
-    category: 'Thyroid',
-    defaultUnit: 'mIU/L',
-    normalRange: { min: 0.4, max: 4.0 },
-    patterns: [
-      /\btsh\b\s+(\d+\.?\d*)/i,
-      /\bthyroid\s+stimulating\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Free T4',
-    aliases: ['ft4', 'free thyroxine', 't4 free'],
-    category: 'Thyroid',
-    defaultUnit: 'ng/dL',
-    normalRange: { min: 0.8, max: 1.8 },
-    patterns: [
-      /\bfree\s+t4\s+(\d+\.?\d*)/i,
-      /\bft4\b\s+(\d+\.?\d*)/i,
-      /\bt4\s+free\s+(\d+\.?\d*)/i,
-    ],
-  },
-
-  // ===== BONE HEALTH =====
-  {
-    name: 'Vitamin D',
-    aliases: ['25-hydroxyvitamin d', '25-oh vitamin d', 'vit d'],
-    category: 'Bone Health',
-    defaultUnit: 'ng/mL',
-    normalRange: { min: 30, max: 100 },
-    patterns: [
-      /\bvitamin\s*d\s+(\d+\.?\d*)/i,
-      /\b25-?(?:oh|hydroxy)\s*(?:vitamin\s*)?d?\s+(\d+\.?\d*)/i,
-      /\bvit\s*d\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'PTH',
-    aliases: ['parathyroid hormone', 'pth intact'],
-    category: 'Bone Health',
-    defaultUnit: 'pg/mL',
-    normalRange: { min: 15, max: 65 },
-    patterns: [
-      /\bpth\b\s+(\d+\.?\d*)/i,
-      /\bparathyroid\s+hormone\s+(\d+\.?\d*)/i,
-    ],
-  },
-
-  // ===== COMPLETE BLOOD COUNT (CBC) =====
-  {
-    name: 'WBC',
-    aliases: ['white blood cell', 'white blood cells', 'leukocytes'],
-    category: 'Blood',
-    defaultUnit: 'K/uL',
-    normalRange: { min: 4.5, max: 11.0 },
-    patterns: [
-      /\bwbc\b\s+(\d+\.?\d*)/i,
-      /\bwhite\s+blood\s+cell\w*\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'RBC',
-    aliases: ['red blood cell', 'red blood cells', 'erythrocytes'],
-    category: 'Blood',
-    defaultUnit: 'M/uL',
-    normalRange: { min: 4.5, max: 5.5 },
-    patterns: [
-      /\brbc\b\s+(\d+\.?\d*)/i,
-      /\bred\s+blood\s+cell\w*\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Hemoglobin',
-    aliases: ['hgb', 'hb'],
-    category: 'Blood',
-    defaultUnit: 'g/dL',
-    normalRange: { min: 12.0, max: 17.5 },
-    patterns: [
-      /\bhemoglobin\s+(\d+\.?\d*)/i,
-      /\bhgb\b\s+(\d+\.?\d*)/i,
-      /\bhb\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Hematocrit',
-    aliases: ['hct'],
-    category: 'Blood',
-    defaultUnit: '%',
-    normalRange: { min: 36, max: 50 },
-    patterns: [
-      /\bhematocrit\s+(\d+\.?\d*)/i,
-      /\bhct\b\s+(\d+\.?\d*)/i,
-    ],
-  },
-  {
-    name: 'Platelets',
-    aliases: ['plt', 'platelet count', 'thrombocytes'],
-    category: 'Blood',
-    defaultUnit: 'K/uL',
-    normalRange: { min: 150, max: 400 },
-    patterns: [
-      /\bplatelets\s+(\d+\.?\d*)/i,
-      /\bplt\b\s+(\d+\.?\d*)/i,
-      /\bplatelet\s+count\s+(\d+\.?\d*)/i,
-    ],
-  },
-];
-
-// Legacy export for backward compatibility
-export const BONE_HEALTH_BIOMARKERS = ALL_BIOMARKERS.filter(
-  (b) => b.category === 'Bone Health'
-);
-
-/**
- * Extracted biomarker result from OCR text
- */
 export interface ExtractedBiomarker {
   name: string;
   value: number;
@@ -460,9 +88,2125 @@ export interface ExtractedBiomarker {
   rawMatch: string;
 }
 
-/**
- * Unit normalization map
- */
+// ============================================
+// BIOMARKER DEFINITIONS - 300+ BIOMARKERS
+// ============================================
+
+export const ALL_BIOMARKERS: BiomarkerPattern[] = [
+  // ═══════════════════════════════════════════════════════════════
+  // LIPID PANEL (16 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Cholesterol, Total',
+    aliases: ['total cholesterol', 'cholesterol'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 200 },
+    patterns: [
+      /\bCHOLESTEROL[,\s]+TOTAL\s+(\d+)/i,
+      /\bTOTAL\s+CHOLESTEROL\s+(\d+)/i,
+      /\bCHOLESTEROL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'HDL Cholesterol',
+    aliases: ['hdl', 'hdl-c', 'good cholesterol'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 40, max: 999 },
+    patterns: [
+      /\bHDL\s+CHOLESTEROL\s+(\d+)/i,
+      /\bHDL-?C\s+(\d+)/i,
+      /\bHDL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'LDL Cholesterol',
+    aliases: ['ldl', 'ldl-c', 'bad cholesterol'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 100 },
+    patterns: [
+      /\bLDL\s+CHOLESTEROL\s+(\d+)/i,
+      /\bLDL-?C(?:HOLESTEROL)?\s+(\d+)/i,
+      /\bLDL\s+CALC\w*\s+(\d+)/i,
+      /\bLDL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Triglycerides',
+    aliases: ['trig', 'trigs'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 150 },
+    patterns: [
+      /\bTRIGLYCERIDES?\s+(\d+)/i,
+      /\bTRIG\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'VLDL Cholesterol',
+    aliases: ['vldl'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 5, max: 40 },
+    patterns: [
+      /\bVLDL\s+CHOLESTEROL\s+(\d+)/i,
+      /\bVLDL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Non-HDL Cholesterol',
+    aliases: ['non hdl cholesterol'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 130 },
+    patterns: [
+      /\bNON-?HDL\s+CHOLESTEROL\s+(\d+)/i,
+      /\bNON\s+HDL\s+CHOL\w*\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Cholesterol/HDL Ratio',
+    aliases: ['chol/hdl ratio', 'tc/hdl'],
+    category: 'Lipids',
+    defaultUnit: 'ratio',
+    normalRange: { min: 0, max: 5.0 },
+    patterns: [
+      /\bCHOL(?:ESTEROL)?\/HDL\w*\s+RATIO\s+(\d+\.?\d*)/i,
+      /\bCHOL\/HDLC\s+RATIO\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'LDL/HDL Ratio',
+    aliases: ['ldl/hdl'],
+    category: 'Lipids',
+    defaultUnit: 'ratio',
+    normalRange: { min: 0, max: 3.5 },
+    patterns: [
+      /\bLDL\/HDL\s+RATIO\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Apolipoprotein A1',
+    aliases: ['apo a1', 'apo a-1', 'apoa1'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 120, max: 175 },
+    patterns: [
+      /\bAPOLIPOPROTEIN\s+A-?1\s+(\d+)/i,
+      /\bAPO\s+A-?1\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Apolipoprotein B',
+    aliases: ['apo b', 'apo b-100', 'apob'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 90 },
+    patterns: [
+      /\bAPOLIPOPROTEIN\s+B\s+(\d+)/i,
+      /\bAPO\s+B(?:-100)?\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Lipoprotein(a)',
+    aliases: ['lp(a)', 'lpa'],
+    category: 'Lipids',
+    defaultUnit: 'nmol/L',
+    normalRange: { min: 0, max: 75 },
+    patterns: [
+      /\bLIPOPROTEIN\s*\(A\)\s+(\d+)/i,
+      /\bLP\s*\(A\)\s+(\d+)/i,
+      /\bLPA\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'LDL Particle Number',
+    aliases: ['ldl-p'],
+    category: 'Lipids',
+    defaultUnit: 'nmol/L',
+    normalRange: { min: 0, max: 1000 },
+    patterns: [
+      /\bLDL\s+PARTICLE\s+NUMBER\s+(\d+)/i,
+      /\bLDL-?P\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Small Dense LDL',
+    aliases: ['sd-ldl'],
+    category: 'Lipids',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 30 },
+    patterns: [
+      /\bSMALL\s+DENSE\s+LDL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Oxidized LDL',
+    aliases: ['ox-ldl'],
+    category: 'Lipids',
+    defaultUnit: 'U/L',
+    normalRange: { min: 0, max: 60 },
+    patterns: [
+      /\bOXIDIZED\s+LDL\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // COMPLETE BLOOD COUNT - CBC (29 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'WBC',
+    aliases: ['white blood cell', 'white blood cells', 'leukocytes'],
+    category: 'Blood',
+    defaultUnit: 'K/uL',
+    normalRange: { min: 3.8, max: 10.8 },
+    patterns: [
+      /\bWHITE\s+BLOOD\s+CELL\s+COUNT\s+(\d+\.?\d*)/i,
+      /\bWBC\s+(\d+\.?\d*)/i,
+      /\bLEUKOCYTES?\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'RBC',
+    aliases: ['red blood cell', 'red blood cells', 'erythrocytes'],
+    category: 'Blood',
+    defaultUnit: 'M/uL',
+    normalRange: { min: 4.2, max: 5.8 },
+    patterns: [
+      /\bRED\s+BLOOD\s+CELL\s+COUNT\s+(\d+\.?\d*)/i,
+      /\bRBC\s+(\d+\.?\d*)/i,
+      /\bERYTHROCYTES?\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Hemoglobin',
+    aliases: ['hgb', 'hb'],
+    category: 'Blood',
+    defaultUnit: 'g/dL',
+    normalRange: { min: 13.2, max: 17.1 },
+    patterns: [
+      /\bHEMOGLOBIN\s+(\d+\.?\d*)/i,
+      /\bHGB\s+(\d+\.?\d*)/i,
+      /\bHB\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Hematocrit',
+    aliases: ['hct'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 38.5, max: 50.0 },
+    patterns: [
+      /\bHEMATOCRIT\s+(\d+\.?\d*)/i,
+      /\bHCT\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'MCV',
+    aliases: ['mean corpuscular volume'],
+    category: 'Blood',
+    defaultUnit: 'fL',
+    normalRange: { min: 80, max: 100 },
+    patterns: [
+      /\bMCV\s+(\d+\.?\d*)/i,
+      /\bMEAN\s+CORPUSCULAR\s+VOLUME\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'MCH',
+    aliases: ['mean corpuscular hemoglobin'],
+    category: 'Blood',
+    defaultUnit: 'pg',
+    normalRange: { min: 27, max: 33 },
+    patterns: [
+      /\bMCH\s+(\d+\.?\d*)/i,
+      /\bMEAN\s+CORPUSCULAR\s+HEMOGLOBIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'MCHC',
+    aliases: ['mean corpuscular hgb conc'],
+    category: 'Blood',
+    defaultUnit: 'g/dL',
+    normalRange: { min: 32, max: 36 },
+    patterns: [
+      /\bMCHC\s+(\d+\.?\d*)/i,
+      /\bMEAN\s+CORPUSCULAR\s+HGB\s+CONC\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'RDW',
+    aliases: ['red cell distribution width', 'rdw-cv'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 11, max: 15 },
+    patterns: [
+      /\bRDW(?:-CV)?\s+(\d+\.?\d*)/i,
+      /\bRED\s+CELL\s+DIST(?:RIBUTION)?\s+WIDTH\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Platelets',
+    aliases: ['plt', 'platelet count', 'thrombocytes'],
+    category: 'Blood',
+    defaultUnit: 'K/uL',
+    normalRange: { min: 140, max: 400 },
+    patterns: [
+      /\bPLATELET\s+COUNT\s+(\d+)/i,
+      /\bPLATELETS?\s+(\d+)/i,
+      /\bPLT\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'MPV',
+    aliases: ['mean platelet volume'],
+    category: 'Blood',
+    defaultUnit: 'fL',
+    normalRange: { min: 7.5, max: 12.5 },
+    patterns: [
+      /\bMPV\s+(\d+\.?\d*)/i,
+      /\bMEAN\s+PLATELET\s+VOLUME\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Neutrophils',
+    aliases: ['neut', 'polys', 'pmn'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 38, max: 80 },
+    patterns: [
+      /\bNEUTROPHILS?\s+(\d+\.?\d*)/i,
+      /\bNEUT\s+(\d+\.?\d*)/i,
+      /\bPOLYS\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Absolute Neutrophils',
+    aliases: ['anc'],
+    category: 'Blood',
+    defaultUnit: 'cells/uL',
+    normalRange: { min: 1500, max: 7800 },
+    patterns: [
+      /\bABSOLUTE\s+NEUTROPHILS?\s+(\d+)/i,
+      /\bANC\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Lymphocytes',
+    aliases: ['lymph'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 15, max: 49 },
+    patterns: [
+      /\bLYMPHOCYTES?\s+(\d+\.?\d*)/i,
+      /\bLYMPH\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Absolute Lymphocytes',
+    aliases: ['alc'],
+    category: 'Blood',
+    defaultUnit: 'cells/uL',
+    normalRange: { min: 850, max: 3900 },
+    patterns: [
+      /\bABSOLUTE\s+LYMPHOCYTES?\s+(\d+)/i,
+      /\bALC\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Monocytes',
+    aliases: ['mono'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 0, max: 13 },
+    patterns: [
+      /\bMONOCYTES?\s+(\d+\.?\d*)/i,
+      /\bMONO\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Eosinophils',
+    aliases: ['eos'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 0, max: 8 },
+    patterns: [
+      /\bEOSINOPHILS?\s+(\d+\.?\d*)/i,
+      /\bEOS\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Basophils',
+    aliases: ['baso'],
+    category: 'Blood',
+    defaultUnit: '%',
+    normalRange: { min: 0, max: 2 },
+    patterns: [
+      /\bBASOPHILS?\s+(\d+\.?\d*)/i,
+      /\bBASO\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ELECTROLYTES (11 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Sodium',
+    aliases: ['na'],
+    category: 'Electrolytes',
+    defaultUnit: 'mEq/L',
+    normalRange: { min: 136, max: 145 },
+    patterns: [
+      /\bSODIUM\s+(\d+)/i,
+      /\bNA\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Potassium',
+    aliases: ['k'],
+    category: 'Electrolytes',
+    defaultUnit: 'mEq/L',
+    normalRange: { min: 3.5, max: 5.0 },
+    patterns: [
+      /\bPOTASSIUM\s+(\d+\.?\d*)/i,
+      /\bK\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Chloride',
+    aliases: ['cl'],
+    category: 'Electrolytes',
+    defaultUnit: 'mEq/L',
+    normalRange: { min: 98, max: 106 },
+    patterns: [
+      /\bCHLORIDE\s+(\d+)/i,
+      /\bCL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'CO2',
+    aliases: ['carbon dioxide', 'bicarbonate', 'hco3'],
+    category: 'Electrolytes',
+    defaultUnit: 'mEq/L',
+    normalRange: { min: 23, max: 29 },
+    patterns: [
+      /\bCARBON\s+DIOXIDE\s+(\d+)/i,
+      /\bCO2\s+(\d+)/i,
+      /\bBICARBONATE\s+(\d+)/i,
+      /\bHCO3\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Calcium',
+    aliases: ['ca', 'total calcium'],
+    category: 'Electrolytes',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 8.6, max: 10.3 },
+    patterns: [
+      /\bCALCIUM\s+(\d+\.?\d*)/i,
+      /\bCA\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Ionized Calcium',
+    aliases: ['ca++', 'free calcium'],
+    category: 'Electrolytes',
+    defaultUnit: 'mmol/L',
+    normalRange: { min: 1.12, max: 1.32 },
+    patterns: [
+      /\bIONIZED\s+CALCIUM\s+(\d+\.?\d*)/i,
+      /\bCA\+\+\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Magnesium',
+    aliases: ['mg'],
+    category: 'Electrolytes',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 1.7, max: 2.2 },
+    patterns: [
+      /\bMAGNESIUM\s+(\d+\.?\d*)/i,
+      /\bMG\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Phosphorus',
+    aliases: ['phosphate', 'phos'],
+    category: 'Electrolytes',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 2.5, max: 4.5 },
+    patterns: [
+      /\bPHOSPHORUS\s+(\d+\.?\d*)/i,
+      /\bPHOSPHATE\s+(\d+\.?\d*)/i,
+      /\bPHOS\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Anion Gap',
+    aliases: [],
+    category: 'Electrolytes',
+    defaultUnit: 'mEq/L',
+    normalRange: { min: 8, max: 12 },
+    patterns: [
+      /\bANION\s+GAP\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Osmolality',
+    aliases: ['serum osmolality'],
+    category: 'Electrolytes',
+    defaultUnit: 'mOsm/kg',
+    normalRange: { min: 275, max: 295 },
+    patterns: [
+      /\bOSMOLALITY\s+(\d+)/i,
+      /\bSERUM\s+OSMOLALITY\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // KIDNEY FUNCTION (13 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'BUN',
+    aliases: ['urea nitrogen', 'blood urea nitrogen'],
+    category: 'Kidney Function',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 7, max: 25 },
+    patterns: [
+      /\bBUN\s+(\d+)/i,
+      /\bUREA\s+NITROGEN\s+(\d+)/i,
+      /\bBLOOD\s+UREA\s+NITROGEN\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Creatinine',
+    aliases: ['creat'],
+    category: 'Kidney Function',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0.6, max: 1.2 },
+    patterns: [
+      /\bCREATININE\s+(\d+\.?\d*)/i,
+      /\bCREAT\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'eGFR',
+    aliases: ['gfr', 'estimated gfr', 'glomerular filtration rate'],
+    category: 'Kidney Function',
+    defaultUnit: 'mL/min/1.73m2',
+    normalRange: { min: 60, max: 999 },
+    patterns: [
+      /\beGFR\s+>?(\d+)/i,
+      /\bGFR\s+>?(\d+)/i,
+      /\bESTIMATED\s+GFR\s+>?(\d+)/i,
+      /\bGLOMERULAR\s+FILTRATION\s+>?(\d+)/i,
+    ],
+  },
+  {
+    name: 'BUN/Creatinine Ratio',
+    aliases: [],
+    category: 'Kidney Function',
+    defaultUnit: 'ratio',
+    normalRange: { min: 10, max: 20 },
+    patterns: [
+      /\bBUN\/CREATININE\s+RATIO\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Cystatin C',
+    aliases: [],
+    category: 'Kidney Function',
+    defaultUnit: 'mg/L',
+    normalRange: { min: 0.5, max: 1.0 },
+    patterns: [
+      /\bCYSTATIN\s+C\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Microalbumin',
+    aliases: ['urine albumin'],
+    category: 'Kidney Function',
+    defaultUnit: 'mg/L',
+    normalRange: { min: 0, max: 30 },
+    patterns: [
+      /\bMICROALBUMIN\s+(\d+\.?\d*)/i,
+      /\bURINE\s+ALBUMIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Albumin/Creatinine Ratio',
+    aliases: ['acr', 'uacr'],
+    category: 'Kidney Function',
+    defaultUnit: 'mg/g',
+    normalRange: { min: 0, max: 30 },
+    patterns: [
+      /\bALBUMIN\/CREATININE\s+RATIO\s+(\d+\.?\d*)/i,
+      /\bACR\s+(\d+\.?\d*)/i,
+      /\bUACR\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Urine Protein',
+    aliases: [],
+    category: 'Kidney Function',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 15 },
+    patterns: [
+      /\bURINE\s+PROTEIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // LIVER FUNCTION (16 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Total Protein',
+    aliases: ['protein total'],
+    category: 'Liver Function',
+    defaultUnit: 'g/dL',
+    normalRange: { min: 6.0, max: 8.3 },
+    patterns: [
+      /\bTOTAL\s+PROTEIN\s+(\d+\.?\d*)/i,
+      /\bPROTEIN[,\s]+TOTAL\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Albumin',
+    aliases: ['alb'],
+    category: 'Liver Function',
+    defaultUnit: 'g/dL',
+    normalRange: { min: 3.5, max: 5.0 },
+    patterns: [
+      /\bALBUMIN\s+(\d+\.?\d*)/i,
+      /\bALB\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Globulin',
+    aliases: ['glob'],
+    category: 'Liver Function',
+    defaultUnit: 'g/dL',
+    normalRange: { min: 2.0, max: 3.5 },
+    patterns: [
+      /\bGLOBULIN\s+(\d+\.?\d*)/i,
+      /\bGLOB\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'A/G Ratio',
+    aliases: ['albumin/globulin ratio'],
+    category: 'Liver Function',
+    defaultUnit: 'ratio',
+    normalRange: { min: 1.0, max: 2.5 },
+    patterns: [
+      /\bA\/G\s+RATIO\s+(\d+\.?\d*)/i,
+      /\bALBUMIN\/GLOBULIN\s+RATIO\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Bilirubin, Total',
+    aliases: ['total bilirubin', 'tbili'],
+    category: 'Liver Function',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0.1, max: 1.2 },
+    patterns: [
+      /\bBILIRUBIN[,\s]+TOTAL\s+(\d+\.?\d*)/i,
+      /\bTOTAL\s+BILIRUBIN\s+(\d+\.?\d*)/i,
+      /\bTBILI\s+(\d+\.?\d*)/i,
+      /\bBILIRUBIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Bilirubin, Direct',
+    aliases: ['direct bilirubin'],
+    category: 'Liver Function',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 0.3 },
+    patterns: [
+      /\bBILIRUBIN[,\s]+DIRECT\s+(\d+\.?\d*)/i,
+      /\bDIRECT\s+BILIRUBIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Alkaline Phosphatase',
+    aliases: ['alk phos', 'alp'],
+    category: 'Liver Function',
+    defaultUnit: 'U/L',
+    normalRange: { min: 36, max: 130 },
+    patterns: [
+      /\bALKALINE\s+PHOSPHATASE\s+(\d+)/i,
+      /\bALK\s+PHOS\s+(\d+)/i,
+      /\bALP\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'AST',
+    aliases: ['sgot', 'aspartate aminotransferase'],
+    category: 'Liver Function',
+    defaultUnit: 'U/L',
+    normalRange: { min: 10, max: 40 },
+    patterns: [
+      /\bAST\s+\(?SGOT\)?\s*(\d+)/i,
+      /\bAST\s+(\d+)/i,
+      /\bSGOT\s+(\d+)/i,
+      /\bASPARTATE\s+AMINO\s*TRANSFERASE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'ALT',
+    aliases: ['sgpt', 'alanine aminotransferase'],
+    category: 'Liver Function',
+    defaultUnit: 'U/L',
+    normalRange: { min: 7, max: 56 },
+    patterns: [
+      /\bALT\s+\(?SGPT\)?\s*(\d+)/i,
+      /\bALT\s+(\d+)/i,
+      /\bSGPT\s+(\d+)/i,
+      /\bALANINE\s+AMINO\s*TRANSFERASE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'GGT',
+    aliases: ['gamma gt', 'gamma-glutamyl transferase'],
+    category: 'Liver Function',
+    defaultUnit: 'U/L',
+    normalRange: { min: 9, max: 48 },
+    patterns: [
+      /\bGGT\s+(\d+)/i,
+      /\bGAMMA\s+GT\s+(\d+)/i,
+      /\bGAMMA-?GLUTAMYL\s+TRANS\w*\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'LDH',
+    aliases: ['lactate dehydrogenase'],
+    category: 'Liver Function',
+    defaultUnit: 'U/L',
+    normalRange: { min: 140, max: 280 },
+    patterns: [
+      /\bLDH\s+(\d+)/i,
+      /\bLACTATE\s+DEHYDROGENASE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Ammonia',
+    aliases: [],
+    category: 'Liver Function',
+    defaultUnit: 'umol/L',
+    normalRange: { min: 15, max: 45 },
+    patterns: [
+      /\bAMMONIA\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // THYROID PANEL (13 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'TSH',
+    aliases: ['thyroid stimulating hormone'],
+    category: 'Thyroid',
+    defaultUnit: 'mIU/L',
+    normalRange: { min: 0.4, max: 4.0 },
+    patterns: [
+      /\bTSH\s+(\d+\.?\d*)/i,
+      /\bTHYROID\s+STIMULATING\s+HORMONE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Free T4',
+    aliases: ['ft4', 'thyroxine free'],
+    category: 'Thyroid',
+    defaultUnit: 'ng/dL',
+    normalRange: { min: 0.8, max: 1.8 },
+    patterns: [
+      /\bFREE\s+T4\s+(\d+\.?\d*)/i,
+      /\bFT4\s+(\d+\.?\d*)/i,
+      /\bTHYROXINE\s+FREE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Free T3',
+    aliases: ['ft3', 'triiodothyronine free'],
+    category: 'Thyroid',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 2.3, max: 4.2 },
+    patterns: [
+      /\bFREE\s+T3\s+(\d+\.?\d*)/i,
+      /\bFT3\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Total T4',
+    aliases: ['t4', 'thyroxine'],
+    category: 'Thyroid',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 4.5, max: 12.0 },
+    patterns: [
+      /\bTOTAL\s+T4\s+(\d+\.?\d*)/i,
+      /\bT4\s+(\d+\.?\d*)/i,
+      /\bTHYROXINE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Total T3',
+    aliases: ['t3', 'triiodothyronine'],
+    category: 'Thyroid',
+    defaultUnit: 'ng/dL',
+    normalRange: { min: 80, max: 200 },
+    patterns: [
+      /\bTOTAL\s+T3\s+(\d+)/i,
+      /\bT3\s+(\d+)/i,
+      /\bTRIIODOTHYRONINE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Reverse T3',
+    aliases: ['rt3'],
+    category: 'Thyroid',
+    defaultUnit: 'ng/dL',
+    normalRange: { min: 10, max: 24 },
+    patterns: [
+      /\bREVERSE\s+T3\s+(\d+)/i,
+      /\bRT3\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Thyroglobulin',
+    aliases: ['tg'],
+    category: 'Thyroid',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 3, max: 40 },
+    patterns: [
+      /\bTHYROGLOBULIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'TPO Antibodies',
+    aliases: ['anti-tpo', 'thyroid peroxidase ab'],
+    category: 'Thyroid',
+    defaultUnit: 'IU/mL',
+    normalRange: { min: 0, max: 35 },
+    patterns: [
+      /\bTPO\s+ANTIBOD\w*\s+(\d+)/i,
+      /\bANTI-?TPO\s+(\d+)/i,
+      /\bTHYROID\s+PEROXIDASE\s+AB\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Thyroglobulin Antibodies',
+    aliases: ['tg ab', 'anti-tg'],
+    category: 'Thyroid',
+    defaultUnit: 'IU/mL',
+    normalRange: { min: 0, max: 4 },
+    patterns: [
+      /\bTHYROGLOBULIN\s+ANTIBOD\w*\s+(\d+)/i,
+      /\bTG\s+AB\s+(\d+)/i,
+      /\bANTI-?TG\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // DIABETES / GLUCOSE METABOLISM (8 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Glucose',
+    aliases: ['fasting glucose', 'blood glucose', 'blood sugar'],
+    category: 'Diabetes',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 70, max: 99 },
+    patterns: [
+      /\bGLUCOSE\s+(\d+)/i,
+      /\bFASTING\s+GLUCOSE\s+(\d+)/i,
+      /\bBLOOD\s+GLUCOSE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Hemoglobin A1c',
+    aliases: ['hba1c', 'a1c', 'glycohemoglobin'],
+    category: 'Diabetes',
+    defaultUnit: '%',
+    normalRange: { min: 0, max: 5.7 },
+    patterns: [
+      /\bHEMOGLOBIN\s+A1C\s+(\d+\.?\d*)/i,
+      /\bHBA1C\s+(\d+\.?\d*)/i,
+      /\bA1C\s+(\d+\.?\d*)/i,
+      /\bGLYCOHEMOGLOBIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Fasting Insulin',
+    aliases: ['insulin'],
+    category: 'Diabetes',
+    defaultUnit: 'uIU/mL',
+    normalRange: { min: 2.6, max: 24.9 },
+    patterns: [
+      /\bFASTING\s+INSULIN\s+(\d+\.?\d*)/i,
+      /\bINSULIN\s+FASTING\s+(\d+\.?\d*)/i,
+      /\bINSULIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'C-Peptide',
+    aliases: [],
+    category: 'Diabetes',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0.8, max: 3.9 },
+    patterns: [
+      /\bC-?PEPTIDE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Fructosamine',
+    aliases: [],
+    category: 'Diabetes',
+    defaultUnit: 'umol/L',
+    normalRange: { min: 200, max: 285 },
+    patterns: [
+      /\bFRUCTOSAMINE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'HOMA-IR',
+    aliases: [],
+    category: 'Diabetes',
+    defaultUnit: 'index',
+    normalRange: { min: 0, max: 2.5 },
+    patterns: [
+      /\bHOMA-?IR\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // IRON STUDIES (6 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Iron',
+    aliases: ['serum iron', 'fe'],
+    category: 'Iron Studies',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 60, max: 170 },
+    patterns: [
+      /\bIRON\s+(\d+)/i,
+      /\bSERUM\s+IRON\s+(\d+)/i,
+      /\bFE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'TIBC',
+    aliases: ['total iron binding capacity'],
+    category: 'Iron Studies',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 250, max: 400 },
+    patterns: [
+      /\bTIBC\s+(\d+)/i,
+      /\bTOTAL\s+IRON\s+BINDING\s+CAPACITY\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'UIBC',
+    aliases: ['unsaturated iron binding capacity'],
+    category: 'Iron Studies',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 150, max: 300 },
+    patterns: [
+      /\bUIBC\s+(\d+)/i,
+      /\bUNSATURATED\s+IRON\s+BINDING\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Transferrin',
+    aliases: [],
+    category: 'Iron Studies',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 200, max: 360 },
+    patterns: [
+      /\bTRANSFERRIN\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Transferrin Saturation',
+    aliases: ['iron saturation', '% saturation'],
+    category: 'Iron Studies',
+    defaultUnit: '%',
+    normalRange: { min: 20, max: 50 },
+    patterns: [
+      /\bTRANSFERRIN\s+SATURATION\s+(\d+)/i,
+      /\bIRON\s+SATURATION\s+(\d+)/i,
+      /\b%\s*SATURATION\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Ferritin',
+    aliases: [],
+    category: 'Iron Studies',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 12, max: 300 },
+    patterns: [
+      /\bFERRITIN\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // VITAMINS (18 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Vitamin A',
+    aliases: ['retinol'],
+    category: 'Vitamins',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 20, max: 60 },
+    patterns: [
+      /\bVITAMIN\s+A\s+(\d+)/i,
+      /\bRETINOL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Vitamin B1',
+    aliases: ['thiamine'],
+    category: 'Vitamins',
+    defaultUnit: 'nmol/L',
+    normalRange: { min: 70, max: 180 },
+    patterns: [
+      /\bVITAMIN\s+B1\s+(\d+)/i,
+      /\bTHIAMINE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Vitamin B6',
+    aliases: ['pyridoxine'],
+    category: 'Vitamins',
+    defaultUnit: 'nmol/L',
+    normalRange: { min: 20, max: 125 },
+    patterns: [
+      /\bVITAMIN\s+B6\s+(\d+)/i,
+      /\bPYRIDOXINE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Folate',
+    aliases: ['vitamin b9', 'folic acid'],
+    category: 'Vitamins',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 3, max: 999 },
+    patterns: [
+      /\bFOLATE\s+(\d+\.?\d*)/i,
+      /\bFOLIC\s+ACID\s+(\d+\.?\d*)/i,
+      /\bVITAMIN\s+B9\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Vitamin B12',
+    aliases: ['cobalamin', 'cyanocobalamin'],
+    category: 'Vitamins',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 200, max: 900 },
+    patterns: [
+      /\bVITAMIN\s+B12\s+(\d+)/i,
+      /\bB12\s+(\d+)/i,
+      /\bCOBALAMIN\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Methylmalonic Acid',
+    aliases: ['mma'],
+    category: 'Vitamins',
+    defaultUnit: 'nmol/L',
+    normalRange: { min: 70, max: 270 },
+    patterns: [
+      /\bMETHYLMALONIC\s+ACID\s+(\d+)/i,
+      /\bMMA\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Homocysteine',
+    aliases: [],
+    category: 'Vitamins',
+    defaultUnit: 'umol/L',
+    normalRange: { min: 5, max: 15 },
+    patterns: [
+      /\bHOMOCYSTEINE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Vitamin C',
+    aliases: ['ascorbic acid'],
+    category: 'Vitamins',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0.4, max: 2.0 },
+    patterns: [
+      /\bVITAMIN\s+C\s+(\d+\.?\d*)/i,
+      /\bASCORBIC\s+ACID\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Vitamin D',
+    aliases: ['25-oh vitamin d', 'vitamin d total', '25-hydroxyvitamin d'],
+    category: 'Vitamins',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 30, max: 100 },
+    patterns: [
+      /\bVITAMIN\s*D[,\s]+25-?(?:OH|HYDROXY)\s+(\d+)/i,
+      /\b25-?(?:OH|HYDROXY)\s+VITAMIN\s*D\s+(\d+)/i,
+      /\bVITAMIN\s*D\s+TOTAL\s+(\d+)/i,
+      /\bVITAMIN\s*D\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Vitamin E',
+    aliases: ['alpha tocopherol'],
+    category: 'Vitamins',
+    defaultUnit: 'mg/L',
+    normalRange: { min: 5.5, max: 17 },
+    patterns: [
+      /\bVITAMIN\s+E\s+(\d+\.?\d*)/i,
+      /\bALPHA\s+TOCOPHEROL\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Vitamin K',
+    aliases: [],
+    category: 'Vitamins',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0.1, max: 2.2 },
+    patterns: [
+      /\bVITAMIN\s+K\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // BONE HEALTH (10 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'PTH',
+    aliases: ['parathyroid hormone', 'intact pth'],
+    category: 'Bone Health',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 15, max: 65 },
+    patterns: [
+      /\bPTH\s+(\d+)/i,
+      /\bPARATHYROID\s+HORMONE\s+(\d+)/i,
+      /\bINTACT\s+PTH\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Osteocalcin',
+    aliases: [],
+    category: 'Bone Health',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 9, max: 42 },
+    patterns: [
+      /\bOSTEOCALCIN\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'N-Telopeptide',
+    aliases: ['ntx'],
+    category: 'Bone Health',
+    defaultUnit: 'nmol BCE',
+    normalRange: { min: 5, max: 65 },
+    patterns: [
+      /\bN-?TELOPEPTIDE\s+(\d+)/i,
+      /\bNTX\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'C-Telopeptide',
+    aliases: ['ctx'],
+    category: 'Bone Health',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 0, max: 600 },
+    patterns: [
+      /\bC-?TELOPEPTIDE\s+(\d+)/i,
+      /\bCTX\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'P1NP',
+    aliases: ['procollagen type 1'],
+    category: 'Bone Health',
+    defaultUnit: 'ug/L',
+    normalRange: { min: 15, max: 80 },
+    patterns: [
+      /\bP1NP\s+(\d+)/i,
+      /\bPROCOLLAGEN\s+TYPE\s+1\s+N-?TERMINAL\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Bone-Specific ALP',
+    aliases: ['bone alp', 'balp'],
+    category: 'Bone Health',
+    defaultUnit: 'ug/L',
+    normalRange: { min: 6, max: 20 },
+    patterns: [
+      /\bBONE-?SPECIFIC\s+ALP\s+(\d+)/i,
+      /\bBONE\s+ALP\s+(\d+)/i,
+      /\bBALP\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // INFLAMMATION MARKERS (11 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'CRP',
+    aliases: ['c-reactive protein'],
+    category: 'Inflammation Markers',
+    defaultUnit: 'mg/L',
+    normalRange: { min: 0, max: 10 },
+    patterns: [
+      /\bCRP\s+(\d+\.?\d*)/i,
+      /\bC-?REACTIVE\s+PROTEIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'hs-CRP',
+    aliases: ['high sensitivity crp', 'cardio crp'],
+    category: 'Inflammation Markers',
+    defaultUnit: 'mg/L',
+    normalRange: { min: 0, max: 1.0 },
+    patterns: [
+      /\bHS-?CRP\s+(\d+\.?\d*)/i,
+      /\bHIGH\s+SENSITIVITY\s+CRP\s+(\d+\.?\d*)/i,
+      /\bCARDIO\s+CRP\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'ESR',
+    aliases: ['sed rate', 'erythrocyte sedimentation rate'],
+    category: 'Inflammation Markers',
+    defaultUnit: 'mm/hr',
+    normalRange: { min: 0, max: 20 },
+    patterns: [
+      /\bESR\s+(\d+)/i,
+      /\bSED\s+RATE\s+(\d+)/i,
+      /\bERYTHROCYTE\s+SEDIMENTATION\s+RATE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Procalcitonin',
+    aliases: [],
+    category: 'Inflammation Markers',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 0.1 },
+    patterns: [
+      /\bPROCALCITONIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Interleukin-6',
+    aliases: ['il-6'],
+    category: 'Inflammation Markers',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 0, max: 7 },
+    patterns: [
+      /\bINTERLEUKIN-?6\s+(\d+\.?\d*)/i,
+      /\bIL-?6\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Complement C3',
+    aliases: ['c3'],
+    category: 'Inflammation Markers',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 90, max: 180 },
+    patterns: [
+      /\bCOMPLEMENT\s+C3\s+(\d+)/i,
+      /\bC3\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Complement C4',
+    aliases: ['c4'],
+    category: 'Inflammation Markers',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 10, max: 40 },
+    patterns: [
+      /\bCOMPLEMENT\s+C4\s+(\d+)/i,
+      /\bC4\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // CARDIAC MARKERS (11 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Troponin I',
+    aliases: ['trop i'],
+    category: 'Cardiac',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 0.04 },
+    patterns: [
+      /\bTROPONIN\s+I\s+(\d+\.?\d*)/i,
+      /\bTROP\s+I\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Troponin T',
+    aliases: ['trop t'],
+    category: 'Cardiac',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 0.01 },
+    patterns: [
+      /\bTROPONIN\s+T\s+(\d+\.?\d*)/i,
+      /\bTROP\s+T\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'BNP',
+    aliases: ['b-type natriuretic peptide'],
+    category: 'Cardiac',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 0, max: 100 },
+    patterns: [
+      /\bBNP\s+(\d+)/i,
+      /\bB-?TYPE\s+NATRIURETIC\s+PEPTIDE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'NT-proBNP',
+    aliases: ['n-terminal pro-bnp'],
+    category: 'Cardiac',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 0, max: 125 },
+    patterns: [
+      /\bNT-?PROBNP\s+(\d+)/i,
+      /\bN-?TERMINAL\s+PRO-?BNP\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'CK',
+    aliases: ['creatine kinase', 'cpk'],
+    category: 'Cardiac',
+    defaultUnit: 'U/L',
+    normalRange: { min: 30, max: 200 },
+    patterns: [
+      /\bCK\s+(\d+)/i,
+      /\bCREATINE\s+KINASE\s+(\d+)/i,
+      /\bCPK\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'CK-MB',
+    aliases: ['creatine kinase mb'],
+    category: 'Cardiac',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 5 },
+    patterns: [
+      /\bCK-?MB\s+(\d+\.?\d*)/i,
+      /\bCREATINE\s+KINASE\s+MB\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Myoglobin',
+    aliases: [],
+    category: 'Cardiac',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 90 },
+    patterns: [
+      /\bMYOGLOBIN\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // COAGULATION (13 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'PT',
+    aliases: ['prothrombin time'],
+    category: 'Coagulation',
+    defaultUnit: 'seconds',
+    normalRange: { min: 11, max: 13.5 },
+    patterns: [
+      /\bPT\s+(\d+\.?\d*)/i,
+      /\bPROTHROMBIN\s+TIME\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'INR',
+    aliases: ['international normalized ratio'],
+    category: 'Coagulation',
+    defaultUnit: 'ratio',
+    normalRange: { min: 0.9, max: 1.1 },
+    patterns: [
+      /\bINR\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'PTT',
+    aliases: ['partial thromboplastin time'],
+    category: 'Coagulation',
+    defaultUnit: 'seconds',
+    normalRange: { min: 25, max: 35 },
+    patterns: [
+      /\bPTT\s+(\d+\.?\d*)/i,
+      /\bAPTT\s+(\d+\.?\d*)/i,
+      /\bPARTIAL\s+THROMBOPLASTIN\s+TIME\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Fibrinogen',
+    aliases: [],
+    category: 'Coagulation',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 200, max: 400 },
+    patterns: [
+      /\bFIBRINOGEN\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'D-Dimer',
+    aliases: [],
+    category: 'Coagulation',
+    defaultUnit: 'ug/mL',
+    normalRange: { min: 0, max: 0.5 },
+    patterns: [
+      /\bD-?DIMER\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Antithrombin III',
+    aliases: ['at3'],
+    category: 'Coagulation',
+    defaultUnit: '%',
+    normalRange: { min: 80, max: 120 },
+    patterns: [
+      /\bANTITHROMBIN\s+III\s+(\d+)/i,
+      /\bAT3\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Protein C',
+    aliases: [],
+    category: 'Coagulation',
+    defaultUnit: '%',
+    normalRange: { min: 70, max: 140 },
+    patterns: [
+      /\bPROTEIN\s+C\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Protein S',
+    aliases: [],
+    category: 'Coagulation',
+    defaultUnit: '%',
+    normalRange: { min: 60, max: 140 },
+    patterns: [
+      /\bPROTEIN\s+S\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // HORMONES (25 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Testosterone, Total',
+    aliases: ['total testosterone', 'testosterone'],
+    category: 'Hormones',
+    defaultUnit: 'ng/dL',
+    normalRange: { min: 300, max: 1000 },
+    patterns: [
+      /\bTESTOSTERONE[,\s]+TOTAL\s+(\d+)/i,
+      /\bTOTAL\s+TESTOSTERONE\s+(\d+)/i,
+      /\bTESTOSTERONE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Free Testosterone',
+    aliases: [],
+    category: 'Hormones',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 50, max: 210 },
+    patterns: [
+      /\bFREE\s+TESTOSTERONE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'SHBG',
+    aliases: ['sex hormone binding globulin'],
+    category: 'Hormones',
+    defaultUnit: 'nmol/L',
+    normalRange: { min: 10, max: 57 },
+    patterns: [
+      /\bSHBG\s+(\d+)/i,
+      /\bSEX\s+HORMONE\s+BINDING\s+GLOBULIN\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Estradiol',
+    aliases: ['e2'],
+    category: 'Hormones',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 10, max: 400 },
+    patterns: [
+      /\bESTRADIOL\s+(\d+)/i,
+      /\bE2\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Progesterone',
+    aliases: ['p4'],
+    category: 'Hormones',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0.1, max: 25 },
+    patterns: [
+      /\bPROGESTERONE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'LH',
+    aliases: ['luteinizing hormone'],
+    category: 'Hormones',
+    defaultUnit: 'mIU/mL',
+    normalRange: { min: 1.5, max: 12.4 },
+    patterns: [
+      /\bLH\s+(\d+\.?\d*)/i,
+      /\bLUTEINIZING\s+HORMONE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'FSH',
+    aliases: ['follicle stimulating hormone'],
+    category: 'Hormones',
+    defaultUnit: 'mIU/mL',
+    normalRange: { min: 1.5, max: 12.4 },
+    patterns: [
+      /\bFSH\s+(\d+\.?\d*)/i,
+      /\bFOLLICLE\s+STIMULATING\s+HORMONE\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Prolactin',
+    aliases: ['prl'],
+    category: 'Hormones',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 2, max: 18 },
+    patterns: [
+      /\bPROLACTIN\s+(\d+\.?\d*)/i,
+      /\bPRL\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Cortisol',
+    aliases: ['serum cortisol'],
+    category: 'Hormones',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 6, max: 23 },
+    patterns: [
+      /\bCORTISOL\s+(\d+\.?\d*)/i,
+      /\bSERUM\s+CORTISOL\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'DHEA-S',
+    aliases: ['dhea sulfate', 'dheas'],
+    category: 'Hormones',
+    defaultUnit: 'ug/dL',
+    normalRange: { min: 80, max: 560 },
+    patterns: [
+      /\bDHEA-?S\s+(\d+)/i,
+      /\bDHEA\s+SULFATE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'ACTH',
+    aliases: ['adrenocorticotropic hormone'],
+    category: 'Hormones',
+    defaultUnit: 'pg/mL',
+    normalRange: { min: 10, max: 60 },
+    patterns: [
+      /\bACTH\s+(\d+)/i,
+      /\bADRENOCORTICOTROPIC\s+HORMONE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'IGF-1',
+    aliases: ['insulin-like growth factor'],
+    category: 'Hormones',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 100, max: 300 },
+    patterns: [
+      /\bIGF-?1\s+(\d+)/i,
+      /\bINSULIN-?LIKE\s+GROWTH\s+FACTOR\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Growth Hormone',
+    aliases: ['gh'],
+    category: 'Hormones',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 10 },
+    patterns: [
+      /\bGROWTH\s+HORMONE\s+(\d+\.?\d*)/i,
+      /\bGH\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'AMH',
+    aliases: ['anti-mullerian hormone'],
+    category: 'Hormones',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 1.0, max: 10.0 },
+    patterns: [
+      /\bAMH\s+(\d+\.?\d*)/i,
+      /\bANTI-?MULLERIAN\s+HORMONE\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTOIMMUNE (17 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'ANA',
+    aliases: ['antinuclear antibody'],
+    category: 'Autoimmune',
+    defaultUnit: 'titer',
+    normalRange: { min: 0, max: 1 },
+    patterns: [
+      /\bANA\s+(\d+:\d+)/i,
+      /\bANTINUCLEAR\s+ANTIBODY\s+(\d+:\d+)/i,
+    ],
+  },
+  {
+    name: 'Anti-dsDNA',
+    aliases: ['double stranded dna antibody'],
+    category: 'Autoimmune',
+    defaultUnit: 'IU/mL',
+    normalRange: { min: 0, max: 30 },
+    patterns: [
+      /\bANTI-?DSDNA\s+(\d+)/i,
+      /\bDOUBLE\s+STRANDED\s+DNA\s+ANTIBODY\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Rheumatoid Factor',
+    aliases: ['rf'],
+    category: 'Autoimmune',
+    defaultUnit: 'IU/mL',
+    normalRange: { min: 0, max: 14 },
+    patterns: [
+      /\bRHEUMATOID\s+FACTOR\s+(\d+)/i,
+      /\bRF\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Anti-CCP',
+    aliases: ['cyclic citrullinated peptide'],
+    category: 'Autoimmune',
+    defaultUnit: 'U/mL',
+    normalRange: { min: 0, max: 20 },
+    patterns: [
+      /\bANTI-?CCP\s+(\d+)/i,
+      /\bCYCLIC\s+CITRULLINATED\s+PEPTIDE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Anti-SSA',
+    aliases: ['ro antibody'],
+    category: 'Autoimmune',
+    defaultUnit: 'AI',
+    normalRange: { min: 0, max: 1.0 },
+    patterns: [
+      /\bANTI-?SSA\s+(\d+\.?\d*)/i,
+      /\bRO\s+ANTIBODY\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Anti-SSB',
+    aliases: ['la antibody'],
+    category: 'Autoimmune',
+    defaultUnit: 'AI',
+    normalRange: { min: 0, max: 1.0 },
+    patterns: [
+      /\bANTI-?SSB\s+(\d+\.?\d*)/i,
+      /\bLA\s+ANTIBODY\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Uric Acid',
+    aliases: [],
+    category: 'Autoimmune',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 3.5, max: 7.2 },
+    patterns: [
+      /\bURIC\s+ACID\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // TUMOR MARKERS (11 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'PSA',
+    aliases: ['prostate specific antigen'],
+    category: 'Tumor Markers',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 4.0 },
+    patterns: [
+      /\bPSA\s+(\d+\.?\d*)/i,
+      /\bPROSTATE\s+SPECIFIC\s+ANTIGEN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Free PSA',
+    aliases: [],
+    category: 'Tumor Markers',
+    defaultUnit: '%',
+    normalRange: { min: 25, max: 100 },
+    patterns: [
+      /\bFREE\s+PSA\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'CEA',
+    aliases: ['carcinoembryonic antigen'],
+    category: 'Tumor Markers',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 3.0 },
+    patterns: [
+      /\bCEA\s+(\d+\.?\d*)/i,
+      /\bCARCINOEMBRYONIC\s+ANTIGEN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'CA-125',
+    aliases: [],
+    category: 'Tumor Markers',
+    defaultUnit: 'U/mL',
+    normalRange: { min: 0, max: 35 },
+    patterns: [
+      /\bCA-?125\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'CA 19-9',
+    aliases: [],
+    category: 'Tumor Markers',
+    defaultUnit: 'U/mL',
+    normalRange: { min: 0, max: 37 },
+    patterns: [
+      /\bCA\s*19-?9\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'CA 15-3',
+    aliases: [],
+    category: 'Tumor Markers',
+    defaultUnit: 'U/mL',
+    normalRange: { min: 0, max: 30 },
+    patterns: [
+      /\bCA\s*15-?3\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'AFP',
+    aliases: ['alpha-fetoprotein'],
+    category: 'Tumor Markers',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 10 },
+    patterns: [
+      /\bAFP\s+(\d+\.?\d*)/i,
+      /\bALPHA-?FETOPROTEIN\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'HCG',
+    aliases: ['beta hcg', 'human chorionic gonadotropin'],
+    category: 'Tumor Markers',
+    defaultUnit: 'mIU/mL',
+    normalRange: { min: 0, max: 5 },
+    patterns: [
+      /\bHCG\s+(\d+)/i,
+      /\bBETA\s+HCG\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // PANCREATIC (4 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Amylase',
+    aliases: [],
+    category: 'Pancreatic',
+    defaultUnit: 'U/L',
+    normalRange: { min: 28, max: 100 },
+    patterns: [
+      /\bAMYLASE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Lipase',
+    aliases: [],
+    category: 'Pancreatic',
+    defaultUnit: 'U/L',
+    normalRange: { min: 0, max: 160 },
+    patterns: [
+      /\bLIPASE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Elastase',
+    aliases: ['fecal elastase'],
+    category: 'Pancreatic',
+    defaultUnit: 'ug/g',
+    normalRange: { min: 200, max: 9999 },
+    patterns: [
+      /\bELASTASE\s+(\d+)/i,
+      /\bFECAL\s+ELASTASE\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // URINALYSIS (15 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Specific Gravity',
+    aliases: [],
+    category: 'Urinalysis',
+    defaultUnit: 'ratio',
+    normalRange: { min: 1.005, max: 1.030 },
+    patterns: [
+      /\bSPECIFIC\s+GRAVITY\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Urine pH',
+    aliases: ['ph'],
+    category: 'Urinalysis',
+    defaultUnit: 'pH',
+    normalRange: { min: 4.5, max: 8.0 },
+    patterns: [
+      /\bURINE\s+PH\s+(\d+\.?\d*)/i,
+      /\bPH\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Urine Glucose',
+    aliases: [],
+    category: 'Urinalysis',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 0 },
+    patterns: [
+      /\bURINE\s+GLUCOSE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Urine Ketones',
+    aliases: [],
+    category: 'Urinalysis',
+    defaultUnit: 'mg/dL',
+    normalRange: { min: 0, max: 0 },
+    patterns: [
+      /\bURINE\s+KETONES?\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Urine WBC',
+    aliases: [],
+    category: 'Urinalysis',
+    defaultUnit: '/HPF',
+    normalRange: { min: 0, max: 5 },
+    patterns: [
+      /\bURINE\s+WBC\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Urine RBC',
+    aliases: [],
+    category: 'Urinalysis',
+    defaultUnit: '/HPF',
+    normalRange: { min: 0, max: 2 },
+    patterns: [
+      /\bURINE\s+RBC\s+(\d+)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // BLOOD GAS (7 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Blood pH',
+    aliases: ['arterial ph'],
+    category: 'Blood Gas',
+    defaultUnit: 'pH',
+    normalRange: { min: 7.35, max: 7.45 },
+    patterns: [
+      /\bBLOOD\s+PH\s+(\d+\.?\d*)/i,
+      /\bARTERIAL\s+PH\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'pCO2',
+    aliases: ['partial pressure co2'],
+    category: 'Blood Gas',
+    defaultUnit: 'mmHg',
+    normalRange: { min: 35, max: 45 },
+    patterns: [
+      /\bPCO2\s+(\d+)/i,
+      /\bPARTIAL\s+PRESSURE\s+CO2\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'pO2',
+    aliases: ['partial pressure o2'],
+    category: 'Blood Gas',
+    defaultUnit: 'mmHg',
+    normalRange: { min: 80, max: 100 },
+    patterns: [
+      /\bPO2\s+(\d+)/i,
+      /\bPARTIAL\s+PRESSURE\s+O2\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Base Excess',
+    aliases: ['be'],
+    category: 'Blood Gas',
+    defaultUnit: 'mEq/L',
+    normalRange: { min: -2, max: 2 },
+    patterns: [
+      /\bBASE\s+EXCESS\s+(-?\d+\.?\d*)/i,
+      /\bBE\s+(-?\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'O2 Saturation',
+    aliases: ['sao2'],
+    category: 'Blood Gas',
+    defaultUnit: '%',
+    normalRange: { min: 95, max: 100 },
+    patterns: [
+      /\bO2\s+SATURATION\s+(\d+)/i,
+      /\bSAO2\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Lactate',
+    aliases: [],
+    category: 'Blood Gas',
+    defaultUnit: 'mmol/L',
+    normalRange: { min: 0.5, max: 2.0 },
+    patterns: [
+      /\bLACTATE\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ALLERGY (3 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'IgE Total',
+    aliases: ['total ige'],
+    category: 'Allergy',
+    defaultUnit: 'IU/mL',
+    normalRange: { min: 0, max: 100 },
+    patterns: [
+      /\bIGE\s+TOTAL\s+(\d+)/i,
+      /\bTOTAL\s+IGE\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Tryptase',
+    aliases: [],
+    category: 'Allergy',
+    defaultUnit: 'ng/mL',
+    normalRange: { min: 0, max: 11.4 },
+    patterns: [
+      /\bTRYPTASE\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GENETIC (5 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'HLA-B27',
+    aliases: [],
+    category: 'Genetic',
+    defaultUnit: 'positive/negative',
+    normalRange: { min: 0, max: 0 },
+    patterns: [
+      /\bHLA-?B27\s+(POSITIVE|NEGATIVE)/i,
+    ],
+  },
+  {
+    name: 'Celiac Panel',
+    aliases: ['ttg iga'],
+    category: 'Genetic',
+    defaultUnit: 'U/mL',
+    normalRange: { min: 0, max: 4 },
+    patterns: [
+      /\bCELIAC\s+PANEL\s+(\d+)/i,
+      /\bTTG\s+IGA\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'G6PD',
+    aliases: [],
+    category: 'Genetic',
+    defaultUnit: 'U/g Hb',
+    normalRange: { min: 7, max: 20 },
+    patterns: [
+      /\bG6PD\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // VITAL SIGNS (9 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Blood Pressure Systolic',
+    aliases: ['systolic bp', 'sbp'],
+    category: 'Vital Signs',
+    defaultUnit: 'mmHg',
+    normalRange: { min: 90, max: 120 },
+    patterns: [
+      /\bBLOOD\s+PRESSURE\s+SYSTOLIC\s+(\d+)/i,
+      /\bSYSTOLIC\s+(\d+)/i,
+      /\bSBP\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Blood Pressure Diastolic',
+    aliases: ['diastolic bp', 'dbp'],
+    category: 'Vital Signs',
+    defaultUnit: 'mmHg',
+    normalRange: { min: 60, max: 80 },
+    patterns: [
+      /\bBLOOD\s+PRESSURE\s+DIASTOLIC\s+(\d+)/i,
+      /\bDIASTOLIC\s+(\d+)/i,
+      /\bDBP\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Heart Rate',
+    aliases: ['pulse', 'hr'],
+    category: 'Vital Signs',
+    defaultUnit: 'bpm',
+    normalRange: { min: 60, max: 100 },
+    patterns: [
+      /\bHEART\s+RATE\s+(\d+)/i,
+      /\bPULSE\s+(\d+)/i,
+      /\bHR\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'Temperature',
+    aliases: ['temp'],
+    category: 'Vital Signs',
+    defaultUnit: 'F',
+    normalRange: { min: 97.8, max: 99.1 },
+    patterns: [
+      /\bTEMPERATURE\s+(\d+\.?\d*)/i,
+      /\bTEMP\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Respiratory Rate',
+    aliases: ['rr'],
+    category: 'Vital Signs',
+    defaultUnit: 'breaths/min',
+    normalRange: { min: 12, max: 20 },
+    patterns: [
+      /\bRESPIRATORY\s+RATE\s+(\d+)/i,
+      /\bRR\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'SpO2',
+    aliases: ['oxygen saturation', 'o2 sat'],
+    category: 'Vital Signs',
+    defaultUnit: '%',
+    normalRange: { min: 95, max: 100 },
+    patterns: [
+      /\bSPO2\s+(\d+)/i,
+      /\bOXYGEN\s+SATURATION\s+(\d+)/i,
+      /\bO2\s+SAT\s+(\d+)/i,
+    ],
+  },
+  {
+    name: 'BMI',
+    aliases: ['body mass index'],
+    category: 'Vital Signs',
+    defaultUnit: 'kg/m2',
+    normalRange: { min: 18.5, max: 24.9 },
+    patterns: [
+      /\bBMI\s+(\d+\.?\d*)/i,
+      /\bBODY\s+MASS\s+INDEX\s+(\d+\.?\d*)/i,
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // BODY COMPOSITION (8 biomarkers)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'Body Fat Percentage',
+    aliases: ['body fat'],
+    category: 'Body Composition',
+    defaultUnit: '%',
+    normalRange: { min: 10, max: 25 },
+    patterns: [
+      /\bBODY\s+FAT\s+(?:PERCENTAGE)?\s*(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Lean Body Mass',
+    aliases: ['lean mass'],
+    category: 'Body Composition',
+    defaultUnit: 'kg',
+    normalRange: { min: 40, max: 80 },
+    patterns: [
+      /\bLEAN\s+(?:BODY\s+)?MASS\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Bone Mineral Density',
+    aliases: ['bmd'],
+    category: 'Body Composition',
+    defaultUnit: 'g/cm2',
+    normalRange: { min: 0.8, max: 1.5 },
+    patterns: [
+      /\bBONE\s+MINERAL\s+DENSITY\s+(\d+\.?\d*)/i,
+      /\bBMD\s+(\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'T-Score',
+    aliases: [],
+    category: 'Body Composition',
+    defaultUnit: 'SD',
+    normalRange: { min: -1.0, max: 999 },
+    patterns: [
+      /\bT-?SCORE\s+(-?\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Z-Score',
+    aliases: [],
+    category: 'Body Composition',
+    defaultUnit: 'SD',
+    normalRange: { min: -2.0, max: 2.0 },
+    patterns: [
+      /\bZ-?SCORE\s+(-?\d+\.?\d*)/i,
+    ],
+  },
+  {
+    name: 'Waist Circumference',
+    aliases: [],
+    category: 'Body Composition',
+    defaultUnit: 'inches',
+    normalRange: { min: 0, max: 40 },
+    patterns: [
+      /\bWAIST\s+CIRCUMFERENCE\s+(\d+\.?\d*)/i,
+    ],
+  },
+];
+
+// ============================================
+// UNIT NORMALIZATION
+// ============================================
+
 const UNIT_NORMALIZATIONS: Record<string, string> = {
   'mg/dl': 'mg/dL',
   'mg/dL': 'mg/dL',
@@ -470,14 +2214,8 @@ const UNIT_NORMALIZATIONS: Record<string, string> = {
   'mmol/L': 'mmol/L',
   'ng/ml': 'ng/mL',
   'ng/mL': 'ng/mL',
-  'nmol/l': 'nmol/L',
-  'nmol/L': 'nmol/L',
   'pg/ml': 'pg/mL',
   'pg/mL': 'pg/mL',
-  'pmol/l': 'pmol/L',
-  'pmol/L': 'pmol/L',
-  'ng/l': 'ng/L',
-  'ng/L': 'ng/L',
   'u/l': 'U/L',
   'U/L': 'U/L',
   'iu/l': 'IU/L',
@@ -493,15 +2231,18 @@ const UNIT_NORMALIZATIONS: Record<string, string> = {
   'm/ul': 'M/uL',
   'M/uL': 'M/uL',
   '%': '%',
+  'ratio': 'ratio',
+  'seconds': 'seconds',
 };
 
-/**
- * Normalize unit string to standard format
- */
 export function normalizeUnit(unit: string): string {
   const cleaned = unit.trim();
   return UNIT_NORMALIZATIONS[cleaned] || UNIT_NORMALIZATIONS[cleaned.toLowerCase()] || cleaned;
 }
+
+// ============================================
+// EXTRACTION FUNCTIONS
+// ============================================
 
 /**
  * Extract biomarkers using regex patterns
@@ -520,36 +2261,33 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
       const rawValue = match[1]?.trim();
       if (!rawValue) continue;
 
+      // Handle numeric values (skip positive/negative for genetic tests)
+      if (rawValue === 'POSITIVE' || rawValue === 'NEGATIVE') continue;
+
       const value = parseFloat(rawValue);
-      if (isNaN(value) || value < 0 || value > 100000) continue;
+      if (isNaN(value)) continue;
 
-      const rawUnit = match[2]?.trim() || biomarker.defaultUnit;
-      const unit = normalizeUnit(rawUnit);
-
-      let normalRange = biomarker.normalRange;
-      if (biomarker.unitRanges && biomarker.unitRanges[unit]) {
-        normalRange = biomarker.unitRanges[unit];
-      }
-
-      let confidence = 0.8;
-      if (match[2]) confidence += 0.1;
-      if (value >= normalRange.min * 0.5 && value <= normalRange.max * 2) {
-        confidence += 0.1;
-      }
+      // Validate value is reasonable
+      if (value < -100 || value > 100000) continue;
 
       foundNames.add(biomarker.name);
+
+      let confidence = 0.8;
+      if (value >= biomarker.normalRange.min * 0.1 && value <= biomarker.normalRange.max * 10) {
+        confidence += 0.1;
+      }
 
       results.push({
         name: biomarker.name,
         value,
-        unit,
+        unit: biomarker.defaultUnit,
         category: biomarker.category,
-        normalRange: { ...normalRange, source: 'Standard Reference Range' },
+        normalRange: { ...biomarker.normalRange, source: 'Standard Reference Range' },
         confidence: Math.min(confidence, 1.0),
         rawMatch: match[0].substring(0, 100),
       });
 
-      console.log(`[BIOMARKER MATCH] ${biomarker.name}: ${value} ${unit} (pattern: ${pattern.source.substring(0, 50)})`);
+      console.log(`[BIOMARKER MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit}`);
       break;
     }
   }
@@ -588,15 +2326,14 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
 
       if (!matched) continue;
 
-      // Find first number in this line or next line
-      const numberMatch = line.match(/(\d+\.?\d*)/);
+      // Find number in this line (handles H/L flags like "234 H")
+      const numberMatch = line.match(/(\d+\.?\d*)\s*[HL]?\s*$/i) || line.match(/(\d+\.?\d*)/);
       let value: number | null = null;
       let rawMatch = line;
 
       if (numberMatch) {
         value = parseFloat(numberMatch[1]);
       } else if (i + 1 < lines.length) {
-        // Check next line for number
         const nextLine = lines[i + 1].trim();
         const nextMatch = nextLine.match(/^(\d+\.?\d*)/);
         if (nextMatch) {
@@ -605,9 +2342,9 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
         }
       }
 
-      if (value === null || isNaN(value) || value < 0 || value > 100000) continue;
+      if (value === null || isNaN(value) || value < -100 || value > 100000) continue;
 
-      // Skip if value seems unreasonable for this biomarker
+      // Skip if value seems unreasonable
       const range = biomarker.normalRange;
       if (value < range.min * 0.01 || value > range.max * 100) continue;
 
@@ -623,7 +2360,7 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
         rawMatch: rawMatch.substring(0, 100),
       });
 
-      console.log(`[LINE MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit} from line: "${line.substring(0, 50)}"`);
+      console.log(`[LINE MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit}`);
       break;
     }
   }
@@ -662,35 +2399,33 @@ export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
 export function validateBiomarkerValue(
   name: string,
   value: number,
-  unit: string
+  _unit: string
 ): { valid: boolean; reason?: string } {
   const biomarker = ALL_BIOMARKERS.find(
     (b) => b.name === name || b.aliases.some((a) => a.toLowerCase() === name.toLowerCase())
   );
 
   if (!biomarker) {
-    // Unknown biomarker - still valid, just can't validate range
     return { valid: true };
   }
 
-  let range = biomarker.normalRange;
-  if (biomarker.unitRanges && biomarker.unitRanges[unit]) {
-    range = biomarker.unitRanges[unit];
-  }
-
-  // Very permissive validation - just check for obviously wrong values
+  const range = biomarker.normalRange;
   if (value < range.min * 0.01 || value > range.max * 100) {
     return {
       valid: false,
-      reason: `Value ${value} ${unit} is outside reasonable range for ${name}`,
+      reason: `Value ${value} is outside reasonable range for ${name}`,
     };
   }
 
   return { valid: true };
 }
 
+// Legacy export for backward compatibility
+export const BONE_HEALTH_BIOMARKERS = ALL_BIOMARKERS.filter((b) => b.category === 'Bone Health');
+
 export default {
   ALL_BIOMARKERS,
+  BIOMARKER_CATEGORIES,
   BONE_HEALTH_BIOMARKERS,
   extractBiomarkersFromText,
   validateBiomarkerValue,

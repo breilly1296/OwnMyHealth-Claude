@@ -24,12 +24,19 @@ import {
   Bean,
   Pill,
   Bolt,
-  // New category icons
+  // Category icons
   Waves, // Thyroid
   Candy, // Diabetes
   CircleDot, // Iron Studies
   Bone, // Bone Health
   Timer, // Coagulation
+  // New diagnostic category icons
+  Target, // Tumor Markers
+  Cherry, // Pancreatic
+  TestTube, // Urinalysis
+  Bug, // Infectious Disease
+  Flower2, // Allergy
+  Wind, // Blood Gas
 } from 'lucide-react';
 
 /**
@@ -66,12 +73,19 @@ export function getIcon(iconName: string): JSX.Element {
     Bean: <Bean className="w-5 h-5" />,
     Pill: <Pill className="w-5 h-5" />,
     Bolt: <Bolt className="w-5 h-5" />,
-    // New category icons
+    // Category icons
     Waves: <Waves className="w-5 h-5" />,
     Candy: <Candy className="w-5 h-5" />,
     CircleDot: <CircleDot className="w-5 h-5" />,
     Bone: <Bone className="w-5 h-5" />,
     Timer: <Timer className="w-5 h-5" />,
+    // New diagnostic category icons
+    Target: <Target className="w-5 h-5" />,
+    Cherry: <Cherry className="w-5 h-5" />,
+    TestTube: <TestTube className="w-5 h-5" />,
+    Bug: <Bug className="w-5 h-5" />,
+    Flower2: <Flower2 className="w-5 h-5" />,
+    Wind: <Wind className="w-5 h-5" />,
   };
   return icons[iconName] || <Activity className="w-5 h-5" />;
 }

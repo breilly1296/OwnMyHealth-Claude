@@ -10,29 +10,39 @@ export interface NormalRange {
   source: string;
 }
 
-// Biomarker category type - all supported categories
+// Biomarker category type - all supported categories (24 total)
 export type BiomarkerCategoryType =
-  // Existing categories
+  // Core categories
   | 'Body Composition'
   | 'Blood'
   | 'Hormones'
   | 'Vitamins'
-  | 'Calcium CT'
   | 'Vital Signs'
   | 'Lipids'
+  | 'Electrolytes'
+  // Organ function
   | 'Kidney Function'
   | 'Liver Function'
-  | 'Inflammation Markers'
-  | 'Electrolytes'
-  | 'EKG'
-  // New categories
   | 'Thyroid'
-  | 'Diabetes'
   | 'Cardiac'
+  | 'Pancreatic'
+  // Specialized panels
+  | 'Diabetes'
   | 'Iron Studies'
   | 'Bone Health'
   | 'Coagulation'
+  | 'Inflammation Markers'
   | 'Autoimmune'
+  // Diagnostic categories
+  | 'Tumor Markers'
+  | 'Infectious Disease'
+  | 'Urinalysis'
+  | 'Blood Gas'
+  | 'Allergy'
+  | 'Genetic'
+  // Legacy/Other
+  | 'Calcium CT'
+  | 'EKG'
   | 'Other';
 
 export interface Biomarker {
