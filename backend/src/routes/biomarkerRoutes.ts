@@ -31,27 +31,44 @@ import { logger } from '../utils/logger.js';
 
 const router = Router();
 
-// Anthropic client - loaded dynamically only when needed
+// Anthropic client - loaded dynamically only when needed and API key is available
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let anthropicClient: any = null;
+let anthropicLoadAttempted = false;
+let anthropicLoadError: string | null = null;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAnthropicClient(): Promise<any> {
+  // Check if API key is configured
   if (!process.env.ANTHROPIC_API_KEY) {
     return null;
   }
-  if (!anthropicClient) {
-    try {
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      anthropicClient = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY,
-      });
-    } catch (error) {
-      logger.error('Failed to load Anthropic SDK', { data: { error: error instanceof Error ? error.message : 'Unknown error' } });
-      return null;
-    }
+
+  // Return cached client if available
+  if (anthropicClient) {
+    return anthropicClient;
   }
-  return anthropicClient;
+
+  // Return null if we already tried and failed to load
+  if (anthropicLoadAttempted && anthropicLoadError) {
+    return null;
+  }
+
+  // Attempt to load the SDK
+  anthropicLoadAttempted = true;
+  try {
+    // Use require instead of dynamic import for better compatibility
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Anthropic = require('@anthropic-ai/sdk').default;
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+    return anthropicClient;
+  } catch (error) {
+    anthropicLoadError = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to load Anthropic SDK', { data: { error: anthropicLoadError } });
+    return null;
+  }
 }
 
 // All routes require authentication
