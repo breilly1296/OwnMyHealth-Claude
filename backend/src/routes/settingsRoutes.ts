@@ -17,6 +17,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import * as settingsController from '../controllers/settingsController.js';
+import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
 
@@ -41,7 +42,7 @@ router.delete(
   '/delete-data',
   (req: Request, _res: Response, next: NextFunction) => {
     console.log('[DELETE-DATA] Handler reached after auth');
-    console.log('[DELETE-DATA] User ID:', (req as any).user?.id);
+    console.log('[DELETE-DATA] User ID:', (req as AuthenticatedRequest).user?.id);
     next();
   },
   asyncHandler(settingsController.deleteAllData)
