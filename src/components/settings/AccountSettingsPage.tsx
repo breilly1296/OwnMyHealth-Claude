@@ -189,41 +189,41 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Display Name
               </label>
-              <div className="flex items-center space-x-3">
-                {isEditingName ? (
-                  <>
-                    <input
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                    />
-                    <button
-                      onClick={handleSaveName}
-                      disabled={isSavingName}
-                      className="px-4 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors"
-                    >
-                      {isSavingName ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-                    </button>
+              {isEditingName ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  />
+                  <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
                     <button
                       onClick={() => setIsEditingName(false)}
-                      className="px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      className="flex-1 sm:flex-none px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       Cancel
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex-1 text-slate-900 dark:text-white">{displayName}</span>
                     <button
-                      onClick={() => setIsEditingName(true)}
-                      className="px-4 py-2 text-sm text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+                      onClick={handleSaveName}
+                      disabled={isSavingName}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 disabled:opacity-50 transition-colors flex items-center justify-center"
                     >
-                      Edit
+                      {isSavingName ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
                     </button>
-                  </>
-                )}
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-900 dark:text-white">{displayName}</span>
+                  <button
+                    onClick={() => setIsEditingName(true)}
+                    className="px-4 py-2 text-sm text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Email (read-only) */}
@@ -347,9 +347,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Data & Privacy</h2>
             </div>
           </div>
-          <div className="p-6 space-y-4">
+          <div className="p-4 md:p-6 space-y-4">
             {/* Export Data */}
-            <div className="flex items-center justify-between py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
               <div>
                 <p className="font-medium text-slate-900 dark:text-white">Export All My Data</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Download all your health data as JSON</p>
@@ -357,7 +357,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
               <button
                 onClick={handleExportData}
                 disabled={isExporting}
-                className="flex items-center px-4 py-2 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                className="flex items-center justify-center px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors w-full sm:w-auto"
               >
                 {isExporting ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -371,14 +371,14 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
             </div>
 
             {/* Delete All Data */}
-            <div className="flex items-center justify-between py-2 border-t border-slate-100 dark:border-slate-700 pt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 border-t border-slate-100 dark:border-slate-700 pt-4">
               <div>
                 <p className="font-medium text-slate-900 dark:text-white">Delete All My Data</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Permanently delete all health records</p>
               </div>
               <button
                 onClick={() => setDeleteType('data')}
-                className="flex items-center px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="flex items-center justify-center px-4 py-2.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full sm:w-auto"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete Data
@@ -386,14 +386,14 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
             </div>
 
             {/* Delete Account */}
-            <div className="flex items-center justify-between py-2 border-t border-slate-100 dark:border-slate-700 pt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 border-t border-slate-100 dark:border-slate-700 pt-4">
               <div>
                 <p className="font-medium text-red-600 dark:text-red-400">Delete My Account</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Permanently delete your account and all data</p>
               </div>
               <button
                 onClick={() => setDeleteType('account')}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                className="flex items-center justify-center px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors w-full sm:w-auto"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete Account
@@ -434,9 +434,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
 
       {/* Delete Confirmation Modal */}
       {deleteType && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[95vh] md:max-h-[90vh] shadow-xl overflow-y-auto">
+            <div className="p-4 md:p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -486,21 +486,21 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
                 </div>
               )}
 
-              <div className="flex space-x-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     setDeleteType(null);
                     setDeletePassword('');
                     setDeleteError(null);
                   }}
-                  className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  className="flex-1 px-4 py-3 sm:py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={deleteType === 'account' ? handleDeleteAccount : handleDeleteData}
                   disabled={isDeleting}
-                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                  className="flex-1 px-4 py-3 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center font-medium"
                 >
                   {isDeleting ? (
                     <>

@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown, Settings } from 'lucide-react';
+import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown, Settings, Menu, X } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
 // Biomarker components
 import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, BiomarkerActionPlan, BiomarkerInsurancePanel } from '../biomarkers';
@@ -70,6 +70,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [selectedBiomarkerForInsurance, setSelectedBiomarkerForInsurance] = useState<Biomarker | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // ============================================
   // Data State (fetched from API, cleared when not needed)
@@ -382,91 +383,91 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return (
       <div className="animate-fade-in max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mb-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Your Health Data</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">Your Health Data</h1>
         </div>
 
-        {/* Bento Grid Layout */}
-        <div className="grid grid-cols-12 gap-5">
+        {/* Bento Grid Layout - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-4 md:gap-5">
 
-          {/* Quick Stats */}
-          <div className="col-span-6 md:col-span-4 bg-slate-900 rounded-2xl p-5 flex flex-col justify-between">
+          {/* Quick Stats - Stack on mobile */}
+          <div className="sm:col-span-1 md:col-span-4 bg-slate-900 rounded-2xl p-4 md:p-5 flex flex-col justify-between min-h-[100px]">
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tracked</span>
             <div>
-              <span className="text-4xl font-bold text-white">{biomarkers.length}</span>
+              <span className="text-3xl md:text-4xl font-bold text-white">{biomarkers.length}</span>
               <p className="text-sm text-slate-400 mt-1">biomarkers</p>
             </div>
           </div>
 
-          <div className="col-span-6 md:col-span-4 bg-wellness-500 rounded-2xl p-5 flex flex-col justify-between">
+          <div className="sm:col-span-1 md:col-span-4 bg-wellness-500 rounded-2xl p-4 md:p-5 flex flex-col justify-between min-h-[100px]">
             <span className="text-xs font-medium text-wellness-100 uppercase tracking-wide">Normal</span>
             <div>
-              <span className="text-4xl font-bold text-white">{inRangeCount}</span>
+              <span className="text-3xl md:text-4xl font-bold text-white">{inRangeCount}</span>
               <p className="text-sm text-wellness-100 mt-1">in range</p>
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-5 flex flex-col justify-between">
+          <div className="sm:col-span-2 md:col-span-4 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-4 md:p-5 flex flex-col justify-between min-h-[100px]">
             <span className="text-xs font-medium text-red-100 uppercase tracking-wide">Needs Review</span>
             <div className="flex items-end justify-between">
               <div>
-                <span className="text-4xl font-bold text-white">{outOfRangeCount}</span>
+                <span className="text-3xl md:text-4xl font-bold text-white">{outOfRangeCount}</span>
                 <p className="text-sm text-red-100 mt-1">out of range</p>
               </div>
               {outOfRangeCount > 0 && (
-                <AlertCircle className="w-8 h-8 text-white/30" />
+                <AlertCircle className="w-6 h-6 md:w-8 md:h-8 text-white/30" />
               )}
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="col-span-12 md:col-span-6 grid grid-cols-3 gap-3">
+          {/* Quick Actions - Responsive grid */}
+          <div className="sm:col-span-2 md:col-span-6 grid grid-cols-3 gap-2 md:gap-3">
             <button
               onClick={() => setIsLabUploadModalOpen(true)}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 hover:border-brand-300 dark:hover:border-brand-500 hover:shadow-sm transition-all group text-left"
+              className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-brand-300 dark:hover:border-brand-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
             >
-              <div className="w-9 h-9 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-3 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
                 <FileUp className="w-4 h-4 text-brand-600 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Lab OCR</p>
-              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Auto-extract</p>
+              <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Lab OCR</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Auto-extract</p>
             </button>
             <button
               onClick={() => setIsPDFModalOpen(true)}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group text-left"
+              className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group text-left min-h-[88px]"
             >
-              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
                 <FileUp className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Upload PDF</p>
-              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Local OCR</p>
+              <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Upload PDF</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Local OCR</p>
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 hover:border-wellness-300 dark:hover:border-wellness-500 hover:shadow-sm transition-all group text-left"
+              className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-wellness-300 dark:hover:border-wellness-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
             >
-              <div className="w-9 h-9 rounded-lg bg-wellness-50 dark:bg-wellness-900/30 flex items-center justify-center mb-3 group-hover:bg-wellness-100 dark:group-hover:bg-wellness-900/50 transition-colors">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-wellness-50 dark:bg-wellness-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-wellness-100 dark:group-hover:bg-wellness-900/50 transition-colors">
                 <Plus className="w-4 h-4 text-wellness-600 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Add Data</p>
-              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Manual entry</p>
+              <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Add Data</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Manual entry</p>
             </button>
           </div>
 
           {/* Attention Items - Conditional */}
           {outOfRangeCount > 0 && (
-            <div className="col-span-12 md:col-span-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div className="sm:col-span-2 md:col-span-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden">
+              <div className="px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 dark:border-slate-700">
                 <h3 className="font-semibold text-slate-900 dark:text-white">Needs Attention</h3>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {outOfRangeBiomarkers.slice(0, 3).map((biomarker) => {
                   const isLow = biomarker.value < biomarker.normalRange.min;
                   return (
-                    <div key={biomarker.id} className="px-5 py-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                    <div key={biomarker.id} className="px-4 md:px-5 py-3 md:py-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isLow ? 'bg-amber-500' : 'bg-red-500'}`} />
                         <div className="min-w-0">
@@ -486,8 +487,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           )}
 
           {/* Recent Measurements */}
-          <div className={`col-span-12 ${outOfRangeCount > 0 ? 'md:col-span-6' : 'md:col-span-12'} bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden`}>
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <div className={`sm:col-span-2 ${outOfRangeCount > 0 ? 'md:col-span-6' : 'md:col-span-12'} bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden`}>
+            <div className="px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
               <h3 className="font-semibold text-slate-900 dark:text-white">Recent Measurements</h3>
               <span className="text-xs text-slate-400 dark:text-slate-400">Last updated</span>
             </div>
@@ -500,7 +501,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   return (
                     <div
                       key={biomarker.id}
-                      className={`px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors ${
+                      className={`px-4 md:px-5 py-3 md:py-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors ${
                         outOfRangeCount === 0 && idx % 2 === 0 ? 'md:border-r md:border-slate-100 dark:md:border-slate-700' : ''
                       } ${outOfRangeCount === 0 ? 'md:border-b md:border-slate-100 dark:md:border-slate-700' : ''}`}
                     >
@@ -738,19 +739,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
       {/* Premium Navbar */}
       <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700/60 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-3">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8">
+          <div className="flex justify-between h-14 md:h-16 items-center">
+            <div className="flex items-center space-x-2 md:space-x-3">
+              {/* Hamburger Menu - Mobile Only */}
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="md:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Open menu"
+              >
+                <Menu className="w-6 h-6 text-slate-600 dark:text-slate-300" />
+              </button>
               <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/25">
-                  <Heart className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/25">
+                  <Heart className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
               </div>
               <div>
-                <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+                <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                   OwnMyHealth
                 </span>
-                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-0.5">Your personal health companion</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-0.5 hidden sm:block">Your personal health companion</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -814,9 +823,59 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </div>
       </nav>
 
+      {/* Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+          {/* Drawer */}
+          <aside className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white dark:bg-slate-900 shadow-xl animate-slide-in-left overflow-y-auto">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center">
+                  <Heart className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-lg font-bold text-slate-900 dark:text-white">Menu</span>
+              </div>
+              <button
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+              </button>
+            </div>
+            <div className="p-4">
+              <nav className="space-y-1">
+                {navGroups.map((group) => {
+                  const groupCategories = categories.filter(cat => cat.group === group.id);
+                  return (
+                    <CollapsibleNavGroup
+                      key={group.id}
+                      group={group}
+                      categories={groupCategories}
+                      selectedCategory={selectedCategory}
+                      onCategorySelect={(category) => {
+                        setSelectedCategory(category);
+                        setSelectedBiomarker(null);
+                        setIsMobileSidebarOpen(false);
+                      }}
+                      defaultExpanded={group.id === 'overview' || group.id === 'insurance'}
+                    />
+                  );
+                })}
+              </nav>
+            </div>
+          </aside>
+        </div>
+      )}
+
       <div className="max-w-[1600px] mx-auto flex">
-        {/* Premium Left Sidebar */}
-        <aside className="w-72 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-r border-slate-200/60 dark:border-slate-700/60 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto sidebar-scroll">
+        {/* Desktop Sidebar - Hidden on Mobile */}
+        <aside className="hidden md:block w-72 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-r border-slate-200/60 dark:border-slate-700/60 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto sidebar-scroll">
           <div className="p-5 pb-8">
             <nav className="space-y-1">
               {navGroups.map((group) => {
@@ -852,7 +911,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 px-8 py-8 min-h-[calc(100vh-4rem)]">
+        <main className="flex-1 px-4 md:px-8 py-6 md:py-8 min-h-[calc(100vh-3.5rem)] md:min-h-[calc(100vh-4rem)]">
           {selectedCategory === 'Dashboard' ? renderDashboardContent() :
            selectedCategory === 'Insurance' ? renderInsuranceContent() :
            selectedCategory === 'Insurance Guide' ? renderInsuranceGuideContent() :

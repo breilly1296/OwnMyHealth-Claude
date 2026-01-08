@@ -69,13 +69,13 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
   const isLow = biomarker.value < biomarker.normalRange.min;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{biomarker.name}</h2>
+        <div className="px-4 md:px-6 py-4 md:py-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
+              <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{biomarker.name}</h2>
               <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${
                 isInRange
                   ? 'bg-wellness-50 dark:bg-wellness-900/30 text-wellness-700 dark:text-wellness-400 border border-wellness-200 dark:border-wellness-800'
@@ -95,10 +95,10 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
         </div>
 
         {/* Stats Bar */}
-        <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="px-4 md:px-6 py-3 md:py-4 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700 overflow-x-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
             {/* Current Value */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200/60 dark:border-slate-700">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-3 md:p-4 border border-slate-200/60 dark:border-slate-700">
               <div className="flex items-center gap-2 mb-2">
                 <Activity className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Current</span>
@@ -167,14 +167,14 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
         </div>
 
         {/* Chart */}
-        <div className="p-6">
-          <BiomarkerChart biomarker={biomarker} height={350} />
+        <div className="p-4 md:p-6 overflow-x-auto">
+          <BiomarkerChart biomarker={biomarker} height={250} />
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6 text-sm">
+        <div className="px-4 md:px-6 py-3 md:py-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm">
               <div>
                 <span className="text-slate-500 dark:text-slate-400">Normal Range:</span>
                 <span className="ml-2 font-medium text-slate-900 dark:text-white">
@@ -186,7 +186,7 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
                 <span className="ml-2 font-medium text-slate-900 dark:text-white">{biomarker.normalRange.source}</span>
               </div>
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">
+            <div className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
               Last updated: {new Date(biomarker.date).toLocaleDateString('en-US', {
                 month: 'long',
                 day: 'numeric',

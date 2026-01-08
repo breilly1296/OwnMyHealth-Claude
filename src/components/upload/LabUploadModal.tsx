@@ -156,16 +156,16 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg p-4 md:p-6 w-full md:max-w-md max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Upload Lab Results</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Upload Lab Results</h2>
           <button
             onClick={() => {
               onClose();
               resetState();
             }}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="p-2 -mr-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             disabled={isProcessing}
           >
             <X className="w-5 h-5" />
@@ -173,14 +173,14 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm flex items-start gap-2">
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-md text-sm flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {result && (
-          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md text-sm">
+          <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-md text-sm">
             <div className="flex items-start gap-2 mb-2">
               <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span className="font-medium">
@@ -189,14 +189,14 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
             </div>
             <ul className="list-disc list-inside ml-6 text-xs space-y-1">
               {result.biomarkers.map((b) => (
-                <li key={b.id} className={b.isOutOfRange ? 'text-orange-600' : ''}>
+                <li key={b.id} className={b.isOutOfRange ? 'text-orange-600 dark:text-orange-400' : ''}>
                   {b.name}: {b.value} {b.unit}
                   {b.isOutOfRange && ' (out of range)'}
                 </li>
               ))}
             </ul>
             {result.labName && (
-              <p className="text-xs mt-2 text-green-600">Lab: {result.labName}</p>
+              <p className="text-xs mt-2 text-green-600 dark:text-green-400">Lab: {result.labName}</p>
             )}
           </div>
         )}
@@ -208,7 +208,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
               flex flex-col items-center justify-center w-full h-44
               border-2 border-dashed rounded-lg
               transition-colors duration-200
-              ${isProcessing ? 'bg-gray-50 border-gray-300 cursor-wait' : 'hover:bg-blue-50 border-blue-300 cursor-pointer'}
+              ${isProcessing ? 'bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 cursor-wait' : 'hover:bg-blue-50 dark:hover:bg-slate-700 border-blue-300 dark:border-blue-600 cursor-pointer'}
             `}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -216,25 +216,25 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
             <div className="flex flex-col items-center justify-center py-6">
               {isProcessing ? (
                 <>
-                  <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
-                  <p className="text-sm font-medium text-gray-700">{progressMessage}</p>
-                  <div className="w-48 h-2 bg-gray-200 rounded-full mt-3 overflow-hidden">
+                  <Loader2 className="w-10 h-10 text-blue-500 dark:text-blue-400 animate-spin mb-3" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">{progressMessage}</p>
+                  <div className="w-48 h-2 bg-gray-200 dark:bg-slate-600 rounded-full mt-3 overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                      className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">{uploadProgress}% complete</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{uploadProgress}% complete</p>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-6 h-6 text-blue-500" />
-                    <Image className="w-6 h-6 text-blue-500" />
+                    <FileText className="w-6 h-6 text-blue-500 dark:text-blue-400" />
+                    <Image className="w-6 h-6 text-blue-500 dark:text-blue-400" />
                   </div>
-                  <p className="text-sm text-gray-700 font-medium">Upload Lab Results</p>
-                  <p className="text-xs text-gray-500 mt-1">Click to upload or drag and drop</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF or image files supported</p>
+                  <p className="text-sm text-gray-700 dark:text-slate-200 font-medium">Upload Lab Results</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Click to upload or drag and drop</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">PDF or image files supported</p>
                 </>
               )}
             </div>
@@ -254,10 +254,10 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
           </label>
         </div>
 
-        <div className="text-xs text-gray-500 space-y-2">
-          <div className="p-3 bg-blue-50 rounded-md">
-            <p className="font-medium text-blue-800 mb-1">Bone Health Biomarkers Extracted:</p>
-            <ul className="list-disc list-inside text-blue-700 space-y-0.5">
+        <div className="text-xs text-gray-500 dark:text-slate-400 space-y-2">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-md">
+            <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Bone Health Biomarkers Extracted:</p>
+            <ul className="list-disc list-inside text-blue-700 dark:text-blue-400 space-y-0.5">
               <li>Calcium</li>
               <li>Vitamin D (25-hydroxy)</li>
               <li>PTH (Parathyroid Hormone)</li>
@@ -267,7 +267,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
           </div>
           <p><span className="font-medium">Supported formats:</span> PDF, PNG, JPG, TIFF</p>
           <p><span className="font-medium">Maximum file size:</span> 10MB</p>
-          <p className="text-gray-400 mt-2">
+          <p className="text-gray-400 dark:text-slate-500 mt-2">
             Our OCR technology will extract biomarker values from your lab report.
             For best results, ensure the document is clear and readable.
           </p>
