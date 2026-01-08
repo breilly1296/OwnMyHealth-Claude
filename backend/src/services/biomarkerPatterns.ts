@@ -46,16 +46,12 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'mmol/L': { min: 2.12, max: 2.62 },
     },
     patterns: [
-      // Quest format: CALCIUM followed by whitespace then number
-      /\bcalcium\s+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      // With serum/total qualifier
-      /\bcalcium[,\s.:]*(?:serum|total)?[\s,:]+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      // CA shorthand with whitespace
-      /\bca\b[\s,:]+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      // Total calcium
-      /(?:total\s+)?calcium[\s,:]+(\d+\.?\d*)/i,
-      // Calcium with colon
-      /\bcalcium\s*:\s*(\d+\.?\d*)/i,
+      // Flexible: CALCIUM then any chars (up to 50) then number
+      /\bcalcium[\s\S]{0,50}?(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // CA shorthand - be more strict to avoid false positives
+      /\bca\b[\s,:]{1,20}(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // Total/Serum calcium
+      /(?:total|serum)\s+calcium[\s\S]{0,30}?(\d+\.?\d*)/i,
     ],
   },
   {
@@ -77,18 +73,14 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'nmol/L': { min: 75, max: 250 },
     },
     patterns: [
-      // Quest format: VITAMIN D followed by whitespace then number
-      /vitamin\s*d\s+(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
-      // 25-OH VITAMIN D with whitespace
-      /25-?(?:oh|hydroxy)[\s,:-]*(?:vitamin\s*)?d?[\s,:]+(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
-      // VITAMIN D 25-OH format
-      /vitamin\s*d[\s,:-]*25-?(?:oh|hydroxy)?[\s,:]+(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
+      // Flexible: VITAMIN D then any chars (up to 50) then number
+      /vitamin\s*d[\s\S]{0,50}?(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
+      // 25-OH or 25-HYDROXY VITAMIN D
+      /25-?(?:oh|hydroxy)[\s\S]{0,40}?(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
       // VIT D shorthand
-      /vit\.?\s*d[\s,:]+(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
+      /\bvit\.?\s*d[\s\S]{0,30}?(\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
       // 25(OH)D format
-      /25\s*\(?oh\)?\s*d[\s,:]+(\d+\.?\d*)/i,
-      // With colon separator
-      /vitamin\s*d\s*:\s*(\d+\.?\d*)/i,
+      /25\s*\(?oh\)?\s*d[\s\S]{0,30}?(\d+\.?\d*)/i,
     ],
   },
   {
@@ -108,16 +100,12 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'ng/L': { min: 15, max: 65 },
     },
     patterns: [
-      // Quest format: PTH followed by whitespace then number
-      /\bpth\s+(\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL]|ng\/[lL])?/i,
-      // PTH with intact qualifier
-      /\bpth[\s,:-]*(?:intact)?[\s,:]+(\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL]|ng\/[lL])?/i,
-      // Parathyroid hormone with whitespace
-      /parathyroid\s*hormone[\s,:]+(\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL])?/i,
+      // Flexible: PTH then any chars (up to 50) then number
+      /\bpth[\s\S]{0,50}?(\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL]|ng\/[lL])?/i,
+      // Parathyroid hormone
+      /parathyroid\s*hormone[\s\S]{0,40}?(\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL])?/i,
       // Intact PTH
-      /intact\s+pth[\s,:]+(\d+\.?\d*)/i,
-      // PTH with colon
-      /\bpth\s*:\s*(\d+\.?\d*)/i,
+      /intact\s+pth[\s\S]{0,30}?(\d+\.?\d*)/i,
     ],
   },
   {
@@ -130,16 +118,12 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'mmol/L': { min: 0.81, max: 1.45 },
     },
     patterns: [
-      // Quest format: PHOSPHORUS followed by whitespace then number
-      /\bphosphorus\s+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      // With serum/inorganic qualifier
-      /\bphosphorus[\s,:-]*(?:serum|inorganic)?[\s,:]+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // Flexible: PHOSPHORUS then any chars (up to 50) then number
+      /\bphosphorus[\s\S]{0,50}?(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
       // Phosphate
-      /\bphosphate[\s,:]+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      // PHOS shorthand
-      /\bphos\b[\s,:]+(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      // Phosphorus with colon
-      /\bphosphorus\s*:\s*(\d+\.?\d*)/i,
+      /\bphosphate[\s\S]{0,40}?(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // PHOS shorthand - more strict to avoid false positives
+      /\bphos\b[\s,:]{1,20}(\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
     ],
   },
   {
@@ -152,18 +136,14 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'IU/L': { min: 44, max: 147 },
     },
     patterns: [
-      // Quest format: ALKALINE PHOSPHATASE followed by whitespace then number
-      /alkaline\s*phosphatase\s+(\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
-      // ALK PHOS with whitespace
-      /alk(?:aline)?\.?\s*phos(?:phatase)?[\s,:]+(\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
-      // ALP shorthand
-      /\balp\b[\s,:]+(\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
+      // Flexible: ALKALINE PHOSPHATASE then any chars (up to 50) then number
+      /alkaline\s*phosphatase[\s\S]{0,50}?(\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
+      // ALK PHOS variations
+      /\balk(?:aline)?\.?\s*phos(?:phatase)?[\s\S]{0,40}?(\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
+      // ALP shorthand - more strict
+      /\balp\b[\s,:]{1,20}(\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
       // ALKP shorthand
-      /\balkp\b[\s,:]+(\d+\.?\d*)/i,
-      // With colon
-      /alkaline\s*phosphatase\s*:\s*(\d+\.?\d*)/i,
-      // Alk Phos with whitespace
-      /\balk\.?\s*phos\.?[\s,:]+(\d+\.?\d*)/i,
+      /\balkp\b[\s,:]{1,20}(\d+\.?\d*)/i,
     ],
   },
 ];
