@@ -46,9 +46,14 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'mmol/L': { min: 2.12, max: 2.62 },
     },
     patterns: [
-      /calcium[,\s:]*(?:serum|total)?[:\s]*([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      /ca[,\s:]+([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      /(?:total\s+)?calcium[:\s]+([<>]?\s*\d+\.?\d*)/i,
+      // Flexible: CALCIUM followed by number anywhere
+      /calcium[,\s.:]*(?:serum|total)?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // CA with separator then number
+      /\bca\b[,\s.:]+([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // Total calcium
+      /(?:total\s+)?calcium[,\s.:]+([<>]?\s*\d+\.?\d*)/i,
+      // Number after calcium with any separators
+      /calcium\s+([<>]?\d+\.?\d*)/i,
     ],
   },
   {
@@ -70,11 +75,18 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'nmol/L': { min: 75, max: 250 },
     },
     patterns: [
-      /vitamin\s*d[,\s]*(?:25-?(?:oh|hydroxy))?[:\s]*([<>]?\s*\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
-      /25-?(?:oh|hydroxy)\s*(?:vitamin\s*)?d[:\s]*([<>]?\s*\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
-      /vit\s*d[:\s]*([<>]?\s*\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
-      /d\s*25-?oh[:\s]*([<>]?\s*\d+\.?\d*)/i,
-      /25\s*\(?oh\)?\s*d[:\s]*([<>]?\s*\d+\.?\d*)/i,
+      // Flexible: VITAMIN D followed by number
+      /vitamin\s*d[,\s.:]*(?:25-?(?:oh|hydroxy))?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
+      // 25-OH or 25-HYDROXY variations
+      /25-?(?:oh|hydroxy)\s*(?:vitamin\s*)?d?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
+      // VIT D shorthand
+      /vit\.?\s*d[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(ng\/m[lL]|nmol\/[lL])?/i,
+      // D 25-OH format
+      /\bd\s*,?\s*25-?oh[,\s.:]*([<>]?\s*\d+\.?\d*)/i,
+      // 25(OH)D format
+      /25\s*\(?oh\)?\s*d[,\s.:]*([<>]?\s*\d+\.?\d*)/i,
+      // Simple: vitamin d then number
+      /vitamin\s*d\s+([<>]?\d+\.?\d*)/i,
     ],
   },
   {
@@ -94,10 +106,16 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'ng/L': { min: 15, max: 65 },
     },
     patterns: [
-      /pth[,\s]*(?:intact)?[:\s]*([<>]?\s*\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL]|ng\/[lL])?/i,
-      /parathyroid\s*hormone[,\s]*(?:intact)?[:\s]*([<>]?\s*\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL])?/i,
-      /intact\s*pth[:\s]*([<>]?\s*\d+\.?\d*)/i,
-      /parathormone[:\s]*([<>]?\s*\d+\.?\d*)/i,
+      // Flexible: PTH followed by number
+      /\bpth\b[,\s.:]*(?:intact)?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL]|ng\/[lL])?/i,
+      // Parathyroid hormone
+      /parathyroid\s*hormone[,\s.:]*(?:intact)?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(pg\/m[lL]|pmol\/[lL])?/i,
+      // Intact PTH
+      /intact\s*pth[,\s.:]*([<>]?\s*\d+\.?\d*)/i,
+      // Parathormone
+      /parathormone[,\s.:]*([<>]?\s*\d+\.?\d*)/i,
+      // Simple: PTH then number
+      /\bpth\s+([<>]?\d+\.?\d*)/i,
     ],
   },
   {
@@ -110,10 +128,16 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'mmol/L': { min: 0.81, max: 1.45 },
     },
     patterns: [
-      /phosphorus[,\s]*(?:serum|inorganic)?[:\s]*([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      /phosphate[:\s]*([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      /phos[:\s]+([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
-      /(?:serum\s+)?phosphorus[:\s]+([<>]?\s*\d+\.?\d*)/i,
+      // Flexible: PHOSPHORUS followed by number
+      /phosphorus[,\s.:]*(?:serum|inorganic)?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // Phosphate
+      /phosphate[,\s.:]*([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // PHOS shorthand
+      /\bphos\b[,\s.:]+([<>]?\s*\d+\.?\d*)\s*(mg\/d[lL]|mmol\/[lL])?/i,
+      // Serum phosphorus
+      /(?:serum\s+)?phosphorus[,\s.:]+([<>]?\s*\d+\.?\d*)/i,
+      // Simple: phosphorus then number
+      /phosphorus\s+([<>]?\d+\.?\d*)/i,
     ],
   },
   {
@@ -126,10 +150,18 @@ export const BONE_HEALTH_BIOMARKERS: BiomarkerPattern[] = [
       'IU/L': { min: 44, max: 147 },
     },
     patterns: [
-      /alkaline\s*phosphatase[:\s]*([<>]?\s*\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
-      /alk(?:aline)?\s*phos(?:phatase)?[:\s]*([<>]?\s*\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
-      /alp[:\s]+([<>]?\s*\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
-      /alkp[:\s]+([<>]?\s*\d+\.?\d*)/i,
+      // Flexible: ALKALINE PHOSPHATASE followed by number
+      /alkaline\s*phosphatase[,\s.:]*([<>]?\s*\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
+      // ALK PHOS variations
+      /alk(?:aline)?\.?\s*phos(?:phatase)?[,\s.:]*([<>]?\s*\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
+      // ALP shorthand
+      /\balp\b[,\s.:]+([<>]?\s*\d+\.?\d*)\s*([uU]\/[lL]|[iI][uU]\/[lL])?/i,
+      // ALKP shorthand
+      /\balkp\b[,\s.:]+([<>]?\s*\d+\.?\d*)/i,
+      // Simple: alkaline phosphatase then number
+      /alkaline\s*phosphatase\s+([<>]?\d+\.?\d*)/i,
+      // Alk. Phos. with periods
+      /alk\.?\s*phos\.?[,\s.:]*([<>]?\s*\d+\.?\d*)/i,
     ],
   },
 ];
