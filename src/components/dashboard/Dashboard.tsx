@@ -723,6 +723,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                           </button>
                         </div>
                       </div>
+
+                      {isSelected && (
+                        <div className="mt-4 pt-4 border-t border-wellness-100 dark:border-wellness-800">
+                          <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
