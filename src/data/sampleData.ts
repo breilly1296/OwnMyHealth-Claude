@@ -222,7 +222,7 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Insurance', description: 'Manage plans, track costs, and learn', icon: 'Shield', group: 'insurance' },
   { name: 'Knowledge Base', description: 'Intelligent insurance plan analysis and comparison', icon: 'Database', group: 'insurance' },
 
-  // Biomarkers
+  // Biomarkers - Existing categories
   { name: 'Body Composition', description: 'Body composition measurements including body fat and lean mass', icon: 'Scale', group: 'biomarkers' },
   { name: 'Blood', description: 'Complete blood count and metabolic panel', icon: 'Droplets', group: 'biomarkers' },
   { name: 'Hormones', description: 'Hormone levels and endocrine function', icon: 'Activity', group: 'biomarkers' },
@@ -233,4 +233,13 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Liver Function', description: 'Liver enzyme and function tests', icon: 'Pill', group: 'biomarkers' },
   { name: 'Inflammation Markers', description: 'Inflammation and immune response', icon: 'Flame', group: 'biomarkers' },
   { name: 'Electrolytes', description: 'Electrolyte balance', icon: 'Bolt', group: 'biomarkers' },
+
+  // Biomarkers - New categories
+  { name: 'Thyroid', description: 'Thyroid function and hormone levels', icon: 'Waves', group: 'biomarkers' },
+  { name: 'Diabetes', description: 'Blood sugar and diabetes markers', icon: 'Candy', group: 'biomarkers' },
+  { name: 'Cardiac', description: 'Heart health and cardiac markers', icon: 'Heart', group: 'biomarkers' },
+  { name: 'Iron Studies', description: 'Iron levels and related markers', icon: 'CircleDot', group: 'biomarkers' },
+  { name: 'Bone Health', description: 'Bone density and metabolism markers', icon: 'Bone', group: 'biomarkers' },
+  { name: 'Coagulation', description: 'Blood clotting and coagulation factors', icon: 'Timer', group: 'biomarkers' },
+  { name: 'Autoimmune', description: 'Autoimmune markers and antibodies', icon: 'ShieldAlert', group: 'biomarkers' },
 ];

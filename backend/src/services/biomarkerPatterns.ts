@@ -13,13 +13,70 @@
  * - Bone Health markers
  */
 
+/**
+ * All supported biomarker categories
+ * Keep in sync with frontend src/types/index.ts BiomarkerCategoryType
+ */
+export const BIOMARKER_CATEGORIES = [
+  // Existing categories
+  'Body Composition',
+  'Blood',
+  'Hormones',
+  'Vitamins',
+  'Calcium CT',
+  'Vital Signs',
+  'Lipids',
+  'Kidney Function',
+  'Liver Function',
+  'Inflammation Markers',
+  'Electrolytes',
+  'EKG',
+  // New categories
+  'Thyroid',
+  'Diabetes',
+  'Cardiac',
+  'Iron Studies',
+  'Bone Health',
+  'Coagulation',
+  'Autoimmune',
+  'Other',
+] as const;
+
+export type BiomarkerCategory = (typeof BIOMARKER_CATEGORIES)[number];
+
+/**
+ * Category metadata for display and organization
+ */
+export const CATEGORY_METADATA: Record<BiomarkerCategory, { description: string; icon: string }> = {
+  'Body Composition': { description: 'Body composition measurements including body fat and lean mass', icon: 'Scale' },
+  'Blood': { description: 'Complete blood count and metabolic panel', icon: 'Droplets' },
+  'Hormones': { description: 'Hormone levels and endocrine function', icon: 'Activity' },
+  'Vitamins': { description: 'Vitamin and mineral levels', icon: 'Zap' },
+  'Calcium CT': { description: 'Coronary calcium CT scan results', icon: 'Heart' },
+  'Vital Signs': { description: 'Basic vital measurements', icon: 'HeartPulse' },
+  'Lipids': { description: 'Cholesterol and triglyceride levels', icon: 'Droplet' },
+  'Kidney Function': { description: 'Kidney health markers', icon: 'Bean' },
+  'Liver Function': { description: 'Liver enzyme and function tests', icon: 'Pill' },
+  'Inflammation Markers': { description: 'Inflammation and immune response', icon: 'Flame' },
+  'Electrolytes': { description: 'Electrolyte balance', icon: 'Bolt' },
+  'EKG': { description: 'Electrocardiogram results', icon: 'Activity' },
+  'Thyroid': { description: 'Thyroid function and hormone levels', icon: 'Waves' },
+  'Diabetes': { description: 'Blood sugar and diabetes markers', icon: 'Candy' },
+  'Cardiac': { description: 'Heart health and cardiac markers', icon: 'Heart' },
+  'Iron Studies': { description: 'Iron levels and related markers', icon: 'CircleDot' },
+  'Bone Health': { description: 'Bone density and metabolism markers', icon: 'Bone' },
+  'Coagulation': { description: 'Blood clotting and coagulation factors', icon: 'Timer' },
+  'Autoimmune': { description: 'Autoimmune markers and antibodies', icon: 'ShieldAlert' },
+  'Other': { description: 'Other biomarkers and tests', icon: 'Activity' },
+};
+
 export interface BiomarkerPattern {
   /** Display name for the biomarker */
   name: string;
   /** Alternative names/aliases to match */
   aliases: string[];
-  /** Biomarker category */
-  category: string;
+  /** Biomarker category - must be one of BIOMARKER_CATEGORIES */
+  category: BiomarkerCategory;
   /** Default unit if not detected */
   defaultUnit: string;
   /** Normal reference range */
@@ -41,7 +98,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Glucose',
     aliases: ['blood glucose', 'fasting glucose', 'blood sugar', 'glu'],
-    category: 'Metabolic',
+    category: 'Diabetes',
     defaultUnit: 'mg/dL',
     normalRange: { min: 70, max: 100 },
     patterns: [
@@ -53,7 +110,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'BUN',
     aliases: ['blood urea nitrogen', 'urea nitrogen'],
-    category: 'Kidney',
+    category: 'Kidney Function',
     defaultUnit: 'mg/dL',
     normalRange: { min: 7, max: 20 },
     patterns: [
@@ -65,7 +122,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Creatinine',
     aliases: ['creat', 'serum creatinine'],
-    category: 'Kidney',
+    category: 'Kidney Function',
     defaultUnit: 'mg/dL',
     normalRange: { min: 0.7, max: 1.3 },
     patterns: [
@@ -76,7 +133,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'eGFR',
     aliases: ['estimated gfr', 'gfr', 'glomerular filtration rate'],
-    category: 'Kidney',
+    category: 'Kidney Function',
     defaultUnit: 'mL/min/1.73m2',
     normalRange: { min: 90, max: 120 },
     patterns: [
@@ -155,7 +212,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Total Protein',
     aliases: ['protein total', 'serum protein'],
-    category: 'Liver',
+    category: 'Liver Function',
     defaultUnit: 'g/dL',
     normalRange: { min: 6.0, max: 8.3 },
     patterns: [
@@ -166,7 +223,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Albumin',
     aliases: ['alb', 'serum albumin'],
-    category: 'Liver',
+    category: 'Liver Function',
     defaultUnit: 'g/dL',
     normalRange: { min: 3.5, max: 5.0 },
     patterns: [
@@ -177,7 +234,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Bilirubin',
     aliases: ['total bilirubin', 'tbili', 'bili'],
-    category: 'Liver',
+    category: 'Liver Function',
     defaultUnit: 'mg/dL',
     normalRange: { min: 0.1, max: 1.2 },
     patterns: [
@@ -189,7 +246,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Alkaline Phosphatase',
     aliases: ['alk phos', 'alp', 'alkp'],
-    category: 'Liver',
+    category: 'Liver Function',
     defaultUnit: 'U/L',
     normalRange: { min: 44, max: 147 },
     patterns: [
@@ -201,7 +258,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'AST',
     aliases: ['sgot', 'aspartate aminotransferase'],
-    category: 'Liver',
+    category: 'Liver Function',
     defaultUnit: 'U/L',
     normalRange: { min: 10, max: 40 },
     patterns: [
@@ -213,7 +270,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'ALT',
     aliases: ['sgpt', 'alanine aminotransferase'],
-    category: 'Liver',
+    category: 'Liver Function',
     defaultUnit: 'U/L',
     normalRange: { min: 7, max: 56 },
     patterns: [
@@ -325,7 +382,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'WBC',
     aliases: ['white blood cell', 'white blood cells', 'leukocytes'],
-    category: 'Hematology',
+    category: 'Blood',
     defaultUnit: 'K/uL',
     normalRange: { min: 4.5, max: 11.0 },
     patterns: [
@@ -336,7 +393,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'RBC',
     aliases: ['red blood cell', 'red blood cells', 'erythrocytes'],
-    category: 'Hematology',
+    category: 'Blood',
     defaultUnit: 'M/uL',
     normalRange: { min: 4.5, max: 5.5 },
     patterns: [
@@ -347,7 +404,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Hemoglobin',
     aliases: ['hgb', 'hb'],
-    category: 'Hematology',
+    category: 'Blood',
     defaultUnit: 'g/dL',
     normalRange: { min: 12.0, max: 17.5 },
     patterns: [
@@ -359,7 +416,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Hematocrit',
     aliases: ['hct'],
-    category: 'Hematology',
+    category: 'Blood',
     defaultUnit: '%',
     normalRange: { min: 36, max: 50 },
     patterns: [
@@ -370,7 +427,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
   {
     name: 'Platelets',
     aliases: ['plt', 'platelet count', 'thrombocytes'],
-    category: 'Hematology',
+    category: 'Blood',
     defaultUnit: 'K/uL',
     normalRange: { min: 150, max: 400 },
     patterns: [

@@ -14,6 +14,7 @@ import {
   Zap as ZapIcon,
   BarChart3,
   Shield,
+  ShieldAlert,
   BookOpen,
   Users,
   Database,
@@ -23,6 +24,12 @@ import {
   Bean,
   Pill,
   Bolt,
+  // New category icons
+  Waves, // Thyroid
+  Candy, // Diabetes
+  CircleDot, // Iron Studies
+  Bone, // Bone Health
+  Timer, // Coagulation
 } from 'lucide-react';
 
 /**
@@ -40,6 +47,7 @@ export function getIcon(iconName: string): JSX.Element {
     Heart: <Heart className="w-5 h-5" />,
     HeartPulse: <HeartPulse className="w-5 h-5" />,
     Shield: <Shield className="w-5 h-5" />,
+    ShieldAlert: <ShieldAlert className="w-5 h-5" />,
     BookOpen: <BookOpen className="w-5 h-5" />,
     Database: <Database className="w-5 h-5" />,
     Users: <Users className="w-5 h-5" />,
@@ -58,6 +66,12 @@ export function getIcon(iconName: string): JSX.Element {
     Bean: <Bean className="w-5 h-5" />,
     Pill: <Pill className="w-5 h-5" />,
     Bolt: <Bolt className="w-5 h-5" />,
+    // New category icons
+    Waves: <Waves className="w-5 h-5" />,
+    Candy: <Candy className="w-5 h-5" />,
+    CircleDot: <CircleDot className="w-5 h-5" />,
+    Bone: <Bone className="w-5 h-5" />,
+    Timer: <Timer className="w-5 h-5" />,
   };
   return icons[iconName] || <Activity className="w-5 h-5" />;
 }
