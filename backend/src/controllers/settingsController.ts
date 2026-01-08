@@ -7,7 +7,7 @@
 
 import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSContext, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -80,21 +80,31 @@ export async function exportUserData(
   const userSalt = await getUserEncryptionSalt(userId);
   const auditService = getAuditLogService(prisma);
 
-  // Fetch user info
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true, createdAt: true },
-  });
+  // Fetch user info and data with RLS context
+  const { user, biomarkers, insurancePlans } = await withRLSContext(userId, async () => {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, createdAt: true },
+    });
 
-  if (!user) {
-    throw new UnauthorizedError('User not found');
-  }
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
 
-  // Fetch all biomarkers with history
-  const biomarkers = await prisma.biomarker.findMany({
-    where: { userId },
-    include: { history: true },
-    orderBy: { measurementDate: 'desc' },
+    // Fetch all biomarkers with history
+    const biomarkers = await prisma.biomarker.findMany({
+      where: { userId },
+      include: { history: true },
+      orderBy: { measurementDate: 'desc' },
+    });
+
+    // Fetch insurance plans
+    const insurancePlans = await prisma.insurancePlan.findMany({
+      where: { userId },
+      orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
+    });
+
+    return { user, biomarkers, insurancePlans };
   });
 
   // Decrypt biomarkers with controlled concurrency
@@ -133,12 +143,6 @@ export async function exportUserData(
     },
     DECRYPT_BATCH_SIZE
   );
-
-  // Fetch insurance plans
-  const insurancePlans = await prisma.insurancePlan.findMany({
-    where: { userId },
-    orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
-  });
 
   const exportInsurancePlans: ExportInsurancePlan[] = insurancePlans.map((plan) => ({
     planName: plan.planName,
@@ -212,28 +216,31 @@ export async function deleteAllData(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
-  // Get counts before deletion for audit log
-  const [biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount] = await Promise.all([
-    prisma.biomarker.count({ where: { userId } }),
-    prisma.insurancePlan.count({ where: { userId } }),
-    prisma.healthNeed.count({ where: { userId } }),
-    prisma.healthGoal.count({ where: { userId } }),
-  ]);
+  // Get counts before deletion for audit log (with RLS context)
+  const counts = await withRLSContext(userId, async () => {
+    const [biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount] = await Promise.all([
+      prisma.biomarker.count({ where: { userId } }),
+      prisma.insurancePlan.count({ where: { userId } }),
+      prisma.healthNeed.count({ where: { userId } }),
+      prisma.healthGoal.count({ where: { userId } }),
+    ]);
+    return { biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount };
+  });
 
-  // Delete all user data in a transaction
-  await prisma.$transaction([
-    prisma.biomarker.deleteMany({ where: { userId } }),
-    prisma.insurancePlan.deleteMany({ where: { userId } }),
-    prisma.healthNeed.deleteMany({ where: { userId } }),
-    prisma.healthGoal.deleteMany({ where: { userId } }),
-  ]);
+  // Delete all user data in a transaction with RLS context
+  await withRLSTransaction(userId, async (tx) => {
+    await tx.biomarker.deleteMany({ where: { userId } });
+    await tx.insurancePlan.deleteMany({ where: { userId } });
+    await tx.healthNeed.deleteMany({ where: { userId } });
+    await tx.healthGoal.deleteMany({ where: { userId } });
+  });
 
   // Audit log: DELETE all user data
   await auditService.logDelete('UserData', userId, {
-    deletedBiomarkers: biomarkerCount,
-    deletedInsurancePlans: insuranceCount,
-    deletedHealthNeeds: healthNeedCount,
-    deletedHealthGoals: healthGoalCount,
+    deletedBiomarkers: counts.biomarkerCount,
+    deletedInsurancePlans: counts.insuranceCount,
+    deletedHealthNeeds: counts.healthNeedCount,
+    deletedHealthGoals: counts.healthGoalCount,
   }, { req, userId });
 
   const response: ApiResponse = {
@@ -261,10 +268,12 @@ export async function deleteAccount(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
-  // Fetch user to verify password
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, passwordHash: true },
+  // Fetch user to verify password (with RLS context)
+  const user = await withRLSContext(userId, async () => {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, passwordHash: true },
+    });
   });
 
   if (!user) {
@@ -283,9 +292,11 @@ export async function deleteAccount(
     reason: 'user_requested',
   }, { req, userId });
 
-  // Delete user (cascade will delete all related data)
-  await prisma.user.delete({
-    where: { id: userId },
+  // Delete user (cascade will delete all related data) - use admin context for user table
+  await withRLSContext(null, async () => {
+    await prisma.user.delete({
+      where: { id: userId },
+    });
   });
 
   const response: ApiResponse = {
