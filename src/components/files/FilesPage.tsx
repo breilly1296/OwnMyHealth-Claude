@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Loader2, AlertCircle, FileText } from 'lucide-react';
 import FileCard from './FileCard';
-import { filesApi, type UserFileData } from '../../services/api';
+import { filesApi } from '../../services/api';
 import type { UserFile } from '../../types';
 
 interface FilesPageProps {
