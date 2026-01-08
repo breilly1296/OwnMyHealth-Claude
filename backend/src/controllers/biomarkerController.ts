@@ -15,15 +15,11 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
-import { processBatch } from '../utils/batchProcessor.js';
 import { toNumber } from '../utils/numberConversion.js';
 import { logger } from '../utils/logger.js';
 import type { Biomarker as PrismaBiomarker, DataSourceType } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
-
-// Batch size for concurrent decryption operations
-const DECRYPT_BATCH_SIZE = 20;
 
 // Response type for biomarkers (with decrypted values)
 interface BiomarkerResponse {
@@ -109,14 +105,18 @@ export async function getBiomarkers(
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
+  const startTime = Date.now();
   const userId = req.user!.id;
   const { category, page, limit } = req.query;
 
   const prisma = getPrismaClient();
+
+  const saltStart = Date.now();
   const userSalt = await getUserEncryptionSalt(userId);
+  const saltTime = Date.now() - saltStart;
 
   // Parse pagination using query helper
-  const pagination = parsePagination(page, limit, { defaultLimit: 20 });
+  const pagination = parsePagination(page, limit, { defaultLimit: 50 });
   const categoryFilter = parseStringParam(category);
 
   // Build where clause
@@ -126,9 +126,12 @@ export async function getBiomarkers(
   }
 
   // Get total count
+  const countStart = Date.now();
   const total = await prisma.biomarker.count({ where });
+  const countTime = Date.now() - countStart;
 
   // Get paginated biomarkers with history
+  const queryStart = Date.now();
   const biomarkers = await prisma.biomarker.findMany({
     where,
     include: { history: true },
@@ -136,20 +139,39 @@ export async function getBiomarkers(
     take: pagination.take,
     orderBy: { measurementDate: 'desc' },
   });
+  const queryTime = Date.now() - queryStart;
 
-  // Decrypt all biomarkers with controlled concurrency
-  const decryptedBiomarkers = await processBatch(
-    biomarkers,
-    (b) => toResponse(b, userSalt),
-    DECRYPT_BATCH_SIZE
+  // Decrypt all biomarkers with higher concurrency for better performance
+  const decryptStart = Date.now();
+  const decryptedBiomarkers = await Promise.all(
+    biomarkers.map((b) => toResponse(b, userSalt))
   );
+  const decryptTime = Date.now() - decryptStart;
 
   // Audit log: READ access to biomarker list
+  const auditStart = Date.now();
   const auditService = getAuditLogService(prisma);
   await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
     operation: 'LIST',
     count: biomarkers.length,
     category: categoryFilter || 'all',
+  });
+  const auditTime = Date.now() - auditStart;
+
+  const totalTime = Date.now() - startTime;
+  logger.info('getBiomarkers timing', {
+    data: {
+      userId,
+      count: biomarkers.length,
+      total,
+      saltTime,
+      countTime,
+      queryTime,
+      decryptTime,
+      auditTime,
+      totalTime,
+      avgDecryptPerRecord: biomarkers.length > 0 ? Math.round(decryptTime / biomarkers.length) : 0,
+    },
   });
 
   const response: ApiResponse<BiomarkerResponse[]> = {
