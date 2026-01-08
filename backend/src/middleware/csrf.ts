@@ -124,6 +124,12 @@ export function validateCsrfToken(
     '/settings/export-data',
   ];
 
+  // Skip CSRF for API routes that require Bearer token auth
+  // These endpoints are protected by JWT which browsers don't send automatically
+  const bearerProtectedRoutes = [
+    '/guidance', // POST /biomarkers/:id/guidance - AI guidance endpoint
+  ];
+
   const isPublicAuthRoute = publicAuthRoutes.some(route =>
     req.path.endsWith(route)
   );
@@ -136,7 +142,11 @@ export function validateCsrfToken(
     req.path.endsWith(route)
   );
 
-  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute) {
+  const isBearerProtectedRoute = bearerProtectedRoutes.some(route =>
+    req.path.endsWith(route)
+  );
+
+  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute || isBearerProtectedRoute) {
     return next();
   }
 
