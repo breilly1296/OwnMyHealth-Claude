@@ -28,6 +28,8 @@ import { InsuranceSBCUpload, InsurancePlanViewer, EnhancedInsuranceUpload, Insur
 import { PDFUploadModal, ClinicalFileUpload, LabUploadModal } from '../upload';
 // Files components
 import FilesPage from '../files/FilesPage';
+// Trends components
+import { TrendsPage } from '../trends';
 // Settings components
 import { AccountSettingsPage } from '../settings';
 // Dashboard components
@@ -935,6 +937,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-8 py-6 md:py-8 min-h-[calc(100vh-3.5rem)] md:min-h-[calc(100vh-4rem)]">
           {selectedCategory === 'Dashboard' ? renderDashboardContent() :
+           selectedCategory === 'Trends' ? <TrendsPage biomarkers={biomarkers} /> :
            selectedCategory === 'Insurance' ? renderInsuranceContent() :
            selectedCategory === 'Insurance Guide' ? renderInsuranceGuideContent() :
            selectedCategory === 'Knowledge Base' ? renderKnowledgeBaseContent() :

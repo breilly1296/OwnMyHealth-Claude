@@ -40,6 +40,7 @@ import {
   Bug, // Infectious Disease
   Flower2, // Allergy
   Wind, // Blood Gas
+  TrendingUp, // Trends
 } from 'lucide-react';
 
 /**
@@ -92,6 +93,8 @@ export function getIcon(iconName: string): JSX.Element {
     // File icons
     FolderOpen: <FolderOpen className="w-5 h-5" />,
     FileText: <FileText className="w-5 h-5" />,
+    // Trends icon
+    TrendingUp: <TrendingUp className="w-5 h-5" />,
   };
   return icons[iconName] || <Activity className="w-5 h-5" />;
 }
