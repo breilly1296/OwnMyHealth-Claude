@@ -35,6 +35,7 @@ const router = Router();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let anthropicClient: any = null;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getAnthropicClient(): Promise<any> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return null;
