@@ -83,6 +83,7 @@ function setAccessTokenCookie(res: Response, token: string): void {
     sameSite: config.cookie.sameSite,
     maxAge: config.cookie.maxAge.accessToken,
     path: '/',
+    ...(config.cookie.domain && { domain: config.cookie.domain }),
   });
 }
 
@@ -101,6 +102,7 @@ function setRefreshTokenCookie(res: Response, token: string, isDemo: boolean = f
     sameSite: config.cookie.sameSite,
     maxAge,
     path: '/', // Send with all requests so refresh works from any endpoint
+    ...(config.cookie.domain && { domain: config.cookie.domain }),
   });
 }
 
@@ -113,12 +115,14 @@ function clearAuthCookies(res: Response): void {
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     path: '/',
+    ...(config.cookie.domain && { domain: config.cookie.domain }),
   });
   res.clearCookie('refresh_token', {
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     path: '/',
+    ...(config.cookie.domain && { domain: config.cookie.domain }),
   });
 }
 
