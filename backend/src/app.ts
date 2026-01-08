@@ -89,6 +89,8 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security middleware
+// When using cross-domain cookies (COOKIE_DOMAIN set), we need to relax some policies
+const isCrossDomain = !!config.cookie.domain;
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -99,18 +101,51 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  // CRITICAL: Must disable for cross-domain setups, otherwise blocks CORS requests
+  crossOriginResourcePolicy: isCrossDomain ? false : { policy: 'same-origin' as const },
 }));
 
 // CORS configuration - use safe origins based on environment
-const corsOptions = {
-  origin: getSafeCorsOrigins(),
-  credentials: config.cors.credentials,
+// For cross-domain cookies (sameSite=none), CORS must:
+// 1. Set Access-Control-Allow-Origin to the exact origin (not *)
+// 2. Set Access-Control-Allow-Credentials: true
+// 3. Handle OPTIONS preflight requests
+const allowedOrigins = getSafeCorsOrigins();
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check if origin is allowed
+    const origins = Array.isArray(allowedOrigins) ? allowedOrigins : [allowedOrigins];
+    if (origins.includes(origin)) {
+      return callback(null, origin); // Return the specific origin, not true
+    }
+
+    // Log rejected origins for debugging
+    logger.warn('CORS rejected origin', { data: { origin, allowedOrigins: origins } });
+    return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+  },
+  credentials: true, // Required for cross-domain cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+  exposedHeaders: ['X-CSRF-Token'], // Allow frontend to read CSRF token header
   // Ensure preflight requests are handled properly
   preflightContinue: false,
   optionsSuccessStatus: 204,
+  maxAge: 86400, // Cache preflight for 24 hours
 };
+
+// Log CORS configuration on startup for debugging
+logger.info('CORS configuration', {
+  data: {
+    allowedOrigins: Array.isArray(allowedOrigins) ? allowedOrigins : [allowedOrigins],
+    credentials: true,
+    isCrossDomain,
+  },
+});
 
 // Apply CORS middleware
 app.use(cors(corsOptions));
