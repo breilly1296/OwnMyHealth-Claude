@@ -99,7 +99,7 @@ export default function CollapsibleNavGroup({
       {/* Group Items */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="mt-1 ml-2 space-y-1 border-l-2 border-slate-100 pl-2">

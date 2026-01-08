@@ -119,7 +119,7 @@
     @apply px-6 py-4 text-sm text-slate-600;
   }
 
-  /* Scrollbar styling */
+  /* Scrollbar styling - Default */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -131,5 +131,32 @@
 
   ::-webkit-scrollbar-thumb {
     @apply bg-slate-300 rounded-full hover:bg-slate-400;
+  }
+
+  /* Sidebar thin scrollbar - more subtle */
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full;
+  }
+
+  .sidebar-scroll:hover::-webkit-scrollbar-thumb {
+    @apply bg-slate-300;
+  }
+
+  /* Firefox scrollbar support */
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #e2e8f0 transparent;
+  }
+
+  .sidebar-scroll:hover {
+    scrollbar-color: #cbd5e1 transparent;
   }
 }

@@ -798,8 +798,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
       <div className="max-w-[1600px] mx-auto flex">
         {/* Premium Left Sidebar */}
-        <aside className="w-72 bg-white/50 backdrop-blur-sm border-r border-slate-200/60 min-h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto">
-          <div className="p-5">
+        <aside className="w-72 bg-white/50 backdrop-blur-sm border-r border-slate-200/60 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto sidebar-scroll">
+          <div className="p-5 pb-8">
             <nav className="space-y-1">
               {navGroups.map((group) => {
                 const groupCategories = categories.filter(cat => cat.group === group.id);
