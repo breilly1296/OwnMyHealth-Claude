@@ -206,12 +206,39 @@ export async function processDocument(
       textPreview: extractedText.substring(0, 500).replace(/\n/g, ' '),
     });
 
-    // DEBUG: Log first 20 lines to see exact OCR output format
+    // DEBUG: Log first 50 lines to see exact OCR output format
     const lines = extractedText.split('\n');
-    console.log('[OCR DEBUG] First 20 lines of OCR text:');
-    lines.slice(0, 20).forEach((line, i) => {
+    console.log('[OCR DEBUG] First 50 lines of OCR text:');
+    lines.slice(0, 50).forEach((line, i) => {
       console.log(`[OCR LINE ${i + 1}] "${line}"`);
     });
+
+    // DEBUG: Check for table data from Document AI
+    if (document.pages) {
+      for (let pageIdx = 0; pageIdx < document.pages.length; pageIdx++) {
+        const page = document.pages[pageIdx];
+        if (page.tables && page.tables.length > 0) {
+          console.log(`[OCR DEBUG] Page ${pageIdx + 1} has ${page.tables.length} tables`);
+          page.tables.forEach((table, tableIdx) => {
+            console.log(`[OCR TABLE ${tableIdx + 1}] Rows: ${table.headerRows?.length || 0} header, ${table.bodyRows?.length || 0} body`);
+            // Log table structure for debugging
+            table.bodyRows?.slice(0, 5).forEach((row, rowIdx) => {
+              const cells = row.cells?.map(cell => {
+                const text = cell.layout?.textAnchor?.textSegments
+                  ?.map(seg => extractedText.substring(
+                    parseInt(seg.startIndex?.toString() || '0'),
+                    parseInt(seg.endIndex?.toString() || '0')
+                  ))
+                  .join('')
+                  .trim() || '';
+                return text;
+              }) || [];
+              console.log(`[OCR TABLE ROW ${rowIdx}] ${JSON.stringify(cells)}`);
+            });
+          });
+        }
+      }
+    }
 
     // Calculate overall text confidence
     let totalConfidence = 0;

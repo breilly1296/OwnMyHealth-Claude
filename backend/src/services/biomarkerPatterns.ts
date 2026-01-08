@@ -2670,7 +2670,83 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
 }
 
 /**
- * Hybrid extraction: Prioritize line-by-line for tabular formats, then try regex
+ * Extract biomarkers using newline-spanning patterns
+ * This handles Document AI output where table columns are on separate lines.
+ *
+ * Pattern: BIOMARKER_NAME followed by whitespace/newlines then a NUMBER
+ * Example: "PLATELET COUNT\n242" or "CHOLESTEROL, TOTAL    \n193"
+ */
+function extractWithNewlineSpanning(text: string): ExtractedBiomarker[] {
+  const results: ExtractedBiomarker[] = [];
+  const foundNames = new Set<string>();
+
+  console.log('[NEWLINE-SPAN] Starting newline-spanning extraction');
+
+  for (const biomarker of ALL_BIOMARKERS) {
+    if (foundNames.has(biomarker.name)) continue;
+
+    // Check each name/alias
+    const namesToCheck = [biomarker.name, ...biomarker.aliases];
+
+    for (const name of namesToCheck) {
+      // Create pattern: biomarker name, then whitespace/newlines, then number
+      // The number must NOT be preceded by reference indicators like < > - or followed by -
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // Pattern: name, whitespace (including newlines), number with optional H/L flag
+      // The number should NOT be followed by a dash (which indicates a range like 140-400)
+      const pattern = new RegExp(
+        `\\b${escapedName}\\b[\\s\\n]+(\\d+\\.?\\d*)(?:\\s*([HL]))?(?![\\s]*[-–][\\s]*\\d)`,
+        'i'
+      );
+
+      const match = text.match(pattern);
+
+      // Additional check: skip if the character before the number is < > - (reference range indicators)
+      if (match && match.index !== undefined) {
+        const beforeMatch = text.substring(Math.max(0, match.index - 5), match.index);
+        if (/[<>–-]\s*$/.test(beforeMatch)) {
+          console.log(`[NEWLINE-SPAN] Skipping ${biomarker.name}: preceded by range indicator`);
+          continue;
+        }
+      }
+      if (match) {
+        const value = parseFloat(match[1]);
+        const flag = match[2];
+
+        if (isNaN(value) || value < 0 || value > 100000) continue;
+
+        // Validate value is reasonable for this biomarker
+        const range = biomarker.normalRange;
+        if (value < range.min * 0.01 || value > range.max * 100) {
+          console.log(`[NEWLINE-SPAN] Skipping ${biomarker.name}: ${value} out of range (${range.min}-${range.max})`);
+          continue;
+        }
+
+        foundNames.add(biomarker.name);
+
+        results.push({
+          name: biomarker.name,
+          value,
+          unit: biomarker.defaultUnit,
+          category: biomarker.category,
+          normalRange: { ...range, source: 'Standard Reference Range' },
+          confidence: 0.80,
+          rawMatch: match[0].substring(0, 100),
+        });
+
+        console.log(`[NEWLINE-SPAN] ${biomarker.name}: ${value}${flag ? ' ' + flag : ''} ${biomarker.defaultUnit}`);
+        break;
+      }
+    }
+  }
+
+  console.log(`[NEWLINE-SPAN] Found ${results.length} biomarkers`);
+  return results;
+}
+
+/**
+ * Hybrid extraction: Try multiple strategies and merge results
  */
 export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
   console.log('[EXTRACTION] ========================================');
@@ -2680,22 +2756,49 @@ export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
   console.log(text.substring(0, 500));
   console.log('[EXTRACTION] ========================================');
 
-  // For tabular lab reports (Quest, etc.), line-by-line is more reliable
-  // Try it first as the primary method
+  // Strategy 1: Line-by-line extraction (for properly formatted tables)
   const lineResults = extractFromLines(text);
   console.log(`[EXTRACTION] Line extraction found: ${lineResults.length} biomarkers`);
   lineResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
 
-  // Then try regex patterns to catch any we missed
+  // Strategy 2: Newline-spanning patterns (for Document AI split columns)
+  const newlineSpanResults = extractWithNewlineSpanning(text);
+  console.log(`[EXTRACTION] Newline-span extraction found: ${newlineSpanResults.length} biomarkers`);
+  newlineSpanResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
+
+  // Strategy 3: Traditional regex patterns (fallback)
   const patternResults = extractWithPatterns(text);
   console.log(`[EXTRACTION] Pattern extraction found: ${patternResults.length} biomarkers`);
   patternResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
 
-  // Merge results, preferring line-based results (more reliable for tabular data)
-  const foundNames = new Set(lineResults.map((r) => r.name));
-  const additionalFromPatterns = patternResults.filter((r) => !foundNames.has(r.name));
+  // Merge results: line-based > newline-span > pattern-based
+  const foundNames = new Set<string>();
+  const combined: ExtractedBiomarker[] = [];
 
-  const combined = [...lineResults, ...additionalFromPatterns];
+  // Add line results first (highest priority)
+  for (const r of lineResults) {
+    if (!foundNames.has(r.name)) {
+      foundNames.add(r.name);
+      combined.push(r);
+    }
+  }
+
+  // Add newline-span results
+  for (const r of newlineSpanResults) {
+    if (!foundNames.has(r.name)) {
+      foundNames.add(r.name);
+      combined.push(r);
+    }
+  }
+
+  // Add pattern results last (lowest priority)
+  for (const r of patternResults) {
+    if (!foundNames.has(r.name)) {
+      foundNames.add(r.name);
+      combined.push(r);
+    }
+  }
+
   console.log('[EXTRACTION] ========================================');
   console.log(`[EXTRACTION] Total unique biomarkers: ${combined.length}`);
   combined.forEach(r => console.log(`  FINAL: ${r.name}: ${r.value} ${r.unit} (confidence: ${r.confidence})`));
