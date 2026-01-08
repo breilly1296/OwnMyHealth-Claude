@@ -4,7 +4,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -58,6 +58,7 @@ model User {
   auditLogs      AuditLog[]
   sessions       Session[]
   encryptionKeys UserEncryptionKey[]
+  files          UserFile[]
 
   // Provider-Patient relationships
   providerRelationships ProviderPatient[] @relation("ProviderUser")
@@ -168,6 +169,44 @@ enum ProviderPatientStatus {
 }
 
 // ============================================
+// USER FILES (Lab Reports, Documents)
+// ============================================
+
+model UserFile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // File metadata
+  filename         String @db.VarChar(255)
+  originalFilename String @map("original_filename") @db.VarChar(255)
+  fileType         String @map("file_type") @db.VarChar(50) // 'application/pdf', 'image/png', etc.
+  fileSize         Int    @map("file_size")
+
+  // GCS storage (gs://ownmyhealth-user-files/{userId}/{uuid}.{ext})
+  storageKey String @map("storage_key") @db.VarChar(500)
+
+  // Lab report metadata (extracted from content)
+  labName String?   @map("lab_name") @db.VarChar(255)
+  labDate DateTime? @map("lab_date") @db.Date
+
+  // Processing info
+  biomarkersExtracted  Int      @default(0) @map("biomarkers_extracted")
+  extractionConfidence Decimal? @map("extraction_confidence") @db.Decimal(3, 2)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biomarkers Biomarker[]
+
+  @@index([userId])
+  @@index([labDate])
+  @@map("user_files")
+}
+
+// ============================================
 // BIOMARKERS / HEALTH DATA
 // ============================================
 
@@ -196,6 +235,9 @@ model Biomarker {
   extractionConfidence Decimal?       @map("extraction_confidence") @db.Decimal(3, 2)
   labName              String?        @map("lab_name") @db.VarChar(200)
 
+  // Link to source file (for lab uploads)
+  userFileId String? @map("user_file_id") @db.Uuid
+
   // Status tracking
   isOutOfRange   Boolean @default(false) @map("is_out_of_range")
   isAcknowledged Boolean @default(false) @map("is_acknowledged")
@@ -205,13 +247,16 @@ model Biomarker {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  history BiomarkerHistory[]
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userFile UserFile?          @relation(fields: [userFileId], references: [id], onDelete: SetNull)
+  history  BiomarkerHistory[]
 
   @@index([userId])
   @@index([userId, category])
   @@index([measurementDate])
   @@index([isOutOfRange])
+  @@index([userFileId])
+  @@index([userId, category, measurementDate(sort: Desc)], map: "biomarkers_user_category_date_idx")
   @@map("biomarkers")
 }
 
@@ -278,6 +323,7 @@ model InsurancePlan {
 
   @@index([userId])
   @@index([isActive])
+  @@index([userId, isActive, isPrimary(sort: Desc)], map: "insurance_plans_user_active_primary_idx")
   @@map("insurance_plans")
 }
 
@@ -523,6 +569,7 @@ model HealthGoal {
   @@index([status])
   @@index([category])
   @@index([targetDate])
+  @@index([userId, status, targetDate], map: "health_goals_user_status_target_idx")
   @@map("health_goals")
 }
 
@@ -604,6 +651,7 @@ model AuditLog {
   @@index([resourceId])
   @@index([createdAt], map: "audit_logs_created_at_asc_idx")
   @@index([createdAt(sort: Desc)], map: "audit_logs_created_at_desc_idx")
+  @@index([userId, createdAt(sort: Desc)], map: "audit_logs_user_created_at_idx")
   @@map("audit_logs")
 }
 

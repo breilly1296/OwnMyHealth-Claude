@@ -55,3 +55,12 @@ export {
   validateBiomarkerValue,
   normalizeUnit,
 } from './biomarkerPatterns.js';
+
+// Storage Service (Google Cloud Storage)
+export {
+  storageService,
+  uploadFile,
+  getSignedUrl,
+  deleteFile,
+  fileExists,
+} from './storageService.js';

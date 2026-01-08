@@ -34,6 +34,11 @@ export type UserEncryptionKey = $Result.DefaultSelection<Prisma.$UserEncryptionK
  */
 export type ProviderPatient = $Result.DefaultSelection<Prisma.$ProviderPatientPayload>
 /**
+ * Model UserFile
+ * 
+ */
+export type UserFile = $Result.DefaultSelection<Prisma.$UserFilePayload>
+/**
  * Model Biomarker
  * 
  */
@@ -486,6 +491,16 @@ export class PrismaClient<
   get providerPatient(): Prisma.ProviderPatientDelegate<ExtArgs, ClientOptions>;
 
   /**
+   * `prisma.userFile`: Exposes CRUD operations for the **UserFile** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more UserFiles
+    * const userFiles = await prisma.userFile.findMany()
+    * ```
+    */
+  get userFile(): Prisma.UserFileDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.biomarker`: Exposes CRUD operations for the **Biomarker** model.
     * Example usage:
     * ```ts
@@ -654,8 +669,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 7.1.0
-   * Query Engine version: ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba
+   * Prisma Client JS version: 7.2.0
+   * Query Engine version: 0c8ef2ce45c83248ab3df073180d5eda9e8be7a3
    */
   export type PrismaVersion = {
     client: string
@@ -1042,6 +1057,7 @@ export namespace Prisma {
     Session: 'Session',
     UserEncryptionKey: 'UserEncryptionKey',
     ProviderPatient: 'ProviderPatient',
+    UserFile: 'UserFile',
     Biomarker: 'Biomarker',
     BiomarkerHistory: 'BiomarkerHistory',
     InsurancePlan: 'InsurancePlan',
@@ -1069,7 +1085,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig"
+      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1366,6 +1382,80 @@ export namespace Prisma {
           count: {
             args: Prisma.ProviderPatientCountArgs<ExtArgs>
             result: $Utils.Optional<ProviderPatientCountAggregateOutputType> | number
+          }
+        }
+      }
+      UserFile: {
+        payload: Prisma.$UserFilePayload<ExtArgs>
+        fields: Prisma.UserFileFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.UserFileFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.UserFileFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>
+          }
+          findFirst: {
+            args: Prisma.UserFileFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.UserFileFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>
+          }
+          findMany: {
+            args: Prisma.UserFileFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>[]
+          }
+          create: {
+            args: Prisma.UserFileCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>
+          }
+          createMany: {
+            args: Prisma.UserFileCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.UserFileCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>[]
+          }
+          delete: {
+            args: Prisma.UserFileDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>
+          }
+          update: {
+            args: Prisma.UserFileUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>
+          }
+          deleteMany: {
+            args: Prisma.UserFileDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.UserFileUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.UserFileUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>[]
+          }
+          upsert: {
+            args: Prisma.UserFileUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UserFilePayload>
+          }
+          aggregate: {
+            args: Prisma.UserFileAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateUserFile>
+          }
+          groupBy: {
+            args: Prisma.UserFileGroupByArgs<ExtArgs>
+            result: $Utils.Optional<UserFileGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.UserFileCountArgs<ExtArgs>
+            result: $Utils.Optional<UserFileCountAggregateOutputType> | number
           }
         }
       }
@@ -2369,6 +2459,7 @@ export namespace Prisma {
     session?: SessionOmit
     userEncryptionKey?: UserEncryptionKeyOmit
     providerPatient?: ProviderPatientOmit
+    userFile?: UserFileOmit
     biomarker?: BiomarkerOmit
     biomarkerHistory?: BiomarkerHistoryOmit
     insurancePlan?: InsurancePlanOmit
@@ -2469,6 +2560,7 @@ export namespace Prisma {
     auditLogs: number
     sessions: number
     encryptionKeys: number
+    files: number
     providerRelationships: number
     patientRelationships: number
   }
@@ -2482,6 +2574,7 @@ export namespace Prisma {
     auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
     sessions?: boolean | UserCountOutputTypeCountSessionsArgs
     encryptionKeys?: boolean | UserCountOutputTypeCountEncryptionKeysArgs
+    files?: boolean | UserCountOutputTypeCountFilesArgs
     providerRelationships?: boolean | UserCountOutputTypeCountProviderRelationshipsArgs
     patientRelationships?: boolean | UserCountOutputTypeCountPatientRelationshipsArgs
   }
@@ -2556,6 +2649,13 @@ export namespace Prisma {
   /**
    * UserCountOutputType without action
    */
+  export type UserCountOutputTypeCountFilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UserFileWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
   export type UserCountOutputTypeCountProviderRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ProviderPatientWhereInput
   }
@@ -2565,6 +2665,37 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountPatientRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ProviderPatientWhereInput
+  }
+
+
+  /**
+   * Count Type UserFileCountOutputType
+   */
+
+  export type UserFileCountOutputType = {
+    biomarkers: number
+  }
+
+  export type UserFileCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    biomarkers?: boolean | UserFileCountOutputTypeCountBiomarkersArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * UserFileCountOutputType without action
+   */
+  export type UserFileCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFileCountOutputType
+     */
+    select?: UserFileCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * UserFileCountOutputType without action
+   */
+  export type UserFileCountOutputTypeCountBiomarkersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: BiomarkerWhereInput
   }
 
 
@@ -3039,6 +3170,7 @@ export namespace Prisma {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     encryptionKeys?: boolean | User$encryptionKeysArgs<ExtArgs>
+    files?: boolean | User$filesArgs<ExtArgs>
     providerRelationships?: boolean | User$providerRelationshipsArgs<ExtArgs>
     patientRelationships?: boolean | User$patientRelationshipsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -3126,6 +3258,7 @@ export namespace Prisma {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     encryptionKeys?: boolean | User$encryptionKeysArgs<ExtArgs>
+    files?: boolean | User$filesArgs<ExtArgs>
     providerRelationships?: boolean | User$providerRelationshipsArgs<ExtArgs>
     patientRelationships?: boolean | User$patientRelationshipsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -3144,6 +3277,7 @@ export namespace Prisma {
       auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
       sessions: Prisma.$SessionPayload<ExtArgs>[]
       encryptionKeys: Prisma.$UserEncryptionKeyPayload<ExtArgs>[]
+      files: Prisma.$UserFilePayload<ExtArgs>[]
       providerRelationships: Prisma.$ProviderPatientPayload<ExtArgs>[]
       patientRelationships: Prisma.$ProviderPatientPayload<ExtArgs>[]
     }
@@ -3571,6 +3705,7 @@ export namespace Prisma {
     auditLogs<T extends User$auditLogsArgs<ExtArgs> = {}>(args?: Subset<T, User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     encryptionKeys<T extends User$encryptionKeysArgs<ExtArgs> = {}>(args?: Subset<T, User$encryptionKeysArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserEncryptionKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    files<T extends User$filesArgs<ExtArgs> = {}>(args?: Subset<T, User$filesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     providerRelationships<T extends User$providerRelationshipsArgs<ExtArgs> = {}>(args?: Subset<T, User$providerRelationshipsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderPatientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     patientRelationships<T extends User$patientRelationshipsArgs<ExtArgs> = {}>(args?: Subset<T, User$patientRelationshipsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderPatientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
@@ -4200,6 +4335,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: UserEncryptionKeyScalarFieldEnum | UserEncryptionKeyScalarFieldEnum[]
+  }
+
+  /**
+   * User.files
+   */
+  export type User$filesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    where?: UserFileWhereInput
+    orderBy?: UserFileOrderByWithRelationInput | UserFileOrderByWithRelationInput[]
+    cursor?: UserFileWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
   }
 
   /**
@@ -7694,6 +7853,1240 @@ export namespace Prisma {
 
 
   /**
+   * Model UserFile
+   */
+
+  export type AggregateUserFile = {
+    _count: UserFileCountAggregateOutputType | null
+    _avg: UserFileAvgAggregateOutputType | null
+    _sum: UserFileSumAggregateOutputType | null
+    _min: UserFileMinAggregateOutputType | null
+    _max: UserFileMaxAggregateOutputType | null
+  }
+
+  export type UserFileAvgAggregateOutputType = {
+    fileSize: number | null
+    biomarkersExtracted: number | null
+    extractionConfidence: Decimal | null
+  }
+
+  export type UserFileSumAggregateOutputType = {
+    fileSize: number | null
+    biomarkersExtracted: number | null
+    extractionConfidence: Decimal | null
+  }
+
+  export type UserFileMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    filename: string | null
+    originalFilename: string | null
+    fileType: string | null
+    fileSize: number | null
+    storageKey: string | null
+    labName: string | null
+    labDate: Date | null
+    biomarkersExtracted: number | null
+    extractionConfidence: Decimal | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type UserFileMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    filename: string | null
+    originalFilename: string | null
+    fileType: string | null
+    fileSize: number | null
+    storageKey: string | null
+    labName: string | null
+    labDate: Date | null
+    biomarkersExtracted: number | null
+    extractionConfidence: Decimal | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type UserFileCountAggregateOutputType = {
+    id: number
+    userId: number
+    filename: number
+    originalFilename: number
+    fileType: number
+    fileSize: number
+    storageKey: number
+    labName: number
+    labDate: number
+    biomarkersExtracted: number
+    extractionConfidence: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type UserFileAvgAggregateInputType = {
+    fileSize?: true
+    biomarkersExtracted?: true
+    extractionConfidence?: true
+  }
+
+  export type UserFileSumAggregateInputType = {
+    fileSize?: true
+    biomarkersExtracted?: true
+    extractionConfidence?: true
+  }
+
+  export type UserFileMinAggregateInputType = {
+    id?: true
+    userId?: true
+    filename?: true
+    originalFilename?: true
+    fileType?: true
+    fileSize?: true
+    storageKey?: true
+    labName?: true
+    labDate?: true
+    biomarkersExtracted?: true
+    extractionConfidence?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type UserFileMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    filename?: true
+    originalFilename?: true
+    fileType?: true
+    fileSize?: true
+    storageKey?: true
+    labName?: true
+    labDate?: true
+    biomarkersExtracted?: true
+    extractionConfidence?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type UserFileCountAggregateInputType = {
+    id?: true
+    userId?: true
+    filename?: true
+    originalFilename?: true
+    fileType?: true
+    fileSize?: true
+    storageKey?: true
+    labName?: true
+    labDate?: true
+    biomarkersExtracted?: true
+    extractionConfidence?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type UserFileAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which UserFile to aggregate.
+     */
+    where?: UserFileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserFiles to fetch.
+     */
+    orderBy?: UserFileOrderByWithRelationInput | UserFileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: UserFileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserFiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserFiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned UserFiles
+    **/
+    _count?: true | UserFileCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: UserFileAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: UserFileSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: UserFileMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: UserFileMaxAggregateInputType
+  }
+
+  export type GetUserFileAggregateType<T extends UserFileAggregateArgs> = {
+        [P in keyof T & keyof AggregateUserFile]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateUserFile[P]>
+      : GetScalarType<T[P], AggregateUserFile[P]>
+  }
+
+
+
+
+  export type UserFileGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UserFileWhereInput
+    orderBy?: UserFileOrderByWithAggregationInput | UserFileOrderByWithAggregationInput[]
+    by: UserFileScalarFieldEnum[] | UserFileScalarFieldEnum
+    having?: UserFileScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: UserFileCountAggregateInputType | true
+    _avg?: UserFileAvgAggregateInputType
+    _sum?: UserFileSumAggregateInputType
+    _min?: UserFileMinAggregateInputType
+    _max?: UserFileMaxAggregateInputType
+  }
+
+  export type UserFileGroupByOutputType = {
+    id: string
+    userId: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName: string | null
+    labDate: Date | null
+    biomarkersExtracted: number
+    extractionConfidence: Decimal | null
+    createdAt: Date
+    updatedAt: Date
+    _count: UserFileCountAggregateOutputType | null
+    _avg: UserFileAvgAggregateOutputType | null
+    _sum: UserFileSumAggregateOutputType | null
+    _min: UserFileMinAggregateOutputType | null
+    _max: UserFileMaxAggregateOutputType | null
+  }
+
+  type GetUserFileGroupByPayload<T extends UserFileGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<UserFileGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof UserFileGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], UserFileGroupByOutputType[P]>
+            : GetScalarType<T[P], UserFileGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type UserFileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    filename?: boolean
+    originalFilename?: boolean
+    fileType?: boolean
+    fileSize?: boolean
+    storageKey?: boolean
+    labName?: boolean
+    labDate?: boolean
+    biomarkersExtracted?: boolean
+    extractionConfidence?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    biomarkers?: boolean | UserFile$biomarkersArgs<ExtArgs>
+    _count?: boolean | UserFileCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["userFile"]>
+
+  export type UserFileSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    filename?: boolean
+    originalFilename?: boolean
+    fileType?: boolean
+    fileSize?: boolean
+    storageKey?: boolean
+    labName?: boolean
+    labDate?: boolean
+    biomarkersExtracted?: boolean
+    extractionConfidence?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["userFile"]>
+
+  export type UserFileSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    filename?: boolean
+    originalFilename?: boolean
+    fileType?: boolean
+    fileSize?: boolean
+    storageKey?: boolean
+    labName?: boolean
+    labDate?: boolean
+    biomarkersExtracted?: boolean
+    extractionConfidence?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["userFile"]>
+
+  export type UserFileSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    filename?: boolean
+    originalFilename?: boolean
+    fileType?: boolean
+    fileSize?: boolean
+    storageKey?: boolean
+    labName?: boolean
+    labDate?: boolean
+    biomarkersExtracted?: boolean
+    extractionConfidence?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type UserFileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "filename" | "originalFilename" | "fileType" | "fileSize" | "storageKey" | "labName" | "labDate" | "biomarkersExtracted" | "extractionConfidence" | "createdAt" | "updatedAt", ExtArgs["result"]["userFile"]>
+  export type UserFileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    biomarkers?: boolean | UserFile$biomarkersArgs<ExtArgs>
+    _count?: boolean | UserFileCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type UserFileIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type UserFileIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $UserFilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "UserFile"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      biomarkers: Prisma.$BiomarkerPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      filename: string
+      originalFilename: string
+      fileType: string
+      fileSize: number
+      storageKey: string
+      labName: string | null
+      labDate: Date | null
+      biomarkersExtracted: number
+      extractionConfidence: Prisma.Decimal | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["userFile"]>
+    composites: {}
+  }
+
+  type UserFileGetPayload<S extends boolean | null | undefined | UserFileDefaultArgs> = $Result.GetResult<Prisma.$UserFilePayload, S>
+
+  type UserFileCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<UserFileFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: UserFileCountAggregateInputType | true
+    }
+
+  export interface UserFileDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['UserFile'], meta: { name: 'UserFile' } }
+    /**
+     * Find zero or one UserFile that matches the filter.
+     * @param {UserFileFindUniqueArgs} args - Arguments to find a UserFile
+     * @example
+     * // Get one UserFile
+     * const userFile = await prisma.userFile.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends UserFileFindUniqueArgs>(args: SelectSubset<T, UserFileFindUniqueArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one UserFile that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {UserFileFindUniqueOrThrowArgs} args - Arguments to find a UserFile
+     * @example
+     * // Get one UserFile
+     * const userFile = await prisma.userFile.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends UserFileFindUniqueOrThrowArgs>(args: SelectSubset<T, UserFileFindUniqueOrThrowArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first UserFile that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileFindFirstArgs} args - Arguments to find a UserFile
+     * @example
+     * // Get one UserFile
+     * const userFile = await prisma.userFile.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends UserFileFindFirstArgs>(args?: SelectSubset<T, UserFileFindFirstArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first UserFile that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileFindFirstOrThrowArgs} args - Arguments to find a UserFile
+     * @example
+     * // Get one UserFile
+     * const userFile = await prisma.userFile.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends UserFileFindFirstOrThrowArgs>(args?: SelectSubset<T, UserFileFindFirstOrThrowArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more UserFiles that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all UserFiles
+     * const userFiles = await prisma.userFile.findMany()
+     * 
+     * // Get first 10 UserFiles
+     * const userFiles = await prisma.userFile.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const userFileWithIdOnly = await prisma.userFile.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends UserFileFindManyArgs>(args?: SelectSubset<T, UserFileFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a UserFile.
+     * @param {UserFileCreateArgs} args - Arguments to create a UserFile.
+     * @example
+     * // Create one UserFile
+     * const UserFile = await prisma.userFile.create({
+     *   data: {
+     *     // ... data to create a UserFile
+     *   }
+     * })
+     * 
+     */
+    create<T extends UserFileCreateArgs>(args: SelectSubset<T, UserFileCreateArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many UserFiles.
+     * @param {UserFileCreateManyArgs} args - Arguments to create many UserFiles.
+     * @example
+     * // Create many UserFiles
+     * const userFile = await prisma.userFile.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends UserFileCreateManyArgs>(args?: SelectSubset<T, UserFileCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many UserFiles and returns the data saved in the database.
+     * @param {UserFileCreateManyAndReturnArgs} args - Arguments to create many UserFiles.
+     * @example
+     * // Create many UserFiles
+     * const userFile = await prisma.userFile.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many UserFiles and only return the `id`
+     * const userFileWithIdOnly = await prisma.userFile.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends UserFileCreateManyAndReturnArgs>(args?: SelectSubset<T, UserFileCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a UserFile.
+     * @param {UserFileDeleteArgs} args - Arguments to delete one UserFile.
+     * @example
+     * // Delete one UserFile
+     * const UserFile = await prisma.userFile.delete({
+     *   where: {
+     *     // ... filter to delete one UserFile
+     *   }
+     * })
+     * 
+     */
+    delete<T extends UserFileDeleteArgs>(args: SelectSubset<T, UserFileDeleteArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one UserFile.
+     * @param {UserFileUpdateArgs} args - Arguments to update one UserFile.
+     * @example
+     * // Update one UserFile
+     * const userFile = await prisma.userFile.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends UserFileUpdateArgs>(args: SelectSubset<T, UserFileUpdateArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more UserFiles.
+     * @param {UserFileDeleteManyArgs} args - Arguments to filter UserFiles to delete.
+     * @example
+     * // Delete a few UserFiles
+     * const { count } = await prisma.userFile.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends UserFileDeleteManyArgs>(args?: SelectSubset<T, UserFileDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more UserFiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many UserFiles
+     * const userFile = await prisma.userFile.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends UserFileUpdateManyArgs>(args: SelectSubset<T, UserFileUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more UserFiles and returns the data updated in the database.
+     * @param {UserFileUpdateManyAndReturnArgs} args - Arguments to update many UserFiles.
+     * @example
+     * // Update many UserFiles
+     * const userFile = await prisma.userFile.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more UserFiles and only return the `id`
+     * const userFileWithIdOnly = await prisma.userFile.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends UserFileUpdateManyAndReturnArgs>(args: SelectSubset<T, UserFileUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one UserFile.
+     * @param {UserFileUpsertArgs} args - Arguments to update or create a UserFile.
+     * @example
+     * // Update or create a UserFile
+     * const userFile = await prisma.userFile.upsert({
+     *   create: {
+     *     // ... data to create a UserFile
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the UserFile we want to update
+     *   }
+     * })
+     */
+    upsert<T extends UserFileUpsertArgs>(args: SelectSubset<T, UserFileUpsertArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of UserFiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileCountArgs} args - Arguments to filter UserFiles to count.
+     * @example
+     * // Count the number of UserFiles
+     * const count = await prisma.userFile.count({
+     *   where: {
+     *     // ... the filter for the UserFiles we want to count
+     *   }
+     * })
+    **/
+    count<T extends UserFileCountArgs>(
+      args?: Subset<T, UserFileCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], UserFileCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a UserFile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends UserFileAggregateArgs>(args: Subset<T, UserFileAggregateArgs>): Prisma.PrismaPromise<GetUserFileAggregateType<T>>
+
+    /**
+     * Group by UserFile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UserFileGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends UserFileGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: UserFileGroupByArgs['orderBy'] }
+        : { orderBy?: UserFileGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, UserFileGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetUserFileGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the UserFile model
+   */
+  readonly fields: UserFileFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for UserFile.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__UserFileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    biomarkers<T extends UserFile$biomarkersArgs<ExtArgs> = {}>(args?: Subset<T, UserFile$biomarkersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the UserFile model
+   */
+  interface UserFileFieldRefs {
+    readonly id: FieldRef<"UserFile", 'String'>
+    readonly userId: FieldRef<"UserFile", 'String'>
+    readonly filename: FieldRef<"UserFile", 'String'>
+    readonly originalFilename: FieldRef<"UserFile", 'String'>
+    readonly fileType: FieldRef<"UserFile", 'String'>
+    readonly fileSize: FieldRef<"UserFile", 'Int'>
+    readonly storageKey: FieldRef<"UserFile", 'String'>
+    readonly labName: FieldRef<"UserFile", 'String'>
+    readonly labDate: FieldRef<"UserFile", 'DateTime'>
+    readonly biomarkersExtracted: FieldRef<"UserFile", 'Int'>
+    readonly extractionConfidence: FieldRef<"UserFile", 'Decimal'>
+    readonly createdAt: FieldRef<"UserFile", 'DateTime'>
+    readonly updatedAt: FieldRef<"UserFile", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * UserFile findUnique
+   */
+  export type UserFileFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * Filter, which UserFile to fetch.
+     */
+    where: UserFileWhereUniqueInput
+  }
+
+  /**
+   * UserFile findUniqueOrThrow
+   */
+  export type UserFileFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * Filter, which UserFile to fetch.
+     */
+    where: UserFileWhereUniqueInput
+  }
+
+  /**
+   * UserFile findFirst
+   */
+  export type UserFileFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * Filter, which UserFile to fetch.
+     */
+    where?: UserFileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserFiles to fetch.
+     */
+    orderBy?: UserFileOrderByWithRelationInput | UserFileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for UserFiles.
+     */
+    cursor?: UserFileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserFiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserFiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserFiles.
+     */
+    distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
+  }
+
+  /**
+   * UserFile findFirstOrThrow
+   */
+  export type UserFileFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * Filter, which UserFile to fetch.
+     */
+    where?: UserFileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserFiles to fetch.
+     */
+    orderBy?: UserFileOrderByWithRelationInput | UserFileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for UserFiles.
+     */
+    cursor?: UserFileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserFiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserFiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserFiles.
+     */
+    distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
+  }
+
+  /**
+   * UserFile findMany
+   */
+  export type UserFileFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * Filter, which UserFiles to fetch.
+     */
+    where?: UserFileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UserFiles to fetch.
+     */
+    orderBy?: UserFileOrderByWithRelationInput | UserFileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing UserFiles.
+     */
+    cursor?: UserFileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UserFiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UserFiles.
+     */
+    skip?: number
+    distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
+  }
+
+  /**
+   * UserFile create
+   */
+  export type UserFileCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * The data needed to create a UserFile.
+     */
+    data: XOR<UserFileCreateInput, UserFileUncheckedCreateInput>
+  }
+
+  /**
+   * UserFile createMany
+   */
+  export type UserFileCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many UserFiles.
+     */
+    data: UserFileCreateManyInput | UserFileCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * UserFile createManyAndReturn
+   */
+  export type UserFileCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * The data used to create many UserFiles.
+     */
+    data: UserFileCreateManyInput | UserFileCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * UserFile update
+   */
+  export type UserFileUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * The data needed to update a UserFile.
+     */
+    data: XOR<UserFileUpdateInput, UserFileUncheckedUpdateInput>
+    /**
+     * Choose, which UserFile to update.
+     */
+    where: UserFileWhereUniqueInput
+  }
+
+  /**
+   * UserFile updateMany
+   */
+  export type UserFileUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update UserFiles.
+     */
+    data: XOR<UserFileUpdateManyMutationInput, UserFileUncheckedUpdateManyInput>
+    /**
+     * Filter which UserFiles to update
+     */
+    where?: UserFileWhereInput
+    /**
+     * Limit how many UserFiles to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * UserFile updateManyAndReturn
+   */
+  export type UserFileUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * The data used to update UserFiles.
+     */
+    data: XOR<UserFileUpdateManyMutationInput, UserFileUncheckedUpdateManyInput>
+    /**
+     * Filter which UserFiles to update
+     */
+    where?: UserFileWhereInput
+    /**
+     * Limit how many UserFiles to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * UserFile upsert
+   */
+  export type UserFileUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * The filter to search for the UserFile to update in case it exists.
+     */
+    where: UserFileWhereUniqueInput
+    /**
+     * In case the UserFile found by the `where` argument doesn't exist, create a new UserFile with this data.
+     */
+    create: XOR<UserFileCreateInput, UserFileUncheckedCreateInput>
+    /**
+     * In case the UserFile was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<UserFileUpdateInput, UserFileUncheckedUpdateInput>
+  }
+
+  /**
+   * UserFile delete
+   */
+  export type UserFileDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    /**
+     * Filter which UserFile to delete.
+     */
+    where: UserFileWhereUniqueInput
+  }
+
+  /**
+   * UserFile deleteMany
+   */
+  export type UserFileDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which UserFiles to delete
+     */
+    where?: UserFileWhereInput
+    /**
+     * Limit how many UserFiles to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * UserFile.biomarkers
+   */
+  export type UserFile$biomarkersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Biomarker
+     */
+    select?: BiomarkerSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Biomarker
+     */
+    omit?: BiomarkerOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: BiomarkerInclude<ExtArgs> | null
+    where?: BiomarkerWhereInput
+    orderBy?: BiomarkerOrderByWithRelationInput | BiomarkerOrderByWithRelationInput[]
+    cursor?: BiomarkerWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: BiomarkerScalarFieldEnum | BiomarkerScalarFieldEnum[]
+  }
+
+  /**
+   * UserFile without action
+   */
+  export type UserFileDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Model Biomarker
    */
 
@@ -7733,6 +9126,7 @@ export namespace Prisma {
     sourceFile: string | null
     extractionConfidence: Decimal | null
     labName: string | null
+    userFileId: string | null
     isOutOfRange: boolean | null
     isAcknowledged: boolean | null
     createdAt: Date | null
@@ -7755,6 +9149,7 @@ export namespace Prisma {
     sourceFile: string | null
     extractionConfidence: Decimal | null
     labName: string | null
+    userFileId: string | null
     isOutOfRange: boolean | null
     isAcknowledged: boolean | null
     createdAt: Date | null
@@ -7777,6 +9172,7 @@ export namespace Prisma {
     sourceFile: number
     extractionConfidence: number
     labName: number
+    userFileId: number
     isOutOfRange: number
     isAcknowledged: number
     createdAt: number
@@ -7813,6 +9209,7 @@ export namespace Prisma {
     sourceFile?: true
     extractionConfidence?: true
     labName?: true
+    userFileId?: true
     isOutOfRange?: true
     isAcknowledged?: true
     createdAt?: true
@@ -7835,6 +9232,7 @@ export namespace Prisma {
     sourceFile?: true
     extractionConfidence?: true
     labName?: true
+    userFileId?: true
     isOutOfRange?: true
     isAcknowledged?: true
     createdAt?: true
@@ -7857,6 +9255,7 @@ export namespace Prisma {
     sourceFile?: true
     extractionConfidence?: true
     labName?: true
+    userFileId?: true
     isOutOfRange?: true
     isAcknowledged?: true
     createdAt?: true
@@ -7966,6 +9365,7 @@ export namespace Prisma {
     sourceFile: string | null
     extractionConfidence: Decimal | null
     labName: string | null
+    userFileId: string | null
     isOutOfRange: boolean
     isAcknowledged: boolean
     createdAt: Date
@@ -8007,11 +9407,13 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
+    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
     history?: boolean | Biomarker$historyArgs<ExtArgs>
     _count?: boolean | BiomarkerCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["biomarker"]>
@@ -8032,11 +9434,13 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
+    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
   }, ExtArgs["result"]["biomarker"]>
 
   export type BiomarkerSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -8055,11 +9459,13 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
+    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
   }, ExtArgs["result"]["biomarker"]>
 
   export type BiomarkerSelectScalar = {
@@ -8078,29 +9484,34 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
+    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type BiomarkerOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "category" | "name" | "unit" | "valueEncrypted" | "notesEncrypted" | "normalRangeMin" | "normalRangeMax" | "normalRangeSource" | "measurementDate" | "sourceType" | "sourceFile" | "extractionConfidence" | "labName" | "isOutOfRange" | "isAcknowledged" | "createdAt" | "updatedAt", ExtArgs["result"]["biomarker"]>
+  export type BiomarkerOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "category" | "name" | "unit" | "valueEncrypted" | "notesEncrypted" | "normalRangeMin" | "normalRangeMax" | "normalRangeSource" | "measurementDate" | "sourceType" | "sourceFile" | "extractionConfidence" | "labName" | "userFileId" | "isOutOfRange" | "isAcknowledged" | "createdAt" | "updatedAt", ExtArgs["result"]["biomarker"]>
   export type BiomarkerInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
     history?: boolean | Biomarker$historyArgs<ExtArgs>
     _count?: boolean | BiomarkerCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type BiomarkerIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
   }
   export type BiomarkerIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
   }
 
   export type $BiomarkerPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Biomarker"
     objects: {
       user: Prisma.$UserPayload<ExtArgs>
+      userFile: Prisma.$UserFilePayload<ExtArgs> | null
       history: Prisma.$BiomarkerHistoryPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
@@ -8119,6 +9530,7 @@ export namespace Prisma {
       sourceFile: string | null
       extractionConfidence: Prisma.Decimal | null
       labName: string | null
+      userFileId: string | null
       isOutOfRange: boolean
       isAcknowledged: boolean
       createdAt: Date
@@ -8518,6 +9930,7 @@ export namespace Prisma {
   export interface Prisma__BiomarkerClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    userFile<T extends Biomarker$userFileArgs<ExtArgs> = {}>(args?: Subset<T, Biomarker$userFileArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     history<T extends Biomarker$historyArgs<ExtArgs> = {}>(args?: Subset<T, Biomarker$historyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -8563,6 +9976,7 @@ export namespace Prisma {
     readonly sourceFile: FieldRef<"Biomarker", 'String'>
     readonly extractionConfidence: FieldRef<"Biomarker", 'Decimal'>
     readonly labName: FieldRef<"Biomarker", 'String'>
+    readonly userFileId: FieldRef<"Biomarker", 'String'>
     readonly isOutOfRange: FieldRef<"Biomarker", 'Boolean'>
     readonly isAcknowledged: FieldRef<"Biomarker", 'Boolean'>
     readonly createdAt: FieldRef<"Biomarker", 'DateTime'>
@@ -8960,6 +10374,25 @@ export namespace Prisma {
      * Limit how many Biomarkers to delete.
      */
     limit?: number
+  }
+
+  /**
+   * Biomarker.userFile
+   */
+  export type Biomarker$userFileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    where?: UserFileWhereInput
   }
 
   /**
@@ -22042,6 +23475,25 @@ export namespace Prisma {
   export type ProviderPatientScalarFieldEnum = (typeof ProviderPatientScalarFieldEnum)[keyof typeof ProviderPatientScalarFieldEnum]
 
 
+  export const UserFileScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    filename: 'filename',
+    originalFilename: 'originalFilename',
+    fileType: 'fileType',
+    fileSize: 'fileSize',
+    storageKey: 'storageKey',
+    labName: 'labName',
+    labDate: 'labDate',
+    biomarkersExtracted: 'biomarkersExtracted',
+    extractionConfidence: 'extractionConfidence',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type UserFileScalarFieldEnum = (typeof UserFileScalarFieldEnum)[keyof typeof UserFileScalarFieldEnum]
+
+
   export const BiomarkerScalarFieldEnum: {
     id: 'id',
     userId: 'userId',
@@ -22058,6 +23510,7 @@ export namespace Prisma {
     sourceFile: 'sourceFile',
     extractionConfidence: 'extractionConfidence',
     labName: 'labName',
+    userFileId: 'userFileId',
     isOutOfRange: 'isOutOfRange',
     isAcknowledged: 'isAcknowledged',
     createdAt: 'createdAt',
@@ -22613,6 +24066,7 @@ export namespace Prisma {
     auditLogs?: AuditLogListRelationFilter
     sessions?: SessionListRelationFilter
     encryptionKeys?: UserEncryptionKeyListRelationFilter
+    files?: UserFileListRelationFilter
     providerRelationships?: ProviderPatientListRelationFilter
     patientRelationships?: ProviderPatientListRelationFilter
   }
@@ -22647,6 +24101,7 @@ export namespace Prisma {
     auditLogs?: AuditLogOrderByRelationAggregateInput
     sessions?: SessionOrderByRelationAggregateInput
     encryptionKeys?: UserEncryptionKeyOrderByRelationAggregateInput
+    files?: UserFileOrderByRelationAggregateInput
     providerRelationships?: ProviderPatientOrderByRelationAggregateInput
     patientRelationships?: ProviderPatientOrderByRelationAggregateInput
   }
@@ -22684,6 +24139,7 @@ export namespace Prisma {
     auditLogs?: AuditLogListRelationFilter
     sessions?: SessionListRelationFilter
     encryptionKeys?: UserEncryptionKeyListRelationFilter
+    files?: UserFileListRelationFilter
     providerRelationships?: ProviderPatientListRelationFilter
     patientRelationships?: ProviderPatientListRelationFilter
   }, "id" | "email" | "emailVerificationToken" | "passwordResetToken">
@@ -22996,6 +24452,106 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"ProviderPatient"> | Date | string
   }
 
+  export type UserFileWhereInput = {
+    AND?: UserFileWhereInput | UserFileWhereInput[]
+    OR?: UserFileWhereInput[]
+    NOT?: UserFileWhereInput | UserFileWhereInput[]
+    id?: UuidFilter<"UserFile"> | string
+    userId?: UuidFilter<"UserFile"> | string
+    filename?: StringFilter<"UserFile"> | string
+    originalFilename?: StringFilter<"UserFile"> | string
+    fileType?: StringFilter<"UserFile"> | string
+    fileSize?: IntFilter<"UserFile"> | number
+    storageKey?: StringFilter<"UserFile"> | string
+    labName?: StringNullableFilter<"UserFile"> | string | null
+    labDate?: DateTimeNullableFilter<"UserFile"> | Date | string | null
+    biomarkersExtracted?: IntFilter<"UserFile"> | number
+    extractionConfidence?: DecimalNullableFilter<"UserFile"> | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFilter<"UserFile"> | Date | string
+    updatedAt?: DateTimeFilter<"UserFile"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    biomarkers?: BiomarkerListRelationFilter
+  }
+
+  export type UserFileOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    filename?: SortOrder
+    originalFilename?: SortOrder
+    fileType?: SortOrder
+    fileSize?: SortOrder
+    storageKey?: SortOrder
+    labName?: SortOrderInput | SortOrder
+    labDate?: SortOrderInput | SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+    biomarkers?: BiomarkerOrderByRelationAggregateInput
+  }
+
+  export type UserFileWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: UserFileWhereInput | UserFileWhereInput[]
+    OR?: UserFileWhereInput[]
+    NOT?: UserFileWhereInput | UserFileWhereInput[]
+    userId?: UuidFilter<"UserFile"> | string
+    filename?: StringFilter<"UserFile"> | string
+    originalFilename?: StringFilter<"UserFile"> | string
+    fileType?: StringFilter<"UserFile"> | string
+    fileSize?: IntFilter<"UserFile"> | number
+    storageKey?: StringFilter<"UserFile"> | string
+    labName?: StringNullableFilter<"UserFile"> | string | null
+    labDate?: DateTimeNullableFilter<"UserFile"> | Date | string | null
+    biomarkersExtracted?: IntFilter<"UserFile"> | number
+    extractionConfidence?: DecimalNullableFilter<"UserFile"> | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFilter<"UserFile"> | Date | string
+    updatedAt?: DateTimeFilter<"UserFile"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    biomarkers?: BiomarkerListRelationFilter
+  }, "id">
+
+  export type UserFileOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    filename?: SortOrder
+    originalFilename?: SortOrder
+    fileType?: SortOrder
+    fileSize?: SortOrder
+    storageKey?: SortOrder
+    labName?: SortOrderInput | SortOrder
+    labDate?: SortOrderInput | SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: UserFileCountOrderByAggregateInput
+    _avg?: UserFileAvgOrderByAggregateInput
+    _max?: UserFileMaxOrderByAggregateInput
+    _min?: UserFileMinOrderByAggregateInput
+    _sum?: UserFileSumOrderByAggregateInput
+  }
+
+  export type UserFileScalarWhereWithAggregatesInput = {
+    AND?: UserFileScalarWhereWithAggregatesInput | UserFileScalarWhereWithAggregatesInput[]
+    OR?: UserFileScalarWhereWithAggregatesInput[]
+    NOT?: UserFileScalarWhereWithAggregatesInput | UserFileScalarWhereWithAggregatesInput[]
+    id?: UuidWithAggregatesFilter<"UserFile"> | string
+    userId?: UuidWithAggregatesFilter<"UserFile"> | string
+    filename?: StringWithAggregatesFilter<"UserFile"> | string
+    originalFilename?: StringWithAggregatesFilter<"UserFile"> | string
+    fileType?: StringWithAggregatesFilter<"UserFile"> | string
+    fileSize?: IntWithAggregatesFilter<"UserFile"> | number
+    storageKey?: StringWithAggregatesFilter<"UserFile"> | string
+    labName?: StringNullableWithAggregatesFilter<"UserFile"> | string | null
+    labDate?: DateTimeNullableWithAggregatesFilter<"UserFile"> | Date | string | null
+    biomarkersExtracted?: IntWithAggregatesFilter<"UserFile"> | number
+    extractionConfidence?: DecimalNullableWithAggregatesFilter<"UserFile"> | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"UserFile"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"UserFile"> | Date | string
+  }
+
   export type BiomarkerWhereInput = {
     AND?: BiomarkerWhereInput | BiomarkerWhereInput[]
     OR?: BiomarkerWhereInput[]
@@ -23015,11 +24571,13 @@ export namespace Prisma {
     sourceFile?: StringNullableFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableFilter<"Biomarker"> | string | null
+    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolFilter<"Biomarker"> | boolean
     createdAt?: DateTimeFilter<"Biomarker"> | Date | string
     updatedAt?: DateTimeFilter<"Biomarker"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    userFile?: XOR<UserFileNullableScalarRelationFilter, UserFileWhereInput> | null
     history?: BiomarkerHistoryListRelationFilter
   }
 
@@ -23039,11 +24597,13 @@ export namespace Prisma {
     sourceFile?: SortOrderInput | SortOrder
     extractionConfidence?: SortOrderInput | SortOrder
     labName?: SortOrderInput | SortOrder
+    userFileId?: SortOrderInput | SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
+    userFile?: UserFileOrderByWithRelationInput
     history?: BiomarkerHistoryOrderByRelationAggregateInput
   }
 
@@ -23066,11 +24626,13 @@ export namespace Prisma {
     sourceFile?: StringNullableFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableFilter<"Biomarker"> | string | null
+    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolFilter<"Biomarker"> | boolean
     createdAt?: DateTimeFilter<"Biomarker"> | Date | string
     updatedAt?: DateTimeFilter<"Biomarker"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    userFile?: XOR<UserFileNullableScalarRelationFilter, UserFileWhereInput> | null
     history?: BiomarkerHistoryListRelationFilter
   }, "id">
 
@@ -23090,6 +24652,7 @@ export namespace Prisma {
     sourceFile?: SortOrderInput | SortOrder
     extractionConfidence?: SortOrderInput | SortOrder
     labName?: SortOrderInput | SortOrder
+    userFileId?: SortOrderInput | SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
@@ -23120,6 +24683,7 @@ export namespace Prisma {
     sourceFile?: StringNullableWithAggregatesFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableWithAggregatesFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableWithAggregatesFilter<"Biomarker"> | string | null
+    userFileId?: UuidNullableWithAggregatesFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolWithAggregatesFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolWithAggregatesFilter<"Biomarker"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"Biomarker"> | Date | string
@@ -24149,6 +25713,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -24183,6 +25748,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -24217,6 +25783,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -24251,6 +25818,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -24603,6 +26171,121 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type UserFileCreateInput = {
+    id?: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutFilesInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserFileInput
+  }
+
+  export type UserFileUncheckedCreateInput = {
+    id?: string
+    userId: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserFileInput
+  }
+
+  export type UserFileUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutFilesNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserFileNestedInput
+  }
+
+  export type UserFileUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserFileNestedInput
+  }
+
+  export type UserFileCreateManyInput = {
+    id?: string
+    userId: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserFileUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserFileUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type BiomarkerCreateInput = {
     id?: string
     category: string
@@ -24623,6 +26306,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutBiomarkersInput
+    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
     history?: BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput
   }
 
@@ -24642,6 +26326,7 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
+    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
@@ -24669,6 +26354,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
+    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
     history?: BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput
   }
 
@@ -24688,6 +26374,7 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -24711,6 +26398,7 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
+    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
@@ -24754,6 +26442,7 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26028,6 +27717,12 @@ export namespace Prisma {
     none?: UserEncryptionKeyWhereInput
   }
 
+  export type UserFileListRelationFilter = {
+    every?: UserFileWhereInput
+    some?: UserFileWhereInput
+    none?: UserFileWhereInput
+  }
+
   export type ProviderPatientListRelationFilter = {
     every?: ProviderPatientWhereInput
     some?: ProviderPatientWhereInput
@@ -26068,6 +27763,10 @@ export namespace Prisma {
   }
 
   export type UserEncryptionKeyOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type UserFileOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -26446,6 +28145,93 @@ export namespace Prisma {
     _max?: NestedEnumProviderPatientStatusFilter<$PrismaModel>
   }
 
+  export type DecimalNullableFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type UserFileCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    filename?: SortOrder
+    originalFilename?: SortOrder
+    fileType?: SortOrder
+    fileSize?: SortOrder
+    storageKey?: SortOrder
+    labName?: SortOrder
+    labDate?: SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserFileAvgOrderByAggregateInput = {
+    fileSize?: SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrder
+  }
+
+  export type UserFileMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    filename?: SortOrder
+    originalFilename?: SortOrder
+    fileType?: SortOrder
+    fileSize?: SortOrder
+    storageKey?: SortOrder
+    labName?: SortOrder
+    labDate?: SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserFileMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    filename?: SortOrder
+    originalFilename?: SortOrder
+    fileType?: SortOrder
+    fileSize?: SortOrder
+    storageKey?: SortOrder
+    labName?: SortOrder
+    labDate?: SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UserFileSumOrderByAggregateInput = {
+    fileSize?: SortOrder
+    biomarkersExtracted?: SortOrder
+    extractionConfidence?: SortOrder
+  }
+
+  export type DecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedDecimalNullableFilter<$PrismaModel>
+    _sum?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedDecimalNullableFilter<$PrismaModel>
+    _max?: NestedDecimalNullableFilter<$PrismaModel>
+  }
+
   export type DecimalFilter<$PrismaModel = never> = {
     equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
     in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
@@ -26464,15 +28250,21 @@ export namespace Prisma {
     not?: NestedEnumDataSourceTypeFilter<$PrismaModel> | $Enums.DataSourceType
   }
 
-  export type DecimalNullableFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  export type UuidNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedUuidNullableFilter<$PrismaModel> | string | null
+  }
+
+  export type UserFileNullableScalarRelationFilter = {
+    is?: UserFileWhereInput | null
+    isNot?: UserFileWhereInput | null
   }
 
   export type BiomarkerHistoryListRelationFilter = {
@@ -26501,6 +28293,7 @@ export namespace Prisma {
     sourceFile?: SortOrder
     extractionConfidence?: SortOrder
     labName?: SortOrder
+    userFileId?: SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
@@ -26529,6 +28322,7 @@ export namespace Prisma {
     sourceFile?: SortOrder
     extractionConfidence?: SortOrder
     labName?: SortOrder
+    userFileId?: SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
@@ -26551,6 +28345,7 @@ export namespace Prisma {
     sourceFile?: SortOrder
     extractionConfidence?: SortOrder
     labName?: SortOrder
+    userFileId?: SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
@@ -26589,20 +28384,19 @@ export namespace Prisma {
     _max?: NestedEnumDataSourceTypeFilter<$PrismaModel>
   }
 
-  export type DecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  export type UuidNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedUuidNullableWithAggregatesFilter<$PrismaModel> | string | null
     _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedDecimalNullableFilter<$PrismaModel>
-    _sum?: NestedDecimalNullableFilter<$PrismaModel>
-    _min?: NestedDecimalNullableFilter<$PrismaModel>
-    _max?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type BiomarkerScalarRelationFilter = {
@@ -27117,18 +28911,6 @@ export namespace Prisma {
     not?: NestedEnumGoalDirectionFilter<$PrismaModel> | $Enums.GoalDirection
   }
 
-  export type UuidNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedUuidNullableFilter<$PrismaModel> | string | null
-  }
-
   export type EnumGoalStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.GoalStatus | EnumGoalStatusFieldRefInput<$PrismaModel>
     in?: $Enums.GoalStatus[] | ListEnumGoalStatusFieldRefInput<$PrismaModel>
@@ -27247,21 +29029,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumGoalDirectionFilter<$PrismaModel>
     _max?: NestedEnumGoalDirectionFilter<$PrismaModel>
-  }
-
-  export type UuidNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedUuidNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type EnumGoalStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -27511,6 +29278,13 @@ export namespace Prisma {
     connect?: UserEncryptionKeyWhereUniqueInput | UserEncryptionKeyWhereUniqueInput[]
   }
 
+  export type UserFileCreateNestedManyWithoutUserInput = {
+    create?: XOR<UserFileCreateWithoutUserInput, UserFileUncheckedCreateWithoutUserInput> | UserFileCreateWithoutUserInput[] | UserFileUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserFileCreateOrConnectWithoutUserInput | UserFileCreateOrConnectWithoutUserInput[]
+    createMany?: UserFileCreateManyUserInputEnvelope
+    connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+  }
+
   export type ProviderPatientCreateNestedManyWithoutProviderInput = {
     create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
     connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
@@ -27579,6 +29353,13 @@ export namespace Prisma {
     connectOrCreate?: UserEncryptionKeyCreateOrConnectWithoutUserInput | UserEncryptionKeyCreateOrConnectWithoutUserInput[]
     createMany?: UserEncryptionKeyCreateManyUserInputEnvelope
     connect?: UserEncryptionKeyWhereUniqueInput | UserEncryptionKeyWhereUniqueInput[]
+  }
+
+  export type UserFileUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<UserFileCreateWithoutUserInput, UserFileUncheckedCreateWithoutUserInput> | UserFileCreateWithoutUserInput[] | UserFileUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserFileCreateOrConnectWithoutUserInput | UserFileCreateOrConnectWithoutUserInput[]
+    createMany?: UserFileCreateManyUserInputEnvelope
+    connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
   }
 
   export type ProviderPatientUncheckedCreateNestedManyWithoutProviderInput = {
@@ -27739,6 +29520,20 @@ export namespace Prisma {
     deleteMany?: UserEncryptionKeyScalarWhereInput | UserEncryptionKeyScalarWhereInput[]
   }
 
+  export type UserFileUpdateManyWithoutUserNestedInput = {
+    create?: XOR<UserFileCreateWithoutUserInput, UserFileUncheckedCreateWithoutUserInput> | UserFileCreateWithoutUserInput[] | UserFileUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserFileCreateOrConnectWithoutUserInput | UserFileCreateOrConnectWithoutUserInput[]
+    upsert?: UserFileUpsertWithWhereUniqueWithoutUserInput | UserFileUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: UserFileCreateManyUserInputEnvelope
+    set?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    disconnect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    delete?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    update?: UserFileUpdateWithWhereUniqueWithoutUserInput | UserFileUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: UserFileUpdateManyWithWhereWithoutUserInput | UserFileUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
+  }
+
   export type ProviderPatientUpdateManyWithoutProviderNestedInput = {
     create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
     connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
@@ -27879,6 +29674,20 @@ export namespace Prisma {
     deleteMany?: UserEncryptionKeyScalarWhereInput | UserEncryptionKeyScalarWhereInput[]
   }
 
+  export type UserFileUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<UserFileCreateWithoutUserInput, UserFileUncheckedCreateWithoutUserInput> | UserFileCreateWithoutUserInput[] | UserFileUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: UserFileCreateOrConnectWithoutUserInput | UserFileCreateOrConnectWithoutUserInput[]
+    upsert?: UserFileUpsertWithWhereUniqueWithoutUserInput | UserFileUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: UserFileCreateManyUserInputEnvelope
+    set?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    disconnect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    delete?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+    update?: UserFileUpdateWithWhereUniqueWithoutUserInput | UserFileUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: UserFileUpdateManyWithWhereWithoutUserInput | UserFileUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
+  }
+
   export type ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput = {
     create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
     connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
@@ -27971,10 +29780,80 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutPatientRelationshipsInput, UserUpdateWithoutPatientRelationshipsInput>, UserUncheckedUpdateWithoutPatientRelationshipsInput>
   }
 
+  export type UserCreateNestedOneWithoutFilesInput = {
+    create?: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFilesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type BiomarkerCreateNestedManyWithoutUserFileInput = {
+    create?: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput> | BiomarkerCreateWithoutUserFileInput[] | BiomarkerUncheckedCreateWithoutUserFileInput[]
+    connectOrCreate?: BiomarkerCreateOrConnectWithoutUserFileInput | BiomarkerCreateOrConnectWithoutUserFileInput[]
+    createMany?: BiomarkerCreateManyUserFileInputEnvelope
+    connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+  }
+
+  export type BiomarkerUncheckedCreateNestedManyWithoutUserFileInput = {
+    create?: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput> | BiomarkerCreateWithoutUserFileInput[] | BiomarkerUncheckedCreateWithoutUserFileInput[]
+    connectOrCreate?: BiomarkerCreateOrConnectWithoutUserFileInput | BiomarkerCreateOrConnectWithoutUserFileInput[]
+    createMany?: BiomarkerCreateManyUserFileInputEnvelope
+    connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+  }
+
+  export type NullableDecimalFieldUpdateOperationsInput = {
+    set?: Decimal | DecimalJsLike | number | string | null
+    increment?: Decimal | DecimalJsLike | number | string
+    decrement?: Decimal | DecimalJsLike | number | string
+    multiply?: Decimal | DecimalJsLike | number | string
+    divide?: Decimal | DecimalJsLike | number | string
+  }
+
+  export type UserUpdateOneRequiredWithoutFilesNestedInput = {
+    create?: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFilesInput
+    upsert?: UserUpsertWithoutFilesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFilesInput, UserUpdateWithoutFilesInput>, UserUncheckedUpdateWithoutFilesInput>
+  }
+
+  export type BiomarkerUpdateManyWithoutUserFileNestedInput = {
+    create?: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput> | BiomarkerCreateWithoutUserFileInput[] | BiomarkerUncheckedCreateWithoutUserFileInput[]
+    connectOrCreate?: BiomarkerCreateOrConnectWithoutUserFileInput | BiomarkerCreateOrConnectWithoutUserFileInput[]
+    upsert?: BiomarkerUpsertWithWhereUniqueWithoutUserFileInput | BiomarkerUpsertWithWhereUniqueWithoutUserFileInput[]
+    createMany?: BiomarkerCreateManyUserFileInputEnvelope
+    set?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    disconnect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    delete?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    update?: BiomarkerUpdateWithWhereUniqueWithoutUserFileInput | BiomarkerUpdateWithWhereUniqueWithoutUserFileInput[]
+    updateMany?: BiomarkerUpdateManyWithWhereWithoutUserFileInput | BiomarkerUpdateManyWithWhereWithoutUserFileInput[]
+    deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
+  }
+
+  export type BiomarkerUncheckedUpdateManyWithoutUserFileNestedInput = {
+    create?: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput> | BiomarkerCreateWithoutUserFileInput[] | BiomarkerUncheckedCreateWithoutUserFileInput[]
+    connectOrCreate?: BiomarkerCreateOrConnectWithoutUserFileInput | BiomarkerCreateOrConnectWithoutUserFileInput[]
+    upsert?: BiomarkerUpsertWithWhereUniqueWithoutUserFileInput | BiomarkerUpsertWithWhereUniqueWithoutUserFileInput[]
+    createMany?: BiomarkerCreateManyUserFileInputEnvelope
+    set?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    disconnect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    delete?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+    update?: BiomarkerUpdateWithWhereUniqueWithoutUserFileInput | BiomarkerUpdateWithWhereUniqueWithoutUserFileInput[]
+    updateMany?: BiomarkerUpdateManyWithWhereWithoutUserFileInput | BiomarkerUpdateManyWithWhereWithoutUserFileInput[]
+    deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
+  }
+
   export type UserCreateNestedOneWithoutBiomarkersInput = {
     create?: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
     connectOrCreate?: UserCreateOrConnectWithoutBiomarkersInput
     connect?: UserWhereUniqueInput
+  }
+
+  export type UserFileCreateNestedOneWithoutBiomarkersInput = {
+    create?: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
+    connectOrCreate?: UserFileCreateOrConnectWithoutBiomarkersInput
+    connect?: UserFileWhereUniqueInput
   }
 
   export type BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput = {
@@ -28003,20 +29882,22 @@ export namespace Prisma {
     set?: $Enums.DataSourceType
   }
 
-  export type NullableDecimalFieldUpdateOperationsInput = {
-    set?: Decimal | DecimalJsLike | number | string | null
-    increment?: Decimal | DecimalJsLike | number | string
-    decrement?: Decimal | DecimalJsLike | number | string
-    multiply?: Decimal | DecimalJsLike | number | string
-    divide?: Decimal | DecimalJsLike | number | string
-  }
-
   export type UserUpdateOneRequiredWithoutBiomarkersNestedInput = {
     create?: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
     connectOrCreate?: UserCreateOrConnectWithoutBiomarkersInput
     upsert?: UserUpsertWithoutBiomarkersInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutBiomarkersInput, UserUpdateWithoutBiomarkersInput>, UserUncheckedUpdateWithoutBiomarkersInput>
+  }
+
+  export type UserFileUpdateOneWithoutBiomarkersNestedInput = {
+    create?: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
+    connectOrCreate?: UserFileCreateOrConnectWithoutBiomarkersInput
+    upsert?: UserFileUpsertWithoutBiomarkersInput
+    disconnect?: UserFileWhereInput | boolean
+    delete?: UserFileWhereInput | boolean
+    connect?: UserFileWhereUniqueInput
+    update?: XOR<XOR<UserFileUpdateToOneWithWhereWithoutBiomarkersInput, UserFileUpdateWithoutBiomarkersInput>, UserFileUncheckedUpdateWithoutBiomarkersInput>
   }
 
   export type BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput = {
@@ -28660,6 +30541,33 @@ export namespace Prisma {
     _max?: NestedEnumProviderPatientStatusFilter<$PrismaModel>
   }
 
+  export type NestedDecimalNullableFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type NestedDecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedDecimalNullableFilter<$PrismaModel>
+    _sum?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedDecimalNullableFilter<$PrismaModel>
+    _max?: NestedDecimalNullableFilter<$PrismaModel>
+  }
+
   export type NestedDecimalFilter<$PrismaModel = never> = {
     equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
     in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
@@ -28678,15 +30586,15 @@ export namespace Prisma {
     not?: NestedEnumDataSourceTypeFilter<$PrismaModel> | $Enums.DataSourceType
   }
 
-  export type NestedDecimalNullableFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  export type NestedUuidNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedUuidNullableFilter<$PrismaModel> | string | null
   }
 
   export type NestedDecimalWithAggregatesFilter<$PrismaModel = never> = {
@@ -28715,20 +30623,18 @@ export namespace Prisma {
     _max?: NestedEnumDataSourceTypeFilter<$PrismaModel>
   }
 
-  export type NestedDecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  export type NestedUuidNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedUuidNullableWithAggregatesFilter<$PrismaModel> | string | null
     _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedDecimalNullableFilter<$PrismaModel>
-    _sum?: NestedDecimalNullableFilter<$PrismaModel>
-    _min?: NestedDecimalNullableFilter<$PrismaModel>
-    _max?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumPlanTypeFilter<$PrismaModel = never> = {
@@ -28840,17 +30746,6 @@ export namespace Prisma {
     not?: NestedEnumGoalDirectionFilter<$PrismaModel> | $Enums.GoalDirection
   }
 
-  export type NestedUuidNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedUuidNullableFilter<$PrismaModel> | string | null
-  }
-
   export type NestedEnumGoalStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.GoalStatus | EnumGoalStatusFieldRefInput<$PrismaModel>
     in?: $Enums.GoalStatus[] | ListEnumGoalStatusFieldRefInput<$PrismaModel>
@@ -28873,20 +30768,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumGoalDirectionFilter<$PrismaModel>
     _max?: NestedEnumGoalDirectionFilter<$PrismaModel>
-  }
-
-  export type NestedUuidNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedUuidNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumGoalStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -28962,6 +30843,7 @@ export namespace Prisma {
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
     history?: BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput
   }
 
@@ -28980,6 +30862,7 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
+    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
@@ -29285,6 +31168,48 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type UserFileCreateWithoutUserInput = {
+    id?: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserFileInput
+  }
+
+  export type UserFileUncheckedCreateWithoutUserInput = {
+    id?: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserFileInput
+  }
+
+  export type UserFileCreateOrConnectWithoutUserInput = {
+    where: UserFileWhereUniqueInput
+    create: XOR<UserFileCreateWithoutUserInput, UserFileUncheckedCreateWithoutUserInput>
+  }
+
+  export type UserFileCreateManyUserInputEnvelope = {
+    data: UserFileCreateManyUserInput | UserFileCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type ProviderPatientCreateWithoutProviderInput = {
     id?: string
     canViewBiomarkers?: boolean
@@ -29408,6 +31333,7 @@ export namespace Prisma {
     sourceFile?: StringNullableFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableFilter<"Biomarker"> | string | null
+    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolFilter<"Biomarker"> | boolean
     createdAt?: DateTimeFilter<"Biomarker"> | Date | string
@@ -29659,6 +31585,41 @@ export namespace Prisma {
     rotatedAt?: DateTimeNullableFilter<"UserEncryptionKey"> | Date | string | null
   }
 
+  export type UserFileUpsertWithWhereUniqueWithoutUserInput = {
+    where: UserFileWhereUniqueInput
+    update: XOR<UserFileUpdateWithoutUserInput, UserFileUncheckedUpdateWithoutUserInput>
+    create: XOR<UserFileCreateWithoutUserInput, UserFileUncheckedCreateWithoutUserInput>
+  }
+
+  export type UserFileUpdateWithWhereUniqueWithoutUserInput = {
+    where: UserFileWhereUniqueInput
+    data: XOR<UserFileUpdateWithoutUserInput, UserFileUncheckedUpdateWithoutUserInput>
+  }
+
+  export type UserFileUpdateManyWithWhereWithoutUserInput = {
+    where: UserFileScalarWhereInput
+    data: XOR<UserFileUpdateManyMutationInput, UserFileUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type UserFileScalarWhereInput = {
+    AND?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
+    OR?: UserFileScalarWhereInput[]
+    NOT?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
+    id?: UuidFilter<"UserFile"> | string
+    userId?: UuidFilter<"UserFile"> | string
+    filename?: StringFilter<"UserFile"> | string
+    originalFilename?: StringFilter<"UserFile"> | string
+    fileType?: StringFilter<"UserFile"> | string
+    fileSize?: IntFilter<"UserFile"> | number
+    storageKey?: StringFilter<"UserFile"> | string
+    labName?: StringNullableFilter<"UserFile"> | string | null
+    labDate?: DateTimeNullableFilter<"UserFile"> | Date | string | null
+    biomarkersExtracted?: IntFilter<"UserFile"> | number
+    extractionConfidence?: DecimalNullableFilter<"UserFile"> | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFilter<"UserFile"> | Date | string
+    updatedAt?: DateTimeFilter<"UserFile"> | Date | string
+  }
+
   export type ProviderPatientUpsertWithWhereUniqueWithoutProviderInput = {
     where: ProviderPatientWhereUniqueInput
     update: XOR<ProviderPatientUpdateWithoutProviderInput, ProviderPatientUncheckedUpdateWithoutProviderInput>
@@ -29741,6 +31702,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -29774,6 +31736,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -29823,6 +31786,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -29856,6 +31820,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -29889,6 +31854,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -29922,6 +31888,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -29971,6 +31938,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -30004,6 +31972,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -30038,6 +32007,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
@@ -30071,6 +32041,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
@@ -30109,6 +32080,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
   }
 
@@ -30142,6 +32114,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
   }
 
@@ -30191,6 +32164,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
@@ -30224,6 +32198,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
@@ -30268,6 +32243,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
   }
 
@@ -30301,7 +32277,232 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+  }
+
+  export type UserCreateWithoutFilesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+  }
+
+  export type UserUncheckedCreateWithoutFilesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+  }
+
+  export type UserCreateOrConnectWithoutFilesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+  }
+
+  export type BiomarkerCreateWithoutUserFileInput = {
+    id?: string
+    category: string
+    name: string
+    unit: string
+    valueEncrypted: string
+    notesEncrypted?: string | null
+    normalRangeMin: Decimal | DecimalJsLike | number | string
+    normalRangeMax: Decimal | DecimalJsLike | number | string
+    normalRangeSource?: string | null
+    measurementDate: Date | string
+    sourceType?: $Enums.DataSourceType
+    sourceFile?: string | null
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    labName?: string | null
+    isOutOfRange?: boolean
+    isAcknowledged?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutBiomarkersInput
+    history?: BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput
+  }
+
+  export type BiomarkerUncheckedCreateWithoutUserFileInput = {
+    id?: string
+    userId: string
+    category: string
+    name: string
+    unit: string
+    valueEncrypted: string
+    notesEncrypted?: string | null
+    normalRangeMin: Decimal | DecimalJsLike | number | string
+    normalRangeMax: Decimal | DecimalJsLike | number | string
+    normalRangeSource?: string | null
+    measurementDate: Date | string
+    sourceType?: $Enums.DataSourceType
+    sourceFile?: string | null
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    labName?: string | null
+    isOutOfRange?: boolean
+    isAcknowledged?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    history?: BiomarkerHistoryUncheckedCreateNestedManyWithoutBiomarkerInput
+  }
+
+  export type BiomarkerCreateOrConnectWithoutUserFileInput = {
+    where: BiomarkerWhereUniqueInput
+    create: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput>
+  }
+
+  export type BiomarkerCreateManyUserFileInputEnvelope = {
+    data: BiomarkerCreateManyUserFileInput | BiomarkerCreateManyUserFileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UserUpsertWithoutFilesInput = {
+    update: XOR<UserUpdateWithoutFilesInput, UserUncheckedUpdateWithoutFilesInput>
+    create: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutFilesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutFilesInput, UserUncheckedUpdateWithoutFilesInput>
+  }
+
+  export type UserUpdateWithoutFilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutFilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+  }
+
+  export type BiomarkerUpsertWithWhereUniqueWithoutUserFileInput = {
+    where: BiomarkerWhereUniqueInput
+    update: XOR<BiomarkerUpdateWithoutUserFileInput, BiomarkerUncheckedUpdateWithoutUserFileInput>
+    create: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput>
+  }
+
+  export type BiomarkerUpdateWithWhereUniqueWithoutUserFileInput = {
+    where: BiomarkerWhereUniqueInput
+    data: XOR<BiomarkerUpdateWithoutUserFileInput, BiomarkerUncheckedUpdateWithoutUserFileInput>
+  }
+
+  export type BiomarkerUpdateManyWithWhereWithoutUserFileInput = {
+    where: BiomarkerScalarWhereInput
+    data: XOR<BiomarkerUpdateManyMutationInput, BiomarkerUncheckedUpdateManyWithoutUserFileInput>
   }
 
   export type UserCreateWithoutBiomarkersInput = {
@@ -30333,6 +32534,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -30366,6 +32568,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -30373,6 +32576,43 @@ export namespace Prisma {
   export type UserCreateOrConnectWithoutBiomarkersInput = {
     where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
+  }
+
+  export type UserFileCreateWithoutBiomarkersInput = {
+    id?: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutFilesInput
+  }
+
+  export type UserFileUncheckedCreateWithoutBiomarkersInput = {
+    id?: string
+    userId: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserFileCreateOrConnectWithoutBiomarkersInput = {
+    where: UserFileWhereUniqueInput
+    create: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
   }
 
   export type BiomarkerHistoryCreateWithoutBiomarkerInput = {
@@ -30439,6 +32679,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -30472,8 +32713,52 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+  }
+
+  export type UserFileUpsertWithoutBiomarkersInput = {
+    update: XOR<UserFileUpdateWithoutBiomarkersInput, UserFileUncheckedUpdateWithoutBiomarkersInput>
+    create: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
+    where?: UserFileWhereInput
+  }
+
+  export type UserFileUpdateToOneWithWhereWithoutBiomarkersInput = {
+    where?: UserFileWhereInput
+    data: XOR<UserFileUpdateWithoutBiomarkersInput, UserFileUncheckedUpdateWithoutBiomarkersInput>
+  }
+
+  export type UserFileUpdateWithoutBiomarkersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutFilesNestedInput
+  }
+
+  export type UserFileUncheckedUpdateWithoutBiomarkersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type BiomarkerHistoryUpsertWithWhereUniqueWithoutBiomarkerInput = {
@@ -30523,6 +32808,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutBiomarkersInput
+    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
   }
 
   export type BiomarkerUncheckedCreateWithoutHistoryInput = {
@@ -30541,6 +32827,7 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
+    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
@@ -30583,6 +32870,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
+    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
   }
 
   export type BiomarkerUncheckedUpdateWithoutHistoryInput = {
@@ -30601,6 +32889,7 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -30636,6 +32925,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -30669,6 +32959,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -30762,6 +33053,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -30795,6 +33087,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -30965,6 +33258,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -30998,6 +33292,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -31111,6 +33406,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -31144,6 +33440,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -31383,6 +33680,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -31416,6 +33714,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -31465,6 +33764,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -31498,6 +33798,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -31531,6 +33832,7 @@ export namespace Prisma {
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -31564,6 +33866,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -31639,6 +33942,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -31672,6 +33976,7 @@ export namespace Prisma {
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -31845,6 +34150,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
@@ -31878,6 +34184,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
@@ -31927,6 +34234,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
@@ -31960,6 +34268,7 @@ export namespace Prisma {
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
@@ -31979,6 +34288,7 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
+    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
@@ -32090,6 +34400,21 @@ export namespace Prisma {
     rotatedAt?: Date | string | null
   }
 
+  export type UserFileCreateManyUserInput = {
+    id?: string
+    filename: string
+    originalFilename: string
+    fileType: string
+    fileSize: number
+    storageKey: string
+    labName?: string | null
+    labDate?: Date | string | null
+    biomarkersExtracted?: number
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type ProviderPatientCreateManyProviderInput = {
     id?: string
     patientId: string
@@ -32143,6 +34468,7 @@ export namespace Prisma {
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
     history?: BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput
   }
 
@@ -32161,6 +34487,7 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -32183,6 +34510,7 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -32512,6 +34840,53 @@ export namespace Prisma {
     rotatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
+  export type UserFileUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    biomarkers?: BiomarkerUpdateManyWithoutUserFileNestedInput
+  }
+
+  export type UserFileUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserFileNestedInput
+  }
+
+  export type UserFileUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    filename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: StringFieldUpdateOperationsInput | string
+    fileType?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    storageKey?: StringFieldUpdateOperationsInput | string
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    labDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    biomarkersExtracted?: IntFieldUpdateOperationsInput | number
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type ProviderPatientUpdateWithoutProviderInput = {
     id?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
@@ -32610,6 +34985,96 @@ export namespace Prisma {
     consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BiomarkerCreateManyUserFileInput = {
+    id?: string
+    userId: string
+    category: string
+    name: string
+    unit: string
+    valueEncrypted: string
+    notesEncrypted?: string | null
+    normalRangeMin: Decimal | DecimalJsLike | number | string
+    normalRangeMax: Decimal | DecimalJsLike | number | string
+    normalRangeSource?: string | null
+    measurementDate: Date | string
+    sourceType?: $Enums.DataSourceType
+    sourceFile?: string | null
+    extractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    labName?: string | null
+    isOutOfRange?: boolean
+    isAcknowledged?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type BiomarkerUpdateWithoutUserFileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    category?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    unit?: StringFieldUpdateOperationsInput | string
+    valueEncrypted?: StringFieldUpdateOperationsInput | string
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    normalRangeMin?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    normalRangeMax?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    normalRangeSource?: NullableStringFieldUpdateOperationsInput | string | null
+    measurementDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
+    isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
+    history?: BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput
+  }
+
+  export type BiomarkerUncheckedUpdateWithoutUserFileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    category?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    unit?: StringFieldUpdateOperationsInput | string
+    valueEncrypted?: StringFieldUpdateOperationsInput | string
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    normalRangeMin?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    normalRangeMax?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    normalRangeSource?: NullableStringFieldUpdateOperationsInput | string | null
+    measurementDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
+    isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    history?: BiomarkerHistoryUncheckedUpdateManyWithoutBiomarkerNestedInput
+  }
+
+  export type BiomarkerUncheckedUpdateManyWithoutUserFileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    category?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    unit?: StringFieldUpdateOperationsInput | string
+    valueEncrypted?: StringFieldUpdateOperationsInput | string
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    normalRangeMin?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    normalRangeMax?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    normalRangeSource?: NullableStringFieldUpdateOperationsInput | string | null
+    measurementDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    sourceType?: EnumDataSourceTypeFieldUpdateOperationsInput | $Enums.DataSourceType
+    sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
+    extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    labName?: NullableStringFieldUpdateOperationsInput | string | null
+    isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
+    isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

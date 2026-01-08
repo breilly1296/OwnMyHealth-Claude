@@ -64,11 +64,11 @@ export interface BiomarkerCategory {
   name: string;
   description: string;
   icon: string;
-  group?: 'overview' | 'insurance' | 'biomarkers';
+  group?: 'overview' | 'files' | 'insurance' | 'biomarkers';
 }
 
 export interface NavGroup {
-  id: 'overview' | 'insurance' | 'biomarkers';
+  id: 'overview' | 'files' | 'insurance' | 'biomarkers';
   label: string;
   icon: string;
   collapsible: boolean;
@@ -108,6 +108,23 @@ export interface ProcessingResult {
   errors?: string[];
   processingTime: number;
   confidence: number;
+}
+
+// User File Types
+export interface UserFile {
+  id: string;
+  filename: string;
+  originalFilename: string;
+  fileType: string;
+  fileSize: number;
+  storageKey: string;
+  labName: string | null;
+  labDate: string | null;
+  biomarkersExtracted: number;
+  extractionConfidence: number | null;
+  categories: string[];
+  createdAt: string;
+  downloadUrl?: string;
 }
 
 // Insurance SBC Types

@@ -24,12 +24,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 7.1.0
- * Query Engine version: ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba
+ * Prisma Client JS version: 7.2.0
+ * Query Engine version: 0c8ef2ce45c83248ab3df073180d5eda9e8be7a3
  */
 Prisma.prismaVersion = {
-  client: "7.1.0",
-  engine: "ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba"
+  client: "7.2.0",
+  engine: "0c8ef2ce45c83248ab3df073180d5eda9e8be7a3"
 }
 
 Prisma.PrismaClientKnownRequestError = () => {
@@ -184,6 +184,22 @@ exports.Prisma.ProviderPatientScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.UserFileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  filename: 'filename',
+  originalFilename: 'originalFilename',
+  fileType: 'fileType',
+  fileSize: 'fileSize',
+  storageKey: 'storageKey',
+  labName: 'labName',
+  labDate: 'labDate',
+  biomarkersExtracted: 'biomarkersExtracted',
+  extractionConfidence: 'extractionConfidence',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.BiomarkerScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -200,6 +216,7 @@ exports.Prisma.BiomarkerScalarFieldEnum = {
   sourceFile: 'sourceFile',
   extractionConfidence: 'extractionConfidence',
   labName: 'labName',
+  userFileId: 'userFileId',
   isOutOfRange: 'isOutOfRange',
   isAcknowledged: 'isAcknowledged',
   createdAt: 'createdAt',
@@ -510,6 +527,7 @@ exports.Prisma.ModelName = {
   Session: 'Session',
   UserEncryptionKey: 'UserEncryptionKey',
   ProviderPatient: 'ProviderPatient',
+  UserFile: 'UserFile',
   Biomarker: 'Biomarker',
   BiomarkerHistory: 'BiomarkerHistory',
   InsurancePlan: 'InsurancePlan',

@@ -26,6 +26,8 @@ import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, Biom
 import { InsuranceSBCUpload, InsurancePlanViewer, EnhancedInsuranceUpload, InsurancePlanCompare, InsuranceHub, InsuranceKnowledgeBase } from '../insurance';
 // Upload components
 import { PDFUploadModal, ClinicalFileUpload, LabUploadModal } from '../upload';
+// Files components
+import FilesPage from '../files/FilesPage';
 // Settings components
 import { AccountSettingsPage } from '../settings';
 // Dashboard components
@@ -561,6 +563,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return <InsuranceKnowledgeBase plans={insurancePlans} />;
   };
 
+  const renderFilesContent = () => {
+    return (
+      <FilesPage onUploadClick={() => setIsLabUploadModalOpen(true)} />
+    );
+  };
+
   const renderCategoryContent = () => {
     // Defensive null check to prevent "Cannot read properties of undefined" errors
     const safeFilteredBiomarkers = filteredBiomarkers || [];
@@ -930,6 +938,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
            selectedCategory === 'Insurance' ? renderInsuranceContent() :
            selectedCategory === 'Insurance Guide' ? renderInsuranceGuideContent() :
            selectedCategory === 'Knowledge Base' ? renderKnowledgeBaseContent() :
+           selectedCategory === 'Files' ? renderFilesContent() :
            renderCategoryContent()}
         </main>
       </div>

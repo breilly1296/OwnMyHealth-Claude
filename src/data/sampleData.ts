@@ -209,6 +209,7 @@ export const initialBiomarkers: Biomarker[] = [
 // Navigation groups for sidebar organization
 export const navGroups: NavGroup[] = [
   { id: 'overview', label: 'Overview', icon: 'LayoutDashboard', collapsible: false },
+  { id: 'files', label: 'My Reports', icon: 'FolderOpen', collapsible: false },
   { id: 'insurance', label: 'Insurance & Coverage', icon: 'Shield', collapsible: true },
   { id: 'biomarkers', label: 'Biomarkers', icon: 'Activity', collapsible: true },
 ];
@@ -217,6 +218,9 @@ export const navGroups: NavGroup[] = [
 export const categories: BiomarkerCategory[] = [
   // Overview - Always visible
   { name: 'Dashboard', description: 'Track your biomarkers and health data', icon: 'BarChart3', group: 'overview' },
+
+  // My Reports - File repository
+  { name: 'Files', description: 'View and manage uploaded lab reports', icon: 'FileText', group: 'files' },
 
   // Insurance & Coverage
   { name: 'Insurance', description: 'Manage plans, track costs, and learn', icon: 'Shield', group: 'insurance' },

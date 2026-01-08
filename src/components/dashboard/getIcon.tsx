@@ -24,6 +24,9 @@ import {
   Bean,
   Pill,
   Bolt,
+  // File icons
+  FolderOpen,
+  FileText,
   // Category icons
   Waves, // Thyroid
   Candy, // Diabetes
@@ -86,6 +89,9 @@ export function getIcon(iconName: string): JSX.Element {
     Bug: <Bug className="w-5 h-5" />,
     Flower2: <Flower2 className="w-5 h-5" />,
     Wind: <Wind className="w-5 h-5" />,
+    // File icons
+    FolderOpen: <FolderOpen className="w-5 h-5" />,
+    FileText: <FileText className="w-5 h-5" />,
   };
   return icons[iconName] || <Activity className="w-5 h-5" />;
 }

@@ -15,6 +15,8 @@ import { parseSBC } from '../services/pdfParser.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { processDocument, extractDateFromText, extractLabNameFromText } from '../services/ocrService.js';
+import { uploadFile as uploadToGCS } from '../services/storageService.js';
+import { logger } from '../utils/logger.js';
 
 const LAB_REPORT_RESOURCE = 'LabReportUpload';
 const SBC_RESOURCE = 'SBCUpload';
@@ -72,6 +74,11 @@ interface LabResultOCRResponse {
     processingTimeMs: number;
     pageCount: number;
     documentType: string;
+  };
+  file?: {
+    id: string;
+    filename: string;
+    storageKey: string;
   };
 }
 
@@ -315,6 +322,7 @@ export async function uploadSBC(
 /**
  * Upload and process a lab result using OCR (Google Document AI)
  * Supports PDF and image files (PNG, JPG, TIFF)
+ * Files are stored in Google Cloud Storage for later viewing/downloading.
  * POST /api/v1/upload/lab-results-ocr
  */
 export async function uploadLabResultOCR(
@@ -377,6 +385,69 @@ export async function uploadLabResultOCR(
   const reportDateStr = ocrResult.metadata.labDate || extractDateFromText(ocrResult.text);
   const reportDate = reportDateStr ? new Date(reportDateStr) : new Date();
 
+  // Calculate average extraction confidence
+  const avgConfidence =
+    ocrResult.biomarkers.reduce((sum, b) => sum + b.confidence, 0) /
+    ocrResult.biomarkers.length;
+
+  // Generate a unique file ID
+  const fileId = crypto.randomUUID();
+
+  // Upload file to GCS
+  let storageKey: string | null = null;
+  try {
+    storageKey = await uploadToGCS(userId, fileId, file.buffer, file.mimetype);
+    logger.info('File uploaded to GCS', { data: { fileId, storageKey, userId } });
+  } catch (error) {
+    // Log error but continue - we can still create biomarkers without file storage
+    logger.error('Failed to upload file to GCS', {
+      data: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fileId,
+        userId,
+      },
+    });
+  }
+
+  // Create UserFile record if GCS upload succeeded
+  let userFile: { id: string; filename: string; storageKey: string } | null = null;
+  if (storageKey) {
+    try {
+      const createdFile = await prisma.userFile.create({
+        data: {
+          id: fileId,
+          userId,
+          filename: labName
+            ? `${labName} - ${reportDate.toLocaleDateString()}`
+            : file.originalname,
+          originalFilename: file.originalname,
+          fileType: file.mimetype,
+          fileSize: file.size,
+          storageKey,
+          labName: labName || null,
+          labDate: reportDate,
+          biomarkersExtracted: ocrResult.biomarkers.length,
+          extractionConfidence: avgConfidence,
+        },
+      });
+      userFile = {
+        id: createdFile.id,
+        filename: createdFile.filename,
+        storageKey: createdFile.storageKey,
+      };
+      logger.info('UserFile record created', { data: { fileId: createdFile.id, userId } });
+    } catch (error) {
+      logger.error('Failed to create UserFile record', {
+        data: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          fileId,
+          userId,
+        },
+      });
+      // Continue without file record - biomarkers can still be created
+    }
+  }
+
   // Create biomarkers in database
   const createdBiomarkers: {
     id: string;
@@ -415,6 +486,8 @@ export async function uploadLabResultOCR(
         normalRangeSource: biomarker.normalRange.source || 'OCR Extraction',
         measurementDate: reportDate,
         isOutOfRange,
+        // Link to UserFile if created
+        userFileId: userFile?.id || null,
       },
     });
 
@@ -427,11 +500,6 @@ export async function uploadLabResultOCR(
       isOutOfRange,
     });
   }
-
-  // Calculate average extraction confidence
-  const avgConfidence =
-    ocrResult.biomarkers.reduce((sum, b) => sum + b.confidence, 0) /
-    ocrResult.biomarkers.length;
 
   // Audit log: successful upload and extraction
   await auditService.logCreate(
@@ -446,6 +514,8 @@ export async function uploadLabResultOCR(
       extractionConfidence: avgConfidence,
       ocrConfidence: ocrResult.confidence,
       processingTimeMs: ocrResult.metadata.processingTimeMs,
+      fileId: userFile?.id,
+      storageKey: storageKey || undefined,
     },
     { req, userId }
   );
@@ -463,6 +533,7 @@ export async function uploadLabResultOCR(
         pageCount: ocrResult.pageCount,
         documentType: ocrResult.metadata.documentType || file.mimetype,
       },
+      file: userFile || undefined,
     },
   };
 

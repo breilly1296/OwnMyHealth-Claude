@@ -80,6 +80,14 @@ export const config = {
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
 
+  // Google Cloud Platform Configuration
+  gcp: {
+    bucketName: process.env.GCS_BUCKET_NAME || 'ownmyhealth-user-files',
+    projectId: process.env.GCP_PROJECT_ID || '',
+    // Path to service account credentials JSON file
+    credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
+  },
+
   // API Versioning
   apiVersion: 'v1',
 
