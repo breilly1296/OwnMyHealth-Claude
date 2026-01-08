@@ -199,11 +199,27 @@ export async function processDocument(
     const extractedText = document.text || '';
     const pageCount = document.pages?.length || 1;
 
-    // DEBUG: Log extracted text preview for troubleshooting
-    console.log('[OCR DEBUG] Extracted text preview', {
+    // DEBUG: Log processor info
+    console.log('[OCR DEBUG] Processor used:', {
+      processorName: processorName,
+      projectId: process.env.GCP_PROJECT_ID,
+      processorId: process.env.GCP_PROCESSOR_ID,
+      location: process.env.GCP_LOCATION || 'us',
+    });
+
+    // DEBUG: Log FULL extracted text (values might be missing!)
+    console.log('[OCR DEBUG] ========== FULL OCR TEXT START ==========');
+    console.log(extractedText);
+    console.log('[OCR DEBUG] ========== FULL OCR TEXT END ==========');
+
+    // DEBUG: Log text stats
+    console.log('[OCR DEBUG] Text stats:', {
       textLength: extractedText.length,
       pageCount,
-      textPreview: extractedText.substring(0, 500).replace(/\n/g, ' '),
+      lineCount: extractedText.split('\n').length,
+      hasNumbers: /\d{2,}/.test(extractedText),
+      sample193: extractedText.includes('193'),
+      sample242: extractedText.includes('242'),
     });
 
     // DEBUG: Log first 50 lines to see exact OCR output format
@@ -214,15 +230,52 @@ export async function processDocument(
     });
 
     // DEBUG: Check for table data from Document AI
+    console.log('[OCR DEBUG] Checking for structured data...');
     if (document.pages) {
       for (let pageIdx = 0; pageIdx < document.pages.length; pageIdx++) {
         const page = document.pages[pageIdx];
+
+        // Log page structure
+        console.log(`[OCR DEBUG] Page ${pageIdx + 1}:`, {
+          hasTables: !!(page.tables && page.tables.length > 0),
+          tableCount: page.tables?.length || 0,
+          hasFormFields: !!(page.formFields && page.formFields.length > 0),
+          formFieldCount: page.formFields?.length || 0,
+          hasBlocks: !!(page.blocks && page.blocks.length > 0),
+          blockCount: page.blocks?.length || 0,
+          hasTokens: !!(page.tokens && page.tokens.length > 0),
+          tokenCount: page.tokens?.length || 0,
+        });
+
+        // Log form fields if present (key-value pairs)
+        if (page.formFields && page.formFields.length > 0) {
+          console.log(`[OCR DEBUG] Page ${pageIdx + 1} has ${page.formFields.length} form fields`);
+          page.formFields.slice(0, 10).forEach((field, fieldIdx) => {
+            const fieldName = field.fieldName?.textAnchor?.textSegments
+              ?.map(seg => extractedText.substring(
+                parseInt(seg.startIndex?.toString() || '0'),
+                parseInt(seg.endIndex?.toString() || '0')
+              ))
+              .join('')
+              .trim() || '';
+            const fieldValue = field.fieldValue?.textAnchor?.textSegments
+              ?.map(seg => extractedText.substring(
+                parseInt(seg.startIndex?.toString() || '0'),
+                parseInt(seg.endIndex?.toString() || '0')
+              ))
+              .join('')
+              .trim() || '';
+            console.log(`[OCR FORM FIELD ${fieldIdx}] "${fieldName}" = "${fieldValue}"`);
+          });
+        }
+
+        // Log tables if present
         if (page.tables && page.tables.length > 0) {
           console.log(`[OCR DEBUG] Page ${pageIdx + 1} has ${page.tables.length} tables`);
           page.tables.forEach((table, tableIdx) => {
             console.log(`[OCR TABLE ${tableIdx + 1}] Rows: ${table.headerRows?.length || 0} header, ${table.bodyRows?.length || 0} body`);
             // Log table structure for debugging
-            table.bodyRows?.slice(0, 5).forEach((row, rowIdx) => {
+            table.bodyRows?.slice(0, 10).forEach((row, rowIdx) => {
               const cells = row.cells?.map(cell => {
                 const text = cell.layout?.textAnchor?.textSegments
                   ?.map(seg => extractedText.substring(
@@ -238,6 +291,16 @@ export async function processDocument(
           });
         }
       }
+    }
+
+    // DEBUG: Check for entities (extracted key-value data)
+    if (document.entities && document.entities.length > 0) {
+      console.log(`[OCR DEBUG] Document has ${document.entities.length} entities`);
+      document.entities.slice(0, 20).forEach((entity, idx) => {
+        console.log(`[OCR ENTITY ${idx}] Type: ${entity.type}, Value: "${entity.mentionText}", Confidence: ${entity.confidence}`);
+      });
+    } else {
+      console.log('[OCR DEBUG] No entities detected - may need Form Parser processor');
     }
 
     // Calculate overall text confidence
