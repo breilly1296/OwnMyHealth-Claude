@@ -1140,15 +1140,50 @@ export const adminApi = {
 // SETTINGS
 // ============================================
 
+export interface ExportBiomarker {
+  name: string;
+  standardName: string;
+  category: string;
+  value: number;
+  unit: string;
+  date: string;
+  isAbnormal: boolean;
+  referenceRange: {
+    min: number;
+    max: number;
+    source?: string;
+  };
+  source: string;
+}
+
+export interface ExportInsurancePlan {
+  planName: string;
+  insurerName: string;
+  planType: string;
+  effectiveDate: string;
+  terminationDate?: string;
+  isActive: boolean;
+  isPrimary: boolean;
+  deductibleIndividual: number;
+  deductibleFamily: number;
+  oopMaxIndividual: number;
+  oopMaxFamily: number;
+}
+
 export interface UserExportData {
+  exportDate: string;
   user: {
-    id: string;
     email: string;
     createdAt: string;
   };
-  biomarkers: BiomarkerData[];
-  insurancePlans: unknown[];
-  exportedAt: string;
+  biomarkers: ExportBiomarker[];
+  insurancePlans: ExportInsurancePlan[];
+  summary: {
+    totalBiomarkers: number;
+    byCategory: Record<string, number>;
+    abnormalCount: number;
+    normalCount: number;
+  };
 }
 
 export const settingsApi = {

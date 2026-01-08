@@ -27,6 +27,7 @@ import providerRoutes from './providerRoutes.js';
 import patientRoutes from './patientRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
+import settingsRoutes from './settingsRoutes.js';
 import type { ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -59,6 +60,7 @@ router.get('/', (_req: Request, res: Response) => {
         '/api/v1/patient',
         '/api/v1/admin',
         '/api/v1/upload',
+        '/api/v1/settings',
       ],
     },
   };
@@ -79,5 +81,8 @@ router.use('/admin', adminRoutes);        // Admin-only routes
 
 // File upload routes
 router.use('/upload', uploadRoutes);      // PDF upload and parsing
+
+// User settings routes
+router.use('/settings', settingsRoutes);  // Data export, account deletion
 
 export default router;
