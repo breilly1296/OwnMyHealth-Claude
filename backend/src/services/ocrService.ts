@@ -65,6 +65,10 @@ let documentAIClient: DocumentProcessorServiceClient | null = null;
 
 /**
  * Get or create Document AI client
+ *
+ * Supports two modes for credentials:
+ * 1. JSON content in GOOGLE_APPLICATION_CREDENTIALS (for Cloud Run secrets)
+ * 2. File path in GOOGLE_APPLICATION_CREDENTIALS (for local development)
  */
 function getDocumentAIClient(): DocumentProcessorServiceClient {
   if (!documentAIClient) {
@@ -76,7 +80,25 @@ function getDocumentAIClient(): DocumentProcessorServiceClient {
       throw new InternalServerError('GCP_PROCESSOR_ID environment variable is not set');
     }
 
-    documentAIClient = new DocumentProcessorServiceClient();
+    const credentialsEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+    // Check if credentials look like JSON content (starts with {)
+    if (credentialsEnv && credentialsEnv.trim().startsWith('{')) {
+      try {
+        const credentials = JSON.parse(credentialsEnv);
+        ocrLogger.info('Initializing Document AI client with JSON credentials');
+        documentAIClient = new DocumentProcessorServiceClient({ credentials });
+      } catch (parseError) {
+        ocrLogger.error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS as JSON', {
+          error: parseError instanceof Error ? parseError.message : 'Unknown error',
+        });
+        throw new InternalServerError('Invalid GCP credentials format');
+      }
+    } else {
+      // Assume it's a file path (default Google behavior)
+      ocrLogger.info('Initializing Document AI client with credentials file');
+      documentAIClient = new DocumentProcessorServiceClient();
+    }
   }
   return documentAIClient;
 }
@@ -271,8 +293,20 @@ export async function checkOCRConfiguration(): Promise<{
     if (!process.env.GCP_PROCESSOR_ID) {
       return { configured: false, error: 'GCP_PROCESSOR_ID not set' };
     }
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+
+    // Check for credentials (either JSON content or file path)
+    const credentialsEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!credentialsEnv) {
       return { configured: false, error: 'GOOGLE_APPLICATION_CREDENTIALS not set' };
+    }
+
+    // Validate JSON credentials if provided as JSON
+    if (credentialsEnv.trim().startsWith('{')) {
+      try {
+        JSON.parse(credentialsEnv);
+      } catch {
+        return { configured: false, error: 'GOOGLE_APPLICATION_CREDENTIALS contains invalid JSON' };
+      }
     }
 
     // Try to initialize client
