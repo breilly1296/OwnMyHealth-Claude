@@ -10,6 +10,7 @@ interface CollapsibleNavGroupProps {
   selectedCategory: string;
   onCategorySelect: (category: string) => void;
   defaultExpanded?: boolean;
+  categoryCounts?: Record<string, number>;
 }
 
 /**
@@ -24,6 +25,7 @@ export default function CollapsibleNavGroup({
   selectedCategory,
   onCategorySelect,
   defaultExpanded = true,
+  categoryCounts = {},
 }: CollapsibleNavGroupProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -55,6 +57,7 @@ export default function CollapsibleNavGroup({
             icon={getIcon(category.icon)}
             isActive={selectedCategory === category.name}
             onClick={() => onCategorySelect(category.name)}
+            count={categoryCounts[category.name]}
           />
         ))}
       </div>
@@ -110,6 +113,7 @@ export default function CollapsibleNavGroup({
               icon={getIcon(category.icon)}
               isActive={selectedCategory === category.name}
               onClick={() => onCategorySelect(category.name)}
+              count={categoryCounts[category.name]}
             />
           ))}
         </div>

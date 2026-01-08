@@ -360,6 +360,16 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     };
   }, [biomarkers]);
 
+  // Calculate biomarker counts per category for sidebar badges
+  const categoryCounts = useMemo(() => {
+    const safeBiomarkers = biomarkers || [];
+    const counts: Record<string, number> = {};
+    for (const biomarker of safeBiomarkers) {
+      counts[biomarker.category] = (counts[biomarker.category] || 0) + 1;
+    }
+    return counts;
+  }, [biomarkers]);
+
   // ============================================
   // Loading State
   // ============================================
@@ -864,6 +874,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         setIsMobileSidebarOpen(false);
                       }}
                       defaultExpanded={group.id === 'overview' || group.id === 'insurance'}
+                      categoryCounts={categoryCounts}
                     />
                   );
                 })}
@@ -891,6 +902,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                       setSelectedBiomarker(null);
                     }}
                     defaultExpanded={group.id === 'overview' || group.id === 'insurance'}
+                    categoryCounts={categoryCounts}
                   />
                 );
               })}
