@@ -2608,59 +2608,30 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
         console.log(`[LINE ${i}] Same-line extraction: value=${extractedValue}`);
       }
 
-      // STRATEGY 2: If no value on same line, check if this is a name-only line
-      // and look at the next few lines for a numeric value
+      // STRATEGY 2: If no value on same line, check ONLY the immediately next line
+      // This handles Document AI splitting table columns into separate lines:
+      //   Line N:   "CHOLESTEROL, TOTAL"
+      //   Line N+1: "193"              <-- value MUST be here
+      //   Line N+2: "Reference Range..." (skip)
       if (extractedValue === null && isNameOnlyLine(line, matchedNameEnd)) {
-        console.log(`[LINE ${i}] Name-only line detected, checking next lines for value...`);
+        const nextLineIndex = i + 1;
+        if (nextLineIndex < lines.length && !usedValueLines.has(nextLineIndex)) {
+          const nextLine = lines[nextLineIndex].trim();
 
-        // Look at the next 3 lines for a value
-        for (let j = 1; j <= 3 && i + j < lines.length; j++) {
-          const nextLine = lines[i + j].trim();
-          if (!nextLine) continue;
-
-          // Skip if this line looks like a reference range or educational text
-          if (/^(reference|range|normal|desirable|<|>|see |note)/i.test(nextLine)) {
-            console.log(`[LINE ${i + j}] Skipping reference/educational line: "${nextLine}"`);
-            continue;
-          }
-
-          const valueResult = isValueOnlyLine(nextLine);
-          if (valueResult) {
-            extractedValue = valueResult.value;
-            valueLineIndex = i + j;
-            rawMatch = `${line} | ${nextLine}`;
-            console.log(`[LINE ${i}] Multi-line extraction: name="${matchedName}", value=${extractedValue} (from line ${valueLineIndex})`);
-            usedValueLines.add(valueLineIndex);
-            break;
-          }
-
-          // Also try to extract a value from a line that has the number at the start
-          const numStartMatch = nextLine.match(/^(\d+\.?\d*)\s/);
-          if (numStartMatch) {
-            const potentialValue = parseFloat(numStartMatch[1]);
-            if (!isNaN(potentialValue) && potentialValue >= 0 && potentialValue < 100000) {
-              extractedValue = potentialValue;
-              valueLineIndex = i + j;
+          // The next line MUST be a "value-only" line - just a number
+          // Examples: "193", "43 L", "2.6", "234 H"
+          // NOT: "Reference Range...", "32.0-36.0 g/dL", "PLATELET COUNT"
+          if (nextLine) {
+            const valueResult = isValueOnlyLine(nextLine);
+            if (valueResult) {
+              extractedValue = valueResult.value;
+              valueLineIndex = nextLineIndex;
               rawMatch = `${line} | ${nextLine}`;
-              console.log(`[LINE ${i}] Multi-line extraction (num-start): name="${matchedName}", value=${extractedValue} (from line ${valueLineIndex})`);
+              console.log(`[LINE ${i}] Multi-line: "${matchedName}" = ${extractedValue} (from line ${valueLineIndex})`);
               usedValueLines.add(valueLineIndex);
-              break;
+            } else {
+              console.log(`[LINE ${i}] Next line not a value: "${nextLine.substring(0, 30)}"`);
             }
-          }
-        }
-      }
-
-      // STRATEGY 3: Check if the value might be on a line BEFORE the name
-      // (Document AI sometimes orders columns differently)
-      if (extractedValue === null && i > 0) {
-        const prevLine = lines[i - 1].trim();
-        if (prevLine && !usedValueLines.has(i - 1)) {
-          const valueResult = isValueOnlyLine(prevLine);
-          if (valueResult) {
-            extractedValue = valueResult.value;
-            rawMatch = `${prevLine} | ${line}`;
-            console.log(`[LINE ${i}] Reverse multi-line extraction: value=${extractedValue} (from line ${i - 1})`);
-            usedValueLines.add(i - 1);
           }
         }
       }
