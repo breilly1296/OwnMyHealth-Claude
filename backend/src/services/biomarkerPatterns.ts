@@ -103,9 +103,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 200 },
     patterns: [
-      /\bCHOLESTEROL[,\s]+TOTAL\s+(\d+)/i,
-      /\bTOTAL\s+CHOLESTEROL\s+(\d+)/i,
-      /\bCHOLESTEROL\s+(\d+)/i,
+      /\bCHOLESTEROL[,\s]*TOTAL\s*(\d+)/i,
+      /\bTOTAL\s*CHOLESTEROL\s*(\d+)/i,
+      /\bCHOLESTEROL\s*(\d+)/i,
     ],
   },
   {
@@ -115,9 +115,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 40, max: 999 },
     patterns: [
-      /\bHDL\s+CHOLESTEROL\s+(\d+)/i,
-      /\bHDL-?C\s+(\d+)/i,
-      /\bHDL\s+(\d+)/i,
+      /\bHDL\s*CHOLESTEROL\s*(\d+)/i,
+      /\bHDL-?C\s*(\d+)/i,
+      /\bHDL\s*(\d+)/i,
     ],
   },
   {
@@ -127,10 +127,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 100 },
     patterns: [
-      /\bLDL\s+CHOLESTEROL\s+(\d+)/i,
-      /\bLDL-?C(?:HOLESTEROL)?\s+(\d+)/i,
-      /\bLDL\s+CALC\w*\s+(\d+)/i,
-      /\bLDL\s+(\d+)/i,
+      /\bLDL\s*CHOLESTEROL\s*(\d+)/i,
+      /\bLDL-?C(?:HOLESTEROL)?\s*(\d+)/i,
+      /\bLDL\s*CALC\w*\s*(\d+)/i,
+      /\bLDL\s*(\d+)/i,
     ],
   },
   {
@@ -140,8 +140,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 150 },
     patterns: [
-      /\bTRIGLYCERIDES?\s+(\d+)/i,
-      /\bTRIG\s+(\d+)/i,
+      /\bTRIGLYCERIDES?\s*(\d+)/i,
+      /\bTRIG\s*(\d+)/i,
     ],
   },
   {
@@ -151,8 +151,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 5, max: 40 },
     patterns: [
-      /\bVLDL\s+CHOLESTEROL\s+(\d+)/i,
-      /\bVLDL\s+(\d+)/i,
+      /\bVLDL\s*CHOLESTEROL\s*(\d+)/i,
+      /\bVLDL\s*(\d+)/i,
     ],
   },
   {
@@ -162,8 +162,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 130 },
     patterns: [
-      /\bNON-?HDL\s+CHOLESTEROL\s+(\d+)/i,
-      /\bNON\s+HDL\s+CHOL\w*\s+(\d+)/i,
+      /\bNON-?HDL\s*CHOLESTEROL\s*(\d+)/i,
+      /\bNON\s*HDL\s*CHOL\w*\s*(\d+)/i,
     ],
   },
   {
@@ -173,8 +173,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ratio',
     normalRange: { min: 0, max: 5.0 },
     patterns: [
-      /\bCHOL(?:ESTEROL)?\/HDL\w*\s+RATIO\s+(\d+\.?\d*)/i,
-      /\bCHOL\/HDLC\s+RATIO\s+(\d+\.?\d*)/i,
+      /\bCHOL(?:ESTEROL)?\/HDL\w*\s*RATIO\s*(\d+\.?\d*)/i,
+      /\bCHOL\/HDLC\s*RATIO\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -184,7 +184,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ratio',
     normalRange: { min: 0, max: 3.5 },
     patterns: [
-      /\bLDL\/HDL\s+RATIO\s+(\d+\.?\d*)/i,
+      /\bLDL\/HDL\s*RATIO\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -194,8 +194,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 120, max: 175 },
     patterns: [
-      /\bAPOLIPOPROTEIN\s+A-?1\s+(\d+)/i,
-      /\bAPO\s+A-?1\s+(\d+)/i,
+      /\bAPOLIPOPROTEIN\s*A-?1\s*(\d+)/i,
+      /\bAPO\s*A-?1\s*(\d+)/i,
     ],
   },
   {
@@ -205,8 +205,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 90 },
     patterns: [
-      /\bAPOLIPOPROTEIN\s+B\s+(\d+)/i,
-      /\bAPO\s+B(?:-100)?\s+(\d+)/i,
+      /\bAPOLIPOPROTEIN\s*B\s*(\d+)/i,
+      /\bAPO\s*B(?:-100)?\s*(\d+)/i,
     ],
   },
   {
@@ -216,9 +216,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol/L',
     normalRange: { min: 0, max: 75 },
     patterns: [
-      /\bLIPOPROTEIN\s*\(A\)\s+(\d+)/i,
-      /\bLP\s*\(A\)\s+(\d+)/i,
-      /\bLPA\s+(\d+)/i,
+      /\bLIPOPROTEIN\s*\(A\)\s*(\d+)/i,
+      /\bLP\s*\(A\)\s*(\d+)/i,
+      /\bLPA\s*(\d+)/i,
     ],
   },
   {
@@ -228,8 +228,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol/L',
     normalRange: { min: 0, max: 1000 },
     patterns: [
-      /\bLDL\s+PARTICLE\s+NUMBER\s+(\d+)/i,
-      /\bLDL-?P\s+(\d+)/i,
+      /\bLDL\s*PARTICLE\s*NUMBER\s*(\d+)/i,
+      /\bLDL-?P\s*(\d+)/i,
     ],
   },
   {
@@ -239,7 +239,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 30 },
     patterns: [
-      /\bSMALL\s+DENSE\s+LDL\s+(\d+)/i,
+      /\bSMALL\s*DENSE\s*LDL\s*(\d+)/i,
     ],
   },
   {
@@ -249,7 +249,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 0, max: 60 },
     patterns: [
-      /\bOXIDIZED\s+LDL\s+(\d+)/i,
+      /\bOXIDIZED\s*LDL\s*(\d+)/i,
     ],
   },
 
@@ -263,9 +263,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'K/uL',
     normalRange: { min: 3.8, max: 10.8 },
     patterns: [
-      /\bWHITE\s+BLOOD\s+CELL\s+COUNT\s+(\d+\.?\d*)/i,
-      /\bWBC\s+(\d+\.?\d*)/i,
-      /\bLEUKOCYTES?\s+(\d+\.?\d*)/i,
+      /\bWHITE\s*BLOOD\s*CELL\s*COUNT\s*(\d+\.?\d*)/i,
+      /\bWBC\s*(\d+\.?\d*)/i,
+      /\bLEUKOCYTES?\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -275,9 +275,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'M/uL',
     normalRange: { min: 4.2, max: 5.8 },
     patterns: [
-      /\bRED\s+BLOOD\s+CELL\s+COUNT\s+(\d+\.?\d*)/i,
-      /\bRBC\s+(\d+\.?\d*)/i,
-      /\bERYTHROCYTES?\s+(\d+\.?\d*)/i,
+      /\bRED\s*BLOOD\s*CELL\s*COUNT\s*(\d+\.?\d*)/i,
+      /\bRBC\s*(\d+\.?\d*)/i,
+      /\bERYTHROCYTES?\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -287,9 +287,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'g/dL',
     normalRange: { min: 13.2, max: 17.1 },
     patterns: [
-      /\bHEMOGLOBIN\s+(\d+\.?\d*)/i,
-      /\bHGB\s+(\d+\.?\d*)/i,
-      /\bHB\s+(\d+\.?\d*)/i,
+      /\bHEMOGLOBIN\s*(\d+\.?\d*)/i,
+      /\bHGB\s*(\d+\.?\d*)/i,
+      /\bHB\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -299,8 +299,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 38.5, max: 50.0 },
     patterns: [
-      /\bHEMATOCRIT\s+(\d+\.?\d*)/i,
-      /\bHCT\s+(\d+\.?\d*)/i,
+      /\bHEMATOCRIT\s*(\d+\.?\d*)/i,
+      /\bHCT\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -310,8 +310,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'fL',
     normalRange: { min: 80, max: 100 },
     patterns: [
-      /\bMCV\s+(\d+\.?\d*)/i,
-      /\bMEAN\s+CORPUSCULAR\s+VOLUME\s+(\d+\.?\d*)/i,
+      /\bMCV\s*(\d+\.?\d*)/i,
+      /\bMEAN\s*CORPUSCULAR\s*VOLUME\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -321,8 +321,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg',
     normalRange: { min: 27, max: 33 },
     patterns: [
-      /\bMCH\s+(\d+\.?\d*)/i,
-      /\bMEAN\s+CORPUSCULAR\s+HEMOGLOBIN\s+(\d+\.?\d*)/i,
+      /\bMCH\s*(\d+\.?\d*)/i,
+      /\bMEAN\s*CORPUSCULAR\s*HEMOGLOBIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -332,8 +332,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'g/dL',
     normalRange: { min: 32, max: 36 },
     patterns: [
-      /\bMCHC\s+(\d+\.?\d*)/i,
-      /\bMEAN\s+CORPUSCULAR\s+HGB\s+CONC\s+(\d+\.?\d*)/i,
+      /\bMCHC\s*(\d+\.?\d*)/i,
+      /\bMEAN\s*CORPUSCULAR\s*HGB\s*CONC\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -343,8 +343,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 11, max: 15 },
     patterns: [
-      /\bRDW(?:-CV)?\s+(\d+\.?\d*)/i,
-      /\bRED\s+CELL\s+DIST(?:RIBUTION)?\s+WIDTH\s+(\d+\.?\d*)/i,
+      /\bRDW(?:-CV)?\s*(\d+\.?\d*)/i,
+      /\bRED\s*CELL\s*DIST(?:RIBUTION)?\s*WIDTH\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -354,9 +354,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'K/uL',
     normalRange: { min: 140, max: 400 },
     patterns: [
-      /\bPLATELET\s+COUNT\s+(\d+)/i,
-      /\bPLATELETS?\s+(\d+)/i,
-      /\bPLT\s+(\d+)/i,
+      /\bPLATELET\s*COUNT\s*(\d+)/i,
+      /\bPLATELETS?\s*(\d+)/i,
+      /\bPLT\s*(\d+)/i,
     ],
   },
   {
@@ -366,8 +366,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'fL',
     normalRange: { min: 7.5, max: 12.5 },
     patterns: [
-      /\bMPV\s+(\d+\.?\d*)/i,
-      /\bMEAN\s+PLATELET\s+VOLUME\s+(\d+\.?\d*)/i,
+      /\bMPV\s*(\d+\.?\d*)/i,
+      /\bMEAN\s*PLATELET\s*VOLUME\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -377,9 +377,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 38, max: 80 },
     patterns: [
-      /\bNEUTROPHILS?\s+(\d+\.?\d*)/i,
-      /\bNEUT\s+(\d+\.?\d*)/i,
-      /\bPOLYS\s+(\d+\.?\d*)/i,
+      /\bNEUTROPHILS?\s*(\d+\.?\d*)/i,
+      /\bNEUT\s*(\d+\.?\d*)/i,
+      /\bPOLYS\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -389,8 +389,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'cells/uL',
     normalRange: { min: 1500, max: 7800 },
     patterns: [
-      /\bABSOLUTE\s+NEUTROPHILS?\s+(\d+)/i,
-      /\bANC\s+(\d+)/i,
+      /\bABSOLUTE\s*NEUTROPHILS?\s*(\d+)/i,
+      /\bANC\s*(\d+)/i,
     ],
   },
   {
@@ -400,8 +400,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 15, max: 49 },
     patterns: [
-      /\bLYMPHOCYTES?\s+(\d+\.?\d*)/i,
-      /\bLYMPH\s+(\d+\.?\d*)/i,
+      /\bLYMPHOCYTES?\s*(\d+\.?\d*)/i,
+      /\bLYMPH\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -411,8 +411,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'cells/uL',
     normalRange: { min: 850, max: 3900 },
     patterns: [
-      /\bABSOLUTE\s+LYMPHOCYTES?\s+(\d+)/i,
-      /\bALC\s+(\d+)/i,
+      /\bABSOLUTE\s*LYMPHOCYTES?\s*(\d+)/i,
+      /\bALC\s*(\d+)/i,
     ],
   },
   {
@@ -422,8 +422,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 0, max: 13 },
     patterns: [
-      /\bMONOCYTES?\s+(\d+\.?\d*)/i,
-      /\bMONO\s+(\d+\.?\d*)/i,
+      /\bMONOCYTES?\s*(\d+\.?\d*)/i,
+      /\bMONO\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -433,8 +433,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 0, max: 8 },
     patterns: [
-      /\bEOSINOPHILS?\s+(\d+\.?\d*)/i,
-      /\bEOS\s+(\d+\.?\d*)/i,
+      /\bEOSINOPHILS?\s*(\d+\.?\d*)/i,
+      /\bEOS\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -444,8 +444,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 0, max: 2 },
     patterns: [
-      /\bBASOPHILS?\s+(\d+\.?\d*)/i,
-      /\bBASO\s+(\d+\.?\d*)/i,
+      /\bBASOPHILS?\s*(\d+\.?\d*)/i,
+      /\bBASO\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -459,8 +459,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mEq/L',
     normalRange: { min: 136, max: 145 },
     patterns: [
-      /\bSODIUM\s+(\d+)/i,
-      /\bNA\s+(\d+)/i,
+      /\bSODIUM\s*(\d+)/i,
+      /\bNA\s*(\d+)/i,
     ],
   },
   {
@@ -470,8 +470,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mEq/L',
     normalRange: { min: 3.5, max: 5.0 },
     patterns: [
-      /\bPOTASSIUM\s+(\d+\.?\d*)/i,
-      /\bK\s+(\d+\.?\d*)/i,
+      /\bPOTASSIUM\s*(\d+\.?\d*)/i,
+      /\bK\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -481,8 +481,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mEq/L',
     normalRange: { min: 98, max: 106 },
     patterns: [
-      /\bCHLORIDE\s+(\d+)/i,
-      /\bCL\s+(\d+)/i,
+      /\bCHLORIDE\s*(\d+)/i,
+      /\bCL\s*(\d+)/i,
     ],
   },
   {
@@ -492,10 +492,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mEq/L',
     normalRange: { min: 23, max: 29 },
     patterns: [
-      /\bCARBON\s+DIOXIDE\s+(\d+)/i,
-      /\bCO2\s+(\d+)/i,
-      /\bBICARBONATE\s+(\d+)/i,
-      /\bHCO3\s+(\d+)/i,
+      /\bCARBON\s*DIOXIDE\s*(\d+)/i,
+      /\bCO2\s*(\d+)/i,
+      /\bBICARBONATE\s*(\d+)/i,
+      /\bHCO3\s*(\d+)/i,
     ],
   },
   {
@@ -505,8 +505,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 8.6, max: 10.3 },
     patterns: [
-      /\bCALCIUM\s+(\d+\.?\d*)/i,
-      /\bCA\s+(\d+\.?\d*)/i,
+      /\bCALCIUM\s*(\d+\.?\d*)/i,
+      /\bCA\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -516,8 +516,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mmol/L',
     normalRange: { min: 1.12, max: 1.32 },
     patterns: [
-      /\bIONIZED\s+CALCIUM\s+(\d+\.?\d*)/i,
-      /\bCA\+\+\s+(\d+\.?\d*)/i,
+      /\bIONIZED\s*CALCIUM\s*(\d+\.?\d*)/i,
+      /\bCA\+\+\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -527,8 +527,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 1.7, max: 2.2 },
     patterns: [
-      /\bMAGNESIUM\s+(\d+\.?\d*)/i,
-      /\bMG\s+(\d+\.?\d*)/i,
+      /\bMAGNESIUM\s*(\d+\.?\d*)/i,
+      /\bMG\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -538,9 +538,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 2.5, max: 4.5 },
     patterns: [
-      /\bPHOSPHORUS\s+(\d+\.?\d*)/i,
-      /\bPHOSPHATE\s+(\d+\.?\d*)/i,
-      /\bPHOS\s+(\d+\.?\d*)/i,
+      /\bPHOSPHORUS\s*(\d+\.?\d*)/i,
+      /\bPHOSPHATE\s*(\d+\.?\d*)/i,
+      /\bPHOS\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -550,7 +550,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mEq/L',
     normalRange: { min: 8, max: 12 },
     patterns: [
-      /\bANION\s+GAP\s+(\d+)/i,
+      /\bANION\s*GAP\s*(\d+)/i,
     ],
   },
   {
@@ -560,8 +560,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mOsm/kg',
     normalRange: { min: 275, max: 295 },
     patterns: [
-      /\bOSMOLALITY\s+(\d+)/i,
-      /\bSERUM\s+OSMOLALITY\s+(\d+)/i,
+      /\bOSMOLALITY\s*(\d+)/i,
+      /\bSERUM\s*OSMOLALITY\s*(\d+)/i,
     ],
   },
 
@@ -575,9 +575,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 7, max: 25 },
     patterns: [
-      /\bBUN\s+(\d+)/i,
-      /\bUREA\s+NITROGEN\s+(\d+)/i,
-      /\bBLOOD\s+UREA\s+NITROGEN\s+(\d+)/i,
+      /\bBUN\s*(\d+)/i,
+      /\bUREA\s*NITROGEN\s*(\d+)/i,
+      /\bBLOOD\s*UREA\s*NITROGEN\s*(\d+)/i,
     ],
   },
   {
@@ -587,8 +587,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0.6, max: 1.2 },
     patterns: [
-      /\bCREATININE\s+(\d+\.?\d*)/i,
-      /\bCREAT\s+(\d+\.?\d*)/i,
+      /\bCREATININE\s*(\d+\.?\d*)/i,
+      /\bCREAT\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -598,10 +598,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mL/min/1.73m2',
     normalRange: { min: 60, max: 999 },
     patterns: [
-      /\beGFR\s+>?(\d+)/i,
-      /\bGFR\s+>?(\d+)/i,
-      /\bESTIMATED\s+GFR\s+>?(\d+)/i,
-      /\bGLOMERULAR\s+FILTRATION\s+>?(\d+)/i,
+      /\beGFR\s*>?(\d+)/i,
+      /\bGFR\s*>?(\d+)/i,
+      /\bESTIMATED\s*GFR\s*>?(\d+)/i,
+      /\bGLOMERULAR\s*FILTRATION\s*>?(\d+)/i,
     ],
   },
   {
@@ -611,7 +611,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ratio',
     normalRange: { min: 10, max: 20 },
     patterns: [
-      /\bBUN\/CREATININE\s+RATIO\s+(\d+)/i,
+      /\bBUN\/CREATININE\s*RATIO\s*(\d+)/i,
     ],
   },
   {
@@ -621,7 +621,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/L',
     normalRange: { min: 0.5, max: 1.0 },
     patterns: [
-      /\bCYSTATIN\s+C\s+(\d+\.?\d*)/i,
+      /\bCYSTATIN\s*C\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -631,8 +631,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/L',
     normalRange: { min: 0, max: 30 },
     patterns: [
-      /\bMICROALBUMIN\s+(\d+\.?\d*)/i,
-      /\bURINE\s+ALBUMIN\s+(\d+\.?\d*)/i,
+      /\bMICROALBUMIN\s*(\d+\.?\d*)/i,
+      /\bURINE\s*ALBUMIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -642,9 +642,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/g',
     normalRange: { min: 0, max: 30 },
     patterns: [
-      /\bALBUMIN\/CREATININE\s+RATIO\s+(\d+\.?\d*)/i,
-      /\bACR\s+(\d+\.?\d*)/i,
-      /\bUACR\s+(\d+\.?\d*)/i,
+      /\bALBUMIN\/CREATININE\s*RATIO\s*(\d+\.?\d*)/i,
+      /\bACR\s*(\d+\.?\d*)/i,
+      /\bUACR\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -654,7 +654,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 15 },
     patterns: [
-      /\bURINE\s+PROTEIN\s+(\d+\.?\d*)/i,
+      /\bURINE\s*PROTEIN\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -668,8 +668,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'g/dL',
     normalRange: { min: 6.0, max: 8.3 },
     patterns: [
-      /\bTOTAL\s+PROTEIN\s+(\d+\.?\d*)/i,
-      /\bPROTEIN[,\s]+TOTAL\s+(\d+\.?\d*)/i,
+      /\bTOTAL\s*PROTEIN\s*(\d+\.?\d*)/i,
+      /\bPROTEIN[,\s]+TOTAL\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -679,8 +679,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'g/dL',
     normalRange: { min: 3.5, max: 5.0 },
     patterns: [
-      /\bALBUMIN\s+(\d+\.?\d*)/i,
-      /\bALB\s+(\d+\.?\d*)/i,
+      /\bALBUMIN\s*(\d+\.?\d*)/i,
+      /\bALB\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -690,8 +690,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'g/dL',
     normalRange: { min: 2.0, max: 3.5 },
     patterns: [
-      /\bGLOBULIN\s+(\d+\.?\d*)/i,
-      /\bGLOB\s+(\d+\.?\d*)/i,
+      /\bGLOBULIN\s*(\d+\.?\d*)/i,
+      /\bGLOB\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -701,8 +701,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ratio',
     normalRange: { min: 1.0, max: 2.5 },
     patterns: [
-      /\bA\/G\s+RATIO\s+(\d+\.?\d*)/i,
-      /\bALBUMIN\/GLOBULIN\s+RATIO\s+(\d+\.?\d*)/i,
+      /\bA\/G\s*RATIO\s*(\d+\.?\d*)/i,
+      /\bALBUMIN\/GLOBULIN\s*RATIO\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -712,10 +712,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0.1, max: 1.2 },
     patterns: [
-      /\bBILIRUBIN[,\s]+TOTAL\s+(\d+\.?\d*)/i,
-      /\bTOTAL\s+BILIRUBIN\s+(\d+\.?\d*)/i,
-      /\bTBILI\s+(\d+\.?\d*)/i,
-      /\bBILIRUBIN\s+(\d+\.?\d*)/i,
+      /\bBILIRUBIN[,\s]+TOTAL\s*(\d+\.?\d*)/i,
+      /\bTOTAL\s*BILIRUBIN\s*(\d+\.?\d*)/i,
+      /\bTBILI\s*(\d+\.?\d*)/i,
+      /\bBILIRUBIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -725,8 +725,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 0.3 },
     patterns: [
-      /\bBILIRUBIN[,\s]+DIRECT\s+(\d+\.?\d*)/i,
-      /\bDIRECT\s+BILIRUBIN\s+(\d+\.?\d*)/i,
+      /\bBILIRUBIN[,\s]+DIRECT\s*(\d+\.?\d*)/i,
+      /\bDIRECT\s*BILIRUBIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -736,9 +736,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 36, max: 130 },
     patterns: [
-      /\bALKALINE\s+PHOSPHATASE\s+(\d+)/i,
-      /\bALK\s+PHOS\s+(\d+)/i,
-      /\bALP\s+(\d+)/i,
+      /\bALKALINE\s*PHOSPHATASE\s*(\d+)/i,
+      /\bALK\s*PHOS\s*(\d+)/i,
+      /\bALP\s*(\d+)/i,
     ],
   },
   {
@@ -748,10 +748,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 10, max: 40 },
     patterns: [
-      /\bAST\s+\(?SGOT\)?\s*(\d+)/i,
-      /\bAST\s+(\d+)/i,
-      /\bSGOT\s+(\d+)/i,
-      /\bASPARTATE\s+AMINO\s*TRANSFERASE\s+(\d+)/i,
+      /\bAST\s*\(?SGOT\)?\s*(\d+)/i,
+      /\bAST\s*(\d+)/i,
+      /\bSGOT\s*(\d+)/i,
+      /\bASPARTATE\s*AMINO\s*TRANSFERASE\s*(\d+)/i,
     ],
   },
   {
@@ -761,10 +761,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 7, max: 56 },
     patterns: [
-      /\bALT\s+\(?SGPT\)?\s*(\d+)/i,
-      /\bALT\s+(\d+)/i,
-      /\bSGPT\s+(\d+)/i,
-      /\bALANINE\s+AMINO\s*TRANSFERASE\s+(\d+)/i,
+      /\bALT\s*\(?SGPT\)?\s*(\d+)/i,
+      /\bALT\s*(\d+)/i,
+      /\bSGPT\s*(\d+)/i,
+      /\bALANINE\s*AMINO\s*TRANSFERASE\s*(\d+)/i,
     ],
   },
   {
@@ -774,9 +774,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 9, max: 48 },
     patterns: [
-      /\bGGT\s+(\d+)/i,
-      /\bGAMMA\s+GT\s+(\d+)/i,
-      /\bGAMMA-?GLUTAMYL\s+TRANS\w*\s+(\d+)/i,
+      /\bGGT\s*(\d+)/i,
+      /\bGAMMA\s*GT\s*(\d+)/i,
+      /\bGAMMA-?GLUTAMYL\s*TRANS\w*\s*(\d+)/i,
     ],
   },
   {
@@ -786,8 +786,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 140, max: 280 },
     patterns: [
-      /\bLDH\s+(\d+)/i,
-      /\bLACTATE\s+DEHYDROGENASE\s+(\d+)/i,
+      /\bLDH\s*(\d+)/i,
+      /\bLACTATE\s*DEHYDROGENASE\s*(\d+)/i,
     ],
   },
   {
@@ -797,7 +797,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'umol/L',
     normalRange: { min: 15, max: 45 },
     patterns: [
-      /\bAMMONIA\s+(\d+)/i,
+      /\bAMMONIA\s*(\d+)/i,
     ],
   },
 
@@ -811,8 +811,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mIU/L',
     normalRange: { min: 0.4, max: 4.0 },
     patterns: [
-      /\bTSH\s+(\d+\.?\d*)/i,
-      /\bTHYROID\s+STIMULATING\s+HORMONE\s+(\d+\.?\d*)/i,
+      /\bTSH\s*(\d+\.?\d*)/i,
+      /\bTHYROID\s*STIMULATING\s*HORMONE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -822,9 +822,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/dL',
     normalRange: { min: 0.8, max: 1.8 },
     patterns: [
-      /\bFREE\s+T4\s+(\d+\.?\d*)/i,
-      /\bFT4\s+(\d+\.?\d*)/i,
-      /\bTHYROXINE\s+FREE\s+(\d+\.?\d*)/i,
+      /\bFREE\s*T4\s*(\d+\.?\d*)/i,
+      /\bFT4\s*(\d+\.?\d*)/i,
+      /\bTHYROXINE\s*FREE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -834,8 +834,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 2.3, max: 4.2 },
     patterns: [
-      /\bFREE\s+T3\s+(\d+\.?\d*)/i,
-      /\bFT3\s+(\d+\.?\d*)/i,
+      /\bFREE\s*T3\s*(\d+\.?\d*)/i,
+      /\bFT3\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -845,9 +845,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 4.5, max: 12.0 },
     patterns: [
-      /\bTOTAL\s+T4\s+(\d+\.?\d*)/i,
-      /\bT4\s+(\d+\.?\d*)/i,
-      /\bTHYROXINE\s+(\d+\.?\d*)/i,
+      /\bTOTAL\s*T4\s*(\d+\.?\d*)/i,
+      /\bT4\s*(\d+\.?\d*)/i,
+      /\bTHYROXINE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -857,9 +857,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/dL',
     normalRange: { min: 80, max: 200 },
     patterns: [
-      /\bTOTAL\s+T3\s+(\d+)/i,
-      /\bT3\s+(\d+)/i,
-      /\bTRIIODOTHYRONINE\s+(\d+)/i,
+      /\bTOTAL\s*T3\s*(\d+)/i,
+      /\bT3\s*(\d+)/i,
+      /\bTRIIODOTHYRONINE\s*(\d+)/i,
     ],
   },
   {
@@ -869,8 +869,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/dL',
     normalRange: { min: 10, max: 24 },
     patterns: [
-      /\bREVERSE\s+T3\s+(\d+)/i,
-      /\bRT3\s+(\d+)/i,
+      /\bREVERSE\s*T3\s*(\d+)/i,
+      /\bRT3\s*(\d+)/i,
     ],
   },
   {
@@ -880,7 +880,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 3, max: 40 },
     patterns: [
-      /\bTHYROGLOBULIN\s+(\d+\.?\d*)/i,
+      /\bTHYROGLOBULIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -890,9 +890,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'IU/mL',
     normalRange: { min: 0, max: 35 },
     patterns: [
-      /\bTPO\s+ANTIBOD\w*\s+(\d+)/i,
-      /\bANTI-?TPO\s+(\d+)/i,
-      /\bTHYROID\s+PEROXIDASE\s+AB\s+(\d+)/i,
+      /\bTPO\s*ANTIBOD\w*\s*(\d+)/i,
+      /\bANTI-?TPO\s*(\d+)/i,
+      /\bTHYROID\s*PEROXIDASE\s*AB\s*(\d+)/i,
     ],
   },
   {
@@ -902,9 +902,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'IU/mL',
     normalRange: { min: 0, max: 4 },
     patterns: [
-      /\bTHYROGLOBULIN\s+ANTIBOD\w*\s+(\d+)/i,
-      /\bTG\s+AB\s+(\d+)/i,
-      /\bANTI-?TG\s+(\d+)/i,
+      /\bTHYROGLOBULIN\s*ANTIBOD\w*\s*(\d+)/i,
+      /\bTG\s*AB\s*(\d+)/i,
+      /\bANTI-?TG\s*(\d+)/i,
     ],
   },
 
@@ -918,9 +918,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 70, max: 99 },
     patterns: [
-      /\bGLUCOSE\s+(\d+)/i,
-      /\bFASTING\s+GLUCOSE\s+(\d+)/i,
-      /\bBLOOD\s+GLUCOSE\s+(\d+)/i,
+      /\bGLUCOSE\s*(\d+)/i,
+      /\bFASTING\s*GLUCOSE\s*(\d+)/i,
+      /\bBLOOD\s*GLUCOSE\s*(\d+)/i,
     ],
   },
   {
@@ -930,10 +930,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 0, max: 5.7 },
     patterns: [
-      /\bHEMOGLOBIN\s+A1C\s+(\d+\.?\d*)/i,
-      /\bHBA1C\s+(\d+\.?\d*)/i,
-      /\bA1C\s+(\d+\.?\d*)/i,
-      /\bGLYCOHEMOGLOBIN\s+(\d+\.?\d*)/i,
+      /\bHEMOGLOBIN\s*A1C\s*(\d+\.?\d*)/i,
+      /\bHBA1C\s*(\d+\.?\d*)/i,
+      /\bA1C\s*(\d+\.?\d*)/i,
+      /\bGLYCOHEMOGLOBIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -943,9 +943,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'uIU/mL',
     normalRange: { min: 2.6, max: 24.9 },
     patterns: [
-      /\bFASTING\s+INSULIN\s+(\d+\.?\d*)/i,
-      /\bINSULIN\s+FASTING\s+(\d+\.?\d*)/i,
-      /\bINSULIN\s+(\d+\.?\d*)/i,
+      /\bFASTING\s*INSULIN\s*(\d+\.?\d*)/i,
+      /\bINSULIN\s*FASTING\s*(\d+\.?\d*)/i,
+      /\bINSULIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -955,7 +955,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0.8, max: 3.9 },
     patterns: [
-      /\bC-?PEPTIDE\s+(\d+\.?\d*)/i,
+      /\bC-?PEPTIDE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -965,7 +965,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'umol/L',
     normalRange: { min: 200, max: 285 },
     patterns: [
-      /\bFRUCTOSAMINE\s+(\d+)/i,
+      /\bFRUCTOSAMINE\s*(\d+)/i,
     ],
   },
   {
@@ -975,7 +975,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'index',
     normalRange: { min: 0, max: 2.5 },
     patterns: [
-      /\bHOMA-?IR\s+(\d+\.?\d*)/i,
+      /\bHOMA-?IR\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -989,9 +989,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 60, max: 170 },
     patterns: [
-      /\bIRON\s+(\d+)/i,
-      /\bSERUM\s+IRON\s+(\d+)/i,
-      /\bFE\s+(\d+)/i,
+      /\bIRON\s*(\d+)/i,
+      /\bSERUM\s*IRON\s*(\d+)/i,
+      /\bFE\s*(\d+)/i,
     ],
   },
   {
@@ -1001,8 +1001,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 250, max: 400 },
     patterns: [
-      /\bTIBC\s+(\d+)/i,
-      /\bTOTAL\s+IRON\s+BINDING\s+CAPACITY\s+(\d+)/i,
+      /\bTIBC\s*(\d+)/i,
+      /\bTOTAL\s*IRON\s*BINDING\s*CAPACITY\s*(\d+)/i,
     ],
   },
   {
@@ -1012,8 +1012,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 150, max: 300 },
     patterns: [
-      /\bUIBC\s+(\d+)/i,
-      /\bUNSATURATED\s+IRON\s+BINDING\s+(\d+)/i,
+      /\bUIBC\s*(\d+)/i,
+      /\bUNSATURATED\s*IRON\s*BINDING\s*(\d+)/i,
     ],
   },
   {
@@ -1023,7 +1023,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 200, max: 360 },
     patterns: [
-      /\bTRANSFERRIN\s+(\d+)/i,
+      /\bTRANSFERRIN\s*(\d+)/i,
     ],
   },
   {
@@ -1033,9 +1033,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 20, max: 50 },
     patterns: [
-      /\bTRANSFERRIN\s+SATURATION\s+(\d+)/i,
-      /\bIRON\s+SATURATION\s+(\d+)/i,
-      /\b%\s*SATURATION\s+(\d+)/i,
+      /\bTRANSFERRIN\s*SATURATION\s*(\d+)/i,
+      /\bIRON\s*SATURATION\s*(\d+)/i,
+      /\b%\s*SATURATION\s*(\d+)/i,
     ],
   },
   {
@@ -1045,7 +1045,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 12, max: 300 },
     patterns: [
-      /\bFERRITIN\s+(\d+)/i,
+      /\bFERRITIN\s*(\d+)/i,
     ],
   },
 
@@ -1059,8 +1059,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 20, max: 60 },
     patterns: [
-      /\bVITAMIN\s+A\s+(\d+)/i,
-      /\bRETINOL\s+(\d+)/i,
+      /\bVITAMIN\s*A\s*(\d+)/i,
+      /\bRETINOL\s*(\d+)/i,
     ],
   },
   {
@@ -1070,8 +1070,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol/L',
     normalRange: { min: 70, max: 180 },
     patterns: [
-      /\bVITAMIN\s+B1\s+(\d+)/i,
-      /\bTHIAMINE\s+(\d+)/i,
+      /\bVITAMIN\s*B1\s*(\d+)/i,
+      /\bTHIAMINE\s*(\d+)/i,
     ],
   },
   {
@@ -1081,8 +1081,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol/L',
     normalRange: { min: 20, max: 125 },
     patterns: [
-      /\bVITAMIN\s+B6\s+(\d+)/i,
-      /\bPYRIDOXINE\s+(\d+)/i,
+      /\bVITAMIN\s*B6\s*(\d+)/i,
+      /\bPYRIDOXINE\s*(\d+)/i,
     ],
   },
   {
@@ -1092,9 +1092,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 3, max: 999 },
     patterns: [
-      /\bFOLATE\s+(\d+\.?\d*)/i,
-      /\bFOLIC\s+ACID\s+(\d+\.?\d*)/i,
-      /\bVITAMIN\s+B9\s+(\d+\.?\d*)/i,
+      /\bFOLATE\s*(\d+\.?\d*)/i,
+      /\bFOLIC\s*ACID\s*(\d+\.?\d*)/i,
+      /\bVITAMIN\s*B9\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1104,9 +1104,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 200, max: 900 },
     patterns: [
-      /\bVITAMIN\s+B12\s+(\d+)/i,
-      /\bB12\s+(\d+)/i,
-      /\bCOBALAMIN\s+(\d+)/i,
+      /\bVITAMIN\s*B12\s*(\d+)/i,
+      /\bB12\s*(\d+)/i,
+      /\bCOBALAMIN\s*(\d+)/i,
     ],
   },
   {
@@ -1116,8 +1116,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol/L',
     normalRange: { min: 70, max: 270 },
     patterns: [
-      /\bMETHYLMALONIC\s+ACID\s+(\d+)/i,
-      /\bMMA\s+(\d+)/i,
+      /\bMETHYLMALONIC\s*ACID\s*(\d+)/i,
+      /\bMMA\s*(\d+)/i,
     ],
   },
   {
@@ -1127,7 +1127,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'umol/L',
     normalRange: { min: 5, max: 15 },
     patterns: [
-      /\bHOMOCYSTEINE\s+(\d+\.?\d*)/i,
+      /\bHOMOCYSTEINE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1137,8 +1137,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0.4, max: 2.0 },
     patterns: [
-      /\bVITAMIN\s+C\s+(\d+\.?\d*)/i,
-      /\bASCORBIC\s+ACID\s+(\d+\.?\d*)/i,
+      /\bVITAMIN\s*C\s*(\d+\.?\d*)/i,
+      /\bASCORBIC\s*ACID\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1148,10 +1148,10 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 30, max: 100 },
     patterns: [
-      /\bVITAMIN\s*D[,\s]+25-?(?:OH|HYDROXY)\s+(\d+)/i,
-      /\b25-?(?:OH|HYDROXY)\s+VITAMIN\s*D\s+(\d+)/i,
-      /\bVITAMIN\s*D\s+TOTAL\s+(\d+)/i,
-      /\bVITAMIN\s*D\s+(\d+)/i,
+      /\bVITAMIN\s*D[,\s]+25-?(?:OH|HYDROXY)\s*(\d+)/i,
+      /\b25-?(?:OH|HYDROXY)\s*VITAMIN\s*D\s*(\d+)/i,
+      /\bVITAMIN\s*D\s*TOTAL\s*(\d+)/i,
+      /\bVITAMIN\s*D\s*(\d+)/i,
     ],
   },
   {
@@ -1161,8 +1161,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/L',
     normalRange: { min: 5.5, max: 17 },
     patterns: [
-      /\bVITAMIN\s+E\s+(\d+\.?\d*)/i,
-      /\bALPHA\s+TOCOPHEROL\s+(\d+\.?\d*)/i,
+      /\bVITAMIN\s*E\s*(\d+\.?\d*)/i,
+      /\bALPHA\s*TOCOPHEROL\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1172,7 +1172,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0.1, max: 2.2 },
     patterns: [
-      /\bVITAMIN\s+K\s+(\d+\.?\d*)/i,
+      /\bVITAMIN\s*K\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -1186,9 +1186,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 15, max: 65 },
     patterns: [
-      /\bPTH\s+(\d+)/i,
-      /\bPARATHYROID\s+HORMONE\s+(\d+)/i,
-      /\bINTACT\s+PTH\s+(\d+)/i,
+      /\bPTH\s*(\d+)/i,
+      /\bPARATHYROID\s*HORMONE\s*(\d+)/i,
+      /\bINTACT\s*PTH\s*(\d+)/i,
     ],
   },
   {
@@ -1198,7 +1198,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 9, max: 42 },
     patterns: [
-      /\bOSTEOCALCIN\s+(\d+)/i,
+      /\bOSTEOCALCIN\s*(\d+)/i,
     ],
   },
   {
@@ -1208,8 +1208,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol BCE',
     normalRange: { min: 5, max: 65 },
     patterns: [
-      /\bN-?TELOPEPTIDE\s+(\d+)/i,
-      /\bNTX\s+(\d+)/i,
+      /\bN-?TELOPEPTIDE\s*(\d+)/i,
+      /\bNTX\s*(\d+)/i,
     ],
   },
   {
@@ -1219,8 +1219,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 0, max: 600 },
     patterns: [
-      /\bC-?TELOPEPTIDE\s+(\d+)/i,
-      /\bCTX\s+(\d+)/i,
+      /\bC-?TELOPEPTIDE\s*(\d+)/i,
+      /\bCTX\s*(\d+)/i,
     ],
   },
   {
@@ -1230,8 +1230,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/L',
     normalRange: { min: 15, max: 80 },
     patterns: [
-      /\bP1NP\s+(\d+)/i,
-      /\bPROCOLLAGEN\s+TYPE\s+1\s+N-?TERMINAL\s+(\d+)/i,
+      /\bP1NP\s*(\d+)/i,
+      /\bPROCOLLAGEN\s*TYPE\s*1\s*N-?TERMINAL\s*(\d+)/i,
     ],
   },
   {
@@ -1241,9 +1241,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/L',
     normalRange: { min: 6, max: 20 },
     patterns: [
-      /\bBONE-?SPECIFIC\s+ALP\s+(\d+)/i,
-      /\bBONE\s+ALP\s+(\d+)/i,
-      /\bBALP\s+(\d+)/i,
+      /\bBONE-?SPECIFIC\s*ALP\s*(\d+)/i,
+      /\bBONE\s*ALP\s*(\d+)/i,
+      /\bBALP\s*(\d+)/i,
     ],
   },
 
@@ -1257,8 +1257,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/L',
     normalRange: { min: 0, max: 10 },
     patterns: [
-      /\bCRP\s+(\d+\.?\d*)/i,
-      /\bC-?REACTIVE\s+PROTEIN\s+(\d+\.?\d*)/i,
+      /\bCRP\s*(\d+\.?\d*)/i,
+      /\bC-?REACTIVE\s*PROTEIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1268,9 +1268,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/L',
     normalRange: { min: 0, max: 1.0 },
     patterns: [
-      /\bHS-?CRP\s+(\d+\.?\d*)/i,
-      /\bHIGH\s+SENSITIVITY\s+CRP\s+(\d+\.?\d*)/i,
-      /\bCARDIO\s+CRP\s+(\d+\.?\d*)/i,
+      /\bHS-?CRP\s*(\d+\.?\d*)/i,
+      /\bHIGH\s*SENSITIVITY\s*CRP\s*(\d+\.?\d*)/i,
+      /\bCARDIO\s*CRP\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1280,9 +1280,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mm/hr',
     normalRange: { min: 0, max: 20 },
     patterns: [
-      /\bESR\s+(\d+)/i,
-      /\bSED\s+RATE\s+(\d+)/i,
-      /\bERYTHROCYTE\s+SEDIMENTATION\s+RATE\s+(\d+)/i,
+      /\bESR\s*(\d+)/i,
+      /\bSED\s*RATE\s*(\d+)/i,
+      /\bERYTHROCYTE\s*SEDIMENTATION\s*RATE\s*(\d+)/i,
     ],
   },
   {
@@ -1292,7 +1292,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 0.1 },
     patterns: [
-      /\bPROCALCITONIN\s+(\d+\.?\d*)/i,
+      /\bPROCALCITONIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1302,8 +1302,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 0, max: 7 },
     patterns: [
-      /\bINTERLEUKIN-?6\s+(\d+\.?\d*)/i,
-      /\bIL-?6\s+(\d+\.?\d*)/i,
+      /\bINTERLEUKIN-?6\s*(\d+\.?\d*)/i,
+      /\bIL-?6\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1313,8 +1313,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 90, max: 180 },
     patterns: [
-      /\bCOMPLEMENT\s+C3\s+(\d+)/i,
-      /\bC3\s+(\d+)/i,
+      /\bCOMPLEMENT\s*C3\s*(\d+)/i,
+      /\bC3\s*(\d+)/i,
     ],
   },
   {
@@ -1324,8 +1324,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 10, max: 40 },
     patterns: [
-      /\bCOMPLEMENT\s+C4\s+(\d+)/i,
-      /\bC4\s+(\d+)/i,
+      /\bCOMPLEMENT\s*C4\s*(\d+)/i,
+      /\bC4\s*(\d+)/i,
     ],
   },
 
@@ -1339,8 +1339,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 0.04 },
     patterns: [
-      /\bTROPONIN\s+I\s+(\d+\.?\d*)/i,
-      /\bTROP\s+I\s+(\d+\.?\d*)/i,
+      /\bTROPONIN\s*I\s*(\d+\.?\d*)/i,
+      /\bTROP\s*I\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1350,8 +1350,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 0.01 },
     patterns: [
-      /\bTROPONIN\s+T\s+(\d+\.?\d*)/i,
-      /\bTROP\s+T\s+(\d+\.?\d*)/i,
+      /\bTROPONIN\s*T\s*(\d+\.?\d*)/i,
+      /\bTROP\s*T\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1361,8 +1361,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 0, max: 100 },
     patterns: [
-      /\bBNP\s+(\d+)/i,
-      /\bB-?TYPE\s+NATRIURETIC\s+PEPTIDE\s+(\d+)/i,
+      /\bBNP\s*(\d+)/i,
+      /\bB-?TYPE\s+NATRIURETIC\s*PEPTIDE\s*(\d+)/i,
     ],
   },
   {
@@ -1372,8 +1372,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 0, max: 125 },
     patterns: [
-      /\bNT-?PROBNP\s+(\d+)/i,
-      /\bN-?TERMINAL\s+PRO-?BNP\s+(\d+)/i,
+      /\bNT-?PROBNP\s*(\d+)/i,
+      /\bN-?TERMINAL\s*PRO-?BNP\s*(\d+)/i,
     ],
   },
   {
@@ -1383,9 +1383,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 30, max: 200 },
     patterns: [
-      /\bCK\s+(\d+)/i,
-      /\bCREATINE\s+KINASE\s+(\d+)/i,
-      /\bCPK\s+(\d+)/i,
+      /\bCK\s*(\d+)/i,
+      /\bCREATINE\s*KINASE\s*(\d+)/i,
+      /\bCPK\s*(\d+)/i,
     ],
   },
   {
@@ -1395,8 +1395,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 5 },
     patterns: [
-      /\bCK-?MB\s+(\d+\.?\d*)/i,
-      /\bCREATINE\s+KINASE\s+MB\s+(\d+\.?\d*)/i,
+      /\bCK-?MB\s*(\d+\.?\d*)/i,
+      /\bCREATINE\s*KINASE\s*MB\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1406,7 +1406,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 90 },
     patterns: [
-      /\bMYOGLOBIN\s+(\d+)/i,
+      /\bMYOGLOBIN\s*(\d+)/i,
     ],
   },
 
@@ -1420,8 +1420,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'seconds',
     normalRange: { min: 11, max: 13.5 },
     patterns: [
-      /\bPT\s+(\d+\.?\d*)/i,
-      /\bPROTHROMBIN\s+TIME\s+(\d+\.?\d*)/i,
+      /\bPT\s*(\d+\.?\d*)/i,
+      /\bPROTHROMBIN\s*TIME\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1431,7 +1431,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ratio',
     normalRange: { min: 0.9, max: 1.1 },
     patterns: [
-      /\bINR\s+(\d+\.?\d*)/i,
+      /\bINR\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1441,9 +1441,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'seconds',
     normalRange: { min: 25, max: 35 },
     patterns: [
-      /\bPTT\s+(\d+\.?\d*)/i,
-      /\bAPTT\s+(\d+\.?\d*)/i,
-      /\bPARTIAL\s+THROMBOPLASTIN\s+TIME\s+(\d+\.?\d*)/i,
+      /\bPTT\s*(\d+\.?\d*)/i,
+      /\bAPTT\s*(\d+\.?\d*)/i,
+      /\bPARTIAL\s*THROMBOPLASTIN\s*TIME\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1453,7 +1453,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 200, max: 400 },
     patterns: [
-      /\bFIBRINOGEN\s+(\d+)/i,
+      /\bFIBRINOGEN\s*(\d+)/i,
     ],
   },
   {
@@ -1463,7 +1463,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/mL',
     normalRange: { min: 0, max: 0.5 },
     patterns: [
-      /\bD-?DIMER\s+(\d+\.?\d*)/i,
+      /\bD-?DIMER\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1473,8 +1473,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 80, max: 120 },
     patterns: [
-      /\bANTITHROMBIN\s+III\s+(\d+)/i,
-      /\bAT3\s+(\d+)/i,
+      /\bANTITHROMBIN\s*III\s*(\d+)/i,
+      /\bAT3\s*(\d+)/i,
     ],
   },
   {
@@ -1484,7 +1484,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 70, max: 140 },
     patterns: [
-      /\bPROTEIN\s+C\s+(\d+)/i,
+      /\bPROTEIN\s*C\s*(\d+)/i,
     ],
   },
   {
@@ -1494,7 +1494,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 60, max: 140 },
     patterns: [
-      /\bPROTEIN\s+S\s+(\d+)/i,
+      /\bPROTEIN\s*S\s*(\d+)/i,
     ],
   },
 
@@ -1508,9 +1508,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/dL',
     normalRange: { min: 300, max: 1000 },
     patterns: [
-      /\bTESTOSTERONE[,\s]+TOTAL\s+(\d+)/i,
-      /\bTOTAL\s+TESTOSTERONE\s+(\d+)/i,
-      /\bTESTOSTERONE\s+(\d+)/i,
+      /\bTESTOSTERONE[,\s]+TOTAL\s*(\d+)/i,
+      /\bTOTAL\s*TESTOSTERONE\s*(\d+)/i,
+      /\bTESTOSTERONE\s*(\d+)/i,
     ],
   },
   {
@@ -1520,7 +1520,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 50, max: 210 },
     patterns: [
-      /\bFREE\s+TESTOSTERONE\s+(\d+\.?\d*)/i,
+      /\bFREE\s*TESTOSTERONE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1530,8 +1530,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'nmol/L',
     normalRange: { min: 10, max: 57 },
     patterns: [
-      /\bSHBG\s+(\d+)/i,
-      /\bSEX\s+HORMONE\s+BINDING\s+GLOBULIN\s+(\d+)/i,
+      /\bSHBG\s*(\d+)/i,
+      /\bSEX\s*HORMONE\s*BINDING\s+GLOBULIN\s*(\d+)/i,
     ],
   },
   {
@@ -1541,8 +1541,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 10, max: 400 },
     patterns: [
-      /\bESTRADIOL\s+(\d+)/i,
-      /\bE2\s+(\d+)/i,
+      /\bESTRADIOL\s*(\d+)/i,
+      /\bE2\s*(\d+)/i,
     ],
   },
   {
@@ -1552,7 +1552,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0.1, max: 25 },
     patterns: [
-      /\bPROGESTERONE\s+(\d+\.?\d*)/i,
+      /\bPROGESTERONE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1562,8 +1562,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mIU/mL',
     normalRange: { min: 1.5, max: 12.4 },
     patterns: [
-      /\bLH\s+(\d+\.?\d*)/i,
-      /\bLUTEINIZING\s+HORMONE\s+(\d+\.?\d*)/i,
+      /\bLH\s*(\d+\.?\d*)/i,
+      /\bLUTEINIZING\s+HORMONE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1573,8 +1573,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mIU/mL',
     normalRange: { min: 1.5, max: 12.4 },
     patterns: [
-      /\bFSH\s+(\d+\.?\d*)/i,
-      /\bFOLLICLE\s+STIMULATING\s+HORMONE\s+(\d+\.?\d*)/i,
+      /\bFSH\s*(\d+\.?\d*)/i,
+      /\bFOLLICLE\s+STIMULATING\s*HORMONE\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1584,8 +1584,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 2, max: 18 },
     patterns: [
-      /\bPROLACTIN\s+(\d+\.?\d*)/i,
-      /\bPRL\s+(\d+\.?\d*)/i,
+      /\bPROLACTIN\s*(\d+\.?\d*)/i,
+      /\bPRL\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1595,8 +1595,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 6, max: 23 },
     patterns: [
-      /\bCORTISOL\s+(\d+\.?\d*)/i,
-      /\bSERUM\s+CORTISOL\s+(\d+\.?\d*)/i,
+      /\bCORTISOL\s*(\d+\.?\d*)/i,
+      /\bSERUM\s+CORTISOL\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1606,8 +1606,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/dL',
     normalRange: { min: 80, max: 560 },
     patterns: [
-      /\bDHEA-?S\s+(\d+)/i,
-      /\bDHEA\s+SULFATE\s+(\d+)/i,
+      /\bDHEA-?S\s*(\d+)/i,
+      /\bDHEA\s+SULFATE\s*(\d+)/i,
     ],
   },
   {
@@ -1617,8 +1617,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pg/mL',
     normalRange: { min: 10, max: 60 },
     patterns: [
-      /\bACTH\s+(\d+)/i,
-      /\bADRENOCORTICOTROPIC\s+HORMONE\s+(\d+)/i,
+      /\bACTH\s*(\d+)/i,
+      /\bADRENOCORTICOTROPIC\s+HORMONE\s*(\d+)/i,
     ],
   },
   {
@@ -1628,8 +1628,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 100, max: 300 },
     patterns: [
-      /\bIGF-?1\s+(\d+)/i,
-      /\bINSULIN-?LIKE\s+GROWTH\s+FACTOR\s+(\d+)/i,
+      /\bIGF-?1\s*(\d+)/i,
+      /\bINSULIN-?LIKE\s+GROWTH\s+FACTOR\s*(\d+)/i,
     ],
   },
   {
@@ -1639,8 +1639,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 10 },
     patterns: [
-      /\bGROWTH\s+HORMONE\s+(\d+\.?\d*)/i,
-      /\bGH\s+(\d+\.?\d*)/i,
+      /\bGROWTH\s+HORMONE\s*(\d+\.?\d*)/i,
+      /\bGH\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1650,8 +1650,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 1.0, max: 10.0 },
     patterns: [
-      /\bAMH\s+(\d+\.?\d*)/i,
-      /\bANTI-?MULLERIAN\s+HORMONE\s+(\d+\.?\d*)/i,
+      /\bAMH\s*(\d+\.?\d*)/i,
+      /\bANTI-?MULLERIAN\s+HORMONE\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -1665,8 +1665,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'titer',
     normalRange: { min: 0, max: 1 },
     patterns: [
-      /\bANA\s+(\d+:\d+)/i,
-      /\bANTINUCLEAR\s+ANTIBODY\s+(\d+:\d+)/i,
+      /\bANA\s*(\d+:\d+)/i,
+      /\bANTINUCLEAR\s+ANTIBODY\s*(\d+:\d+)/i,
     ],
   },
   {
@@ -1676,8 +1676,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'IU/mL',
     normalRange: { min: 0, max: 30 },
     patterns: [
-      /\bANTI-?DSDNA\s+(\d+)/i,
-      /\bDOUBLE\s+STRANDED\s+DNA\s+ANTIBODY\s+(\d+)/i,
+      /\bANTI-?DSDNA\s*(\d+)/i,
+      /\bDOUBLE\s+STRANDED\s+DNA\s+ANTIBODY\s*(\d+)/i,
     ],
   },
   {
@@ -1687,8 +1687,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'IU/mL',
     normalRange: { min: 0, max: 14 },
     patterns: [
-      /\bRHEUMATOID\s+FACTOR\s+(\d+)/i,
-      /\bRF\s+(\d+)/i,
+      /\bRHEUMATOID\s+FACTOR\s*(\d+)/i,
+      /\bRF\s*(\d+)/i,
     ],
   },
   {
@@ -1698,8 +1698,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/mL',
     normalRange: { min: 0, max: 20 },
     patterns: [
-      /\bANTI-?CCP\s+(\d+)/i,
-      /\bCYCLIC\s+CITRULLINATED\s+PEPTIDE\s+(\d+)/i,
+      /\bANTI-?CCP\s*(\d+)/i,
+      /\bCYCLIC\s+CITRULLINATED\s+PEPTIDE\s*(\d+)/i,
     ],
   },
   {
@@ -1709,8 +1709,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'AI',
     normalRange: { min: 0, max: 1.0 },
     patterns: [
-      /\bANTI-?SSA\s+(\d+\.?\d*)/i,
-      /\bRO\s+ANTIBODY\s+(\d+\.?\d*)/i,
+      /\bANTI-?SSA\s*(\d+\.?\d*)/i,
+      /\bRO\s+ANTIBODY\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1720,8 +1720,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'AI',
     normalRange: { min: 0, max: 1.0 },
     patterns: [
-      /\bANTI-?SSB\s+(\d+\.?\d*)/i,
-      /\bLA\s+ANTIBODY\s+(\d+\.?\d*)/i,
+      /\bANTI-?SSB\s*(\d+\.?\d*)/i,
+      /\bLA\s+ANTIBODY\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1731,7 +1731,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 3.5, max: 7.2 },
     patterns: [
-      /\bURIC\s+ACID\s+(\d+\.?\d*)/i,
+      /\bURIC\s+ACID\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -1745,8 +1745,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 4.0 },
     patterns: [
-      /\bPSA\s+(\d+\.?\d*)/i,
-      /\bPROSTATE\s+SPECIFIC\s+ANTIGEN\s+(\d+\.?\d*)/i,
+      /\bPSA\s*(\d+\.?\d*)/i,
+      /\bPROSTATE\s+SPECIFIC\s+ANTIGEN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1756,7 +1756,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 25, max: 100 },
     patterns: [
-      /\bFREE\s+PSA\s+(\d+)/i,
+      /\bFREE\s+PSA\s*(\d+)/i,
     ],
   },
   {
@@ -1766,8 +1766,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 3.0 },
     patterns: [
-      /\bCEA\s+(\d+\.?\d*)/i,
-      /\bCARCINOEMBRYONIC\s+ANTIGEN\s+(\d+\.?\d*)/i,
+      /\bCEA\s*(\d+\.?\d*)/i,
+      /\bCARCINOEMBRYONIC\s+ANTIGEN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1777,7 +1777,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/mL',
     normalRange: { min: 0, max: 35 },
     patterns: [
-      /\bCA-?125\s+(\d+)/i,
+      /\bCA-?125\s*(\d+)/i,
     ],
   },
   {
@@ -1787,7 +1787,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/mL',
     normalRange: { min: 0, max: 37 },
     patterns: [
-      /\bCA\s*19-?9\s+(\d+)/i,
+      /\bCA\s*19-?9\s*(\d+)/i,
     ],
   },
   {
@@ -1797,7 +1797,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/mL',
     normalRange: { min: 0, max: 30 },
     patterns: [
-      /\bCA\s*15-?3\s+(\d+)/i,
+      /\bCA\s*15-?3\s*(\d+)/i,
     ],
   },
   {
@@ -1807,8 +1807,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 10 },
     patterns: [
-      /\bAFP\s+(\d+\.?\d*)/i,
-      /\bALPHA-?FETOPROTEIN\s+(\d+\.?\d*)/i,
+      /\bAFP\s*(\d+\.?\d*)/i,
+      /\bALPHA-?FETOPROTEIN\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1818,8 +1818,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mIU/mL',
     normalRange: { min: 0, max: 5 },
     patterns: [
-      /\bHCG\s+(\d+)/i,
-      /\bBETA\s+HCG\s+(\d+)/i,
+      /\bHCG\s*(\d+)/i,
+      /\bBETA\s+HCG\s*(\d+)/i,
     ],
   },
 
@@ -1833,7 +1833,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 28, max: 100 },
     patterns: [
-      /\bAMYLASE\s+(\d+)/i,
+      /\bAMYLASE\s*(\d+)/i,
     ],
   },
   {
@@ -1843,7 +1843,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/L',
     normalRange: { min: 0, max: 160 },
     patterns: [
-      /\bLIPASE\s+(\d+)/i,
+      /\bLIPASE\s*(\d+)/i,
     ],
   },
   {
@@ -1853,8 +1853,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ug/g',
     normalRange: { min: 200, max: 9999 },
     patterns: [
-      /\bELASTASE\s+(\d+)/i,
-      /\bFECAL\s+ELASTASE\s+(\d+)/i,
+      /\bELASTASE\s*(\d+)/i,
+      /\bFECAL\s+ELASTASE\s*(\d+)/i,
     ],
   },
 
@@ -1868,7 +1868,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ratio',
     normalRange: { min: 1.005, max: 1.030 },
     patterns: [
-      /\bSPECIFIC\s+GRAVITY\s+(\d+\.?\d*)/i,
+      /\bSPECIFIC\s+GRAVITY\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1878,8 +1878,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pH',
     normalRange: { min: 4.5, max: 8.0 },
     patterns: [
-      /\bURINE\s+PH\s+(\d+\.?\d*)/i,
-      /\bPH\s+(\d+\.?\d*)/i,
+      /\bURINE\s+PH\s*(\d+\.?\d*)/i,
+      /\bPH\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1889,7 +1889,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 0 },
     patterns: [
-      /\bURINE\s+GLUCOSE\s+(\d+)/i,
+      /\bURINE\s+GLUCOSE\s*(\d+)/i,
     ],
   },
   {
@@ -1899,7 +1899,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mg/dL',
     normalRange: { min: 0, max: 0 },
     patterns: [
-      /\bURINE\s+KETONES?\s+(\d+)/i,
+      /\bURINE\s+KETONES?\s*(\d+)/i,
     ],
   },
   {
@@ -1909,7 +1909,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '/HPF',
     normalRange: { min: 0, max: 5 },
     patterns: [
-      /\bURINE\s+WBC\s+(\d+)/i,
+      /\bURINE\s+WBC\s*(\d+)/i,
     ],
   },
   {
@@ -1919,7 +1919,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '/HPF',
     normalRange: { min: 0, max: 2 },
     patterns: [
-      /\bURINE\s+RBC\s+(\d+)/i,
+      /\bURINE\s+RBC\s*(\d+)/i,
     ],
   },
 
@@ -1933,8 +1933,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'pH',
     normalRange: { min: 7.35, max: 7.45 },
     patterns: [
-      /\bBLOOD\s+PH\s+(\d+\.?\d*)/i,
-      /\bARTERIAL\s+PH\s+(\d+\.?\d*)/i,
+      /\bBLOOD\s+PH\s*(\d+\.?\d*)/i,
+      /\bARTERIAL\s+PH\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -1944,8 +1944,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mmHg',
     normalRange: { min: 35, max: 45 },
     patterns: [
-      /\bPCO2\s+(\d+)/i,
-      /\bPARTIAL\s+PRESSURE\s+CO2\s+(\d+)/i,
+      /\bPCO2\s*(\d+)/i,
+      /\bPARTIAL\s+PRESSURE\s+CO2\s*(\d+)/i,
     ],
   },
   {
@@ -1955,8 +1955,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mmHg',
     normalRange: { min: 80, max: 100 },
     patterns: [
-      /\bPO2\s+(\d+)/i,
-      /\bPARTIAL\s+PRESSURE\s+O2\s+(\d+)/i,
+      /\bPO2\s*(\d+)/i,
+      /\bPARTIAL\s+PRESSURE\s+O2\s*(\d+)/i,
     ],
   },
   {
@@ -1977,8 +1977,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 95, max: 100 },
     patterns: [
-      /\bO2\s+SATURATION\s+(\d+)/i,
-      /\bSAO2\s+(\d+)/i,
+      /\bO2\s+SATURATION\s*(\d+)/i,
+      /\bSAO2\s*(\d+)/i,
     ],
   },
   {
@@ -1988,7 +1988,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mmol/L',
     normalRange: { min: 0.5, max: 2.0 },
     patterns: [
-      /\bLACTATE\s+(\d+\.?\d*)/i,
+      /\bLACTATE\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -2002,8 +2002,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'IU/mL',
     normalRange: { min: 0, max: 100 },
     patterns: [
-      /\bIGE\s+TOTAL\s+(\d+)/i,
-      /\bTOTAL\s+IGE\s+(\d+)/i,
+      /\bIGE\s*TOTAL\s*(\d+)/i,
+      /\bTOTAL\s+IGE\s*(\d+)/i,
     ],
   },
   {
@@ -2013,7 +2013,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'ng/mL',
     normalRange: { min: 0, max: 11.4 },
     patterns: [
-      /\bTRYPTASE\s+(\d+\.?\d*)/i,
+      /\bTRYPTASE\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -2037,8 +2037,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/mL',
     normalRange: { min: 0, max: 4 },
     patterns: [
-      /\bCELIAC\s+PANEL\s+(\d+)/i,
-      /\bTTG\s+IGA\s+(\d+)/i,
+      /\bCELIAC\s+PANEL\s*(\d+)/i,
+      /\bTTG\s+IGA\s*(\d+)/i,
     ],
   },
   {
@@ -2048,7 +2048,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'U/g Hb',
     normalRange: { min: 7, max: 20 },
     patterns: [
-      /\bG6PD\s+(\d+\.?\d*)/i,
+      /\bG6PD\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -2062,9 +2062,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mmHg',
     normalRange: { min: 90, max: 120 },
     patterns: [
-      /\bBLOOD\s+PRESSURE\s+SYSTOLIC\s+(\d+)/i,
-      /\bSYSTOLIC\s+(\d+)/i,
-      /\bSBP\s+(\d+)/i,
+      /\bBLOOD\s+PRESSURE\s+SYSTOLIC\s*(\d+)/i,
+      /\bSYSTOLIC\s*(\d+)/i,
+      /\bSBP\s*(\d+)/i,
     ],
   },
   {
@@ -2074,9 +2074,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'mmHg',
     normalRange: { min: 60, max: 80 },
     patterns: [
-      /\bBLOOD\s+PRESSURE\s+DIASTOLIC\s+(\d+)/i,
-      /\bDIASTOLIC\s+(\d+)/i,
-      /\bDBP\s+(\d+)/i,
+      /\bBLOOD\s+PRESSURE\s+DIASTOLIC\s*(\d+)/i,
+      /\bDIASTOLIC\s*(\d+)/i,
+      /\bDBP\s*(\d+)/i,
     ],
   },
   {
@@ -2086,9 +2086,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'bpm',
     normalRange: { min: 60, max: 100 },
     patterns: [
-      /\bHEART\s+RATE\s+(\d+)/i,
-      /\bPULSE\s+(\d+)/i,
-      /\bHR\s+(\d+)/i,
+      /\bHEART\s+RATE\s*(\d+)/i,
+      /\bPULSE\s*(\d+)/i,
+      /\bHR\s*(\d+)/i,
     ],
   },
   {
@@ -2098,8 +2098,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'F',
     normalRange: { min: 97.8, max: 99.1 },
     patterns: [
-      /\bTEMPERATURE\s+(\d+\.?\d*)/i,
-      /\bTEMP\s+(\d+\.?\d*)/i,
+      /\bTEMPERATURE\s*(\d+\.?\d*)/i,
+      /\bTEMP\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -2109,8 +2109,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'breaths/min',
     normalRange: { min: 12, max: 20 },
     patterns: [
-      /\bRESPIRATORY\s+RATE\s+(\d+)/i,
-      /\bRR\s+(\d+)/i,
+      /\bRESPIRATORY\s+RATE\s*(\d+)/i,
+      /\bRR\s*(\d+)/i,
     ],
   },
   {
@@ -2120,9 +2120,9 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: '%',
     normalRange: { min: 95, max: 100 },
     patterns: [
-      /\bSPO2\s+(\d+)/i,
-      /\bOXYGEN\s+SATURATION\s+(\d+)/i,
-      /\bO2\s+SAT\s+(\d+)/i,
+      /\bSPO2\s*(\d+)/i,
+      /\bOXYGEN\s+SATURATION\s*(\d+)/i,
+      /\bO2\s+SAT\s*(\d+)/i,
     ],
   },
   {
@@ -2132,8 +2132,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'kg/m2',
     normalRange: { min: 18.5, max: 24.9 },
     patterns: [
-      /\bBMI\s+(\d+\.?\d*)/i,
-      /\bBODY\s+MASS\s+INDEX\s+(\d+\.?\d*)/i,
+      /\bBMI\s*(\d+\.?\d*)/i,
+      /\bBODY\s+MASS\s+INDEX\s*(\d+\.?\d*)/i,
     ],
   },
 
@@ -2157,7 +2157,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'kg',
     normalRange: { min: 40, max: 80 },
     patterns: [
-      /\bLEAN\s+(?:BODY\s+)?MASS\s+(\d+\.?\d*)/i,
+      /\bLEAN\s+(?:BODY\s+)?MASS\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -2167,8 +2167,8 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'g/cm2',
     normalRange: { min: 0.8, max: 1.5 },
     patterns: [
-      /\bBONE\s+MINERAL\s+DENSITY\s+(\d+\.?\d*)/i,
-      /\bBMD\s+(\d+\.?\d*)/i,
+      /\bBONE\s+MINERAL\s+DENSITY\s*(\d+\.?\d*)/i,
+      /\bBMD\s*(\d+\.?\d*)/i,
     ],
   },
   {
@@ -2198,7 +2198,7 @@ export const ALL_BIOMARKERS: BiomarkerPattern[] = [
     defaultUnit: 'inches',
     normalRange: { min: 0, max: 40 },
     patterns: [
-      /\bWAIST\s+CIRCUMFERENCE\s+(\d+\.?\d*)/i,
+      /\bWAIST\s+CIRCUMFERENCE\s*(\d+\.?\d*)/i,
     ],
   },
 ];
@@ -2324,7 +2324,7 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
 
   // Pattern 1: Whitespace, then number (possibly with decimal), optionally H/L flag
   // Must be the FIRST thing after the name (just whitespace before number)
-  const resultMatch = afterName.match(/^\s+(\d+\.?\d*)\s*([HL])?\s/i);
+  const resultMatch = afterName.match(/^\s*(\d+\.?\d*)\s*([HL])?\s/i);
 
   if (resultMatch) {
     const value = parseFloat(resultMatch[1]);
@@ -2336,7 +2336,7 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
   }
 
   // Pattern 2: Whitespace, number followed by unit (common in lab reports)
-  const unitMatch = afterName.match(/^\s+(\d+\.?\d*)\s*(?:mg|g|%|K\/uL|M\/uL|mL|uL|fL|pg|ng|IU|U|mmol|umol|mEq|ratio)/i);
+  const unitMatch = afterName.match(/^\s*(\d+\.?\d*)\s*(?:mg|g|%|K\/uL|M\/uL|mL|uL|fL|pg|ng|IU|U|mmol|umol|mEq|ratio)/i);
   if (unitMatch) {
     const value = parseFloat(unitMatch[1]);
     console.log(`[EXTRACT_VALUE] Pattern 2 (with unit) matched: value=${value}`);

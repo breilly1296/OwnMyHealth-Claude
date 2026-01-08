@@ -11,7 +11,7 @@ import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { ValidationError } from '../middleware/errorHandler.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
-import { parseLabReport, parseSBC } from '../services/pdfParser.js';
+import { parseSBC } from '../services/pdfParser.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { processDocument, extractDateFromText, extractLabNameFromText } from '../services/ocrService.js';
@@ -103,10 +103,10 @@ export async function uploadLabReport(
   const userSalt = await getUserEncryptionSalt(userId);
   const auditService = getAuditLogService(prisma);
 
-  // Parse the PDF
-  const parseResult = await parseLabReport(file.buffer, file.originalname);
+  // Process the PDF using Claude API for intelligent extraction
+  const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname);
 
-  if (parseResult.biomarkers.length === 0) {
+  if (ocrResult.biomarkers.length === 0) {
     // Audit log: failed extraction
     await auditService.logAccess(LAB_REPORT_RESOURCE, undefined, { req, userId }, {
       operation: 'PARSE_FAILED',
@@ -118,6 +118,11 @@ export async function uploadLabReport(
     throw new ValidationError('Could not extract any biomarkers from the PDF. Please ensure it is a valid lab report.');
   }
 
+  // Use metadata from Claude if available, otherwise extract from text
+  const labName = ocrResult.metadata.labName || extractLabNameFromText(ocrResult.text);
+  const reportDateStr = ocrResult.metadata.labDate || extractDateFromText(ocrResult.text);
+  const reportDate = reportDateStr ? new Date(reportDateStr) : new Date();
+
   // Create biomarkers in database
   const createdBiomarkers: {
     id: string;
@@ -128,13 +133,13 @@ export async function uploadLabReport(
     isOutOfRange: boolean;
   }[] = [];
 
-  for (const biomarker of parseResult.biomarkers) {
+  for (const biomarker of ocrResult.biomarkers) {
     // Encrypt the value
     const valueEncrypted = encryptionService.encrypt(biomarker.value.toString(), userSalt);
 
     // Encrypt notes if present
-    const notesEncrypted = biomarker.labName
-      ? encryptionService.encrypt(`Extracted from lab report: ${biomarker.labName}`, userSalt)
+    const notesEncrypted = labName
+      ? encryptionService.encrypt(`Extracted from lab report: ${labName}`, userSalt)
       : null;
 
     // Check if out of range
@@ -152,7 +157,7 @@ export async function uploadLabReport(
         normalRangeMin: biomarker.normalRange.min,
         normalRangeMax: biomarker.normalRange.max,
         normalRangeSource: biomarker.normalRange.source || 'Lab Report',
-        measurementDate: new Date(biomarker.date),
+        measurementDate: reportDate,
         isOutOfRange,
       },
     });
@@ -167,17 +172,17 @@ export async function uploadLabReport(
     });
   }
 
-  // Calculate average extraction confidence
-  const avgConfidence = parseResult.biomarkers.reduce((sum, b) => sum + b.extractionConfidence, 0)
-                        / parseResult.biomarkers.length;
+  // Use confidence from OCR result
+  const avgConfidence = ocrResult.confidence;
 
   // Audit log: successful upload and extraction
   await auditService.logCreate(LAB_REPORT_RESOURCE, 'BATCH', {
     filename: file.originalname,
     fileSize: file.size,
     biomarkersExtracted: createdBiomarkers.length,
-    labName: parseResult.labName,
+    labName: labName || undefined,
     extractionConfidence: avgConfidence,
+    processorType: ocrResult.metadata.processorType,
   }, { req, userId });
 
   const response: ApiResponse<LabReportUploadResponse> = {
@@ -185,8 +190,8 @@ export async function uploadLabReport(
     data: {
       biomarkersCreated: createdBiomarkers.length,
       biomarkers: createdBiomarkers,
-      labName: parseResult.labName,
-      reportDate: parseResult.reportDate,
+      labName: labName || undefined,
+      reportDate: reportDate.toISOString(),
       extractionConfidence: avgConfidence,
     },
   };
