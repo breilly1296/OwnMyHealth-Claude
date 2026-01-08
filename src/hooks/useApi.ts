@@ -109,7 +109,8 @@ function useApiFetch<T>(
 
 export function useBiomarkers(category?: string) {
   const fetcher = useCallback(async () => {
-    const result = await biomarkersApi.getAll({ category });
+    // High limit to fetch all biomarkers, avoiding pagination issues
+    const result = await biomarkersApi.getAll({ category, limit: 1000 });
     return result.biomarkers;
   }, [category]);
 

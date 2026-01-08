@@ -137,7 +137,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       }
 
       try {
-        const result = await biomarkersApi.getAll();
+        // Fetch all biomarkers (high limit to avoid pagination issues)
+        const result = await biomarkersApi.getAll({ limit: 1000 });
         setBiomarkers(result.biomarkers as unknown as Biomarker[]);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to load biomarkers';
@@ -253,7 +254,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     // Fetch updated biomarkers from server since they were saved server-side
     const fetchUpdatedBiomarkers = async () => {
       try {
-        const result = await biomarkersApi.getAll();
+        // Fetch all biomarkers (high limit to avoid pagination issues)
+        const result = await biomarkersApi.getAll({ limit: 1000 });
         setBiomarkers(result.biomarkers as unknown as Biomarker[]);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to refresh biomarkers';
