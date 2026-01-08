@@ -2513,8 +2513,43 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
 }
 
 /**
+ * Check if a line contains ONLY a numeric value (possibly with H/L flag)
+ * This handles Document AI splitting table columns into separate lines
+ */
+function isValueOnlyLine(line: string): { value: number; flag?: string } | null {
+  const trimmed = line.trim();
+  // Match: number with optional decimal, optional H/L flag, optional unit
+  // Examples: "193", "43 L", "2.6", "234 H", "0.86"
+  const match = trimmed.match(/^(\d+\.?\d*)\s*([HL])?\s*(%|mg\/dL|g\/dL|K\/uL|M\/uL|fL|pg|ng\/mL|mIU\/mL|mEq\/L|mmol\/L)?$/i);
+  if (match) {
+    const value = parseFloat(match[1]);
+    if (!isNaN(value) && value >= 0 && value < 100000) {
+      return { value, flag: match[2] };
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if a line is primarily a biomarker name (with little or no trailing content)
+ */
+function isNameOnlyLine(line: string, nameEndIndex: number): boolean {
+  const afterName = line.substring(nameEndIndex).trim();
+  // If there's very little after the name, it's likely a name-only line
+  // Allow for trailing punctuation or very short suffixes
+  return afterName.length < 5 || /^[,;:\s]*$/.test(afterName);
+}
+
+/**
  * Extract biomarkers using line-by-line analysis for tabular formats
- * Quest format: "BIOMARKER NAME    VALUE    Reference Range: X-Y unit"
+ * Handles both single-line format and Document AI multi-line format where
+ * table columns are split into separate lines.
+ *
+ * Single-line: "CHOLESTEROL, TOTAL    193    Reference Range: <200 mg/dL"
+ * Multi-line:
+ *   Line 1: "CHOLESTEROL, TOTAL"
+ *   Line 2: "193"
+ *   Line 3: "Reference Range: <200 mg/dL"
  */
 function extractFromLines(text: string): ExtractedBiomarker[] {
   const results: ExtractedBiomarker[] = [];
@@ -2522,19 +2557,18 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
   const lines = text.split('\n');
 
   console.log(`[LINE ANALYSIS] Processing ${lines.length} lines`);
-  console.log('[LINE ANALYSIS] First 20 lines:');
-  lines.slice(0, 20).forEach((line, i) => console.log(`  ${i}: "${line.substring(0, 80)}"`));
+  console.log('[LINE ANALYSIS] First 30 lines:');
+  lines.slice(0, 30).forEach((line, i) => console.log(`  ${i}: "${line.substring(0, 80)}"`));
 
-  let resultRowCount = 0;
+  // Track which lines we've used as values (to avoid double-matching)
+  const usedValueLines = new Set<number>();
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (!line || line.length < 3) continue;
+    if (!line || line.length < 2) continue;
 
-    // Skip lines that don't look like result rows
-    if (!looksLikeResultRow(line)) {
-      continue;
-    }
-    resultRowCount++;
+    // Skip lines we've already used as value lines
+    if (usedValueLines.has(i)) continue;
 
     for (const biomarker of ALL_BIOMARKERS) {
       if (foundNames.has(biomarker.name)) continue;
@@ -2556,22 +2590,86 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
 
       if (matchedNameEnd === -1) continue;
 
-      console.log(`[LINE ${i}] Found biomarker "${matchedName}" in line: "${line.substring(0, 60)}..."`);
+      console.log(`[LINE ${i}] Found biomarker "${matchedName}" in line: "${line}"`);
 
-      // Extract the result value (first number after biomarker name)
-      const extraction = extractResultValue(line, matchedNameEnd);
+      let extractedValue: number | null = null;
+      let rawMatch = line;
+      let valueLineIndex = i;
 
-      if (!extraction) {
+      // STRATEGY 1: Try to extract value from the same line (traditional format)
+      const sameLineExtraction = extractResultValue(line, matchedNameEnd);
+      if (sameLineExtraction) {
+        extractedValue = sameLineExtraction.value;
+        rawMatch = sameLineExtraction.rawMatch;
+        console.log(`[LINE ${i}] Same-line extraction: value=${extractedValue}`);
+      }
+
+      // STRATEGY 2: If no value on same line, check if this is a name-only line
+      // and look at the next few lines for a numeric value
+      if (extractedValue === null && isNameOnlyLine(line, matchedNameEnd)) {
+        console.log(`[LINE ${i}] Name-only line detected, checking next lines for value...`);
+
+        // Look at the next 3 lines for a value
+        for (let j = 1; j <= 3 && i + j < lines.length; j++) {
+          const nextLine = lines[i + j].trim();
+          if (!nextLine) continue;
+
+          // Skip if this line looks like a reference range or educational text
+          if (/^(reference|range|normal|desirable|<|>|see |note)/i.test(nextLine)) {
+            console.log(`[LINE ${i + j}] Skipping reference/educational line: "${nextLine}"`);
+            continue;
+          }
+
+          const valueResult = isValueOnlyLine(nextLine);
+          if (valueResult) {
+            extractedValue = valueResult.value;
+            valueLineIndex = i + j;
+            rawMatch = `${line} | ${nextLine}`;
+            console.log(`[LINE ${i}] Multi-line extraction: name="${matchedName}", value=${extractedValue} (from line ${valueLineIndex})`);
+            usedValueLines.add(valueLineIndex);
+            break;
+          }
+
+          // Also try to extract a value from a line that has the number at the start
+          const numStartMatch = nextLine.match(/^(\d+\.?\d*)\s/);
+          if (numStartMatch) {
+            const potentialValue = parseFloat(numStartMatch[1]);
+            if (!isNaN(potentialValue) && potentialValue >= 0 && potentialValue < 100000) {
+              extractedValue = potentialValue;
+              valueLineIndex = i + j;
+              rawMatch = `${line} | ${nextLine}`;
+              console.log(`[LINE ${i}] Multi-line extraction (num-start): name="${matchedName}", value=${extractedValue} (from line ${valueLineIndex})`);
+              usedValueLines.add(valueLineIndex);
+              break;
+            }
+          }
+        }
+      }
+
+      // STRATEGY 3: Check if the value might be on a line BEFORE the name
+      // (Document AI sometimes orders columns differently)
+      if (extractedValue === null && i > 0) {
+        const prevLine = lines[i - 1].trim();
+        if (prevLine && !usedValueLines.has(i - 1)) {
+          const valueResult = isValueOnlyLine(prevLine);
+          if (valueResult) {
+            extractedValue = valueResult.value;
+            rawMatch = `${prevLine} | ${line}`;
+            console.log(`[LINE ${i}] Reverse multi-line extraction: value=${extractedValue} (from line ${i - 1})`);
+            usedValueLines.add(i - 1);
+          }
+        }
+      }
+
+      if (extractedValue === null) {
         console.log(`[LINE ${i}] No value extracted for ${biomarker.name}`);
         continue;
       }
 
-      const { value, rawMatch } = extraction;
-
-      // Skip if value seems unreasonable for this biomarker
+      // Validate value is within reasonable bounds for this biomarker
       const range = biomarker.normalRange;
-      if (value < range.min * 0.01 || value > range.max * 100) {
-        console.log(`[LINE ${i}] Value ${value} out of range for ${biomarker.name} (expected ${range.min}-${range.max})`);
+      if (extractedValue < range.min * 0.01 || extractedValue > range.max * 100) {
+        console.log(`[LINE ${i}] Value ${extractedValue} out of range for ${biomarker.name} (expected ${range.min * 0.01}-${range.max * 100})`);
         continue;
       }
 
@@ -2579,20 +2677,20 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
 
       results.push({
         name: biomarker.name,
-        value,
+        value: extractedValue,
         unit: biomarker.defaultUnit,
         category: biomarker.category,
         normalRange: { ...range, source: 'Standard Reference Range' },
-        confidence: 0.85, // Higher confidence for line-based extraction with proper validation
-        rawMatch: rawMatch.substring(0, 100),
+        confidence: 0.85,
+        rawMatch: rawMatch.substring(0, 150),
       });
 
-      console.log(`[LINE MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit} (line ${i})`);
+      console.log(`[LINE MATCH] ${biomarker.name}: ${extractedValue} ${biomarker.defaultUnit} (lines ${i}-${valueLineIndex})`);
       break;
     }
   }
 
-  console.log(`[LINE ANALYSIS] Processed ${resultRowCount} result rows, found ${results.length} biomarkers`);
+  console.log(`[LINE ANALYSIS] Found ${results.length} biomarkers`);
   return results;
 }
 
