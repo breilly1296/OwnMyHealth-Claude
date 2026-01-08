@@ -161,8 +161,16 @@ export async function attemptTokenRefresh(): Promise<boolean> {
  * Handles variations: csrf_token, csrf-token, csrfToken, CSRF-Token, etc.
  */
 function getCsrfToken(): string {
-  const match = document.cookie.match(/csrf[_-]?token=([^;]+)/i);
-  return match ? decodeURIComponent(match[1]) : '';
+  const cookies = document.cookie;
+  const match = cookies.match(/csrf[_-]?token=([^;]+)/i);
+  const token = match ? decodeURIComponent(match[1]) : '';
+
+  // Debug logging for CSRF issues
+  if (!token && typeof window !== 'undefined') {
+    console.warn('[CSRF] No csrf token found in cookies:', cookies.substring(0, 200));
+  }
+
+  return token;
 }
 
 /**
@@ -189,6 +197,8 @@ async function apiFetch<T>(
     const csrfToken = getCsrfToken();
     if (csrfToken) {
       (headers as Record<string, string>)['x-csrf-token'] = csrfToken;
+    } else {
+      console.warn(`[CSRF] Making ${method} request to ${endpoint} without CSRF token`);
     }
   }
 
