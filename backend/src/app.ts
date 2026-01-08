@@ -102,12 +102,21 @@ app.use(helmet({
 }));
 
 // CORS configuration - use safe origins based on environment
-app.use(cors({
+const corsOptions = {
   origin: getSafeCorsOrigins(),
   credentials: config.cors.credentials,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-}));
+  // Ensure preflight requests are handled properly
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for preflight requests (belt and suspenders)
+app.options('*', cors(corsOptions));
 
 // Cookie parsing (must be before routes)
 app.use(cookieParser());
