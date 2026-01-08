@@ -206,6 +206,13 @@ export async function processDocument(
       textPreview: extractedText.substring(0, 500).replace(/\n/g, ' '),
     });
 
+    // DEBUG: Log first 20 lines to see exact OCR output format
+    const lines = extractedText.split('\n');
+    console.log('[OCR DEBUG] First 20 lines of OCR text:');
+    lines.slice(0, 20).forEach((line, i) => {
+      console.log(`[OCR LINE ${i + 1}] "${line}"`);
+    });
+
     // Calculate overall text confidence
     let totalConfidence = 0;
     let confidenceCount = 0;
@@ -229,15 +236,13 @@ export async function processDocument(
     const biomarkers = extractBiomarkersFromText(extractedText);
 
     // DEBUG: Log biomarker extraction results
-    console.log('[OCR DEBUG] Biomarker extraction results', {
+    console.log('[OCR DEBUG] Biomarker extraction summary', {
       biomarkersFoundBeforeValidation: biomarkers.length,
-      biomarkerDetails: biomarkers.map((b) => ({
-        name: b.name,
-        value: b.value,
-        unit: b.unit,
-        confidence: b.confidence,
-        rawMatch: b.rawMatch.substring(0, 50),
-      })),
+    });
+
+    // DEBUG: Log each found biomarker individually
+    biomarkers.forEach((b, i) => {
+      console.log(`[OCR BIOMARKER ${i + 1}] ${b.name}: ${b.value} ${b.unit} (confidence: ${b.confidence.toFixed(2)}, raw: "${b.rawMatch.substring(0, 60)}")`);
     });
 
     // Validate extracted biomarkers
