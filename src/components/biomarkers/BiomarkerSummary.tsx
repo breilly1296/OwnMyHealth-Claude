@@ -49,7 +49,7 @@ export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSumm
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       {/* Total Tracked */}
-      <div className="bg-slate-900 rounded-2xl p-5 text-white">
+      <div className="bg-slate-900 dark:bg-slate-800 rounded-2xl p-5 text-white">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-5 h-5 opacity-70" />
           <span className="text-sm font-medium opacity-70">Tracked</span>
@@ -69,7 +69,7 @@ export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSumm
       </div>
 
       {/* Out of Range */}
-      <div className={`rounded-2xl p-5 text-white ${outOfRange.length > 0 ? 'bg-red-500' : 'bg-slate-400'}`}>
+      <div className={`rounded-2xl p-5 text-white ${outOfRange.length > 0 ? 'bg-red-500' : 'bg-slate-400 dark:bg-slate-600'}`}>
         <div className="flex items-center gap-2 mb-3">
           <AlertCircle className="w-5 h-5 opacity-70" />
           <span className="text-sm font-medium opacity-70">Attention</span>
@@ -79,31 +79,31 @@ export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSumm
       </div>
 
       {/* Latest Concern or All Clear */}
-      <div className={`rounded-2xl p-5 ${mostRecentOutOfRange ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
+      <div className={`rounded-2xl p-5 ${mostRecentOutOfRange ? 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800' : 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'}`}>
         <div className="flex items-center gap-2 mb-2">
           {mostRecentOutOfRange ? (
-            <AlertCircle className="w-4 h-4 text-amber-500" />
+            <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           ) : (
-            <CheckCircle className="w-4 h-4 text-blue-500" />
+            <CheckCircle className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           )}
-          <span className={`text-xs font-medium ${mostRecentOutOfRange ? 'text-amber-600' : 'text-blue-600'}`}>
+          <span className={`text-xs font-medium ${mostRecentOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
             {mostRecentOutOfRange ? 'Latest Concern' : 'Status'}
           </span>
         </div>
         {mostRecentOutOfRange ? (
           <div>
-            <p className="font-semibold text-slate-900 truncate">{mostRecentOutOfRange.name}</p>
-            <p className="text-sm text-amber-700">
+            <p className="font-semibold text-slate-900 dark:text-white truncate">{mostRecentOutOfRange.name}</p>
+            <p className="text-sm text-amber-700 dark:text-amber-400">
               {mostRecentOutOfRange.value} {mostRecentOutOfRange.unit}
-              <span className="text-amber-500 ml-1">
+              <span className="text-amber-500 dark:text-amber-500 ml-1">
                 ({mostRecentOutOfRange.value < mostRecentOutOfRange.normalRange.min ? 'Low' : 'High'})
               </span>
             </p>
           </div>
         ) : (
           <div>
-            <p className="font-semibold text-blue-900">All Clear</p>
-            <p className="text-sm text-blue-600">Within normal range</p>
+            <p className="font-semibold text-blue-900 dark:text-blue-300">All Clear</p>
+            <p className="text-sm text-blue-600 dark:text-blue-400">Within normal range</p>
           </div>
         )}
       </div>

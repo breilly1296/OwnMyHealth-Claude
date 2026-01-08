@@ -31,7 +31,7 @@ export default function CategoryTab({ category, icon, isActive, onClick }: Categ
       className={`group flex items-center space-x-3 px-4 py-3 w-full rounded-xl transition-all duration-200 ${
         isActive
           ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white font-medium shadow-lg shadow-brand-500/25'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          : 'text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
       }`}
     >
       <span className={`flex-shrink-0 transition-transform duration-200 ${isActive ? '' : 'group-hover:scale-110'}`}>

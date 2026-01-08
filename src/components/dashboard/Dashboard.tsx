@@ -365,10 +365,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   if (isLoadingBiomarkers) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-4" />
-          <p className="text-slate-600">Loading your health data...</p>
+          <p className="text-slate-600 dark:text-slate-400">Loading your health data...</p>
         </div>
       </div>
     );
@@ -383,10 +383,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       <div className="animate-fade-in max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <p className="text-sm font-medium text-slate-400 mb-1">
+          <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mb-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <h1 className="text-3xl font-bold text-slate-900">Your Health Data</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Your Health Data</h1>
         </div>
 
         {/* Bento Grid Layout */}
@@ -426,57 +426,57 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           <div className="col-span-12 md:col-span-6 grid grid-cols-3 gap-3">
             <button
               onClick={() => setIsLabUploadModalOpen(true)}
-              className="bg-white rounded-2xl border border-slate-200/60 p-4 hover:border-brand-300 hover:shadow-sm transition-all group text-left"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 hover:border-brand-300 dark:hover:border-brand-500 hover:shadow-sm transition-all group text-left"
             >
-              <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center mb-3 group-hover:bg-brand-100 transition-colors">
-                <FileUp className="w-4 h-4 text-brand-600" />
+              <div className="w-9 h-9 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-3 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
+                <FileUp className="w-4 h-4 text-brand-600 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-medium text-slate-900">Lab OCR</p>
-              <p className="text-xs text-slate-400 mt-0.5">Auto-extract</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Lab OCR</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Auto-extract</p>
             </button>
             <button
               onClick={() => setIsPDFModalOpen(true)}
-              className="bg-white rounded-2xl border border-slate-200/60 p-4 hover:border-slate-300 hover:shadow-sm transition-all group text-left"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group text-left"
             >
-              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center mb-3 group-hover:bg-slate-200 transition-colors">
-                <FileUp className="w-4 h-4 text-slate-600" />
+              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
+                <FileUp className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-medium text-slate-900">Upload PDF</p>
-              <p className="text-xs text-slate-400 mt-0.5">Local OCR</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Upload PDF</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Local OCR</p>
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-white rounded-2xl border border-slate-200/60 p-4 hover:border-wellness-300 hover:shadow-sm transition-all group text-left"
+              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 hover:border-wellness-300 dark:hover:border-wellness-500 hover:shadow-sm transition-all group text-left"
             >
-              <div className="w-9 h-9 rounded-lg bg-wellness-50 flex items-center justify-center mb-3 group-hover:bg-wellness-100 transition-colors">
-                <Plus className="w-4 h-4 text-wellness-600" />
+              <div className="w-9 h-9 rounded-lg bg-wellness-50 dark:bg-wellness-900/30 flex items-center justify-center mb-3 group-hover:bg-wellness-100 dark:group-hover:bg-wellness-900/50 transition-colors">
+                <Plus className="w-4 h-4 text-wellness-600 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-medium text-slate-900">Add Data</p>
-              <p className="text-xs text-slate-400 mt-0.5">Manual entry</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Add Data</p>
+              <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5">Manual entry</p>
             </button>
           </div>
 
           {/* Attention Items - Conditional */}
           {outOfRangeCount > 0 && (
-            <div className="col-span-12 md:col-span-6 bg-white rounded-2xl border border-slate-200/60 overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-900">Needs Attention</h3>
+            <div className="col-span-12 md:col-span-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Needs Attention</h3>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {outOfRangeBiomarkers.slice(0, 3).map((biomarker) => {
                   const isLow = biomarker.value < biomarker.normalRange.min;
                   return (
-                    <div key={biomarker.id} className="px-5 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                    <div key={biomarker.id} className="px-5 py-4 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isLow ? 'bg-amber-500' : 'bg-red-500'}`} />
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">{biomarker.name}</p>
-                          <p className="text-xs text-slate-400">{isLow ? 'Below' : 'Above'} range</p>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{biomarker.name}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-400">{isLow ? 'Below' : 'Above'} range</p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-4">
-                        <p className="text-sm font-semibold text-red-600">{biomarker.value}</p>
-                        <p className="text-xs text-slate-400">{biomarker.unit}</p>
+                        <p className="text-sm font-semibold text-red-600 dark:text-red-400">{biomarker.value}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-400">{biomarker.unit}</p>
                       </div>
                     </div>
                   );
@@ -486,12 +486,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           )}
 
           {/* Recent Measurements */}
-          <div className={`col-span-12 ${outOfRangeCount > 0 ? 'md:col-span-6' : 'md:col-span-12'} bg-white rounded-2xl border border-slate-200/60 overflow-hidden`}>
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-semibold text-slate-900">Recent Measurements</h3>
-              <span className="text-xs text-slate-400">Last updated</span>
+          <div className={`col-span-12 ${outOfRangeCount > 0 ? 'md:col-span-6' : 'md:col-span-12'} bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 overflow-hidden`}>
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900 dark:text-white">Recent Measurements</h3>
+              <span className="text-xs text-slate-400 dark:text-slate-400">Last updated</span>
             </div>
-            <div className={`${outOfRangeCount > 0 ? '' : 'grid grid-cols-1 md:grid-cols-2'} divide-y md:divide-y-0 divide-slate-100`}>
+            <div className={`${outOfRangeCount > 0 ? '' : 'grid grid-cols-1 md:grid-cols-2'} divide-y md:divide-y-0 divide-slate-100 dark:divide-slate-700`}>
               {(biomarkers || [])
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .slice(0, outOfRangeCount > 0 ? 4 : 6)
@@ -500,15 +500,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   return (
                     <div
                       key={biomarker.id}
-                      className={`px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors ${
-                        outOfRangeCount === 0 && idx % 2 === 0 ? 'md:border-r md:border-slate-100' : ''
-                      } ${outOfRangeCount === 0 ? 'md:border-b md:border-slate-100' : ''}`}
+                      className={`px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors ${
+                        outOfRangeCount === 0 && idx % 2 === 0 ? 'md:border-r md:border-slate-100 dark:md:border-slate-700' : ''
+                      } ${outOfRangeCount === 0 ? 'md:border-b md:border-slate-100 dark:md:border-slate-700' : ''}`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-1.5 h-1.5 rounded-full ${status.isOutOfRange ? 'bg-red-500' : 'bg-wellness-500'}`} />
-                        <span className="text-sm text-slate-700">{biomarker.name}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-200">{biomarker.name}</span>
                       </div>
-                      <span className={`text-sm font-medium ${status.isOutOfRange ? 'text-red-600' : 'text-slate-900'}`}>
+                      <span className={`text-sm font-medium ${status.isOutOfRange ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
                         {biomarker.value} {biomarker.unit}
                       </span>
                     </div>
@@ -557,8 +557,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return (
       <div className="max-w-6xl mx-auto animate-fade-in">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">{selectedCategory}</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{selectedCategory}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
             {categories.find(c => c.name === selectedCategory)?.description}
           </p>
         </div>
@@ -568,14 +568,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         <div className="flex flex-wrap gap-2 mb-8">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Data
           </button>
           <button
             onClick={() => setIsPDFModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <FileUp className="w-4 h-4 mr-2" />
             Upload Report
@@ -591,7 +591,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         <div className="space-y-6">
           {outOfRangeBiomarkers.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500" />
                 Needs Attention ({outOfRangeBiomarkers.length})
               </h2>
@@ -604,27 +604,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <div
                       key={biomarker.id}
                       onClick={() => setSelectedBiomarker(isSelected ? null : biomarker)}
-                      className={`bg-white rounded-xl border p-4 cursor-pointer transition-all ${
-                        isSelected ? 'border-red-300 ring-2 ring-red-100' : 'border-red-200 hover:border-red-300'
+                      className={`bg-white dark:bg-slate-800 rounded-xl border p-4 cursor-pointer transition-all ${
+                        isSelected ? 'border-red-300 dark:border-red-500 ring-2 ring-red-100 dark:ring-red-900/30' : 'border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-600'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-slate-900">{biomarker.name}</h3>
+                            <h3 className="font-semibold text-slate-900 dark:text-white">{biomarker.name}</h3>
                             {biomarker.sourceFile && (
-                              <span className="text-2xs px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded">Auto</span>
+                              <span className="text-2xs px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded">Auto</span>
                             )}
                           </div>
-                          <p className="text-sm text-slate-500">{biomarker.description}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{biomarker.description}</p>
                         </div>
 
                         <div className="text-right flex-shrink-0">
                           <div className="flex items-center gap-2 justify-end">
-                            <span className="text-lg font-bold text-red-600">{biomarker.value}</span>
-                            <span className="text-sm text-slate-400">{biomarker.unit}</span>
+                            <span className="text-lg font-bold text-red-600 dark:text-red-400">{biomarker.value}</span>
+                            <span className="text-sm text-slate-400 dark:text-slate-500">{biomarker.unit}</span>
                           </div>
-                          <p className="text-xs text-red-500 mt-0.5">
+                          <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
                             {isLow ? 'Below' : 'Above'} range ({biomarker.normalRange.min}-{biomarker.normalRange.max})
                           </p>
                         </div>
@@ -632,14 +632,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button
                             onClick={(e) => handleTrendClick(biomarker, e)}
-                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                           >
                             <LineChart className="w-4 h-4" />
                           </button>
                           {insurancePlans.length > 0 && (
                             <button
                               onClick={(e) => handleInsuranceClick(biomarker, e)}
-                              className="p-2 text-slate-400 hover:text-wellness-600 hover:bg-wellness-50 rounded-lg transition-colors"
+                              className="p-2 text-slate-400 dark:text-slate-500 hover:text-wellness-600 dark:hover:text-wellness-400 hover:bg-wellness-50 dark:hover:bg-wellness-900/30 rounded-lg transition-colors"
                             >
                               <Shield className="w-4 h-4" />
                             </button>
@@ -648,7 +648,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                       </div>
 
                       {isSelected && (
-                        <div className="mt-4 pt-4 border-t border-red-100">
+                        <div className="mt-4 pt-4 border-t border-red-100 dark:border-red-800">
                           <BiomarkerActionPlan biomarker={biomarker} insurancePlans={insurancePlans} />
                         </div>
                       )}
@@ -661,11 +661,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
           {inRangeBiomarkers.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-wellness-500" />
                 In Range ({inRangeBiomarkers.length})
               </h2>
-              <div className="bg-white rounded-xl border border-slate-200/60 divide-y divide-slate-100">
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
                 {inRangeBiomarkers.map((biomarker) => {
                   const isSelected = selectedBiomarker?.id === biomarker.id;
 
@@ -673,27 +673,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <div
                       key={biomarker.id}
                       onClick={() => setSelectedBiomarker(isSelected ? null : biomarker)}
-                      className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-wellness-50/50' : 'hover:bg-slate-50/50'}`}
+                      className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-wellness-50/50 dark:bg-wellness-900/20' : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/50'}`}
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-2 h-2 rounded-full bg-wellness-400 flex-shrink-0" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-900">{biomarker.name}</span>
+                              <span className="font-medium text-slate-900 dark:text-white">{biomarker.name}</span>
                             </div>
-                            <p className="text-xs text-slate-400 truncate">{biomarker.description}</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{biomarker.description}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <div className="text-right">
-                            <span className="font-semibold text-slate-900">{biomarker.value}</span>
-                            <span className="text-sm text-slate-400 ml-1">{biomarker.unit}</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">{biomarker.value}</span>
+                            <span className="text-sm text-slate-400 dark:text-slate-500 ml-1">{biomarker.unit}</span>
                           </div>
                           <button
                             onClick={(e) => handleTrendClick(biomarker, e)}
-                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                           >
                             <LineChart className="w-4 h-4" />
                           </button>
@@ -707,13 +707,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           )}
 
           {safeFilteredBiomarkers.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200/60">
-              <Activity className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No {selectedCategory} Data</h3>
-              <p className="text-slate-500 mb-6">Add your first measurement to start tracking.</p>
+            <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700">
+              <Activity className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No {selectedCategory} Data</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-6">Add your first measurement to start tracking.</p>
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Measurement
@@ -737,7 +737,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
       {/* Premium Navbar */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
+      <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700/60 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-3">
@@ -747,10 +747,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 </div>
               </div>
               <div>
-                <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                   OwnMyHealth
                 </span>
-                <p className="text-xs text-slate-500 -mt-0.5">Your personal health companion</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-0.5">Your personal health companion</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -759,15 +759,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+                    className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
-                    <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-slate-600" />
+                    <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                     </div>
-                    <span className="text-sm font-medium text-slate-700 hidden sm:block max-w-[120px] truncate">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 hidden sm:block max-w-[120px] truncate">
                       {user.email}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Dropdown Menu */}
@@ -816,7 +816,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
       <div className="max-w-[1600px] mx-auto flex">
         {/* Premium Left Sidebar */}
-        <aside className="w-72 bg-white/50 backdrop-blur-sm border-r border-slate-200/60 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto sidebar-scroll">
+        <aside className="w-72 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-r border-slate-200/60 dark:border-slate-700/60 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto sidebar-scroll">
           <div className="p-5 pb-8">
             <nav className="space-y-1">
               {navGroups.map((group) => {
@@ -837,14 +837,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               })}
             </nav>
 
-            <div className="mt-6 p-4 bg-gradient-to-br from-brand-50 to-brand-100/50 rounded-2xl border border-brand-200/50">
+            <div className="mt-6 p-4 bg-gradient-to-br from-brand-50 to-brand-100/50 dark:from-slate-800 dark:to-slate-800 rounded-2xl border border-brand-200/50 dark:border-slate-700">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
                   <Zap className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-sm font-semibold text-brand-900">Pro Tip</span>
+                <span className="text-sm font-semibold text-brand-900 dark:text-white">Pro Tip</span>
               </div>
-              <p className="text-xs text-brand-700 leading-relaxed">
+              <p className="text-xs text-brand-700 dark:text-slate-300 leading-relaxed">
                 Upload your lab reports to automatically extract and track biomarkers over time.
               </p>
             </div>
