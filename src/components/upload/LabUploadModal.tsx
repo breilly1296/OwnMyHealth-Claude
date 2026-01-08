@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { X, Loader2, AlertTriangle, FileText, Image, CheckCircle } from 'lucide-react';
+import { X, Loader2, AlertTriangle, FileText, Image, CheckCircle, Calendar, Building2 } from 'lucide-react';
 import { uploadFile } from '../../services/uploadUtils';
 
 interface ExtractedBiomarker {
@@ -120,13 +120,8 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
       setProgressMessage('Processing complete!');
 
       setResult(response);
-
-      // Brief delay to show success state
-      setTimeout(() => {
-        onSuccess(response.biomarkers);
-        onClose();
-        resetState();
-      }, 1500);
+      // Call onSuccess to update parent state, but keep modal open for review
+      onSuccess(response.biomarkers);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process file. Please try again.');
       setUploadProgress(0);
@@ -134,7 +129,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     } finally {
       setIsProcessing(false);
     }
-  }, [onSuccess, onClose, resetState]);
+  }, [onSuccess]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -180,39 +175,86 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
         )}
 
         {result && (
-          <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-md text-sm">
-            <div className="flex items-start gap-2 mb-2">
-              <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span className="font-medium">
-                Successfully extracted {result.biomarkersCreated} biomarker{result.biomarkersCreated !== 1 ? 's' : ''}
-              </span>
+          <div className="mb-4">
+            {/* Success Header */}
+            <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-t-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-semibold text-base">
+                  Successfully extracted {result.biomarkersCreated} biomarker{result.biomarkersCreated !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
-            <ul className="list-disc list-inside ml-6 text-xs space-y-1">
-              {result.biomarkers.map((b) => (
-                <li key={b.id} className={b.isOutOfRange ? 'text-orange-600 dark:text-orange-400' : ''}>
-                  {b.name}: {b.value} {b.unit}
-                  {b.isOutOfRange && ' (out of range)'}
-                </li>
-              ))}
-            </ul>
-            {result.labName && (
-              <p className="text-xs mt-2 text-green-600 dark:text-green-400">Lab: {result.labName}</p>
-            )}
+
+            {/* Lab Info */}
+            <div className="p-3 bg-gray-50 dark:bg-slate-700 border-x border-gray-200 dark:border-slate-600">
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-slate-300">
+                {result.labName && (
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+                    <span>{result.labName}</span>
+                  </div>
+                )}
+                {result.reportDate && (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+                    <span>{new Date(result.reportDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Biomarkers List */}
+            <div className="p-3 bg-white dark:bg-slate-800 border border-t-0 border-gray-200 dark:border-slate-600 rounded-b-lg max-h-48 overflow-y-auto">
+              <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Extracted Values</p>
+              <div className="space-y-1.5">
+                {result.biomarkers.map((b) => (
+                  <div
+                    key={b.id}
+                    className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
+                      b.isOutOfRange
+                        ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
+                        : 'text-gray-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <span className="font-medium">{b.name}</span>
+                    <span>
+                      {b.value} {b.unit}
+                      {b.isOutOfRange && (
+                        <span className="ml-1 text-xs">(out of range)</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Done Button */}
+            <button
+              onClick={() => {
+                onClose();
+                resetState();
+              }}
+              className="w-full mt-4 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Done
+            </button>
           </div>
         )}
 
-        <div className="mb-6">
-          <label
-            htmlFor="lab-upload"
-            className={`
-              flex flex-col items-center justify-center w-full h-44
-              border-2 border-dashed rounded-lg
-              transition-colors duration-200
-              ${isProcessing ? 'bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 cursor-wait' : 'hover:bg-blue-50 dark:hover:bg-slate-700 border-blue-300 dark:border-blue-600 cursor-pointer'}
-            `}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-          >
+        {!result && (
+          <div className="mb-6">
+            <label
+              htmlFor="lab-upload"
+              className={`
+                flex flex-col items-center justify-center w-full h-44
+                border-2 border-dashed rounded-lg
+                transition-colors duration-200
+                ${isProcessing ? 'bg-gray-50 dark:bg-slate-700 border-gray-300 dark:border-slate-600 cursor-wait' : 'hover:bg-blue-50 dark:hover:bg-slate-700 border-blue-300 dark:border-blue-600 cursor-pointer'}
+              `}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            >
             <div className="flex flex-col items-center justify-center py-6">
               {isProcessing ? (
                 <>
@@ -252,26 +294,23 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
               }}
             />
           </label>
-        </div>
 
-        <div className="text-xs text-gray-500 dark:text-slate-400 space-y-2">
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-md">
-            <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Bone Health Biomarkers Extracted:</p>
-            <ul className="list-disc list-inside text-blue-700 dark:text-blue-400 space-y-0.5">
-              <li>Calcium</li>
-              <li>Vitamin D (25-hydroxy)</li>
-              <li>PTH (Parathyroid Hormone)</li>
-              <li>Phosphorus</li>
-              <li>Alkaline Phosphatase</li>
-            </ul>
+          <div className="text-xs text-gray-500 dark:text-slate-400 space-y-2 mt-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-md">
+              <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Biomarkers Extracted:</p>
+              <p className="text-blue-700 dark:text-blue-400">
+                All standard lab values including lipids, CBC, metabolic panel, thyroid, vitamins, and more.
+              </p>
+            </div>
+            <p><span className="font-medium">Supported formats:</span> PDF, PNG, JPG, TIFF</p>
+            <p><span className="font-medium">Maximum file size:</span> 10MB</p>
+            <p className="text-gray-400 dark:text-slate-500 mt-2">
+              Our AI will extract biomarker values from your lab report.
+              For best results, ensure the document is clear and readable.
+            </p>
           </div>
-          <p><span className="font-medium">Supported formats:</span> PDF, PNG, JPG, TIFF</p>
-          <p><span className="font-medium">Maximum file size:</span> 10MB</p>
-          <p className="text-gray-400 dark:text-slate-500 mt-2">
-            Our OCR technology will extract biomarker values from your lab report.
-            For best results, ensure the document is clear and readable.
-          </p>
         </div>
+        )}
       </div>
     </div>
   );
