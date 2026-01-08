@@ -29,7 +29,7 @@ import { PDFUploadModal, ClinicalFileUpload, LabUploadModal } from '../upload';
 // Files components
 import FilesPage from '../files/FilesPage';
 // Trends components
-import { TrendsPage } from '../trends';
+import { TrendsPage, BiomarkerAIGuidance } from '../trends';
 // Settings components
 import { AccountSettingsPage } from '../settings';
 // Dashboard components
@@ -672,6 +672,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
                       {isSelected && (
                         <div className="mt-4 pt-4 border-t border-red-100 dark:border-red-800">
+                          <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
                           <BiomarkerActionPlan biomarker={biomarker} insurancePlans={insurancePlans} />
                         </div>
                       )}
