@@ -2570,6 +2570,10 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
     // Skip lines we've already used as value lines
     if (usedValueLines.has(i)) continue;
 
+    // Skip lines that are clearly not result rows (headers, educational text, etc.)
+    // But allow short lines that might be biomarker names in multi-line format
+    if (line.length > 50 && !looksLikeResultRow(line)) continue;
+
     for (const biomarker of ALL_BIOMARKERS) {
       if (foundNames.has(biomarker.name)) continue;
 
