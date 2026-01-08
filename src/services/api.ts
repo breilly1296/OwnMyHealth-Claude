@@ -1136,6 +1136,47 @@ export const adminApi = {
   },
 };
 
+// ============================================
+// SETTINGS
+// ============================================
+
+export interface UserExportData {
+  user: {
+    id: string;
+    email: string;
+    createdAt: string;
+  };
+  biomarkers: BiomarkerData[];
+  insurancePlans: unknown[];
+  exportedAt: string;
+}
+
+export const settingsApi = {
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiFetch('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  },
+
+  async exportData(): Promise<UserExportData> {
+    const response = await apiFetch<UserExportData>('/settings/export-data');
+    return response.data;
+  },
+
+  async deleteAllData(): Promise<void> {
+    await apiFetch('/settings/delete-data', {
+      method: 'DELETE',
+    });
+  },
+
+  async deleteAccount(password: string): Promise<void> {
+    await apiFetch('/settings/delete-account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
+  },
+};
 
 // Export error type for consumers
 export type { ApiError };

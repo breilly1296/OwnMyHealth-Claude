@@ -28,6 +28,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ErrorBoundary } from './components/common';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { authApi } from './services/api';
 import { Loader2, Heart } from 'lucide-react';
 
@@ -282,9 +283,11 @@ function AppContent() {
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

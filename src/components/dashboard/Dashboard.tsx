@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown } from 'lucide-react';
+import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown, Settings } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
 // Biomarker components
 import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, BiomarkerActionPlan, BiomarkerInsurancePanel } from '../biomarkers';
@@ -26,6 +26,8 @@ import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, Biom
 import { InsuranceSBCUpload, InsurancePlanViewer, EnhancedInsuranceUpload, InsurancePlanCompare, InsuranceHub, InsuranceKnowledgeBase } from '../insurance';
 // Upload components
 import { PDFUploadModal, ClinicalFileUpload, LabUploadModal } from '../upload';
+// Settings components
+import { AccountSettingsPage } from '../settings';
 // Dashboard components
 import { CollapsibleNavGroup } from './index';
 // Data (for demo mode / fallback)
@@ -67,6 +69,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [trendBiomarker, setTrendBiomarker] = useState<Biomarker | null>(null);
   const [selectedBiomarkerForInsurance, setSelectedBiomarkerForInsurance] = useState<Biomarker | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // ============================================
   // Data State (fetched from API, cleared when not needed)
@@ -726,8 +729,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // Main Render
   // ============================================
 
+  // Show Account Settings page if enabled
+  if (showSettings) {
+    return <AccountSettingsPage onBack={() => setShowSettings(false)} />;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
       {/* Premium Navbar */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 lg:px-8">
@@ -771,17 +779,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         onClick={() => setIsUserMenuOpen(false)}
                       />
                       {/* Menu */}
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50">
-                        <div className="px-4 py-3 border-b border-slate-100">
-                          <p className="text-sm font-medium text-slate-900 truncate">{user.email}</p>
-                          <p className="text-xs text-slate-500 capitalize">{user.role.toLowerCase()}</p>
+                      <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
+                        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                          <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{user.email}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user.role.toLowerCase()}</p>
                         </div>
+                        <button
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            setShowSettings(true);
+                          }}
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <Settings className="w-4 h-4 mr-3" />
+                          Account Settings
+                        </button>
                         <button
                           onClick={async () => {
                             setIsUserMenuOpen(false);
                             await onLogout();
                           }}
-                          className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <LogOut className="w-4 h-4 mr-3" />
                           Sign out
