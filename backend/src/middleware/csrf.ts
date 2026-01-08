@@ -32,13 +32,27 @@ function generateCsrfToken(): string {
 export function setCsrfCookie(res: Response, token?: string): string {
   const csrfToken = token || generateCsrfToken();
 
-  res.cookie(CSRF_COOKIE_NAME, csrfToken, {
+  const cookieOptions: {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'strict' | 'lax' | 'none';
+    path: string;
+    maxAge: number;
+    domain?: string;
+  } = {
     httpOnly: false, // Must be readable by JavaScript
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     path: '/',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  });
+  };
+
+  // Add domain for cross-domain cookie sharing
+  if (config.cookie.domain) {
+    cookieOptions.domain = config.cookie.domain;
+  }
+
+  res.cookie(CSRF_COOKIE_NAME, csrfToken, cookieOptions);
 
   return csrfToken;
 }

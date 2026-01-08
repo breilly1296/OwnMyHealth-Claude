@@ -26,11 +26,17 @@ export const config = {
   },
 
   // Cookie Configuration
+  // For cross-domain setups (frontend on domain.com, API on api.domain.com):
+  // - Set COOKIE_DOMAIN=.domain.com (note the leading dot)
+  // - Set COOKIE_SAME_SITE=none (required for cross-domain)
+  // - Secure will be true in production (required when SameSite=none)
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    // Use 'lax' in development for cross-port requests, 'strict' in production
-    sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') || (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+    // Cross-domain requires SameSite=none; same-domain can use strict/lax
+    // If COOKIE_DOMAIN is set, default to 'none' for cross-domain support
+    sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
+      (process.env.COOKIE_DOMAIN ? 'none' : (process.env.NODE_ENV === 'production' ? 'lax' : 'lax')),
     domain: process.env.COOKIE_DOMAIN || undefined,
     maxAge: {
       accessToken: 15 * 60 * 1000, // 15 minutes in ms
