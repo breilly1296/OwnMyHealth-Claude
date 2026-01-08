@@ -2245,7 +2245,135 @@ export function normalizeUnit(unit: string): string {
 // ============================================
 
 /**
- * Extract biomarkers using regex patterns
+ * Keywords that indicate educational/guidance text rather than actual results.
+ * Lines containing these should be SKIPPED during extraction.
+ */
+const EDUCATIONAL_KEYWORDS = [
+  'goal',
+  'target',
+  'desirable',
+  'therapeutic',
+  'considered',
+  'prevention',
+  'recommended',
+  'optimal',
+  'guideline',
+  'suggests',
+  'indicating',
+  'associated with',
+  'risk factor',
+  'treatment',
+  'treating to',
+  'should be',
+  'aim for',
+  'ideally',
+  'according to',
+];
+
+/**
+ * Patterns that indicate a reference range value (NOT an actual result)
+ * These appear BEFORE the number and indicate it's a range limit
+ */
+const REFERENCE_RANGE_INDICATORS = [
+  /<\s*$/,           // "<" before number
+  />\s*$/,           // ">" before number
+  /<=\s*$/,          // "<=" before number
+  />=\s*$/,          // ">=" before number
+  /OR\s*=\s*$/i,     // "OR =" (Quest format for >= or <=)
+  /range[:\s]*$/i,   // "range:" before number
+  /desirable[:\s]*$/i, // "desirable:" before number
+  /-\s*$/,           // "-" (part of a range like "70-100")
+  /to\s*$/i,         // "to" (part of a range like "70 to 100")
+];
+
+/**
+ * Check if text contains educational/guidance content
+ */
+function isEducationalText(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  return EDUCATIONAL_KEYWORDS.some(keyword => lowerText.includes(keyword));
+}
+
+/**
+ * Check if the context before the matched value indicates it's a reference range
+ */
+function isReferenceRangeContext(textBeforeValue: string): boolean {
+  const trimmed = textBeforeValue.trim();
+  return REFERENCE_RANGE_INDICATORS.some(pattern => pattern.test(trimmed));
+}
+
+/**
+ * Extract the FIRST number that appears after a biomarker name in a result line.
+ * Quest format: "BIOMARKER NAME    VALUE    Reference Range: <200 mg/dL"
+ * We want VALUE, not the 200 from the reference range.
+ */
+function extractResultValue(line: string, biomarkerNameEndIndex: number): { value: number; rawMatch: string } | null {
+  // Get text after the biomarker name
+  const afterName = line.substring(biomarkerNameEndIndex);
+
+  // Skip if this looks like educational text
+  if (isEducationalText(afterName)) {
+    console.log(`[SKIP] Educational text detected: "${afterName.substring(0, 50)}..."`);
+    return null;
+  }
+
+  // Match the FIRST number that appears after the name
+  // Must NOT be preceded by < > <= >= or "range:"
+  // Pattern: whitespace, then number (possibly with decimal), optionally followed by H/L flag
+  const resultMatch = afterName.match(/^\s+(\d+\.?\d*)\s*[HL]?(?:\s|$)/i);
+
+  if (resultMatch) {
+    const value = parseFloat(resultMatch[1]);
+    if (!isNaN(value) && value >= 0 && value < 100000) {
+      return { value, rawMatch: line };
+    }
+  }
+
+  // Also try: number followed by unit (but NOT preceded by reference indicators)
+  const unitMatch = afterName.match(/^\s+(\d+\.?\d*)\s*(?:mg|g|%|K|M|m|u|n|f|p|IU|U|ratio)/i);
+  if (unitMatch) {
+    const value = parseFloat(unitMatch[1]);
+    if (!isNaN(value) && value >= 0 && value < 100000) {
+      return { value, rawMatch: line };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if a line looks like a result row (vs educational/header text)
+ * Result rows typically have: NAME followed by NUMBER followed by more text
+ */
+function looksLikeResultRow(line: string): boolean {
+  // Skip lines that are mostly text descriptions
+  if (line.length > 200) return false;
+
+  // Skip lines with educational keywords
+  if (isEducationalText(line)) return false;
+
+  // Skip lines that start with common non-result patterns
+  const skipStarters = [
+    /^note[:\s]/i,
+    /^comment[:\s]/i,
+    /^interpretation/i,
+    /^see\s/i,
+    /^for\s/i,
+    /^if\s/i,
+    /^when\s/i,
+    /^\*/,
+    /^\(/,
+  ];
+
+  if (skipStarters.some(pattern => pattern.test(line.trim()))) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Extract biomarkers using regex patterns with improved filtering
  */
 function extractWithPatterns(text: string): ExtractedBiomarker[] {
   const results: ExtractedBiomarker[] = [];
@@ -2256,12 +2384,12 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
 
     for (const pattern of biomarker.patterns) {
       const match = text.match(pattern);
-      if (!match) continue;
+      if (!match || match.index === undefined) continue;
 
       const rawValue = match[1]?.trim();
       if (!rawValue) continue;
 
-      // Handle numeric values (skip positive/negative for genetic tests)
+      // Handle non-numeric values
       if (rawValue === 'POSITIVE' || rawValue === 'NEGATIVE') continue;
 
       const value = parseFloat(rawValue);
@@ -2269,6 +2397,24 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
 
       // Validate value is reasonable
       if (value < -100 || value > 100000) continue;
+
+      // Get context around the match to check for educational text
+      const contextStart = Math.max(0, match.index - 100);
+      const contextEnd = Math.min(text.length, match.index + match[0].length + 100);
+      const context = text.substring(contextStart, contextEnd);
+
+      // CRITICAL: Skip if this looks like educational/guidance text
+      if (isEducationalText(context)) {
+        console.log(`[SKIP PATTERN] Educational context for ${biomarker.name}: "${match[0].substring(0, 50)}"`);
+        continue;
+      }
+
+      // CRITICAL: Check if the value is preceded by reference range indicators
+      const textBeforeValue = text.substring(Math.max(0, match.index), match.index + match[0].indexOf(rawValue));
+      if (isReferenceRangeContext(textBeforeValue)) {
+        console.log(`[SKIP PATTERN] Reference range context for ${biomarker.name}: "${match[0].substring(0, 50)}"`);
+        continue;
+      }
 
       foundNames.add(biomarker.name);
 
@@ -2297,6 +2443,7 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
 
 /**
  * Extract biomarkers using line-by-line analysis for tabular formats
+ * Quest format: "BIOMARKER NAME    VALUE    Reference Range: X-Y unit"
  */
 function extractFromLines(text: string): ExtractedBiomarker[] {
   const results: ExtractedBiomarker[] = [];
@@ -2309,44 +2456,42 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
     const line = lines[i].trim();
     if (!line || line.length < 3) continue;
 
+    // Skip lines that don't look like result rows
+    if (!looksLikeResultRow(line)) {
+      continue;
+    }
+
     for (const biomarker of ALL_BIOMARKERS) {
       if (foundNames.has(biomarker.name)) continue;
 
       // Check if line contains the biomarker name or any alias
       const namesToCheck = [biomarker.name, ...biomarker.aliases];
-      let matched = false;
+      let matchedNameEnd = -1;
 
       for (const name of namesToCheck) {
-        const nameRegex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-        if (nameRegex.test(line)) {
-          matched = true;
+        const nameRegex = new RegExp(`\\b(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'i');
+        const nameMatch = line.match(nameRegex);
+        if (nameMatch && nameMatch.index !== undefined) {
+          matchedNameEnd = nameMatch.index + nameMatch[0].length;
           break;
         }
       }
 
-      if (!matched) continue;
+      if (matchedNameEnd === -1) continue;
 
-      // Find number in this line (handles H/L flags like "234 H")
-      const numberMatch = line.match(/(\d+\.?\d*)\s*[HL]?\s*$/i) || line.match(/(\d+\.?\d*)/);
-      let value: number | null = null;
-      let rawMatch = line;
+      // Extract the result value (first number after biomarker name)
+      const extraction = extractResultValue(line, matchedNameEnd);
 
-      if (numberMatch) {
-        value = parseFloat(numberMatch[1]);
-      } else if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim();
-        const nextMatch = nextLine.match(/^(\d+\.?\d*)/);
-        if (nextMatch) {
-          value = parseFloat(nextMatch[1]);
-          rawMatch = `${line} ${nextLine}`;
-        }
-      }
+      if (!extraction) continue;
 
-      if (value === null || isNaN(value) || value < -100 || value > 100000) continue;
+      const { value, rawMatch } = extraction;
 
-      // Skip if value seems unreasonable
+      // Skip if value seems unreasonable for this biomarker
       const range = biomarker.normalRange;
-      if (value < range.min * 0.01 || value > range.max * 100) continue;
+      if (value < range.min * 0.01 || value > range.max * 100) {
+        console.log(`[SKIP LINE] Value ${value} out of range for ${biomarker.name}`);
+        continue;
+      }
 
       foundNames.add(biomarker.name);
 
@@ -2356,7 +2501,7 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
         unit: biomarker.defaultUnit,
         category: biomarker.category,
         normalRange: { ...range, source: 'Standard Reference Range' },
-        confidence: 0.7,
+        confidence: 0.75, // Slightly higher confidence for line-based extraction
         rawMatch: rawMatch.substring(0, 100),
       });
 

@@ -74,6 +74,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
 
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
   const handleSaveName = async () => {
     setIsSavingName(true);
     try {
@@ -119,9 +122,14 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
     try {
       await settingsApi.deleteAllData();
       setDeleteType(null);
-      window.location.reload();
+      setToast({ message: 'All health data deleted', type: 'success' });
+      // Redirect to dashboard after showing toast
+      setTimeout(() => {
+        onBack();
+      }, 1500);
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete data');
+      setToast({ message: err instanceof Error ? err.message : 'Failed to delete data', type: 'error' });
     } finally {
       setIsDeleting(false);
     }
@@ -435,7 +443,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                    {deleteType === 'account' ? 'Delete Account' : 'Delete All Data'}
+                    {deleteType === 'account' ? 'Delete Account' : 'Delete All Health Data'}
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400">This action cannot be undone</p>
                 </div>
@@ -444,7 +452,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
               <p className="text-slate-600 dark:text-slate-400 mb-4">
                 {deleteType === 'account'
                   ? 'This will permanently delete your account, all your health data, and remove you from our system.'
-                  : 'This will permanently delete all your biomarkers, health records, and uploaded documents.'}
+                  : 'This will permanently delete all your biomarker measurements, uploaded files, and health records. This action cannot be undone.'}
               </p>
 
               {deleteError && (
@@ -502,12 +510,38 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Delete {deleteType === 'account' ? 'Account' : 'Data'}
+                      {deleteType === 'account' ? 'Delete Account' : 'Delete Everything'}
                     </>
                   )}
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+          <div
+            className={`flex items-center space-x-3 px-4 py-3 rounded-xl shadow-lg ${
+              toast.type === 'success'
+                ? 'bg-green-600 text-white'
+                : 'bg-red-600 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertTriangle className="w-5 h-5" />
+            )}
+            <span className="font-medium">{toast.message}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 hover:opacity-80"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
