@@ -192,6 +192,13 @@ export async function processDocument(
     const extractedText = document.text || '';
     const pageCount = document.pages?.length || 1;
 
+    // DEBUG: Log extracted text preview for troubleshooting
+    ocrLogger.info('OCR extracted text preview', {
+      textLength: extractedText.length,
+      pageCount,
+      textPreview: extractedText.substring(0, 500).replace(/\n/g, ' '),
+    });
+
     // Calculate overall text confidence
     let totalConfidence = 0;
     let confidenceCount = 0;
@@ -213,6 +220,18 @@ export async function processDocument(
 
     // Extract biomarkers from text
     const biomarkers = extractBiomarkersFromText(extractedText);
+
+    // DEBUG: Log biomarker extraction results
+    ocrLogger.info('Biomarker extraction results', {
+      biomarkersFoundBeforeValidation: biomarkers.length,
+      biomarkerDetails: biomarkers.map((b) => ({
+        name: b.name,
+        value: b.value,
+        unit: b.unit,
+        confidence: b.confidence,
+        rawMatch: b.rawMatch.substring(0, 50),
+      })),
+    });
 
     // Validate extracted biomarkers
     const validatedBiomarkers = biomarkers.filter((b) => {
