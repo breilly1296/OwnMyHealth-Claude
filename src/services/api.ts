@@ -158,10 +158,11 @@ export async function attemptTokenRefresh(): Promise<boolean> {
 
 /**
  * Get CSRF token from cookies
+ * Handles variations: csrf_token, csrf-token, csrfToken, CSRF-Token, etc.
  */
-function getCsrfToken(): string | null {
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
-  return match ? match[1] : null;
+function getCsrfToken(): string {
+  const match = document.cookie.match(/csrf[_-]?token=([^;]+)/i);
+  return match ? decodeURIComponent(match[1]) : '';
 }
 
 /**
