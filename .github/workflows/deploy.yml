@@ -30,44 +30,60 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Build and Push with Cloud Build
+      - name: Configure Docker for Artifact Registry
         run: |
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
-          echo "Building image: $IMAGE"
-          BUILD_ID=$(gcloud builds submit backend \
-            --tag "$IMAGE" \
-            --project "${{ env.PROJECT_ID }}" \
-            --async \
-            --format='value(id)')
-          echo "Build submitted: $BUILD_ID"
-          while true; do
-            STATUS=$(gcloud builds describe "$BUILD_ID" \
-              --project "${{ env.PROJECT_ID }}" \
-              --format='value(status)')
-            echo "Build status: $STATUS"
-            case "$STATUS" in
-              SUCCESS)
-                echo "Build completed successfully"
-                break
-                ;;
-              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
-                echo "Build failed with status: $STATUS"
-                exit 1
-                ;;
-              *)
-                echo "Build in progress, waiting 15s..."
-                sleep 15
-                ;;
-            esac
-          done
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}"
+          IMAGE_SHA="${IMAGE_BASE}:${{ github.sha }}"
+          IMAGE_LATEST="${IMAGE_BASE}:latest"
+
+          echo "=========================================="
+          echo "Building Docker image..."
+          echo "Image with SHA: $IMAGE_SHA"
+          echo "Image latest: $IMAGE_LATEST"
+          echo "=========================================="
+
+          # Build the Docker image locally
+          cd backend
+          docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
+
+          echo "=========================================="
+          echo "Pushing images to Artifact Registry..."
+          echo "=========================================="
+
+          # Push both tags
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_LATEST"
+
+          echo "=========================================="
+          echo "Images pushed successfully!"
+          echo "SHA image: $IMAGE_SHA"
+          echo "Latest image: $IMAGE_LATEST"
+          echo "=========================================="
 
       - name: Deploy to Cloud Run
         run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+          echo "=========================================="
+          echo "Deploying to Cloud Run..."
+          echo "Service: ${{ env.SERVICE }}"
+          echo "Image: $IMAGE"
+          echo "Region: ${{ env.REGION }}"
+          echo "=========================================="
+
           gcloud run deploy ${{ env.SERVICE }} \
-            --image "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
+            --image "$IMAGE" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
             --platform managed
+
+          echo "=========================================="
+          echo "Deployment complete!"
+          echo "Service URL: https://$(gcloud run services describe ${{ env.SERVICE }} --region ${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo 'api.ownmyhealth.io')"
+          echo "=========================================="
 
   deploy-frontend:
     runs-on: ubuntu-latest
