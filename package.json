@@ -19,7 +19,7 @@
     "chart.js": "^4.4.2",
     "csv-parse": "^6.1.0",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.344.0",
     "pdfjs-dist": "^4.0.379",
