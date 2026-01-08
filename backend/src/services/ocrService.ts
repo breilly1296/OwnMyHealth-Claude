@@ -154,6 +154,13 @@ export async function processDocument(
   mimeType: string,
   filename: string
 ): Promise<OCRResult> {
+  // DEBUG: Confirm function is being called
+  console.log('[OCR DEBUG] processDocument called', {
+    filename,
+    mimeType,
+    bufferSize: buffer.length,
+  });
+
   const startTime = Date.now();
 
   // Validate file
@@ -193,7 +200,7 @@ export async function processDocument(
     const pageCount = document.pages?.length || 1;
 
     // DEBUG: Log extracted text preview for troubleshooting
-    ocrLogger.info('OCR extracted text preview', {
+    console.log('[OCR DEBUG] Extracted text preview', {
       textLength: extractedText.length,
       pageCount,
       textPreview: extractedText.substring(0, 500).replace(/\n/g, ' '),
@@ -222,7 +229,7 @@ export async function processDocument(
     const biomarkers = extractBiomarkersFromText(extractedText);
 
     // DEBUG: Log biomarker extraction results
-    ocrLogger.info('Biomarker extraction results', {
+    console.log('[OCR DEBUG] Biomarker extraction results', {
       biomarkersFoundBeforeValidation: biomarkers.length,
       biomarkerDetails: biomarkers.map((b) => ({
         name: b.name,
