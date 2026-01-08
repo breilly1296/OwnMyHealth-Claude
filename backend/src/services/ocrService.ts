@@ -14,6 +14,7 @@
  */
 
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
+import pdf from 'pdf-parse';
 import { logger } from '../utils/logger.js';
 import { InternalServerError, BadRequestError } from '../middleware/errorHandler.js';
 import {
@@ -37,6 +38,9 @@ const SUPPORTED_MIME_TYPES = [
 
 // Maximum file size (10 MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Minimum text length to consider PDF has embedded text (not just headers/footers)
+const MIN_EMBEDDED_TEXT_LENGTH = 100;
 
 /**
  * OCR processing result
@@ -115,6 +119,42 @@ function getProcessorName(): string {
 }
 
 /**
+ * Extract text directly from PDF using pdf-parse
+ * This works for PDFs with embedded text (like Quest lab results)
+ * Much faster and more accurate than OCR for these documents
+ */
+async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageCount: number } | null> {
+  try {
+    console.log('[PDF EXTRACT] Attempting direct text extraction from PDF...');
+    const data = await pdf(buffer);
+
+    console.log('[PDF EXTRACT] Direct extraction result:', {
+      textLength: data.text.length,
+      pageCount: data.numpages,
+      hasSubstantialText: data.text.length > MIN_EMBEDDED_TEXT_LENGTH,
+    });
+
+    // Check if PDF has substantial embedded text
+    if (data.text && data.text.length > MIN_EMBEDDED_TEXT_LENGTH) {
+      console.log('[PDF EXTRACT] ========== EXTRACTED TEXT START ==========');
+      console.log(data.text);
+      console.log('[PDF EXTRACT] ========== EXTRACTED TEXT END ==========');
+
+      return {
+        text: data.text,
+        pageCount: data.numpages,
+      };
+    }
+
+    console.log('[PDF EXTRACT] PDF has minimal embedded text, will use OCR fallback');
+    return null;
+  } catch (error) {
+    console.log('[PDF EXTRACT] Direct extraction failed, will use OCR fallback:', error);
+    return null;
+  }
+}
+
+/**
  * Validate file before processing
  */
 function validateFile(
@@ -147,15 +187,15 @@ function validateFile(
 }
 
 /**
- * Process a document using Google Document AI
+ * Process a document - tries direct PDF text extraction first,
+ * falls back to Document AI OCR for scanned images
  */
 export async function processDocument(
   buffer: Buffer,
   mimeType: string,
   filename: string
 ): Promise<OCRResult> {
-  // DEBUG: Confirm function is being called
-  console.log('[OCR DEBUG] processDocument called', {
+  console.log('[DOCUMENT] processDocument called', {
     filename,
     mimeType,
     bufferSize: buffer.length,
@@ -169,7 +209,55 @@ export async function processDocument(
     throw new BadRequestError(validation.error || 'Invalid file');
   }
 
-  ocrLogger.info('Processing document with Document AI', {
+  // For PDFs, try direct text extraction first (much faster and more accurate)
+  if (mimeType === 'application/pdf') {
+    const pdfResult = await extractTextFromPDF(buffer);
+
+    if (pdfResult && pdfResult.text.length > MIN_EMBEDDED_TEXT_LENGTH) {
+      console.log('[DOCUMENT] Using direct PDF text extraction (embedded text found)');
+
+      // Extract biomarkers from the directly extracted text
+      const biomarkers = extractBiomarkersFromText(pdfResult.text);
+
+      // Validate extracted biomarkers
+      const validatedBiomarkers = biomarkers.filter((b) => {
+        const validationResult = validateBiomarkerValue(b.name, b.value, b.unit);
+        if (!validationResult.valid) {
+          ocrLogger.warn('Invalid biomarker value discarded', {
+            biomarkerName: b.name,
+            validationReason: validationResult.reason,
+          });
+        }
+        return validationResult.valid;
+      });
+
+      const processingTimeMs = Date.now() - startTime;
+
+      ocrLogger.info('Direct PDF extraction complete', {
+        pageCount: pdfResult.pageCount,
+        textLength: pdfResult.text.length,
+        biomarkersFound: validatedBiomarkers.length,
+        processingTimeMs,
+      });
+
+      return {
+        text: pdfResult.text,
+        biomarkers: validatedBiomarkers,
+        confidence: 0.95, // High confidence for direct text extraction
+        pageCount: pdfResult.pageCount,
+        metadata: {
+          processorType: 'pdf-parse-direct',
+          processingTimeMs,
+          documentType: mimeType,
+        },
+      };
+    }
+
+    console.log('[DOCUMENT] PDF has no embedded text, falling back to Document AI OCR');
+  }
+
+  // Fall back to Document AI OCR for images or PDFs without embedded text
+  ocrLogger.info('Processing document with Document AI OCR (fallback)', {
     mimeType,
     sizeBytes: buffer.length,
   });
@@ -199,109 +287,20 @@ export async function processDocument(
     const extractedText = document.text || '';
     const pageCount = document.pages?.length || 1;
 
-    // DEBUG: Log processor info
-    console.log('[OCR DEBUG] Processor used:', {
-      processorName: processorName,
-      projectId: process.env.GCP_PROJECT_ID,
-      processorId: process.env.GCP_PROCESSOR_ID,
-      location: process.env.GCP_LOCATION || 'us',
-    });
-
-    // DEBUG: Log FULL extracted text (values might be missing!)
-    console.log('[OCR DEBUG] ========== FULL OCR TEXT START ==========');
-    console.log(extractedText);
-    console.log('[OCR DEBUG] ========== FULL OCR TEXT END ==========');
-
-    // DEBUG: Log text stats
-    console.log('[OCR DEBUG] Text stats:', {
+    // Log OCR results (this is the fallback path for scanned images)
+    console.log('[OCR FALLBACK] Document AI OCR used for image/scanned PDF');
+    console.log('[OCR FALLBACK] Text extracted:', {
       textLength: extractedText.length,
       pageCount,
       lineCount: extractedText.split('\n').length,
-      hasNumbers: /\d{2,}/.test(extractedText),
-      sample193: extractedText.includes('193'),
-      sample242: extractedText.includes('242'),
     });
 
-    // DEBUG: Log first 50 lines to see exact OCR output format
+    // Log first 20 lines for debugging
     const lines = extractedText.split('\n');
-    console.log('[OCR DEBUG] First 50 lines of OCR text:');
-    lines.slice(0, 50).forEach((line, i) => {
-      console.log(`[OCR LINE ${i + 1}] "${line}"`);
+    console.log('[OCR FALLBACK] First 20 lines:');
+    lines.slice(0, 20).forEach((line, i) => {
+      console.log(`  ${i + 1}: "${line}"`);
     });
-
-    // DEBUG: Check for table data from Document AI
-    console.log('[OCR DEBUG] Checking for structured data...');
-    if (document.pages) {
-      for (let pageIdx = 0; pageIdx < document.pages.length; pageIdx++) {
-        const page = document.pages[pageIdx];
-
-        // Log page structure
-        console.log(`[OCR DEBUG] Page ${pageIdx + 1}:`, {
-          hasTables: !!(page.tables && page.tables.length > 0),
-          tableCount: page.tables?.length || 0,
-          hasFormFields: !!(page.formFields && page.formFields.length > 0),
-          formFieldCount: page.formFields?.length || 0,
-          hasBlocks: !!(page.blocks && page.blocks.length > 0),
-          blockCount: page.blocks?.length || 0,
-          hasTokens: !!(page.tokens && page.tokens.length > 0),
-          tokenCount: page.tokens?.length || 0,
-        });
-
-        // Log form fields if present (key-value pairs)
-        if (page.formFields && page.formFields.length > 0) {
-          console.log(`[OCR DEBUG] Page ${pageIdx + 1} has ${page.formFields.length} form fields`);
-          page.formFields.slice(0, 10).forEach((field, fieldIdx) => {
-            const fieldName = field.fieldName?.textAnchor?.textSegments
-              ?.map(seg => extractedText.substring(
-                parseInt(seg.startIndex?.toString() || '0'),
-                parseInt(seg.endIndex?.toString() || '0')
-              ))
-              .join('')
-              .trim() || '';
-            const fieldValue = field.fieldValue?.textAnchor?.textSegments
-              ?.map(seg => extractedText.substring(
-                parseInt(seg.startIndex?.toString() || '0'),
-                parseInt(seg.endIndex?.toString() || '0')
-              ))
-              .join('')
-              .trim() || '';
-            console.log(`[OCR FORM FIELD ${fieldIdx}] "${fieldName}" = "${fieldValue}"`);
-          });
-        }
-
-        // Log tables if present
-        if (page.tables && page.tables.length > 0) {
-          console.log(`[OCR DEBUG] Page ${pageIdx + 1} has ${page.tables.length} tables`);
-          page.tables.forEach((table, tableIdx) => {
-            console.log(`[OCR TABLE ${tableIdx + 1}] Rows: ${table.headerRows?.length || 0} header, ${table.bodyRows?.length || 0} body`);
-            // Log table structure for debugging
-            table.bodyRows?.slice(0, 10).forEach((row, rowIdx) => {
-              const cells = row.cells?.map(cell => {
-                const text = cell.layout?.textAnchor?.textSegments
-                  ?.map(seg => extractedText.substring(
-                    parseInt(seg.startIndex?.toString() || '0'),
-                    parseInt(seg.endIndex?.toString() || '0')
-                  ))
-                  .join('')
-                  .trim() || '';
-                return text;
-              }) || [];
-              console.log(`[OCR TABLE ROW ${rowIdx}] ${JSON.stringify(cells)}`);
-            });
-          });
-        }
-      }
-    }
-
-    // DEBUG: Check for entities (extracted key-value data)
-    if (document.entities && document.entities.length > 0) {
-      console.log(`[OCR DEBUG] Document has ${document.entities.length} entities`);
-      document.entities.slice(0, 20).forEach((entity, idx) => {
-        console.log(`[OCR ENTITY ${idx}] Type: ${entity.type}, Value: "${entity.mentionText}", Confidence: ${entity.confidence}`);
-      });
-    } else {
-      console.log('[OCR DEBUG] No entities detected - may need Form Parser processor');
-    }
 
     // Calculate overall text confidence
     let totalConfidence = 0;
@@ -322,18 +321,9 @@ export async function processDocument(
 
     const avgConfidence = confidenceCount > 0 ? totalConfidence / confidenceCount : 0.5;
 
-    // Extract biomarkers from text
+    // Extract biomarkers from OCR text
     const biomarkers = extractBiomarkersFromText(extractedText);
-
-    // DEBUG: Log biomarker extraction results
-    console.log('[OCR DEBUG] Biomarker extraction summary', {
-      biomarkersFoundBeforeValidation: biomarkers.length,
-    });
-
-    // DEBUG: Log each found biomarker individually
-    biomarkers.forEach((b, i) => {
-      console.log(`[OCR BIOMARKER ${i + 1}] ${b.name}: ${b.value} ${b.unit} (confidence: ${b.confidence.toFixed(2)}, raw: "${b.rawMatch.substring(0, 60)}")`);
-    });
+    console.log(`[OCR FALLBACK] Extracted ${biomarkers.length} biomarkers from OCR text`);
 
     // Validate extracted biomarkers
     const validatedBiomarkers = biomarkers.filter((b) => {
@@ -349,7 +339,7 @@ export async function processDocument(
 
     const processingTimeMs = Date.now() - startTime;
 
-    ocrLogger.info('Document AI processing complete', {
+    ocrLogger.info('Document AI OCR fallback complete', {
       pageCount,
       textLength: extractedText.length,
       biomarkersFound: validatedBiomarkers.length,
@@ -363,7 +353,7 @@ export async function processDocument(
       confidence: avgConfidence,
       pageCount,
       metadata: {
-        processorType: 'document-ai',
+        processorType: 'document-ai-ocr-fallback',
         processingTimeMs,
         documentType: mimeType,
       },
