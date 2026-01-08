@@ -27,7 +27,6 @@ import {
   Moon,
   Monitor,
   CheckCircle,
-  X,
   Eye,
   EyeOff,
 } from 'lucide-react';
