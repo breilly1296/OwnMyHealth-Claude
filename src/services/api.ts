@@ -157,6 +157,14 @@ export async function attemptTokenRefresh(): Promise<boolean> {
 }
 
 /**
+ * Get CSRF token from cookies
+ */
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+/**
  * Base fetch wrapper with authentication, timeout, error handling, and automatic token refresh
  */
 async function apiFetch<T>(
@@ -172,6 +180,15 @@ async function apiFetch<T>(
 
   if (authToken) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  // Add CSRF token for state-changing requests
+  const method = (options.method || 'GET').toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      (headers as Record<string, string>)['x-csrf-token'] = csrfToken;
+    }
   }
 
   // Create abort controller for timeout
