@@ -2311,33 +2311,56 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
   // Get text after the biomarker name
   const afterName = line.substring(biomarkerNameEndIndex);
 
+  console.log(`[EXTRACT_VALUE] After name: "${afterName.substring(0, 80)}..."`);
+
   // Skip if this looks like educational text
   if (isEducationalText(afterName)) {
     console.log(`[SKIP] Educational text detected: "${afterName.substring(0, 50)}..."`);
     return null;
   }
 
-  // Match the FIRST number that appears after the name
-  // Must NOT be preceded by < > <= >= or "range:"
-  // Pattern: whitespace, then number (possibly with decimal), optionally followed by H/L flag
-  const resultMatch = afterName.match(/^\s+(\d+\.?\d*)\s*[HL]?(?:\s|$)/i);
+  // Quest format typically has: NAME <whitespace> VALUE <whitespace> Reference Range
+  // The VALUE is the first number after the name, possibly with H/L flag
+
+  // Pattern 1: Whitespace, then number (possibly with decimal), optionally H/L flag
+  // Must be the FIRST thing after the name (just whitespace before number)
+  const resultMatch = afterName.match(/^\s+(\d+\.?\d*)\s*([HL])?\s/i);
 
   if (resultMatch) {
     const value = parseFloat(resultMatch[1]);
+    const flag = resultMatch[2];
+    console.log(`[EXTRACT_VALUE] Pattern 1 matched: value=${value}, flag=${flag || 'none'}`);
     if (!isNaN(value) && value >= 0 && value < 100000) {
       return { value, rawMatch: line };
     }
   }
 
-  // Also try: number followed by unit (but NOT preceded by reference indicators)
-  const unitMatch = afterName.match(/^\s+(\d+\.?\d*)\s*(?:mg|g|%|K|M|m|u|n|f|p|IU|U|ratio)/i);
+  // Pattern 2: Whitespace, number followed by unit (common in lab reports)
+  const unitMatch = afterName.match(/^\s+(\d+\.?\d*)\s*(?:mg|g|%|K\/uL|M\/uL|mL|uL|fL|pg|ng|IU|U|mmol|umol|mEq|ratio)/i);
   if (unitMatch) {
     const value = parseFloat(unitMatch[1]);
+    console.log(`[EXTRACT_VALUE] Pattern 2 (with unit) matched: value=${value}`);
     if (!isNaN(value) && value >= 0 && value < 100000) {
       return { value, rawMatch: line };
     }
   }
 
+  // Pattern 3: More lenient - any number after whitespace, but NOT if preceded by < > = - or "to"
+  // This catches cases where OCR added extra spaces
+  const lenientMatch = afterName.match(/^\s{2,}(\d+\.?\d*)(?:\s|$)/);
+  if (lenientMatch) {
+    // Make sure this isn't part of a reference range
+    const beforeNumber = afterName.substring(0, afterName.indexOf(lenientMatch[1]));
+    if (!REFERENCE_RANGE_INDICATORS.some(pattern => pattern.test(beforeNumber))) {
+      const value = parseFloat(lenientMatch[1]);
+      console.log(`[EXTRACT_VALUE] Pattern 3 (lenient) matched: value=${value}`);
+      if (!isNaN(value) && value >= 0 && value < 100000) {
+        return { value, rawMatch: line };
+      }
+    }
+  }
+
+  console.log(`[EXTRACT_VALUE] No pattern matched for: "${afterName.substring(0, 50)}"`);
   return null;
 }
 
@@ -2347,10 +2370,21 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
  */
 function looksLikeResultRow(line: string): boolean {
   // Skip lines that are mostly text descriptions
-  if (line.length > 200) return false;
+  if (line.length > 200) {
+    console.log(`[SKIP_ROW] Line too long (${line.length} chars): "${line.substring(0, 50)}..."`);
+    return false;
+  }
+
+  // Skip lines that are too short to be result rows
+  if (line.length < 10) {
+    return false;
+  }
 
   // Skip lines with educational keywords
-  if (isEducationalText(line)) return false;
+  if (isEducationalText(line)) {
+    console.log(`[SKIP_ROW] Educational text: "${line.substring(0, 50)}..."`);
+    return false;
+  }
 
   // Skip lines that start with common non-result patterns
   const skipStarters = [
@@ -2361,11 +2395,22 @@ function looksLikeResultRow(line: string): boolean {
     /^for\s/i,
     /^if\s/i,
     /^when\s/i,
+    /^page\s/i,
+    /^\d{1,2}\/\d{1,2}\/\d{2,4}/,  // Date patterns
     /^\*/,
     /^\(/,
+    /^reference/i,
+    /^normal/i,
+    /^range/i,
   ];
 
   if (skipStarters.some(pattern => pattern.test(line.trim()))) {
+    console.log(`[SKIP_ROW] Non-result starter: "${line.substring(0, 50)}..."`);
+    return false;
+  }
+
+  // A result row should have at least one number
+  if (!/\d/.test(line)) {
     return false;
   }
 
@@ -2378,6 +2423,8 @@ function looksLikeResultRow(line: string): boolean {
 function extractWithPatterns(text: string): ExtractedBiomarker[] {
   const results: ExtractedBiomarker[] = [];
   const foundNames = new Set<string>();
+
+  console.log('[PATTERN EXTRACTION] Starting pattern-based extraction');
 
   for (const biomarker of ALL_BIOMARKERS) {
     if (foundNames.has(biomarker.name)) continue;
@@ -2398,6 +2445,8 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
       // Validate value is reasonable
       if (value < -100 || value > 100000) continue;
 
+      console.log(`[PATTERN] Candidate for ${biomarker.name}: value=${value}, match="${match[0].substring(0, 60)}"`);
+
       // Get context around the match to check for educational text
       const contextStart = Math.max(0, match.index - 100);
       const contextEnd = Math.min(text.length, match.index + match[0].length + 100);
@@ -2416,9 +2465,30 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
         continue;
       }
 
+      // CRITICAL: Check text after the match for reference range patterns
+      // If we see "Reference Range:" or similar right after, this value might be correct
+      // But if we see the value is part of a range like "0-8", skip it
+      const afterMatch = text.substring(match.index + match[0].length, match.index + match[0].length + 50);
+      const beforeMatch = text.substring(Math.max(0, match.index - 30), match.index);
+
+      // Check if value appears to be part of a reference range (e.g., "0-8" or "140-400")
+      const rangePatternBefore = /[-–]\s*$/;
+      const rangePatternAfter = /^\s*[-–]\s*\d/;
+      if (rangePatternBefore.test(beforeMatch) || rangePatternAfter.test(afterMatch)) {
+        console.log(`[SKIP PATTERN] Value ${value} appears to be part of range for ${biomarker.name}`);
+        continue;
+      }
+
+      // Validate value is within reasonable bounds for this biomarker
+      const range = biomarker.normalRange;
+      if (value < range.min * 0.01 || value > range.max * 100) {
+        console.log(`[SKIP PATTERN] Value ${value} out of reasonable range for ${biomarker.name} (expected ${range.min}-${range.max})`);
+        continue;
+      }
+
       foundNames.add(biomarker.name);
 
-      let confidence = 0.8;
+      let confidence = 0.7; // Lower base confidence for pattern matching (line-based is preferred)
       if (value >= biomarker.normalRange.min * 0.1 && value <= biomarker.normalRange.max * 10) {
         confidence += 0.1;
       }
@@ -2433,11 +2503,12 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
         rawMatch: match[0].substring(0, 100),
       });
 
-      console.log(`[BIOMARKER MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit}`);
+      console.log(`[PATTERN MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit}`);
       break;
     }
   }
 
+  console.log(`[PATTERN EXTRACTION] Found ${results.length} biomarkers`);
   return results;
 }
 
@@ -2451,7 +2522,10 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
   const lines = text.split('\n');
 
   console.log(`[LINE ANALYSIS] Processing ${lines.length} lines`);
+  console.log('[LINE ANALYSIS] First 20 lines:');
+  lines.slice(0, 20).forEach((line, i) => console.log(`  ${i}: "${line.substring(0, 80)}"`));
 
+  let resultRowCount = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line || line.length < 3) continue;
@@ -2460,18 +2534,21 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
     if (!looksLikeResultRow(line)) {
       continue;
     }
+    resultRowCount++;
 
     for (const biomarker of ALL_BIOMARKERS) {
       if (foundNames.has(biomarker.name)) continue;
 
       // Check if line contains the biomarker name or any alias
       const namesToCheck = [biomarker.name, ...biomarker.aliases];
+      let matchedName = '';
       let matchedNameEnd = -1;
 
       for (const name of namesToCheck) {
         const nameRegex = new RegExp(`\\b(${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'i');
         const nameMatch = line.match(nameRegex);
         if (nameMatch && nameMatch.index !== undefined) {
+          matchedName = name;
           matchedNameEnd = nameMatch.index + nameMatch[0].length;
           break;
         }
@@ -2479,17 +2556,22 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
 
       if (matchedNameEnd === -1) continue;
 
+      console.log(`[LINE ${i}] Found biomarker "${matchedName}" in line: "${line.substring(0, 60)}..."`);
+
       // Extract the result value (first number after biomarker name)
       const extraction = extractResultValue(line, matchedNameEnd);
 
-      if (!extraction) continue;
+      if (!extraction) {
+        console.log(`[LINE ${i}] No value extracted for ${biomarker.name}`);
+        continue;
+      }
 
       const { value, rawMatch } = extraction;
 
       // Skip if value seems unreasonable for this biomarker
       const range = biomarker.normalRange;
       if (value < range.min * 0.01 || value > range.max * 100) {
-        console.log(`[SKIP LINE] Value ${value} out of range for ${biomarker.name}`);
+        console.log(`[LINE ${i}] Value ${value} out of range for ${biomarker.name} (expected ${range.min}-${range.max})`);
         continue;
       }
 
@@ -2501,39 +2583,50 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
         unit: biomarker.defaultUnit,
         category: biomarker.category,
         normalRange: { ...range, source: 'Standard Reference Range' },
-        confidence: 0.75, // Slightly higher confidence for line-based extraction
+        confidence: 0.85, // Higher confidence for line-based extraction with proper validation
         rawMatch: rawMatch.substring(0, 100),
       });
 
-      console.log(`[LINE MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit}`);
+      console.log(`[LINE MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit} (line ${i})`);
       break;
     }
   }
 
+  console.log(`[LINE ANALYSIS] Processed ${resultRowCount} result rows, found ${results.length} biomarkers`);
   return results;
 }
 
 /**
- * Hybrid extraction: Try regex patterns first, then line-by-line analysis
+ * Hybrid extraction: Prioritize line-by-line for tabular formats, then try regex
  */
 export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
+  console.log('[EXTRACTION] ========================================');
   console.log('[EXTRACTION] Starting hybrid biomarker extraction');
   console.log(`[EXTRACTION] Text length: ${text.length} chars`);
+  console.log('[EXTRACTION] Text preview (first 500 chars):');
+  console.log(text.substring(0, 500));
+  console.log('[EXTRACTION] ========================================');
 
-  // First try regex patterns
-  const patternResults = extractWithPatterns(text);
-  console.log(`[EXTRACTION] Pattern extraction found: ${patternResults.length} biomarkers`);
-
-  // Then try line-by-line analysis for any we missed
+  // For tabular lab reports (Quest, etc.), line-by-line is more reliable
+  // Try it first as the primary method
   const lineResults = extractFromLines(text);
   console.log(`[EXTRACTION] Line extraction found: ${lineResults.length} biomarkers`);
+  lineResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
 
-  // Merge results, preferring pattern matches (higher confidence)
-  const foundNames = new Set(patternResults.map((r) => r.name));
-  const additionalFromLines = lineResults.filter((r) => !foundNames.has(r.name));
+  // Then try regex patterns to catch any we missed
+  const patternResults = extractWithPatterns(text);
+  console.log(`[EXTRACTION] Pattern extraction found: ${patternResults.length} biomarkers`);
+  patternResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
 
-  const combined = [...patternResults, ...additionalFromLines];
+  // Merge results, preferring line-based results (more reliable for tabular data)
+  const foundNames = new Set(lineResults.map((r) => r.name));
+  const additionalFromPatterns = patternResults.filter((r) => !foundNames.has(r.name));
+
+  const combined = [...lineResults, ...additionalFromPatterns];
+  console.log('[EXTRACTION] ========================================');
   console.log(`[EXTRACTION] Total unique biomarkers: ${combined.length}`);
+  combined.forEach(r => console.log(`  FINAL: ${r.name}: ${r.value} ${r.unit} (confidence: ${r.confidence})`));
+  console.log('[EXTRACTION] ========================================');
 
   return combined;
 }
