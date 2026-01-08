@@ -209,6 +209,15 @@ async function startServer() {
     startAuditCleanup(getPrismaClient());
 
     const server = app.listen(config.port, () => {
+      // Log cookie configuration for debugging cross-domain issues
+      logger.info('Cookie configuration', {
+        data: {
+          domain: config.cookie.domain || '(not set - will use request domain)',
+          sameSite: config.cookie.sameSite,
+          secure: config.cookie.secure,
+        },
+      });
+
       logger.startup(`
 ╔═══════════════════════════════════════════════════════╗
 ║                                                       ║
