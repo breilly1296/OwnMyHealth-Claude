@@ -26,23 +26,29 @@ import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { bulkOperationLimiter } from '../middleware/rateLimiter.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
-import Anthropic from '@anthropic-ai/sdk';
 import type { AuthenticatedRequest } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
 
-// Initialize Anthropic client lazily (only when API key is available)
-let anthropicClient: Anthropic | null = null;
+// Anthropic client - loaded dynamically only when needed
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let anthropicClient: any = null;
 
-function getAnthropicClient(): Anthropic | null {
+async function getAnthropicClient(): Promise<any> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return null;
   }
   if (!anthropicClient) {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    try {
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      anthropicClient = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+    } catch (error) {
+      logger.error('Failed to load Anthropic SDK', { data: { error: error instanceof Error ? error.message : 'Unknown error' } });
+      return null;
+    }
   }
   return anthropicClient;
 }
@@ -90,7 +96,7 @@ router.post(
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Check if Anthropic API key is configured
-      const anthropic = getAnthropicClient();
+      const anthropic = await getAnthropicClient();
       if (!anthropic) {
         logger.warn('AI guidance requested but ANTHROPIC_API_KEY is not configured');
         return res.status(503).json({
