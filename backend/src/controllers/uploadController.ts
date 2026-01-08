@@ -372,9 +372,10 @@ export async function uploadLabResultOCR(
     );
   }
 
-  // Extract date and lab name from OCR text
-  const reportDate = extractDateFromText(ocrResult.text) || new Date().toISOString();
-  const labName = extractLabNameFromText(ocrResult.text);
+  // Use metadata from Claude/OCR if available, otherwise extract from text
+  const labName = ocrResult.metadata.labName || extractLabNameFromText(ocrResult.text);
+  const reportDateStr = ocrResult.metadata.labDate || extractDateFromText(ocrResult.text);
+  const reportDate = reportDateStr ? new Date(reportDateStr) : new Date();
 
   // Create biomarkers in database
   const createdBiomarkers: {
@@ -412,7 +413,7 @@ export async function uploadLabResultOCR(
         normalRangeMin: biomarker.normalRange.min,
         normalRangeMax: biomarker.normalRange.max,
         normalRangeSource: biomarker.normalRange.source || 'OCR Extraction',
-        measurementDate: new Date(reportDate),
+        measurementDate: reportDate,
         isOutOfRange,
       },
     });
@@ -441,7 +442,7 @@ export async function uploadLabResultOCR(
       fileSize: file.size,
       mimeType: file.mimetype,
       biomarkersExtracted: createdBiomarkers.length,
-      labName,
+      labName: labName || undefined,
       extractionConfidence: avgConfidence,
       ocrConfidence: ocrResult.confidence,
       processingTimeMs: ocrResult.metadata.processingTimeMs,
@@ -455,7 +456,7 @@ export async function uploadLabResultOCR(
       biomarkersCreated: createdBiomarkers.length,
       biomarkers: createdBiomarkers,
       labName: labName || undefined,
-      reportDate,
+      reportDate: reportDate.toISOString(),
       extractionConfidence: avgConfidence,
       ocrMetadata: {
         processingTimeMs: ocrResult.metadata.processingTimeMs,
