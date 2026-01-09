@@ -20,20 +20,102 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Database, Search, BarChart3, Shield, DollarSign, CheckCircle, XCircle, Eye, GitCompare as Compare, Network, Target } from 'lucide-react';
+import { Database, Search, BarChart3, Shield, DollarSign, CheckCircle, XCircle, Eye, GitCompare as Compare, Network, Target, Filter } from 'lucide-react';
 import type { InsurancePlan } from '../../types';
 import {
   insuranceKB,
   type NormalizedInsurancePlan,
   type PlanSearchCriteria,
   type PlanSearchResult,
-  type PlanComparison
+  type PlanComparison,
+  type ServiceCoverageComparison,
 } from '../../utils/insurance/insuranceKnowledgeBase';
 
 interface InsuranceKnowledgePanelProps {
   plans: InsurancePlan[];
   isOpen: boolean;
   onClose: () => void;
+}
+
+// ============================================
+// Reusable UI Components
+// ============================================
+
+/** Metric card for displaying key statistics */
+interface MetricCardProps {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  colorScheme: 'blue' | 'green' | 'purple' | 'orange';
+}
+
+const COLOR_SCHEMES = {
+  blue: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'text-blue-600', label: 'text-blue-600', value: 'text-blue-700' },
+  green: { bg: 'bg-green-50', border: 'border-green-200', icon: 'text-green-600', label: 'text-green-600', value: 'text-green-700' },
+  purple: { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'text-purple-600', label: 'text-purple-600', value: 'text-purple-700' },
+  orange: { bg: 'bg-orange-50', border: 'border-orange-200', icon: 'text-orange-600', label: 'text-orange-600', value: 'text-orange-700' },
+} as const;
+
+function MetricCard({ icon: Icon, label, value, colorScheme }: MetricCardProps) {
+  const colors = COLOR_SCHEMES[colorScheme];
+  return (
+    <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+      <div className="flex items-center">
+        <Icon className={`w-8 h-8 ${colors.icon} mr-3`} />
+        <div>
+          <p className={`text-sm ${colors.label}`}>{label}</p>
+          <p className={`text-2xl font-bold ${colors.value}`}>{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Progress bar for scores */
+interface ScoreBarProps {
+  score: number;
+  maxScore?: number;
+  showLabel?: boolean;
+  className?: string;
+}
+
+function ScoreBar({ score, maxScore = 10, showLabel = true, className = '' }: ScoreBarProps) {
+  const percentage = (score / maxScore) * 100;
+  return (
+    <div className={`flex items-center ${className}`}>
+      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${percentage}%` }} />
+      </div>
+      {showLabel && <span className="font-medium">{score}/{maxScore}</span>}
+    </div>
+  );
+}
+
+/** Tag/badge list for displaying multiple items */
+interface TagListProps {
+  items: string[];
+  colorScheme: 'blue' | 'green' | 'orange' | 'yellow' | 'purple';
+}
+
+const TAG_COLORS = {
+  blue: 'bg-blue-100 text-blue-700',
+  green: 'bg-green-100 text-green-700',
+  orange: 'bg-orange-100 text-orange-700',
+  yellow: 'bg-yellow-100 text-yellow-800',
+  purple: 'bg-purple-100 text-purple-800',
+} as const;
+
+function TagList({ items, colorScheme }: TagListProps) {
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map((item, index) => (
+        <span key={index} className={`px-2 py-1 ${TAG_COLORS[colorScheme]} text-xs rounded`}>
+          {item}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: InsuranceKnowledgePanelProps) {
@@ -247,12 +329,8 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                             
                             <p className="text-sm text-gray-600 mb-2">{result.plan.insurerName}</p>
                             
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {result.matchedCriteria.map((criteria, cIndex) => (
-                                <span key={cIndex} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                                  {criteria}
-                                </span>
-                              ))}
+                            <div className="mb-3">
+                              <TagList items={result.matchedCriteria} colorScheme="blue" />
                             </div>
 
                             <div className="grid grid-cols-3 gap-4 text-sm">
@@ -341,15 +419,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                           </td>
                           {comparison.comparisonMatrix.planScores.map(plan => (
                             <td key={plan.planId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center">
-                                <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                  <div 
-                                    className="bg-blue-600 h-2 rounded-full" 
-                                    style={{ width: `${(plan.scores[category] / 10) * 100}%` }}
-                                  />
-                                </div>
-                                <span className="font-medium">{plan.scores[category]}/10</span>
-                              </div>
+                              <ScoreBar score={plan.scores[category]} />
                             </td>
                           ))}
                         </tr>
@@ -382,24 +452,16 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                         <div className="space-y-2 text-sm">
                           <div>
                             <span className="text-gray-600">Best for:</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {rec.bestFor.map((item, index) => (
-                                <span key={index} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                                  {item}
-                                </span>
-                              ))}
+                            <div className="mt-1">
+                              <TagList items={rec.bestFor} colorScheme="green" />
                             </div>
                           </div>
-                          
+
                           {rec.concerns.length > 0 && (
                             <div>
                               <span className="text-gray-600">Potential concerns:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {rec.concerns.map((concern, index) => (
-                                  <span key={index} className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
-                                    {concern}
-                                  </span>
-                                ))}
+                              <div className="mt-1">
+                                <TagList items={rec.concerns} colorScheme="orange" />
                               </div>
                             </div>
                           )}
@@ -422,60 +484,33 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
 
               {/* Plan Metrics Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <Shield className="w-8 h-8 text-blue-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-blue-600">Total Plans</p>
-                      <p className="text-2xl font-bold text-blue-700">{normalizedPlans.length}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <DollarSign className="w-8 h-8 text-green-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-green-600">Avg Premium</p>
-                      <p className="text-2xl font-bold text-green-700">
-                        {formatCurrency(
-                          normalizedPlans.reduce((sum, plan) => {
-                            const premium = plan.normalizedCosts.find(c => c.costType === 'premium')?.amount || 0;
-                            return sum + premium;
-                          }, 0) / normalizedPlans.length
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <Network className="w-8 h-8 text-purple-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-purple-600">Plan Types</p>
-                      <p className="text-2xl font-bold text-purple-700">
-                        {new Set(normalizedPlans.map(p => p.planType)).size}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <Target className="w-8 h-8 text-orange-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-orange-600">Avg Coverage</p>
-                      <p className="text-2xl font-bold text-orange-700">
-                        {Math.round(
-                          normalizedPlans.reduce((sum, plan) => 
-                            sum + plan.keyMetrics.coverageComprehensiveness, 0
-                          ) / normalizedPlans.length
-                        )}/10
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <MetricCard icon={Shield} label="Total Plans" value={normalizedPlans.length} colorScheme="blue" />
+                <MetricCard
+                  icon={DollarSign}
+                  label="Avg Premium"
+                  value={formatCurrency(
+                    normalizedPlans.reduce((sum, plan) => {
+                      const premium = plan.normalizedCosts.find(c => c.costType === 'premium')?.amount || 0;
+                      return sum + premium;
+                    }, 0) / (normalizedPlans.length || 1)
+                  )}
+                  colorScheme="green"
+                />
+                <MetricCard
+                  icon={Network}
+                  label="Plan Types"
+                  value={new Set(normalizedPlans.map(p => p.planType)).size}
+                  colorScheme="purple"
+                />
+                <MetricCard
+                  icon={Target}
+                  label="Avg Coverage"
+                  value={`${Math.round(
+                    normalizedPlans.reduce((sum, plan) => sum + plan.keyMetrics.coverageComprehensiveness, 0) /
+                    (normalizedPlans.length || 1)
+                  )}/10`}
+                  colorScheme="orange"
+                />
               </div>
 
               {/* Plan Distribution */}

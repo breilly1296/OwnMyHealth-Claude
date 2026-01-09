@@ -18,11 +18,13 @@ import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 import { logger } from '../utils/logger.js';
 import { InternalServerError, BadRequestError } from '../middleware/errorHandler.js';
 import {
-  extractBiomarkersFromText,
-  validateBiomarkerValue,
   type ExtractedBiomarker,
   ALL_BIOMARKERS,
 } from './biomarkerPatterns.js';
+import {
+  extractBiomarkersFromText,
+  validateBiomarkerValue,
+} from './biomarkerExtractor.js';
 import {
   extractBiomarkersWithClaude,
   isClaudeExtractionConfigured,

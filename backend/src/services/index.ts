@@ -48,13 +48,17 @@ export {
   extractLabNameFromText,
 } from './ocrService.js';
 
-// Biomarker Patterns
+// Biomarker Patterns and Data
 export {
   BONE_HEALTH_BIOMARKERS,
-  extractBiomarkersFromText,
-  validateBiomarkerValue,
   normalizeUnit,
 } from './biomarkerPatterns.js';
+
+// Biomarker Extraction
+export {
+  extractBiomarkersFromText,
+  validateBiomarkerValue,
+} from './biomarkerExtractor.js';
 
 // Storage Service (Google Cloud Storage)
 export {
