@@ -73,10 +73,14 @@ export function DashboardContent({
         <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-5 text-white shadow-lg shadow-brand-500/20">
           <div className="flex items-center justify-between mb-3">
             <Heart className="w-8 h-8 opacity-80" />
-            <span className="text-3xl font-bold">{stats.healthScore}%</span>
+            <span className="text-3xl font-bold">
+              {stats.healthScore >= 0 ? `${stats.healthScore}%` : '—'}
+            </span>
           </div>
           <p className="text-sm opacity-90">Health Score</p>
-          <p className="text-xs opacity-70 mt-1">Based on biomarkers in range</p>
+          <p className="text-xs opacity-70 mt-1">
+            {stats.healthScore >= 0 ? 'Based on biomarkers in range' : 'Add data to calculate'}
+          </p>
         </div>
 
         {/* Total Biomarkers */}

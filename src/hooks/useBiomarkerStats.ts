@@ -15,7 +15,7 @@ interface BiomarkerStats {
   inRangeCount: number;
   /** Number of biomarkers outside normal range */
   outOfRangeCount: number;
-  /** Percentage of biomarkers in range (0-100) */
+  /** Percentage of biomarkers in range (0-100), or -1 if no data */
   healthScore: number;
   /** Count of biomarkers per category */
   categoryCounts: Record<string, number>;
@@ -50,8 +50,8 @@ export function useBiomarkerStats(biomarkers: Biomarker[]): BiomarkerStats {
       categoryCounts[b.category] = (categoryCounts[b.category] || 0) + 1;
     });
 
-    // Health score as percentage of biomarkers in range
-    const healthScore = totalCount > 0 ? Math.round((inRangeCount / totalCount) * 100) : 100;
+    // Health score as percentage of biomarkers in range (-1 means no data)
+    const healthScore = totalCount > 0 ? Math.round((inRangeCount / totalCount) * 100) : -1;
 
     return {
       totalCount,
