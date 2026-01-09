@@ -113,7 +113,7 @@ router.post(
       });
     }
 
-    const { biomarker, allBiomarkers } = req.body;
+    const { biomarker, allBiomarkers: _allBiomarkers } = req.body;
 
     if (!biomarker) {
       return res.status(400).json({
@@ -122,41 +122,26 @@ router.post(
       });
     }
 
-    // Build context about other biomarkers for more relevant guidance
-    const otherBiomarkersContext = allBiomarkers
-      ?.filter((b: { id: string }) => b.id !== biomarker.id)
-      ?.slice(0, 10)
-      ?.map((b: { name: string; value: number; unit: string; status: string }) =>
-        `${b.name}: ${b.value} ${b.unit} (${b.status})`
-      )
-      ?.join(', ') || 'None provided';
-
-    const prompt = `You are a health education assistant helping patients understand their lab results and prepare for doctor visits.
+    const prompt = `Health education assistant. Be concise and specific.
 
 Biomarker: ${biomarker.name}
-Current Value: ${biomarker.value} ${biomarker.unit}
-Normal Range: ${biomarker.normalRange?.min || 'N/A'} - ${biomarker.normalRange?.max || 'N/A'} ${biomarker.unit}
+Value: ${biomarker.value} ${biomarker.unit} (Range: ${biomarker.normalRange?.min || '?'}-${biomarker.normalRange?.max || '?'})
 Status: ${biomarker.status}
-Category: ${biomarker.category}
-${biomarker.history?.length > 1 ? `Recent History: ${biomarker.history.slice(0, 5).map((h: { value: number; date: string }) => `${h.value} (${h.date})`).join(', ')}` : ''}
+${biomarker.history?.length > 1 ? `History: ${biomarker.history.slice(0, 3).map((h: { value: number; date: string }) => `${h.value} (${h.date})`).join(', ')}` : ''}
 
-Other recent biomarkers: ${otherBiomarkersContext}
+Respond with these sections (use exact headers):
 
-Provide:
-1. **What This Measures**: One sentence explaining what this biomarker indicates about health.
+**What This Measures**: One sentence.
 
-2. **Understanding Your Result**: Interpret this specific value. Is it concerning? Borderline? What conditions or factors commonly cause this pattern?
+**Understanding Your Result**: 2-3 sentences interpreting this value. Concerning? Borderline? Common causes?
 
-3. **Trend Summary**: If history exists, describe the trajectory and what it might mean.
+**Trend Summary**: If history provided, 1-2 sentences on trajectory. Skip if no history.
 
-4. **Questions for Your Doctor**: 3 specific, actionable questions like:
-   - "Given my [specific value], should we investigate [specific cause]?"
-   - "Would [specific test] help clarify why this is [high/low]?"
-   - NOT generic questions like "What does this mean?"
+**Questions for Your Doctor**: 2 specific questions using the actual values, like "Given my ${biomarker.value} ${biomarker.unit}, should we check X?"
 
-5. **What You Can Do**: 2-3 specific lifestyle or dietary factors that influence this biomarker.
+**What You Can Do**: 2 specific lifestyle factors that affect this biomarker.
 
-Keep it under 350 words. End with a brief disclaimer about consulting healthcare providers.`;
+Be direct. No disclaimers needed. Under 200 words total.`;
 
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -168,7 +153,7 @@ Keep it under 350 words. End with a brief disclaimer about consulting healthcare
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
+          max_tokens: 600,
           messages: [
             {
               role: 'user',
