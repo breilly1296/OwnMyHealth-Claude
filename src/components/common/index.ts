@@ -9,3 +9,4 @@ export {
   ProviderOrAdmin,
   RoleBadge,
 } from './RoleGuard';
+export { ErrorToast } from './ErrorToast';
