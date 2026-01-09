@@ -336,7 +336,10 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
               )}
 
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
                 className="flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors mt-2"
               >
                 {isExpanded ? (
