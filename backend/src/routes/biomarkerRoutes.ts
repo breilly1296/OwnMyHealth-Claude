@@ -131,7 +131,7 @@ router.post(
       )
       ?.join(', ') || 'None provided';
 
-    const prompt = `You are a health education assistant. Provide educational information about this biomarker result. Be informative but include appropriate disclaimers that this is not medical advice.
+    const prompt = `You are a health education assistant helping patients understand their lab results and prepare for doctor visits.
 
 Biomarker: ${biomarker.name}
 Current Value: ${biomarker.value} ${biomarker.unit}
@@ -140,16 +140,23 @@ Status: ${biomarker.status}
 Category: ${biomarker.category}
 ${biomarker.history?.length > 1 ? `Recent History: ${biomarker.history.slice(0, 5).map((h: { value: number; date: string }) => `${h.value} (${h.date})`).join(', ')}` : ''}
 
-Other recent biomarkers for context: ${otherBiomarkersContext}
+Other recent biomarkers: ${otherBiomarkersContext}
 
-Please provide:
-1. **What This Measures**: Brief explanation of what this biomarker indicates
-2. **Understanding Your Result**: What this specific value might mean (always noting individual variation)
-3. **Trend Summary**: If history provided, what the trend might indicate
-4. **Questions for Your Doctor**: 2-3 relevant questions to discuss
-5. **General Wellness**: Lifestyle factors that can influence this biomarker
+Provide:
+1. **What This Measures**: One sentence explaining what this biomarker indicates about health.
 
-Keep response concise (under 400 words). Always remind the user to consult their healthcare provider for personalized advice.`;
+2. **Understanding Your Result**: Interpret this specific value. Is it concerning? Borderline? What conditions or factors commonly cause this pattern?
+
+3. **Trend Summary**: If history exists, describe the trajectory and what it might mean.
+
+4. **Questions for Your Doctor**: 3 specific, actionable questions like:
+   - "Given my [specific value], should we investigate [specific cause]?"
+   - "Would [specific test] help clarify why this is [high/low]?"
+   - NOT generic questions like "What does this mean?"
+
+5. **What You Can Do**: 2-3 specific lifestyle or dietary factors that influence this biomarker.
+
+Keep it under 350 words. End with a brief disclaimer about consulting healthcare providers.`;
 
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -160,7 +167,7 @@ Keep response concise (under 400 words). Always remind the user to consult their
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
           messages: [
             {

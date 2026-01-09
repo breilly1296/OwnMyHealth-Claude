@@ -100,7 +100,9 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
       { pattern: /\*\*Understanding Your Result\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'Understanding Your Result', icon: <Stethoscope className="w-4 h-4" /> },
       { pattern: /\*\*Trend Summary\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'Trend Summary', icon: <TrendingUp className="w-4 h-4" /> },
       { pattern: /\*\*Questions for Your Doctor\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'Questions for Your Doctor', icon: <MessageCircle className="w-4 h-4" /> },
-      { pattern: /\*\*General Wellness Information\*\*\s*([\s\S]*?)(?=\*\*|---|$)/i, title: 'General Wellness', icon: <Heart className="w-4 h-4" /> },
+      { pattern: /\*\*What You Can Do\*\*\s*([\s\S]*?)(?=\*\*|---|$)/i, title: 'What You Can Do', icon: <Heart className="w-4 h-4" /> },
+      // Legacy pattern for backward compatibility
+      { pattern: /\*\*General Wellness(?:\s*Information)?\*\*\s*([\s\S]*?)(?=\*\*|---|$)/i, title: 'What You Can Do', icon: <Heart className="w-4 h-4" /> },
     ];
 
     for (const { pattern, title, icon } of sectionPatterns) {
