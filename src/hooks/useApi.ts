@@ -12,15 +12,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   biomarkersApi,
   insuranceApi,
-  dnaApi,
   healthNeedsApi,
-  healthAnalysisApi,
   type BiomarkerData,
   type InsurancePlanData,
-  type DNADataInfo,
-  type GeneticTraitData,
   type HealthNeedData,
-  type HealthAnalysisResult,
   type ApiError,
 } from '../services/api';
 
@@ -185,39 +180,6 @@ export function useInsuranceBenefits(planId: string | null) {
 }
 
 // ============================================
-// DNA HOOKS
-// ============================================
-
-export function useDNAUploads() {
-  const fetcher = useCallback(() => dnaApi.getUploads(), []);
-  return useApiFetch<DNADataInfo[]>(fetcher, { clearOnUnmount: true });
-}
-
-export function useDNAUpload(id: string | null) {
-  const fetcher = useCallback(async () => {
-    if (!id) return null;
-    return dnaApi.getUploadById(id);
-  }, [id]);
-
-  return useApiFetch<DNADataInfo | null>(fetcher, {
-    immediate: !!id,
-    clearOnUnmount: true,
-  });
-}
-
-export function useGeneticTraits(dnaId: string | null) {
-  const fetcher = useCallback(async () => {
-    if (!dnaId) return [];
-    return dnaApi.getTraits(dnaId);
-  }, [dnaId]);
-
-  return useApiFetch<GeneticTraitData[]>(fetcher, {
-    immediate: !!dnaId,
-    clearOnUnmount: true,
-  });
-}
-
-// ============================================
 // HEALTH NEEDS HOOKS
 // ============================================
 
@@ -236,15 +198,6 @@ export function useHealthNeed(id: string | null) {
     immediate: !!id,
     clearOnUnmount: true,
   });
-}
-
-// ============================================
-// HEALTH ANALYSIS HOOKS
-// ============================================
-
-export function useHealthAnalysis() {
-  const fetcher = useCallback(() => healthAnalysisApi.getAnalysis(), []);
-  return useApiFetch<HealthAnalysisResult>(fetcher, { clearOnUnmount: true });
 }
 
 // ============================================
@@ -332,17 +285,6 @@ export function useDeleteInsurancePlan() {
 
 export function useUploadSBC() {
   return useMutation(insuranceApi.uploadSBC);
-}
-
-// DNA mutations
-export function useUploadDNA() {
-  return useMutation(({ file, source }: { file: File; source: string }) =>
-    dnaApi.uploadDNA(file, source)
-  );
-}
-
-export function useDeleteDNAUpload() {
-  return useMutation(dnaApi.deleteUpload);
 }
 
 // Health needs mutations
