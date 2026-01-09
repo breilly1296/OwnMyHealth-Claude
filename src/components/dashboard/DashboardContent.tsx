@@ -55,6 +55,7 @@ export function DashboardContent({
   onCategorySelect,
   onOpenAddMeasurement,
   onOpenPDFUpload,
+  onOpenLabUpload,
 }: DashboardContentProps) {
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
@@ -119,20 +120,36 @@ export function DashboardContent({
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           Quick Actions
         </h2>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-3 gap-2 md:gap-3 max-w-xl">
           <button
             onClick={onOpenAddMeasurement}
-            className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors shadow-sm"
+            className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-wellness-300 dark:hover:border-wellness-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Measurement
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-wellness-50 dark:bg-wellness-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-wellness-100 dark:group-hover:bg-wellness-900/50 transition-colors">
+              <Plus className="w-4 h-4 text-wellness-600 dark:text-slate-300" />
+            </div>
+            <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Add Data</p>
+            <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Manual entry</p>
+          </button>
+          <button
+            onClick={onOpenLabUpload}
+            className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-brand-300 dark:hover:border-brand-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
+          >
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
+              <FileUp className="w-4 h-4 text-brand-600 dark:text-slate-300" />
+            </div>
+            <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Lab OCR</p>
+            <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Auto-extract</p>
           </button>
           <button
             onClick={onOpenPDFUpload}
-            className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group text-left min-h-[88px]"
           >
-            <FileUp className="w-4 h-4 mr-2" />
-            Upload Lab Report
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
+              <FileUp className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            </div>
+            <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Upload PDF</p>
+            <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Local parsing</p>
           </button>
         </div>
       </div>
