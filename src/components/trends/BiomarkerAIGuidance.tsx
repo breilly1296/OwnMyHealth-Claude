@@ -8,7 +8,7 @@
  * - Loading state with skeleton
  * - Error handling with retry
  * - Cached guidance to avoid re-fetching
- * - Formatted markdown-like sections
+ * - Proper markdown rendering
  * - Clear medical disclaimer
  *
  * @module components/trends/BiomarkerAIGuidance
@@ -34,6 +34,144 @@ interface GuidanceSection {
 
 // Cache for guidance to avoid re-fetching
 const guidanceCache = new Map<string, string>();
+
+/**
+ * Parse markdown text into React elements
+ * Handles: **bold**, *italic*, - bullet lists, numbered lists
+ */
+function renderMarkdown(text: string): React.ReactNode {
+  // Remove any disclaimer text from the AI response (we add our own)
+  const disclaimerPatterns = [
+    /---[\s\S]*$/i, // Everything after ---
+    /\*?disclaimer\*?:?[\s\S]*$/i,
+    /please consult[\s\S]*healthcare provider[\s\S]*$/i,
+    /this information is for educational purposes[\s\S]*$/i,
+    /always consult[\s\S]*doctor[\s\S]*$/i,
+  ];
+
+  let cleanedText = text;
+  for (const pattern of disclaimerPatterns) {
+    cleanedText = cleanedText.replace(pattern, '').trim();
+  }
+
+  // Split into lines for processing
+  const lines = cleanedText.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentList: { type: 'ul' | 'ol'; items: React.ReactNode[] } | null = null;
+  let key = 0;
+
+  const processInlineMarkdown = (line: string): React.ReactNode => {
+    // Process bold (**text**) and italic (*text*)
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let partKey = 0;
+
+    while (remaining.length > 0) {
+      // Check for bold
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      // Check for italic (single asterisk, but not part of bold)
+      const italicMatch = remaining.match(/(?<!\*)\*([^*]+)\*(?!\*)/);
+
+      if (boldMatch && (!italicMatch || boldMatch.index! <= italicMatch.index!)) {
+        // Add text before bold
+        if (boldMatch.index! > 0) {
+          parts.push(<span key={partKey++}>{remaining.slice(0, boldMatch.index)}</span>);
+        }
+        // Add bold text
+        parts.push(<strong key={partKey++} className="font-semibold text-slate-700 dark:text-slate-200">{boldMatch[1]}</strong>);
+        remaining = remaining.slice(boldMatch.index! + boldMatch[0].length);
+      } else if (italicMatch) {
+        // Add text before italic
+        if (italicMatch.index! > 0) {
+          parts.push(<span key={partKey++}>{remaining.slice(0, italicMatch.index)}</span>);
+        }
+        // Add italic text
+        parts.push(<em key={partKey++} className="italic">{italicMatch[1]}</em>);
+        remaining = remaining.slice(italicMatch.index! + italicMatch[0].length);
+      } else {
+        // No more markdown, add remaining text
+        parts.push(<span key={partKey++}>{remaining}</span>);
+        break;
+      }
+    }
+
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+  };
+
+  const flushList = () => {
+    if (currentList) {
+      if (currentList.type === 'ul') {
+        elements.push(
+          <ul key={key++} className="space-y-2 my-3">
+            {currentList.items.map((item, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-brand-500 mt-1.5 text-xs">&#9679;</span>
+                <span className="flex-1">{item}</span>
+              </li>
+            ))}
+          </ul>
+        );
+      } else {
+        elements.push(
+          <ol key={key++} className="space-y-2 my-3">
+            {currentList.items.map((item, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-brand-500 font-medium min-w-[1.25rem]">{i + 1}.</span>
+                <span className="flex-1">{item}</span>
+              </li>
+            ))}
+          </ol>
+        );
+      }
+      currentList = null;
+    }
+  };
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Skip empty lines
+    if (!trimmedLine) {
+      flushList();
+      continue;
+    }
+
+    // Check for bullet list item
+    const bulletMatch = trimmedLine.match(/^[-*]\s+(.+)$/);
+    if (bulletMatch) {
+      if (!currentList || currentList.type !== 'ul') {
+        flushList();
+        currentList = { type: 'ul', items: [] };
+      }
+      currentList.items.push(processInlineMarkdown(bulletMatch[1]));
+      continue;
+    }
+
+    // Check for numbered list item
+    const numberedMatch = trimmedLine.match(/^\d+[.)]\s+(.+)$/);
+    if (numberedMatch) {
+      if (!currentList || currentList.type !== 'ol') {
+        flushList();
+        currentList = { type: 'ol', items: [] };
+      }
+      currentList.items.push(processInlineMarkdown(numberedMatch[1]));
+      continue;
+    }
+
+    // Regular paragraph
+    flushList();
+    elements.push(
+      <p key={key++} className="my-2 leading-relaxed">
+        {processInlineMarkdown(trimmedLine)}
+      </p>
+    );
+  }
+
+  // Flush any remaining list
+  flushList();
+
+  return <div className="space-y-1">{elements}</div>;
+}
 
 export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: BiomarkerAIGuidanceProps) {
   const [guidance, setGuidance] = useState<string | null>(null);
@@ -93,24 +231,29 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
   // Parse guidance into sections
   const parseGuidance = (text: string): GuidanceSection[] => {
     const sections: GuidanceSection[] = [];
+    const seenTitles = new Set<string>();
 
     // Define section patterns and their icons
     const sectionPatterns = [
-      { pattern: /\*\*What This Measures\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'What This Measures', icon: <BookOpen className="w-4 h-4" /> },
-      { pattern: /\*\*Understanding Your Result\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'Understanding Your Result', icon: <Stethoscope className="w-4 h-4" /> },
-      { pattern: /\*\*Trend Summary\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'Trend Summary', icon: <TrendingUp className="w-4 h-4" /> },
-      { pattern: /\*\*Questions for Your Doctor\*\*\s*([\s\S]*?)(?=\*\*|$)/i, title: 'Questions for Your Doctor', icon: <MessageCircle className="w-4 h-4" /> },
-      { pattern: /\*\*What You Can Do\*\*\s*([\s\S]*?)(?=\*\*|---|$)/i, title: 'What You Can Do', icon: <Heart className="w-4 h-4" /> },
+      { pattern: /(?:^|\n)\s*\d*\.?\s*\*\*What This Measures\*\*:?\s*([\s\S]*?)(?=\n\s*\d*\.?\s*\*\*|$)/i, title: 'What This Measures', icon: <BookOpen className="w-4 h-4" /> },
+      { pattern: /(?:^|\n)\s*\d*\.?\s*\*\*Understanding Your Result\*\*:?\s*([\s\S]*?)(?=\n\s*\d*\.?\s*\*\*|$)/i, title: 'Understanding Your Result', icon: <Stethoscope className="w-4 h-4" /> },
+      { pattern: /(?:^|\n)\s*\d*\.?\s*\*\*Trend Summary\*\*:?\s*([\s\S]*?)(?=\n\s*\d*\.?\s*\*\*|$)/i, title: 'Trend Summary', icon: <TrendingUp className="w-4 h-4" /> },
+      { pattern: /(?:^|\n)\s*\d*\.?\s*\*\*Questions for Your Doctor\*\*:?\s*([\s\S]*?)(?=\n\s*\d*\.?\s*\*\*|$)/i, title: 'Questions for Your Doctor', icon: <MessageCircle className="w-4 h-4" /> },
+      { pattern: /(?:^|\n)\s*\d*\.?\s*\*\*What You Can Do\*\*:?\s*([\s\S]*?)(?=\n\s*\d*\.?\s*\*\*|---|$)/i, title: 'What You Can Do', icon: <Heart className="w-4 h-4" /> },
       // Legacy pattern for backward compatibility
-      { pattern: /\*\*General Wellness(?:\s*Information)?\*\*\s*([\s\S]*?)(?=\*\*|---|$)/i, title: 'What You Can Do', icon: <Heart className="w-4 h-4" /> },
+      { pattern: /(?:^|\n)\s*\d*\.?\s*\*\*General Wellness(?:\s*Information)?\*\*:?\s*([\s\S]*?)(?=\n\s*\d*\.?\s*\*\*|---|$)/i, title: 'What You Can Do', icon: <Heart className="w-4 h-4" /> },
     ];
 
     for (const { pattern, title, icon } of sectionPatterns) {
+      // Skip if we already have this section
+      if (seenTitles.has(title)) continue;
+
       const match = text.match(pattern);
       if (match && match[1]) {
         const content = match[1].trim();
         if (content) {
           sections.push({ title, icon, content });
+          seenTitles.add(title);
         }
       }
     }
@@ -121,34 +264,28 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
   const sections = guidance ? parseGuidance(guidance) : [];
 
   return (
-    <div className="mt-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-5 border border-slate-200 dark:border-slate-600">
+    <div className="mt-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl p-5 border border-slate-200 dark:border-slate-600 shadow-sm">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="w-5 h-5 text-brand-500" />
+      <div className="flex items-center gap-2 mb-5">
+        <div className="p-1.5 bg-brand-100 dark:bg-brand-900/40 rounded-lg">
+          <Sparkles className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+        </div>
         <h4 className="font-semibold text-slate-900 dark:text-white">AI Health Guide</h4>
-        <span className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-2 py-0.5 rounded-full">
+        <span className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-2 py-0.5 rounded-full font-medium">
           Educational
         </span>
       </div>
 
       {/* Loading State */}
       {isLoading && (
-        <div className="space-y-4 animate-pulse">
-          <div className="space-y-2">
-            <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-1/4"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-3/4"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-full"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-5/6"></div>
-          </div>
-          <div className="space-y-2">
-            <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-1/3"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-full"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-4/5"></div>
-          </div>
-          <div className="space-y-2">
-            <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-1/4"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-2/3"></div>
-          </div>
+        <div className="space-y-5 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 bg-slate-200 dark:bg-slate-600 rounded w-1/4"></div>
+              <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-full"></div>
+              <div className="h-3 bg-slate-200 dark:bg-slate-600 rounded w-5/6"></div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -156,12 +293,12 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
       {error && !isLoading && (
         <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+            <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" />
             <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
           </div>
           <button
             onClick={handleRetry}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex-shrink-0"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Retry
@@ -170,46 +307,40 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
       )}
 
       {/* Guidance Content */}
-      {guidance && !isLoading && !error && (
-        <div className="space-y-4">
+      {guidance && !isLoading && !error && sections.length > 0 && (
+        <div className="space-y-5">
           {sections.map((section, idx) => (
-            <div key={idx} className="space-y-2">
-              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+            <div key={idx} className="group">
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-brand-500 dark:text-brand-400">{section.icon}</span>
-                <h5 className="font-medium text-sm">{section.title}</h5>
+                <h5 className="font-semibold text-sm text-slate-800 dark:text-slate-200">{section.title}</h5>
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed pl-6">
-                {section.title === 'Questions for Your Doctor' ? (
-                  <ul className="space-y-1.5 list-disc list-inside">
-                    {section.content.split('\n').filter(line => line.trim().startsWith('-')).map((line, i) => (
-                      <li key={i} className="text-slate-600 dark:text-slate-400">
-                        {line.replace(/^-\s*/, '').trim()}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{section.content.replace(/^-\s*/gm, '').trim()}</p>
-                )}
+              <div className="text-sm text-slate-600 dark:text-slate-400 pl-6">
+                {renderMarkdown(section.content)}
               </div>
             </div>
           ))}
 
-          {/* Disclaimer */}
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-              This information is for educational purposes only and is not medical advice. Please discuss your results with your healthcare provider.
+          {/* Single Disclaimer */}
+          <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-600">
+            <p className="text-xs text-slate-500 dark:text-slate-400 italic flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              <span>This information is for educational purposes only and is not medical advice. Please discuss your results with your healthcare provider.</span>
             </p>
           </div>
         </div>
       )}
 
-      {/* Empty state if no sections parsed but guidance exists */}
+      {/* Fallback if no sections parsed */}
       {guidance && !isLoading && !error && sections.length === 0 && (
-        <div className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
-          {guidance}
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-              This information is for educational purposes only and is not medical advice. Please discuss your results with your healthcare provider.
+        <div className="text-sm text-slate-600 dark:text-slate-400">
+          {renderMarkdown(guidance)}
+
+          {/* Single Disclaimer */}
+          <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-600">
+            <p className="text-xs text-slate-500 dark:text-slate-400 italic flex items-start gap-2">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              <span>This information is for educational purposes only and is not medical advice. Please discuss your results with your healthcare provider.</span>
             </p>
           </div>
         </div>
