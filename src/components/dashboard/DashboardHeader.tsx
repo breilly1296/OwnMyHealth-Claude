@@ -12,6 +12,7 @@ interface DashboardHeaderProps {
   user: { id: string; email: string; role: string } | null;
   onLogout: () => void;
   onOpenMobileSidebar: () => void;
+  onOpenAccountSettings: () => void;
 }
 
 /**
@@ -28,6 +29,7 @@ export function DashboardHeader({
   user,
   onLogout,
   onOpenMobileSidebar,
+  onOpenAccountSettings,
 }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -110,7 +112,7 @@ export function DashboardHeader({
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      // Navigate to settings - handled by parent
+                      onOpenAccountSettings();
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                   >

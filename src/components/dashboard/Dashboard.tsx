@@ -211,6 +211,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
         user={user}
         onLogout={handleLogout}
         onOpenMobileSidebar={() => modals.open('mobileSidebar')}
+        onOpenAccountSettings={() => handleCategorySelect('Account Settings')}
       />
 
       {/* Main Layout */}
