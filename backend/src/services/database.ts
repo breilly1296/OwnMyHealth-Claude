@@ -233,6 +233,20 @@ export async function checkDatabaseHealth(): Promise<{
 // ============================================
 
 /**
+ * UUID format validation regex
+ * SECURITY: Prevents SQL injection in RLS context setting
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate that a string is a valid UUID format
+ * SECURITY: This is critical to prevent SQL injection in $executeRawUnsafe calls
+ */
+function validateUUID(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
+/**
  * Set RLS context for the current user
  *
  * IMPORTANT: Call this before any database operation that should be
@@ -245,6 +259,12 @@ export async function checkDatabaseHealth(): Promise<{
 export async function setRLSContext(userId: string, isAdmin = false): Promise<void> {
   if (!prisma) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
+  }
+
+  // SECURITY: Validate UUID format to prevent SQL injection
+  // The userId is used in $executeRawUnsafe, so we must validate it
+  if (!validateUUID(userId)) {
+    throw new Error('Invalid user ID format: must be a valid UUID');
   }
 
   try {
@@ -370,6 +390,12 @@ export async function withRLSTransaction<T>(
 ): Promise<T> {
   if (!prisma) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
+  }
+
+  // SECURITY: Validate UUID format to prevent SQL injection
+  // The userId is used in $executeRawUnsafe, so we must validate it
+  if (userId !== null && !validateUUID(userId)) {
+    throw new Error('Invalid user ID format: must be a valid UUID');
   }
 
   return prisma.$transaction(async (tx) => {

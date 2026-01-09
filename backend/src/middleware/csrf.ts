@@ -159,14 +159,8 @@ export function validateCsrfToken(
   const cookieToken = req.cookies[CSRF_COOKIE_NAME];
   const headerToken = req.headers[CSRF_HEADER_NAME] as string;
 
-  // Debug logging for CSRF validation
-  console.log(`[CSRF] Validating ${req.method} ${req.path}`);
-  console.log(`[CSRF] Cookie token: ${cookieToken ? cookieToken.substring(0, 8) + '...' : 'MISSING'}`);
-  console.log(`[CSRF] Header token: ${headerToken ? headerToken.substring(0, 8) + '...' : 'MISSING'}`);
-
   // Validate tokens exist and match
   if (!cookieToken || !headerToken) {
-    console.log(`[CSRF] BLOCKED - Token missing. Cookie: ${!!cookieToken}, Header: ${!!headerToken}`);
     throw new ForbiddenError('CSRF token missing');
   }
 
