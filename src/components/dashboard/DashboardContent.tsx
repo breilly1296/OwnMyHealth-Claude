@@ -51,7 +51,7 @@ export function DashboardContent({
   biomarkers,
   categories,
   stats,
-  insurancePlans,
+  insurancePlans: _insurancePlans,
   onCategorySelect,
   onOpenAddMeasurement,
   onOpenPDFUpload,

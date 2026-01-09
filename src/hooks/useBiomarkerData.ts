@@ -138,7 +138,8 @@ export function useBiomarkerData({
     return () => {
       cancelled = true;
     };
-  }, [user?.id]); // ← ONLY primitive dependency - prevents infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only depend on user?.id (primitive) to prevent infinite loops
+  }, [user?.id]);
 
   // Cleanup PHI data on unmount (separate effect to avoid re-running fetch)
   useEffect(() => {
