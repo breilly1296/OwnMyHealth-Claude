@@ -7,8 +7,8 @@
 
 import React from 'react';
 import {
-  Search, Database, Filter, BarChart3, Shield, DollarSign,
-  CheckCircle, XCircle, ChevronRight, Sparkles, FileText,
+  Search, Database, Filter, Shield, DollarSign,
+  CheckCircle, XCircle, ChevronRight, FileText,
   TrendingUp, Info, X
 } from 'lucide-react';
 import type { InsurancePlan } from '../../types';
