@@ -1,20 +1,20 @@
 {
   "Body Composition": [
     { "name": "BMI", "unit": "kg/m²", "normalRange": { "min": 18.5, "max": 24.9, "source": "WHO" }, "description": "Body Mass Index" },
-    { "name": "Body Fat Percentage", "unit": "%", "normalRange": { "min": 10, "max": 25, "source": "American Council on Exercise" }, "description": "Total body fat percentage" },
+    { "name": "Body Fat Percentage", "unit": "%", "normalRange": { "min": 10, "max": 25, "source": "American Council on Exercise" }, "description": "Total body fat percentage (varies by sex: men 10-20%, women 18-28%)" },
     { "name": "Lean Mass", "unit": "kg", "normalRange": { "min": 45, "max": 80, "source": "DEXA Standards" }, "description": "Total lean body mass" },
     { "name": "Visceral Fat", "unit": "rating", "normalRange": { "min": 1, "max": 12, "source": "DEXA Standards" }, "description": "Visceral fat rating/level" },
-    { "name": "T-Score", "unit": "SD", "normalRange": { "min": -1, "max": 1, "source": "WHO" }, "description": "Bone density T-score (DEXA)" },
+    { "name": "T-Score", "unit": "SD", "normalRange": { "min": -1, "max": 2, "source": "WHO" }, "description": "Bone density T-score (DEXA): >-1 normal, -1 to -2.5 osteopenia, <-2.5 osteoporosis" },
     { "name": "Z-Score", "unit": "SD", "normalRange": { "min": -2, "max": 2, "source": "WHO" }, "description": "Bone density Z-score (DEXA)" },
-    { "name": "Bone Mineral Density", "unit": "g/cm²", "normalRange": { "min": 0.9, "max": 1.4, "source": "DEXA Standards" }, "description": "Bone mineral density from DEXA scan" },
-    { "name": "Waist Circumference", "unit": "in", "normalRange": { "min": 24, "max": 40, "source": "American Heart Association" }, "description": "Waist circumference measurement" },
-    { "name": "Waist-Hip Ratio", "unit": "ratio", "normalRange": { "min": 0.7, "max": 0.95, "source": "WHO" }, "description": "Ratio of waist to hip circumference" }
+    { "name": "Bone Mineral Density", "unit": "g/cm²", "normalRange": { "min": 0.9, "max": 1.4, "source": "ISCD" }, "description": "Bone mineral density from DEXA scan" },
+    { "name": "Waist Circumference", "unit": "in", "normalRange": { "min": 24, "max": 35, "source": "American Heart Association" }, "description": "Waist circumference (men <40 in, women <35 in)" },
+    { "name": "Waist-Hip Ratio", "unit": "ratio", "normalRange": { "min": 0.7, "max": 0.9, "source": "WHO" }, "description": "Ratio of waist to hip circumference (men <0.9, women <0.85)" }
   ],
   "Blood": [
-    { "name": "WBC", "unit": "K/uL", "normalRange": { "min": 3.5, "max": 10.5, "source": "Mayo Clinic" }, "description": "White Blood Cell count" },
-    { "name": "RBC", "unit": "M/uL", "normalRange": { "min": 4.0, "max": 5.5, "source": "Mayo Clinic" }, "description": "Red Blood Cell count" },
-    { "name": "Hemoglobin", "unit": "g/dL", "normalRange": { "min": 12.0, "max": 17.5, "source": "Mayo Clinic" }, "description": "Oxygen-carrying protein in red blood cells" },
-    { "name": "Hematocrit", "unit": "%", "normalRange": { "min": 36, "max": 50, "source": "Mayo Clinic" }, "description": "Percentage of red blood cells in blood" },
+    { "name": "WBC", "unit": "K/uL", "normalRange": { "min": 4.5, "max": 11.0, "source": "Mayo Clinic" }, "description": "White Blood Cell count" },
+    { "name": "RBC", "unit": "M/uL", "normalRange": { "min": 4.0, "max": 5.5, "source": "Mayo Clinic" }, "description": "Red Blood Cell count (men 4.5-5.5, women 4.0-5.0)" },
+    { "name": "Hemoglobin", "unit": "g/dL", "normalRange": { "min": 12.0, "max": 17.5, "source": "Mayo Clinic" }, "description": "Oxygen-carrying protein (men 13.5-17.5, women 12.0-16.0)" },
+    { "name": "Hematocrit", "unit": "%", "normalRange": { "min": 36, "max": 50, "source": "Mayo Clinic" }, "description": "Percentage of red blood cells (men 38-50%, women 36-44%)" },
     { "name": "MCV", "unit": "fL", "normalRange": { "min": 80, "max": 100, "source": "Mayo Clinic" }, "description": "Mean Corpuscular Volume - average RBC size" },
     { "name": "MCH", "unit": "pg", "normalRange": { "min": 27, "max": 33, "source": "Mayo Clinic" }, "description": "Mean Corpuscular Hemoglobin" },
     { "name": "MCHC", "unit": "g/dL", "normalRange": { "min": 32, "max": 36, "source": "Mayo Clinic" }, "description": "Mean Corpuscular Hemoglobin Concentration" },
@@ -33,10 +33,10 @@
     { "name": "NRBC", "unit": "/100 WBC", "normalRange": { "min": 0, "max": 0, "source": "Mayo Clinic" }, "description": "Nucleated Red Blood Cells" }
   ],
   "Hormones": [
-    { "name": "Testosterone (Total)", "unit": "ng/dL", "normalRange": { "min": 300, "max": 1000, "source": "Mayo Clinic" }, "description": "Total testosterone level" },
-    { "name": "Free Testosterone", "unit": "pg/mL", "normalRange": { "min": 5, "max": 25, "source": "Mayo Clinic" }, "description": "Unbound testosterone" },
-    { "name": "Estradiol", "unit": "pg/mL", "normalRange": { "min": 15, "max": 350, "source": "Mayo Clinic" }, "description": "Primary estrogen hormone" },
-    { "name": "Progesterone", "unit": "ng/mL", "normalRange": { "min": 0.1, "max": 25, "source": "Mayo Clinic" }, "description": "Progesterone hormone level" },
+    { "name": "Testosterone (Total)", "unit": "ng/dL", "normalRange": { "min": 300, "max": 1000, "source": "Mayo Clinic" }, "description": "Total testosterone level (adult males)" },
+    { "name": "Free Testosterone", "unit": "pg/mL", "normalRange": { "min": 9, "max": 30, "source": "Mayo Clinic" }, "description": "Unbound testosterone (adult males)" },
+    { "name": "Estradiol", "unit": "pg/mL", "normalRange": { "min": 15, "max": 350, "source": "Mayo Clinic" }, "description": "Primary estrogen hormone (varies by menstrual phase)" },
+    { "name": "Progesterone", "unit": "ng/mL", "normalRange": { "min": 0.1, "max": 25, "source": "Mayo Clinic" }, "description": "Progesterone hormone level (varies by menstrual phase)" },
     { "name": "LH", "unit": "mIU/mL", "normalRange": { "min": 1.5, "max": 9.3, "source": "Mayo Clinic" }, "description": "Luteinizing Hormone" },
     { "name": "FSH", "unit": "mIU/mL", "normalRange": { "min": 1.5, "max": 12.4, "source": "Mayo Clinic" }, "description": "Follicle-Stimulating Hormone" },
     { "name": "Prolactin", "unit": "ng/mL", "normalRange": { "min": 2, "max": 18, "source": "Mayo Clinic" }, "description": "Prolactin hormone level" },
@@ -63,7 +63,7 @@
     { "name": "Folate", "unit": "ng/mL", "normalRange": { "min": 3, "max": 20, "source": "Mayo Clinic" }, "description": "Vitamin B9 / Folic Acid level" },
     { "name": "Vitamin B12", "unit": "pg/mL", "normalRange": { "min": 200, "max": 900, "source": "Mayo Clinic" }, "description": "Cobalamin level" },
     { "name": "Vitamin C", "unit": "mg/dL", "normalRange": { "min": 0.4, "max": 2.0, "source": "Mayo Clinic" }, "description": "Ascorbic Acid level" },
-    { "name": "Vitamin D 25-OH", "unit": "ng/mL", "normalRange": { "min": 30, "max": 100, "source": "Mayo Clinic" }, "description": "25-hydroxyvitamin D (total vitamin D)" },
+    { "name": "Vitamin D 25-OH", "unit": "ng/mL", "normalRange": { "min": 30, "max": 100, "source": "Endocrine Society" }, "description": "25-hydroxyvitamin D (total vitamin D)" },
     { "name": "Vitamin D 1,25-OH", "unit": "pg/mL", "normalRange": { "min": 18, "max": 72, "source": "Mayo Clinic" }, "description": "1,25-dihydroxyvitamin D (active form)" },
     { "name": "Vitamin E", "unit": "mg/L", "normalRange": { "min": 5.5, "max": 17, "source": "Mayo Clinic" }, "description": "Alpha-tocopherol level" },
     { "name": "Vitamin K", "unit": "ng/mL", "normalRange": { "min": 0.1, "max": 2.2, "source": "Mayo Clinic" }, "description": "Phylloquinone level" },
@@ -81,32 +81,41 @@
     { "name": "Height", "unit": "in", "normalRange": { "min": 54, "max": 78, "source": "General" }, "description": "Body height" }
   ],
   "Lipids": [
-    { "name": "Total Cholesterol", "unit": "mg/dL", "normalRange": { "min": 125, "max": 200, "source": "Mayo Clinic" }, "description": "Total cholesterol level" },
-    { "name": "HDL Cholesterol", "unit": "mg/dL", "normalRange": { "min": 40, "max": 60, "source": "Mayo Clinic" }, "description": "High-density lipoprotein (good cholesterol)" },
-    { "name": "LDL Cholesterol", "unit": "mg/dL", "normalRange": { "min": 0, "max": 100, "source": "Mayo Clinic" }, "description": "Low-density lipoprotein (bad cholesterol)" },
-    { "name": "Triglycerides", "unit": "mg/dL", "normalRange": { "min": 0, "max": 150, "source": "Mayo Clinic" }, "description": "Blood triglyceride level" },
+    { "name": "Total Cholesterol", "unit": "mg/dL", "normalRange": { "min": 125, "max": 200, "source": "American Heart Association" }, "description": "Total cholesterol level (desirable <200)" },
+    { "name": "HDL Cholesterol", "unit": "mg/dL", "normalRange": { "min": 40, "max": 100, "source": "American Heart Association" }, "description": "High-density lipoprotein (>60 optimal/protective)" },
+    { "name": "LDL Cholesterol", "unit": "mg/dL", "normalRange": { "min": 0, "max": 100, "source": "American Heart Association" }, "description": "Low-density lipoprotein (optimal <100, near optimal 100-129)" },
+    { "name": "Triglycerides", "unit": "mg/dL", "normalRange": { "min": 0, "max": 150, "source": "American Heart Association" }, "description": "Blood triglyceride level (normal <150)" },
     { "name": "VLDL", "unit": "mg/dL", "normalRange": { "min": 5, "max": 40, "source": "Mayo Clinic" }, "description": "Very Low-Density Lipoprotein" },
-    { "name": "Non-HDL Cholesterol", "unit": "mg/dL", "normalRange": { "min": 0, "max": 130, "source": "Mayo Clinic" }, "description": "Total cholesterol minus HDL" },
-    { "name": "Chol/HDL Ratio", "unit": "ratio", "normalRange": { "min": 1, "max": 5, "source": "Mayo Clinic" }, "description": "Total cholesterol to HDL ratio" },
-    { "name": "LDL/HDL Ratio", "unit": "ratio", "normalRange": { "min": 0.5, "max": 3.5, "source": "Mayo Clinic" }, "description": "LDL to HDL ratio" },
-    { "name": "ApoA1", "unit": "mg/dL", "normalRange": { "min": 120, "max": 175, "source": "Mayo Clinic" }, "description": "Apolipoprotein A1" },
-    { "name": "ApoB", "unit": "mg/dL", "normalRange": { "min": 40, "max": 100, "source": "Mayo Clinic" }, "description": "Apolipoprotein B" },
-    { "name": "Lp(a)", "unit": "nmol/L", "normalRange": { "min": 0, "max": 75, "source": "Mayo Clinic" }, "description": "Lipoprotein(a)" },
-    { "name": "LDL-P", "unit": "nmol/L", "normalRange": { "min": 0, "max": 1000, "source": "Mayo Clinic" }, "description": "LDL Particle Number" },
-    { "name": "Oxidized LDL", "unit": "U/L", "normalRange": { "min": 0, "max": 60, "source": "Mayo Clinic" }, "description": "Oxidized LDL cholesterol" }
+    { "name": "Non-HDL Cholesterol", "unit": "mg/dL", "normalRange": { "min": 0, "max": 130, "source": "American Heart Association" }, "description": "Total cholesterol minus HDL (optimal <130)" },
+    { "name": "Chol/HDL Ratio", "unit": "ratio", "normalRange": { "min": 1, "max": 4.5, "source": "American Heart Association" }, "description": "Total cholesterol to HDL ratio (optimal <3.5)" },
+    { "name": "LDL/HDL Ratio", "unit": "ratio", "normalRange": { "min": 0.5, "max": 3.0, "source": "American Heart Association" }, "description": "LDL to HDL ratio (optimal <2.5)" },
+    { "name": "Triglyceride/HDL Ratio", "unit": "ratio", "normalRange": { "min": 0.5, "max": 2.0, "source": "American Heart Association" }, "description": "Triglyceride to HDL ratio (optimal <2, insulin resistance marker)" },
+    { "name": "ApoA1", "unit": "mg/dL", "normalRange": { "min": 120, "max": 175, "source": "Quest Diagnostics" }, "description": "Apolipoprotein A1 (men 120-175, women 140-210)" },
+    { "name": "ApoB", "unit": "mg/dL", "normalRange": { "min": 40, "max": 90, "source": "American College of Cardiology" }, "description": "Apolipoprotein B (optimal <90, high risk <80)" },
+    { "name": "ApoB/ApoA1 Ratio", "unit": "ratio", "normalRange": { "min": 0.3, "max": 0.9, "source": "European Society of Cardiology" }, "description": "ApoB to ApoA1 ratio (optimal <0.9 men, <0.8 women)" },
+    { "name": "Lp(a)", "unit": "nmol/L", "normalRange": { "min": 0, "max": 75, "source": "European Atherosclerosis Society" }, "description": "Lipoprotein(a) (desirable <75 nmol/L or <30 mg/dL)" },
+    { "name": "LDL-P", "unit": "nmol/L", "normalRange": { "min": 0, "max": 1000, "source": "NMR LipoProfile/LabCorp" }, "description": "LDL Particle Number (optimal <1000, borderline 1000-1299, high >1300)" },
+    { "name": "LDL Small", "unit": "nmol/L", "normalRange": { "min": 0, "max": 527, "source": "NMR LipoProfile/LabCorp" }, "description": "Small LDL particle concentration (optimal <527)" },
+    { "name": "LDL Medium", "unit": "nmol/L", "normalRange": { "min": 0, "max": 400, "source": "NMR LipoProfile/LabCorp" }, "description": "Medium LDL particle concentration" },
+    { "name": "LDL Peak Size", "unit": "nm", "normalRange": { "min": 20.5, "max": 23.0, "source": "NMR LipoProfile/LabCorp" }, "description": "LDL peak particle size (>20.5 Pattern A optimal, <20.5 Pattern B atherogenic)" },
+    { "name": "HDL-P", "unit": "umol/L", "normalRange": { "min": 30, "max": 45, "source": "NMR LipoProfile/LabCorp" }, "description": "HDL Particle Number (higher is better)" },
+    { "name": "HDL Large", "unit": "umol/L", "normalRange": { "min": 4.9, "max": 12.0, "source": "NMR LipoProfile/LabCorp" }, "description": "Large HDL particles (optimal >4.9 umol/L)" },
+    { "name": "Oxidized LDL", "unit": "U/L", "normalRange": { "min": 0, "max": 60, "source": "Quest Diagnostics" }, "description": "Oxidized LDL cholesterol" },
+    { "name": "sdLDL", "unit": "mg/dL", "normalRange": { "min": 0, "max": 30, "source": "Quest Diagnostics" }, "description": "Small dense LDL (optimal <30)" },
+    { "name": "Remnant Cholesterol", "unit": "mg/dL", "normalRange": { "min": 0, "max": 30, "source": "European Heart Journal" }, "description": "Remnant cholesterol (Total - HDL - LDL)" }
   ],
   "Kidney Function": [
     { "name": "BUN", "unit": "mg/dL", "normalRange": { "min": 7, "max": 20, "source": "Mayo Clinic" }, "description": "Blood Urea Nitrogen" },
-    { "name": "Creatinine", "unit": "mg/dL", "normalRange": { "min": 0.6, "max": 1.2, "source": "Mayo Clinic" }, "description": "Serum creatinine level" },
-    { "name": "eGFR", "unit": "mL/min/1.73m²", "normalRange": { "min": 90, "max": 120, "source": "National Kidney Foundation" }, "description": "Estimated Glomerular Filtration Rate" },
+    { "name": "Creatinine", "unit": "mg/dL", "normalRange": { "min": 0.6, "max": 1.2, "source": "Mayo Clinic" }, "description": "Serum creatinine level (men 0.7-1.3, women 0.6-1.1)" },
+    { "name": "eGFR", "unit": "mL/min/1.73m²", "normalRange": { "min": 90, "max": 120, "source": "National Kidney Foundation" }, "description": "Estimated Glomerular Filtration Rate (>90 normal)" },
     { "name": "Cystatin C", "unit": "mg/L", "normalRange": { "min": 0.6, "max": 1.0, "source": "Mayo Clinic" }, "description": "Kidney function marker" },
     { "name": "BUN/Creatinine Ratio", "unit": "ratio", "normalRange": { "min": 10, "max": 20, "source": "Mayo Clinic" }, "description": "Ratio of BUN to creatinine" },
     { "name": "Microalbumin", "unit": "mg/L", "normalRange": { "min": 0, "max": 30, "source": "Mayo Clinic" }, "description": "Urine microalbumin" },
-    { "name": "Albumin/Creatinine Ratio", "unit": "mg/g", "normalRange": { "min": 0, "max": 30, "source": "Mayo Clinic" }, "description": "Urine albumin to creatinine ratio" },
+    { "name": "Albumin/Creatinine Ratio", "unit": "mg/g", "normalRange": { "min": 0, "max": 30, "source": "National Kidney Foundation" }, "description": "Urine albumin to creatinine ratio (<30 normal)" },
     { "name": "Urine Protein", "unit": "mg/dL", "normalRange": { "min": 0, "max": 15, "source": "Mayo Clinic" }, "description": "Urine protein level" }
   ],
   "Liver Function": [
-    { "name": "AST", "unit": "U/L", "normalRange": { "min": 8, "max": 33, "source": "Mayo Clinic" }, "description": "Aspartate Aminotransferase (SGOT)" },
+    { "name": "AST", "unit": "U/L", "normalRange": { "min": 10, "max": 40, "source": "Mayo Clinic" }, "description": "Aspartate Aminotransferase (SGOT)" },
     { "name": "ALT", "unit": "U/L", "normalRange": { "min": 7, "max": 56, "source": "Mayo Clinic" }, "description": "Alanine Aminotransferase (SGPT)" },
     { "name": "ALP", "unit": "U/L", "normalRange": { "min": 44, "max": 147, "source": "Mayo Clinic" }, "description": "Alkaline Phosphatase" },
     { "name": "GGT", "unit": "U/L", "normalRange": { "min": 8, "max": 61, "source": "Mayo Clinic" }, "description": "Gamma-Glutamyl Transferase" },
@@ -120,72 +129,82 @@
     { "name": "LDH", "unit": "U/L", "normalRange": { "min": 140, "max": 280, "source": "Mayo Clinic" }, "description": "Lactate Dehydrogenase" }
   ],
   "Thyroid": [
-    { "name": "TSH", "unit": "mIU/L", "normalRange": { "min": 0.4, "max": 4.0, "source": "Mayo Clinic" }, "description": "Thyroid Stimulating Hormone" },
+    { "name": "TSH", "unit": "mIU/L", "normalRange": { "min": 0.4, "max": 4.0, "source": "American Thyroid Association" }, "description": "Thyroid Stimulating Hormone" },
     { "name": "Free T4", "unit": "ng/dL", "normalRange": { "min": 0.8, "max": 1.8, "source": "Mayo Clinic" }, "description": "Free Thyroxine" },
     { "name": "Free T3", "unit": "pg/mL", "normalRange": { "min": 2.3, "max": 4.2, "source": "Mayo Clinic" }, "description": "Free Triiodothyronine" },
     { "name": "Total T4", "unit": "mcg/dL", "normalRange": { "min": 4.5, "max": 12.0, "source": "Mayo Clinic" }, "description": "Total Thyroxine" },
     { "name": "Total T3", "unit": "ng/dL", "normalRange": { "min": 80, "max": 200, "source": "Mayo Clinic" }, "description": "Total Triiodothyronine" },
     { "name": "Reverse T3", "unit": "ng/dL", "normalRange": { "min": 9.2, "max": 24.1, "source": "Mayo Clinic" }, "description": "Reverse Triiodothyronine" },
     { "name": "T3 Uptake", "unit": "%", "normalRange": { "min": 24, "max": 39, "source": "Mayo Clinic" }, "description": "T3 Resin Uptake" },
-    { "name": "TPO Antibodies", "unit": "IU/mL", "normalRange": { "min": 0, "max": 35, "source": "Mayo Clinic" }, "description": "Thyroid Peroxidase Antibodies" },
-    { "name": "Thyroglobulin Antibodies", "unit": "IU/mL", "normalRange": { "min": 0, "max": 20, "source": "Mayo Clinic" }, "description": "Anti-thyroglobulin antibodies" }
+    { "name": "TPO Antibodies", "unit": "IU/mL", "normalRange": { "min": 0, "max": 35, "source": "Mayo Clinic" }, "description": "Thyroid Peroxidase Antibodies (<35 negative)" },
+    { "name": "Thyroglobulin Antibodies", "unit": "IU/mL", "normalRange": { "min": 0, "max": 20, "source": "Mayo Clinic" }, "description": "Anti-thyroglobulin antibodies (<20 negative)" },
+    { "name": "Thyroglobulin", "unit": "ng/mL", "normalRange": { "min": 2, "max": 35, "source": "Mayo Clinic" }, "description": "Thyroglobulin protein level" }
   ],
   "Diabetes": [
-    { "name": "Glucose (Fasting)", "unit": "mg/dL", "normalRange": { "min": 70, "max": 100, "source": "Mayo Clinic" }, "description": "Fasting blood glucose" },
-    { "name": "Glucose (Random)", "unit": "mg/dL", "normalRange": { "min": 70, "max": 140, "source": "Mayo Clinic" }, "description": "Random blood glucose" },
-    { "name": "HbA1c", "unit": "%", "normalRange": { "min": 4.0, "max": 5.6, "source": "Mayo Clinic" }, "description": "Glycated Hemoglobin (3-month average)" },
-    { "name": "Fasting Insulin", "unit": "uIU/mL", "normalRange": { "min": 2, "max": 25, "source": "Mayo Clinic" }, "description": "Fasting insulin level" },
+    { "name": "Glucose (Fasting)", "unit": "mg/dL", "normalRange": { "min": 70, "max": 100, "source": "American Diabetes Association" }, "description": "Fasting blood glucose (100-125 prediabetic)" },
+    { "name": "Glucose (Random)", "unit": "mg/dL", "normalRange": { "min": 70, "max": 140, "source": "American Diabetes Association" }, "description": "Random blood glucose" },
+    { "name": "HbA1c", "unit": "%", "normalRange": { "min": 4.0, "max": 5.6, "source": "American Diabetes Association" }, "description": "Glycated Hemoglobin (5.7-6.4 prediabetic, >6.5 diabetic)" },
+    { "name": "Fasting Insulin", "unit": "uIU/mL", "normalRange": { "min": 2, "max": 20, "source": "Mayo Clinic" }, "description": "Fasting insulin level (optimal <10)" },
     { "name": "C-Peptide", "unit": "ng/mL", "normalRange": { "min": 0.8, "max": 3.9, "source": "Mayo Clinic" }, "description": "Insulin production marker" },
-    { "name": "HOMA-IR", "unit": "index", "normalRange": { "min": 0.5, "max": 2.5, "source": "Mayo Clinic" }, "description": "Insulin Resistance Index" },
+    { "name": "HOMA-IR", "unit": "index", "normalRange": { "min": 0.5, "max": 2.0, "source": "Journal of Clinical Endocrinology" }, "description": "Insulin Resistance Index (optimal <1.0)" },
     { "name": "Fructosamine", "unit": "umol/L", "normalRange": { "min": 200, "max": 285, "source": "Mayo Clinic" }, "description": "2-3 week glucose average" },
     { "name": "GAD65 Antibodies", "unit": "U/mL", "normalRange": { "min": 0, "max": 5, "source": "Mayo Clinic" }, "description": "Type 1 diabetes marker" }
   ],
   "Cardiac": [
     { "name": "Troponin I", "unit": "ng/mL", "normalRange": { "min": 0, "max": 0.04, "source": "Mayo Clinic" }, "description": "Cardiac troponin I" },
     { "name": "Troponin T", "unit": "ng/mL", "normalRange": { "min": 0, "max": 0.01, "source": "Mayo Clinic" }, "description": "Cardiac troponin T" },
+    { "name": "hs-Troponin I", "unit": "ng/L", "normalRange": { "min": 0, "max": 19, "source": "Mayo Clinic" }, "description": "High-sensitivity cardiac troponin I" },
     { "name": "BNP", "unit": "pg/mL", "normalRange": { "min": 0, "max": 100, "source": "Mayo Clinic" }, "description": "Brain Natriuretic Peptide" },
-    { "name": "NT-proBNP", "unit": "pg/mL", "normalRange": { "min": 0, "max": 125, "source": "Mayo Clinic" }, "description": "N-terminal proBNP" },
+    { "name": "NT-proBNP", "unit": "pg/mL", "normalRange": { "min": 0, "max": 125, "source": "Mayo Clinic" }, "description": "N-terminal proBNP (<125 age <75)" },
     { "name": "CK", "unit": "U/L", "normalRange": { "min": 30, "max": 200, "source": "Mayo Clinic" }, "description": "Creatine Kinase (total)" },
     { "name": "CK-MB", "unit": "ng/mL", "normalRange": { "min": 0, "max": 5, "source": "Mayo Clinic" }, "description": "Creatine Kinase MB isoenzyme" },
     { "name": "Myoglobin", "unit": "ng/mL", "normalRange": { "min": 0, "max": 90, "source": "Mayo Clinic" }, "description": "Myoglobin level" },
-    { "name": "hs-CRP", "unit": "mg/L", "normalRange": { "min": 0, "max": 1, "source": "Mayo Clinic" }, "description": "High-sensitivity C-Reactive Protein" }
+    { "name": "hs-CRP", "unit": "mg/L", "normalRange": { "min": 0, "max": 1, "source": "American Heart Association" }, "description": "High-sensitivity C-Reactive Protein (<1 low risk, 1-3 average, >3 high risk)" },
+    { "name": "Myeloperoxidase", "unit": "pmol/L", "normalRange": { "min": 0, "max": 480, "source": "Cleveland HeartLab" }, "description": "MPO - vascular inflammation marker" },
+    { "name": "Lp-PLA2", "unit": "ng/mL", "normalRange": { "min": 0, "max": 200, "source": "Quest Diagnostics" }, "description": "Lipoprotein-associated phospholipase A2 (vascular inflammation)" }
   ],
   "Iron Studies": [
     { "name": "Serum Iron", "unit": "mcg/dL", "normalRange": { "min": 60, "max": 170, "source": "Mayo Clinic" }, "description": "Iron level in blood" },
     { "name": "TIBC", "unit": "mcg/dL", "normalRange": { "min": 250, "max": 370, "source": "Mayo Clinic" }, "description": "Total Iron Binding Capacity" },
     { "name": "UIBC", "unit": "mcg/dL", "normalRange": { "min": 150, "max": 300, "source": "Mayo Clinic" }, "description": "Unsaturated Iron Binding Capacity" },
     { "name": "Transferrin Saturation", "unit": "%", "normalRange": { "min": 20, "max": 50, "source": "Mayo Clinic" }, "description": "Iron saturation percentage" },
-    { "name": "Ferritin", "unit": "ng/mL", "normalRange": { "min": 20, "max": 250, "source": "Mayo Clinic" }, "description": "Iron storage protein" },
-    { "name": "Transferrin", "unit": "mg/dL", "normalRange": { "min": 200, "max": 360, "source": "Mayo Clinic" }, "description": "Iron transport protein" }
+    { "name": "Ferritin", "unit": "ng/mL", "normalRange": { "min": 20, "max": 250, "source": "Mayo Clinic" }, "description": "Iron storage protein (men 24-336, women 11-307)" },
+    { "name": "Transferrin", "unit": "mg/dL", "normalRange": { "min": 200, "max": 360, "source": "Mayo Clinic" }, "description": "Iron transport protein" },
+    { "name": "Soluble Transferrin Receptor", "unit": "mg/L", "normalRange": { "min": 2.2, "max": 5.0, "source": "Mayo Clinic" }, "description": "sTfR - iron deficiency marker" }
   ],
   "Bone Health": [
     { "name": "Calcium", "unit": "mg/dL", "normalRange": { "min": 8.5, "max": 10.5, "source": "Mayo Clinic" }, "description": "Serum calcium level" },
     { "name": "Ionized Calcium", "unit": "mg/dL", "normalRange": { "min": 4.6, "max": 5.3, "source": "Mayo Clinic" }, "description": "Free calcium in blood" },
     { "name": "Phosphorus", "unit": "mg/dL", "normalRange": { "min": 2.5, "max": 4.5, "source": "Mayo Clinic" }, "description": "Serum phosphorus level" },
-    { "name": "PTH", "unit": "pg/mL", "normalRange": { "min": 15, "max": 65, "source": "Mayo Clinic" }, "description": "Parathyroid Hormone" },
+    { "name": "PTH", "unit": "pg/mL", "normalRange": { "min": 15, "max": 65, "source": "Mayo Clinic" }, "description": "Parathyroid Hormone (intact)" },
     { "name": "Osteocalcin", "unit": "ng/mL", "normalRange": { "min": 9, "max": 42, "source": "Mayo Clinic" }, "description": "Bone formation marker" },
     { "name": "CTX", "unit": "pg/mL", "normalRange": { "min": 25, "max": 573, "source": "Mayo Clinic" }, "description": "C-terminal telopeptide (bone resorption marker)" },
-    { "name": "P1NP", "unit": "ng/mL", "normalRange": { "min": 15, "max": 115, "source": "Mayo Clinic" }, "description": "Procollagen Type 1 N-Terminal Propeptide" },
-    { "name": "Bone ALP", "unit": "U/L", "normalRange": { "min": 6, "max": 22, "source": "Mayo Clinic" }, "description": "Bone-specific Alkaline Phosphatase" }
+    { "name": "P1NP", "unit": "ng/mL", "normalRange": { "min": 15, "max": 115, "source": "Roche Diagnostics" }, "description": "Procollagen Type 1 N-Terminal Propeptide (bone formation)" },
+    { "name": "Bone ALP", "unit": "U/L", "normalRange": { "min": 6, "max": 22, "source": "Quest Diagnostics" }, "description": "Bone-specific Alkaline Phosphatase" },
+    { "name": "NTX", "unit": "nmol BCE/L", "normalRange": { "min": 5, "max": 65, "source": "Quest Diagnostics" }, "description": "N-terminal telopeptide (bone resorption marker)" }
   ],
   "Coagulation": [
     { "name": "PT", "unit": "seconds", "normalRange": { "min": 11, "max": 13.5, "source": "Mayo Clinic" }, "description": "Prothrombin Time" },
-    { "name": "INR", "unit": "ratio", "normalRange": { "min": 0.8, "max": 1.2, "source": "Mayo Clinic" }, "description": "International Normalized Ratio" },
+    { "name": "INR", "unit": "ratio", "normalRange": { "min": 0.8, "max": 1.2, "source": "Mayo Clinic" }, "description": "International Normalized Ratio (non-anticoagulated)" },
     { "name": "PTT", "unit": "seconds", "normalRange": { "min": 25, "max": 35, "source": "Mayo Clinic" }, "description": "Partial Thromboplastin Time" },
+    { "name": "aPTT", "unit": "seconds", "normalRange": { "min": 25, "max": 35, "source": "Mayo Clinic" }, "description": "Activated Partial Thromboplastin Time" },
     { "name": "Fibrinogen", "unit": "mg/dL", "normalRange": { "min": 200, "max": 400, "source": "Mayo Clinic" }, "description": "Fibrinogen level" },
-    { "name": "D-Dimer", "unit": "ng/mL", "normalRange": { "min": 0, "max": 500, "source": "Mayo Clinic" }, "description": "Fibrin degradation product" },
+    { "name": "D-Dimer", "unit": "ng/mL", "normalRange": { "min": 0, "max": 500, "source": "Mayo Clinic" }, "description": "Fibrin degradation product (<500 excludes DVT/PE)" },
     { "name": "Thrombin Time", "unit": "seconds", "normalRange": { "min": 14, "max": 21, "source": "Mayo Clinic" }, "description": "Thrombin clotting time" },
     { "name": "Bleeding Time", "unit": "minutes", "normalRange": { "min": 1, "max": 9, "source": "Mayo Clinic" }, "description": "Time for bleeding to stop" },
-    { "name": "Factor VIII", "unit": "%", "normalRange": { "min": 50, "max": 150, "source": "Mayo Clinic" }, "description": "Clotting factor VIII activity" }
+    { "name": "Factor VIII", "unit": "%", "normalRange": { "min": 50, "max": 150, "source": "Mayo Clinic" }, "description": "Clotting factor VIII activity" },
+    { "name": "Antithrombin III", "unit": "%", "normalRange": { "min": 80, "max": 120, "source": "Mayo Clinic" }, "description": "Antithrombin activity" },
+    { "name": "Protein C", "unit": "%", "normalRange": { "min": 70, "max": 140, "source": "Mayo Clinic" }, "description": "Protein C activity" },
+    { "name": "Protein S", "unit": "%", "normalRange": { "min": 65, "max": 140, "source": "Mayo Clinic" }, "description": "Protein S activity (free)" }
   ],
   "Inflammation Markers": [
-    { "name": "CRP", "unit": "mg/L", "normalRange": { "min": 0, "max": 3, "source": "Mayo Clinic" }, "description": "C-Reactive Protein" },
-    { "name": "ESR", "unit": "mm/hr", "normalRange": { "min": 0, "max": 20, "source": "Mayo Clinic" }, "description": "Erythrocyte Sedimentation Rate" },
+    { "name": "CRP", "unit": "mg/L", "normalRange": { "min": 0, "max": 10, "source": "Mayo Clinic" }, "description": "C-Reactive Protein (standard)" },
+    { "name": "ESR", "unit": "mm/hr", "normalRange": { "min": 0, "max": 20, "source": "Mayo Clinic" }, "description": "Erythrocyte Sedimentation Rate (men 0-15, women 0-20)" },
     { "name": "IL-6", "unit": "pg/mL", "normalRange": { "min": 0, "max": 7, "source": "Mayo Clinic" }, "description": "Interleukin-6" },
     { "name": "TNF-alpha", "unit": "pg/mL", "normalRange": { "min": 0, "max": 8.1, "source": "Mayo Clinic" }, "description": "Tumor Necrosis Factor alpha" },
-    { "name": "Fibrinogen", "unit": "mg/dL", "normalRange": { "min": 200, "max": 400, "source": "Mayo Clinic" }, "description": "Fibrinogen (acute phase reactant)" },
-    { "name": "Procalcitonin", "unit": "ng/mL", "normalRange": { "min": 0, "max": 0.1, "source": "Mayo Clinic" }, "description": "Bacterial infection marker" },
-    { "name": "Serum Amyloid A", "unit": "mg/L", "normalRange": { "min": 0, "max": 10, "source": "Mayo Clinic" }, "description": "Acute phase protein" }
+    { "name": "Procalcitonin", "unit": "ng/mL", "normalRange": { "min": 0, "max": 0.1, "source": "Mayo Clinic" }, "description": "Bacterial infection marker (<0.1 low risk)" },
+    { "name": "Serum Amyloid A", "unit": "mg/L", "normalRange": { "min": 0, "max": 10, "source": "Mayo Clinic" }, "description": "Acute phase protein" },
+    { "name": "Calprotectin (Fecal)", "unit": "mcg/g", "normalRange": { "min": 0, "max": 50, "source": "Mayo Clinic" }, "description": "Intestinal inflammation marker" }
   ],
   "Autoimmune": [
     { "name": "ANA", "unit": "titer", "normalRange": { "min": 0, "max": 1, "source": "Mayo Clinic" }, "description": "Antinuclear Antibody (negative <1:40)" },
@@ -208,23 +227,25 @@
     { "name": "Osmolality", "unit": "mOsm/kg", "normalRange": { "min": 275, "max": 295, "source": "Mayo Clinic" }, "description": "Serum osmolality" },
     { "name": "Calcium", "unit": "mg/dL", "normalRange": { "min": 8.5, "max": 10.5, "source": "Mayo Clinic" }, "description": "Serum calcium level" },
     { "name": "Magnesium", "unit": "mg/dL", "normalRange": { "min": 1.7, "max": 2.2, "source": "Mayo Clinic" }, "description": "Serum magnesium level" },
-    { "name": "Phosphate", "unit": "mg/dL", "normalRange": { "min": 2.5, "max": 4.5, "source": "Mayo Clinic" }, "description": "Serum phosphate level" }
+    { "name": "Phosphate", "unit": "mg/dL", "normalRange": { "min": 2.5, "max": 4.5, "source": "Mayo Clinic" }, "description": "Serum phosphate level" },
+    { "name": "Uric Acid", "unit": "mg/dL", "normalRange": { "min": 2.5, "max": 7.0, "source": "Mayo Clinic" }, "description": "Serum uric acid (men 3.5-7.0, women 2.5-6.0)" }
   ],
   "Tumor Markers": [
-    { "name": "PSA", "unit": "ng/mL", "normalRange": { "min": 0, "max": 4, "source": "Mayo Clinic" }, "description": "Prostate-Specific Antigen" },
-    { "name": "Free PSA", "unit": "%", "normalRange": { "min": 25, "max": 100, "source": "Mayo Clinic" }, "description": "Free PSA percentage" },
+    { "name": "PSA", "unit": "ng/mL", "normalRange": { "min": 0, "max": 4, "source": "American Cancer Society" }, "description": "Prostate-Specific Antigen (<4 generally normal)" },
+    { "name": "Free PSA", "unit": "%", "normalRange": { "min": 25, "max": 100, "source": "Mayo Clinic" }, "description": "Free PSA percentage (>25% lower cancer risk)" },
     { "name": "CEA", "unit": "ng/mL", "normalRange": { "min": 0, "max": 5, "source": "Mayo Clinic" }, "description": "Carcinoembryonic Antigen" },
     { "name": "CA 125", "unit": "U/mL", "normalRange": { "min": 0, "max": 35, "source": "Mayo Clinic" }, "description": "Cancer Antigen 125 (ovarian)" },
     { "name": "CA 19-9", "unit": "U/mL", "normalRange": { "min": 0, "max": 37, "source": "Mayo Clinic" }, "description": "Cancer Antigen 19-9 (pancreatic)" },
     { "name": "CA 15-3", "unit": "U/mL", "normalRange": { "min": 0, "max": 30, "source": "Mayo Clinic" }, "description": "Cancer Antigen 15-3 (breast)" },
     { "name": "AFP", "unit": "ng/mL", "normalRange": { "min": 0, "max": 10, "source": "Mayo Clinic" }, "description": "Alpha-Fetoprotein (liver)" },
-    { "name": "HCG", "unit": "mIU/mL", "normalRange": { "min": 0, "max": 5, "source": "Mayo Clinic" }, "description": "Human Chorionic Gonadotropin" }
+    { "name": "HCG", "unit": "mIU/mL", "normalRange": { "min": 0, "max": 5, "source": "Mayo Clinic" }, "description": "Human Chorionic Gonadotropin" },
+    { "name": "CA 27-29", "unit": "U/mL", "normalRange": { "min": 0, "max": 38, "source": "Mayo Clinic" }, "description": "Cancer Antigen 27-29 (breast)" }
   ],
   "Pancreatic": [
     { "name": "Amylase", "unit": "U/L", "normalRange": { "min": 28, "max": 100, "source": "Mayo Clinic" }, "description": "Serum amylase level" },
     { "name": "Lipase", "unit": "U/L", "normalRange": { "min": 0, "max": 160, "source": "Mayo Clinic" }, "description": "Serum lipase level" },
     { "name": "Trypsin", "unit": "ng/mL", "normalRange": { "min": 140, "max": 400, "source": "Mayo Clinic" }, "description": "Serum trypsin level" },
-    { "name": "Elastase", "unit": "mcg/g", "normalRange": { "min": 200, "max": 500, "source": "Mayo Clinic" }, "description": "Fecal elastase (pancreatic function)" }
+    { "name": "Elastase", "unit": "mcg/g", "normalRange": { "min": 200, "max": 500, "source": "Mayo Clinic" }, "description": "Fecal elastase (>200 normal pancreatic function)" }
   ],
   "Urinalysis": [
     { "name": "Urine pH", "unit": "pH", "normalRange": { "min": 4.5, "max": 8.0, "source": "Mayo Clinic" }, "description": "Urine acidity/alkalinity" },
@@ -237,14 +258,16 @@
     { "name": "Urine Bacteria", "unit": "/HPF", "normalRange": { "min": 0, "max": 0, "source": "Mayo Clinic" }, "description": "Bacteria in urine" }
   ],
   "Infectious Disease": [
-    { "name": "HIV Antibody", "unit": "index", "normalRange": { "min": 0, "max": 1, "source": "Mayo Clinic" }, "description": "HIV 1/2 antibody screen" },
-    { "name": "HIV RNA", "unit": "copies/mL", "normalRange": { "min": 0, "max": 20, "source": "Mayo Clinic" }, "description": "HIV viral load" },
-    { "name": "Hepatitis B Surface Antigen", "unit": "index", "normalRange": { "min": 0, "max": 1, "source": "Mayo Clinic" }, "description": "HBsAg screen" },
-    { "name": "Hepatitis B Surface Antibody", "unit": "mIU/mL", "normalRange": { "min": 10, "max": 1000, "source": "Mayo Clinic" }, "description": "Anti-HBs (immunity marker)" },
-    { "name": "Hepatitis C Antibody", "unit": "index", "normalRange": { "min": 0, "max": 1, "source": "Mayo Clinic" }, "description": "Anti-HCV screen" },
-    { "name": "Hepatitis C RNA", "unit": "IU/mL", "normalRange": { "min": 0, "max": 15, "source": "Mayo Clinic" }, "description": "HCV viral load" },
-    { "name": "RPR", "unit": "titer", "normalRange": { "min": 0, "max": 0, "source": "Mayo Clinic" }, "description": "Syphilis screen" },
-    { "name": "Lyme Antibody", "unit": "index", "normalRange": { "min": 0, "max": 0.9, "source": "Mayo Clinic" }, "description": "Lyme disease antibody" }
+    { "name": "HIV Antibody", "unit": "index", "normalRange": { "min": 0, "max": 1, "source": "CDC" }, "description": "HIV 1/2 antibody screen (<1 negative)" },
+    { "name": "HIV RNA", "unit": "copies/mL", "normalRange": { "min": 0, "max": 20, "source": "CDC" }, "description": "HIV viral load (<20 undetectable)" },
+    { "name": "Hepatitis B Surface Antigen", "unit": "index", "normalRange": { "min": 0, "max": 1, "source": "CDC" }, "description": "HBsAg screen (<1 negative)" },
+    { "name": "Hepatitis B Surface Antibody", "unit": "mIU/mL", "normalRange": { "min": 10, "max": 1000, "source": "CDC" }, "description": "Anti-HBs (>10 immune)" },
+    { "name": "Hepatitis C Antibody", "unit": "index", "normalRange": { "min": 0, "max": 1, "source": "CDC" }, "description": "Anti-HCV screen (<1 negative)" },
+    { "name": "Hepatitis C RNA", "unit": "IU/mL", "normalRange": { "min": 0, "max": 15, "source": "CDC" }, "description": "HCV viral load (<15 undetectable)" },
+    { "name": "RPR", "unit": "titer", "normalRange": { "min": 0, "max": 0, "source": "CDC" }, "description": "Syphilis screen (nonreactive)" },
+    { "name": "Lyme Antibody", "unit": "index", "normalRange": { "min": 0, "max": 0.9, "source": "CDC" }, "description": "Lyme disease antibody (<0.9 negative)" },
+    { "name": "EBV VCA IgG", "unit": "U/mL", "normalRange": { "min": 0, "max": 18, "source": "Mayo Clinic" }, "description": "Epstein-Barr virus capsid antigen IgG" },
+    { "name": "CMV IgG", "unit": "AU/mL", "normalRange": { "min": 0, "max": 6, "source": "Mayo Clinic" }, "description": "Cytomegalovirus IgG (<6 negative)" }
   ],
   "Blood Gas": [
     { "name": "pH (Blood)", "unit": "pH", "normalRange": { "min": 7.35, "max": 7.45, "source": "Mayo Clinic" }, "description": "Arterial blood pH" },
@@ -252,11 +275,12 @@
     { "name": "pO2", "unit": "mmHg", "normalRange": { "min": 80, "max": 100, "source": "Mayo Clinic" }, "description": "Partial pressure of oxygen" },
     { "name": "HCO3", "unit": "mEq/L", "normalRange": { "min": 22, "max": 28, "source": "Mayo Clinic" }, "description": "Bicarbonate level" },
     { "name": "Base Excess", "unit": "mEq/L", "normalRange": { "min": -2, "max": 2, "source": "Mayo Clinic" }, "description": "Base excess/deficit" },
-    { "name": "O2 Saturation (ABG)", "unit": "%", "normalRange": { "min": 95, "max": 100, "source": "Mayo Clinic" }, "description": "Oxygen saturation from ABG" }
+    { "name": "O2 Saturation (ABG)", "unit": "%", "normalRange": { "min": 95, "max": 100, "source": "Mayo Clinic" }, "description": "Oxygen saturation from ABG" },
+    { "name": "Lactate", "unit": "mmol/L", "normalRange": { "min": 0.5, "max": 2.0, "source": "Mayo Clinic" }, "description": "Blood lactate level" }
   ],
   "Allergy": [
     { "name": "Total IgE", "unit": "IU/mL", "normalRange": { "min": 0, "max": 100, "source": "Mayo Clinic" }, "description": "Total Immunoglobulin E" },
-    { "name": "Specific IgE", "unit": "kU/L", "normalRange": { "min": 0, "max": 0.35, "source": "Mayo Clinic" }, "description": "Allergen-specific IgE" },
+    { "name": "Specific IgE", "unit": "kU/L", "normalRange": { "min": 0, "max": 0.35, "source": "Mayo Clinic" }, "description": "Allergen-specific IgE (<0.35 Class 0 negative)" },
     { "name": "Tryptase", "unit": "ng/mL", "normalRange": { "min": 0, "max": 11.4, "source": "Mayo Clinic" }, "description": "Mast cell activation marker" },
     { "name": "Histamine", "unit": "ng/mL", "normalRange": { "min": 0, "max": 1, "source": "Mayo Clinic" }, "description": "Plasma histamine level" },
     { "name": "Eosinophil Cationic Protein", "unit": "mcg/L", "normalRange": { "min": 0, "max": 24, "source": "Mayo Clinic" }, "description": "ECP - eosinophil activity marker" }
@@ -269,19 +293,29 @@
     { "name": "HLA-B27", "unit": "positive/negative", "normalRange": { "min": 0, "max": 0, "source": "Mayo Clinic" }, "description": "HLA-B27 antigen" }
   ],
   "Calcium CT": [
-    { "name": "Total Calcium Score", "unit": "AU", "normalRange": { "min": 0, "max": 100, "source": "Mayo Clinic" }, "description": "Agatston score from coronary calcium CT scan" },
-    { "name": "LAD Score", "unit": "AU", "normalRange": { "min": 0, "max": 50, "source": "Mayo Clinic" }, "description": "Left Anterior Descending artery calcium score" },
-    { "name": "LCX Score", "unit": "AU", "normalRange": { "min": 0, "max": 50, "source": "Mayo Clinic" }, "description": "Left Circumflex artery calcium score" },
-    { "name": "RCA Score", "unit": "AU", "normalRange": { "min": 0, "max": 50, "source": "Mayo Clinic" }, "description": "Right Coronary Artery calcium score" },
-    { "name": "Left Main Score", "unit": "AU", "normalRange": { "min": 0, "max": 25, "source": "Mayo Clinic" }, "description": "Left Main coronary artery calcium score" }
+    { "name": "Total Calcium Score", "unit": "AU", "normalRange": { "min": 0, "max": 100, "source": "American College of Cardiology" }, "description": "Agatston score (0 none, 1-100 mild, 101-400 moderate, >400 severe)" },
+    { "name": "LAD Score", "unit": "AU", "normalRange": { "min": 0, "max": 50, "source": "American College of Cardiology" }, "description": "Left Anterior Descending artery calcium score" },
+    { "name": "LCX Score", "unit": "AU", "normalRange": { "min": 0, "max": 50, "source": "American College of Cardiology" }, "description": "Left Circumflex artery calcium score" },
+    { "name": "RCA Score", "unit": "AU", "normalRange": { "min": 0, "max": 50, "source": "American College of Cardiology" }, "description": "Right Coronary Artery calcium score" },
+    { "name": "Left Main Score", "unit": "AU", "normalRange": { "min": 0, "max": 25, "source": "American College of Cardiology" }, "description": "Left Main coronary artery calcium score" },
+    { "name": "Calcium Percentile", "unit": "%", "normalRange": { "min": 0, "max": 75, "source": "MESA Study" }, "description": "Age/sex/race adjusted calcium score percentile" }
   ],
   "EKG": [
-    { "name": "QT Interval", "unit": "ms", "normalRange": { "min": 350, "max": 440, "source": "Mayo Clinic" }, "description": "Time between Q wave and T wave" },
-    { "name": "QTc Interval", "unit": "ms", "normalRange": { "min": 350, "max": 450, "source": "Mayo Clinic" }, "description": "Corrected QT interval" },
-    { "name": "PR Interval", "unit": "ms", "normalRange": { "min": 120, "max": 200, "source": "Mayo Clinic" }, "description": "Time between P wave and QRS complex" },
-    { "name": "QRS Duration", "unit": "ms", "normalRange": { "min": 60, "max": 100, "source": "Mayo Clinic" }, "description": "Duration of the QRS complex" },
-    { "name": "RR Interval", "unit": "ms", "normalRange": { "min": 600, "max": 1200, "source": "Mayo Clinic" }, "description": "Time between consecutive R waves" },
-    { "name": "ST Segment", "unit": "mm", "normalRange": { "min": -0.5, "max": 0.5, "source": "Mayo Clinic" }, "description": "ST segment elevation or depression" },
-    { "name": "Heart Rate (EKG)", "unit": "bpm", "normalRange": { "min": 60, "max": 100, "source": "Mayo Clinic" }, "description": "Heart rate from EKG" }
+    { "name": "QT Interval", "unit": "ms", "normalRange": { "min": 350, "max": 440, "source": "American Heart Association" }, "description": "Time between Q wave and T wave" },
+    { "name": "QTc Interval", "unit": "ms", "normalRange": { "min": 350, "max": 450, "source": "American Heart Association" }, "description": "Corrected QT interval (men <450, women <460)" },
+    { "name": "PR Interval", "unit": "ms", "normalRange": { "min": 120, "max": 200, "source": "American Heart Association" }, "description": "Time between P wave and QRS complex" },
+    { "name": "QRS Duration", "unit": "ms", "normalRange": { "min": 60, "max": 100, "source": "American Heart Association" }, "description": "Duration of the QRS complex (<120 normal)" },
+    { "name": "RR Interval", "unit": "ms", "normalRange": { "min": 600, "max": 1200, "source": "American Heart Association" }, "description": "Time between consecutive R waves" },
+    { "name": "ST Segment", "unit": "mm", "normalRange": { "min": -0.5, "max": 0.5, "source": "American Heart Association" }, "description": "ST segment elevation or depression" },
+    { "name": "Heart Rate (EKG)", "unit": "bpm", "normalRange": { "min": 60, "max": 100, "source": "American Heart Association" }, "description": "Heart rate from EKG" },
+    { "name": "P Wave Duration", "unit": "ms", "normalRange": { "min": 80, "max": 120, "source": "American Heart Association" }, "description": "Duration of P wave" },
+    { "name": "Heart Rate Variability", "unit": "ms", "normalRange": { "min": 20, "max": 200, "source": "European Heart Journal" }, "description": "HRV SDNN (standard deviation of NN intervals)" }
+  ],
+  "Omega Fatty Acids": [
+    { "name": "Omega-3 Index", "unit": "%", "normalRange": { "min": 8, "max": 12, "source": "OmegaQuant" }, "description": "EPA+DHA as % of RBC fatty acids (>8% optimal)" },
+    { "name": "EPA", "unit": "%", "normalRange": { "min": 1.5, "max": 4.0, "source": "OmegaQuant" }, "description": "Eicosapentaenoic acid (% of total fatty acids)" },
+    { "name": "DHA", "unit": "%", "normalRange": { "min": 4.0, "max": 8.0, "source": "OmegaQuant" }, "description": "Docosahexaenoic acid (% of total fatty acids)" },
+    { "name": "AA/EPA Ratio", "unit": "ratio", "normalRange": { "min": 1.5, "max": 5.0, "source": "OmegaQuant" }, "description": "Arachidonic acid to EPA ratio (lower is better)" },
+    { "name": "Omega-6/Omega-3 Ratio", "unit": "ratio", "normalRange": { "min": 2, "max": 4, "source": "American Journal of Clinical Nutrition" }, "description": "Omega-6 to Omega-3 ratio (optimal <4:1)" }
   ]
 }
