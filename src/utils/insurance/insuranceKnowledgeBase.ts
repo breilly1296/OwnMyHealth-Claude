@@ -333,57 +333,51 @@ export class InsuranceKnowledgeBase {
       effectiveDate: data.planInformation?.effectiveDate || new Date().toISOString().split('T')[0],
       sourceDocument: sourceFile,
       extractionConfidence: 0.8,
-      normalizedBenefits: this.normalizeExtractedBenefits(data.benefits || []),
-      normalizedCosts: this.normalizeExtractedCosts(data.costs || []),
-      networkInfo: this.normalizeExtractedNetwork(data.network),
-      limitations: this.normalizeExtractedLimitations(data.limitations || []),
-      keyMetrics: this.calculateExtractedPlanMetrics(data),
-      tags: this.generateExtractedTags(data),
+      normalizedBenefits: this.normalizeBenefits(data.benefits || []),
+      normalizedCosts: this.normalizeCosts(data.costs || []),
+      networkInfo: data.network ? this.normalizeNetwork(data.network) : {
+        networkType: 'standard' as const,
+        geographicCoverage: ['Unknown'],
+        specialtyAccess: []
+      },
+      limitations: this.normalizeLimitations(data.limitations || []),
+      keyMetrics: this.calculatePlanMetrics(data),
+      tags: this.generateTags(data),
       lastUpdated: new Date().toISOString()
     };
   }
 
-  // Normalize benefits from standard format
-  private normalizeBenefits(benefits: InsuranceBenefit[]): NormalizedBenefit[] {
+  // Normalize benefits from either InsuranceBenefit[] or ExtractedBenefit[]
+  private normalizeBenefits(benefits: (InsuranceBenefit | ExtractedBenefit)[]): NormalizedBenefit[] {
     return benefits.map(benefit => {
       const serviceMapping = this.findServiceMapping(benefit.serviceName);
-      
+
+      // Determine ID: use existing or generate new
+      const id = 'id' in benefit && benefit.id ? benefit.id : crypto.randomUUID();
+
+      // Determine category fallback: use categorizeBenefit for extracted, else primary_care
+      const categoryFallback = 'category' in benefit && benefit.category
+        ? this.categorizeBenefit(benefit.category)
+        : 'primary_care';
+
+      // Determine confidence: use extracted confidence or default 0.9
+      const confidence = 'confidence' in benefit && typeof benefit.confidence === 'number'
+        ? benefit.confidence
+        : 0.9;
+
       return {
-        id: benefit.id,
+        id,
         serviceCode: serviceMapping?.code || `CUSTOM_${crypto.randomUUID().substring(0, 8)}`,
         serviceName: benefit.serviceName,
-        category: serviceMapping?.category || 'primary_care',
+        category: serviceMapping?.category || categoryFallback,
         subcategory: serviceMapping?.subcategory,
-        inNetworkCoverage: this.normalizeCoverageDetails(benefit.inNetworkCoverage),
-        outOfNetworkCoverage: benefit.outOfNetworkCoverage ? 
-          this.normalizeCoverageDetails(benefit.outOfNetworkCoverage) : undefined,
+        inNetworkCoverage: this.normalizeCoverage(benefit.inNetworkCoverage),
+        outOfNetworkCoverage: benefit.outOfNetworkCoverage ?
+          this.normalizeCoverage(benefit.outOfNetworkCoverage) : undefined,
         requirements: this.extractRequirements(benefit),
         limitations: [],
         relatedServices: [],
-        confidence: 0.9,
-        rawData: benefit
-      };
-    });
-  }
-
-  // Normalize benefits from extracted format
-  private normalizeExtractedBenefits(benefits: ExtractedBenefit[]): NormalizedBenefit[] {
-    return benefits.map(benefit => {
-      const serviceMapping = this.findServiceMapping(benefit.serviceName);
-      
-      return {
-        id: crypto.randomUUID(),
-        serviceCode: serviceMapping?.code || `CUSTOM_${crypto.randomUUID().substring(0, 8)}`,
-        serviceName: benefit.serviceName,
-        category: serviceMapping?.category || this.categorizeBenefit(benefit.category),
-        subcategory: serviceMapping?.subcategory,
-        inNetworkCoverage: this.normalizeExtractedCoverage(benefit.inNetworkCoverage),
-        outOfNetworkCoverage: benefit.outOfNetworkCoverage ? 
-          this.normalizeExtractedCoverage(benefit.outOfNetworkCoverage) : undefined,
-        requirements: this.extractExtractedRequirements(benefit),
-        limitations: [],
-        relatedServices: [],
-        confidence: benefit.confidence,
+        confidence,
         rawData: benefit
       };
     });
@@ -408,8 +402,8 @@ export class InsuranceKnowledgeBase {
     return undefined;
   }
 
-  // Normalize coverage details
-  private normalizeCoverageDetails(coverage: CoverageDetails): NormalizedCoverage {
+  // Normalize coverage from either CoverageDetails or ExtractedCoverage
+  private normalizeCoverage(coverage: CoverageDetails | ExtractedCoverage): NormalizedCoverage {
     let costStructure: CostStructure;
 
     if (!coverage.covered) {
@@ -418,68 +412,61 @@ export class InsuranceKnowledgeBase {
       costStructure = { type: 'copay', amount: coverage.copay };
     } else if (coverage.coinsurance !== undefined) {
       costStructure = { type: 'coinsurance', percentage: coverage.coinsurance };
-    } else if (coverage.deductible !== undefined) {
+    } else if ('deductible' in coverage && coverage.deductible !== undefined) {
       costStructure = { type: 'deductible', amount: coverage.deductible };
     } else {
       costStructure = { type: 'flat_rate', amount: 0 };
     }
 
-    return {
-      covered: coverage.covered,
-      costStructure,
-      deductibleApplies: coverage.deductible !== undefined,
-      coveragePercentage: coverage.coveragePercentage || (coverage.covered ? 100 : 0),
-      notes: coverage.limitations?.join('; ')
-    };
-  }
+    // Determine deductibleApplies based on input type
+    const deductibleApplies = 'deductible' in coverage
+      ? coverage.deductible !== undefined
+      : ('deductibleApplies' in coverage ? coverage.deductibleApplies || false : false);
 
-  // Normalize extracted coverage
-  private normalizeExtractedCoverage(coverage: ExtractedCoverage): NormalizedCoverage {
-    let costStructure: CostStructure;
-
-    if (!coverage.covered) {
-      costStructure = { type: 'not_covered' };
-    } else if (coverage.copay !== undefined) {
-      costStructure = { type: 'copay', amount: coverage.copay };
-    } else if (coverage.coinsurance !== undefined) {
-      costStructure = { type: 'coinsurance', percentage: coverage.coinsurance };
-    } else {
-      costStructure = { type: 'flat_rate', amount: 0 };
-    }
+    // Determine notes based on input type
+    const notes = 'limitations' in coverage && coverage.limitations
+      ? coverage.limitations.join('; ')
+      : ('notes' in coverage ? coverage.notes : undefined);
 
     return {
       covered: coverage.covered,
       costStructure,
-      deductibleApplies: coverage.deductibleApplies || false,
+      deductibleApplies,
       coveragePercentage: coverage.coveragePercentage || (coverage.covered ? 100 : 0),
-      notes: coverage.notes
+      notes
     };
   }
 
-  // Normalize costs
-  private normalizeCosts(costs: InsuranceCost[]): NormalizedCost[] {
-    return costs.map(cost => ({
-      id: cost.id,
-      costType: this.mapCostType(cost.type),
-      category: this.mapCostCategory(cost.appliesTo),
-      amount: cost.amount,
-      frequency: this.mapFrequency(cost.frequency),
-      appliesTo: [cost.appliesTo],
-      confidence: 0.9
-    }));
-  }
+  // Normalize costs from either InsuranceCost[] or ExtractedCost[]
+  private normalizeCosts(costs: (InsuranceCost | ExtractedCost)[]): NormalizedCost[] {
+    return costs.map(cost => {
+      // Check if this is an InsuranceCost (has appliesTo) or ExtractedCost (has category directly typed)
+      const isInsuranceCost = 'appliesTo' in cost;
 
-  // Normalize extracted costs
-  private normalizeExtractedCosts(costs: ExtractedCost[]): NormalizedCost[] {
-    return costs.map(cost => ({
-      id: crypto.randomUUID(),
-      costType: cost.type,
-      category: cost.category,
-      amount: cost.amount || 0,
-      frequency: this.mapFrequency(cost.frequency),
-      appliesTo: [cost.category],
-      confidence: cost.confidence
-    }));
+      const id = 'id' in cost && cost.id ? cost.id : crypto.randomUUID();
+      const costType = isInsuranceCost
+        ? this.mapCostType(cost.type as string)
+        : (cost as ExtractedCost).type;
+      const category = isInsuranceCost
+        ? this.mapCostCategory((cost as InsuranceCost).appliesTo)
+        : (cost as ExtractedCost).category;
+      const appliesTo = isInsuranceCost
+        ? [(cost as InsuranceCost).appliesTo]
+        : [(cost as ExtractedCost).category];
+      const confidence = 'confidence' in cost && typeof cost.confidence === 'number'
+        ? cost.confidence
+        : 0.9;
+
+      return {
+        id,
+        costType,
+        category,
+        amount: cost.amount || 0,
+        frequency: this.mapFrequency(cost.frequency),
+        appliesTo,
+        confidence
+      };
+    });
   }
 
   // Helper methods for mapping and categorization
@@ -538,45 +525,24 @@ export class InsuranceKnowledgeBase {
     return 'primary_care';
   }
 
-  // Extract requirements from benefit
-  private extractRequirements(benefit: InsuranceBenefit): ServiceRequirement[] {
+  // Extract requirements from benefit (works with both InsuranceBenefit and ExtractedBenefit)
+  private extractRequirements(benefit: { priorAuthRequired?: boolean; referralRequired?: boolean }): ServiceRequirement[] {
     const requirements: ServiceRequirement[] = [];
-    
-    if (benefit.priorAuthRequired) {
-      requirements.push({
-        type: 'prior_authorization',
-        description: 'Prior authorization required before service'
-      });
-    }
-    
-    if (benefit.referralRequired) {
-      requirements.push({
-        type: 'referral',
-        description: 'Referral from primary care provider required'
-      });
-    }
-    
-    return requirements;
-  }
 
-  // Extract requirements from extracted benefit
-  private extractExtractedRequirements(benefit: ExtractedBenefit): ServiceRequirement[] {
-    const requirements: ServiceRequirement[] = [];
-    
     if (benefit.priorAuthRequired) {
       requirements.push({
         type: 'prior_authorization',
         description: 'Prior authorization required before service'
       });
     }
-    
+
     if (benefit.referralRequired) {
       requirements.push({
         type: 'referral',
         description: 'Referral from primary care provider required'
       });
     }
-    
+
     return requirements;
   }
 
@@ -638,10 +604,8 @@ export class InsuranceKnowledgeBase {
     }));
   }
 
-  /**
-   * Normalize network information from InsurancePlan format
-   */
-  private normalizeNetwork(network: NetworkInfo): NormalizedNetwork {
+  // Normalize network information from either NetworkInfo or NetworkInformation
+  private normalizeNetwork(network: NetworkInfo | NetworkInformation): NormalizedNetwork {
     if (!network) {
       return {
         networkType: 'standard',
@@ -655,43 +619,30 @@ export class InsuranceKnowledgeBase {
       network.geographicCoverage
     );
 
-    return {
-      networkName: network.networkName,
-      networkType,
-      providerCount: network.providerCount,
-      geographicCoverage: network.geographicCoverage?.length > 0
-        ? network.geographicCoverage
-        : ['Unknown'],
-      specialtyAccess: this.generateSpecialtyAccess(network.specialtyCount)
-    };
-  }
+    // Check if this is NetworkInfo (has networkName) or NetworkInformation (has providerNetworkName)
+    const isNetworkInfo = 'networkName' in network;
 
-  /**
-   * Normalize network information from extracted document data
-   */
-  private normalizeExtractedNetwork(network: NetworkInformation): NormalizedNetwork {
-    if (!network) {
-      return {
-        networkType: 'standard',
-        geographicCoverage: ['Unknown'],
-        specialtyAccess: []
-      };
-    }
+    const networkName = isNetworkInfo
+      ? (network as NetworkInfo).networkName
+      : (network as NetworkInformation).providerNetworkName;
 
-    const networkType = this.determineNetworkType(
-      network.providerCount,
-      network.geographicCoverage
-    );
+    const specialtyAccess = isNetworkInfo
+      ? this.generateSpecialtyAccess((network as NetworkInfo).specialtyCount)
+      : this.generateSpecialtyAccess();
+
+    const pharmacyNetwork = !isNetworkInfo
+      ? (network as NetworkInformation).pharmacyNetwork
+      : undefined;
 
     return {
-      networkName: network.providerNetworkName,
+      networkName,
       networkType,
       providerCount: network.providerCount,
       geographicCoverage: network.geographicCoverage?.length
         ? network.geographicCoverage
         : ['Unknown'],
-      specialtyAccess: this.generateSpecialtyAccess(),
-      pharmacyNetwork: network.pharmacyNetwork
+      specialtyAccess,
+      pharmacyNetwork
     };
   }
 
@@ -720,36 +671,35 @@ export class InsuranceKnowledgeBase {
     return 'GENERAL';
   }
 
-  /**
-   * Normalize limitations from InsurancePlan format
-   */
-  private normalizeLimitations(limitations: InsuranceLimitation[]): NormalizedLimitation[] {
+  // Normalize limitations from either InsuranceLimitation[] or LimitationInformation[]
+  private normalizeLimitations(limitations: (InsuranceLimitation | LimitationInformation)[]): NormalizedLimitation[] {
     if (!limitations?.length) return [];
 
-    return limitations.map(limitation => ({
-      id: limitation.id,
-      serviceCode: this.mapServiceToCode(limitation.serviceName || limitation.description || ''),
-      limitationType: this.mapLimitationType(limitation.limitType),
-      limitValue: limitation.limitValue,
-      description: limitation.description,
-      exceptions: limitation.exceptions || []
-    }));
-  }
+    return limitations.map(limitation => {
+      // Check if this is InsuranceLimitation (has limitType) or LimitationInformation (has type)
+      const isInsuranceLimitation = 'limitType' in limitation;
 
-  /**
-   * Normalize limitations from extracted document data
-   */
-  private normalizeExtractedLimitations(limitations: LimitationInformation[]): NormalizedLimitation[] {
-    if (!limitations?.length) return [];
+      const id = 'id' in limitation && limitation.id ? limitation.id : crypto.randomUUID();
+      const serviceSource = isInsuranceLimitation
+        ? ((limitation as InsuranceLimitation).category || limitation.description || '')
+        : ((limitation as LimitationInformation).service || limitation.description || '');
+      const limitationType = isInsuranceLimitation
+        ? this.mapLimitationType((limitation as InsuranceLimitation).limitType)
+        : (limitation as LimitationInformation).type;
+      const limitValue = isInsuranceLimitation
+        ? (limitation as InsuranceLimitation).limitValue
+        : (limitation as LimitationInformation).value;
+      const exceptions = 'exceptions' in limitation ? limitation.exceptions || [] : [];
 
-    return limitations.map(limitation => ({
-      id: crypto.randomUUID(),
-      serviceCode: this.mapServiceToCode(limitation.service || limitation.description || ''),
-      limitationType: limitation.type,
-      limitValue: limitation.value,
-      description: limitation.description,
-      exceptions: []
-    }));
+      return {
+        id,
+        serviceCode: this.mapServiceToCode(serviceSource),
+        limitationType,
+        limitValue,
+        description: limitation.description,
+        exceptions
+      };
+    });
   }
 
   private mapLimitationType(limitType: string): 'annual' | 'lifetime' | 'per_visit' | 'per_service' {
@@ -760,7 +710,19 @@ export class InsuranceKnowledgeBase {
     return 'annual';
   }
 
-  private calculatePlanMetrics(_plan: InsurancePlan): PlanMetrics {
+  // Calculate plan metrics from either InsurancePlan or ExtractedInsuranceData
+  private calculatePlanMetrics(planOrData: InsurancePlan | ExtractedInsuranceData): PlanMetrics {
+    // Check if this is InsurancePlan (has benefits array with different structure) or ExtractedInsuranceData
+    const isInsurancePlan = 'planName' in planOrData && 'benefits' in planOrData &&
+      Array.isArray(planOrData.benefits) && planOrData.benefits.length > 0 &&
+      'serviceName' in planOrData.benefits[0] && 'inNetworkCoverage' in planOrData.benefits[0];
+
+    const topBenefits = isInsurancePlan
+      ? ['Primary Care', 'Preventive Care']
+      : ((planOrData as ExtractedInsuranceData).benefits?.slice(0, 3).map(b => b.serviceName) || []);
+
+    const potentialGaps = isInsurancePlan ? ['Dental', 'Vision'] : [];
+
     return {
       overallCostRating: 7,
       coverageComprehensiveness: 8,
@@ -771,38 +733,29 @@ export class InsuranceKnowledgeBase {
         mediumUsage: 4000,
         highUsage: 8000
       },
-      topBenefits: ['Primary Care', 'Preventive Care'],
-      potentialGaps: ['Dental', 'Vision']
+      topBenefits,
+      potentialGaps
     };
   }
 
-  private calculateExtractedPlanMetrics(data: ExtractedInsuranceData): PlanMetrics {
-    return {
-      overallCostRating: 7,
-      coverageComprehensiveness: 8,
-      networkQuality: 7,
-      userFriendliness: 6,
-      estimatedAnnualCost: {
-        lowUsage: 2000,
-        mediumUsage: 4000,
-        highUsage: 8000
-      },
-      topBenefits: data.benefits?.slice(0, 3).map(b => b.serviceName) || [],
-      potentialGaps: []
-    };
-  }
+  // Generate tags from either InsurancePlan or ExtractedInsuranceData
+  private generateTags(planOrData: InsurancePlan | ExtractedInsuranceData): string[] {
+    // Check if this is InsurancePlan (has planType directly) or ExtractedInsuranceData
+    const isInsurancePlan = 'planType' in planOrData && 'planName' in planOrData;
 
-  private generateTags(plan: InsurancePlan): string[] {
-    const tags = [plan.planType.toLowerCase()];
-    if (plan.planName.toLowerCase().includes('high deductible')) tags.push('hdhp');
-    if (plan.planName.toLowerCase().includes('bronze')) tags.push('bronze');
-    if (plan.planName.toLowerCase().includes('silver')) tags.push('silver');
-    if (plan.planName.toLowerCase().includes('gold')) tags.push('gold');
-    if (plan.planName.toLowerCase().includes('platinum')) tags.push('platinum');
-    return tags;
-  }
+    if (isInsurancePlan) {
+      const plan = planOrData as InsurancePlan;
+      const tags = [plan.planType.toLowerCase()];
+      const planNameLower = plan.planName.toLowerCase();
+      if (planNameLower.includes('high deductible')) tags.push('hdhp');
+      if (planNameLower.includes('bronze')) tags.push('bronze');
+      if (planNameLower.includes('silver')) tags.push('silver');
+      if (planNameLower.includes('gold')) tags.push('gold');
+      if (planNameLower.includes('platinum')) tags.push('platinum');
+      return tags;
+    }
 
-  private generateExtractedTags(data: ExtractedInsuranceData): string[] {
+    const data = planOrData as ExtractedInsuranceData;
     const tags: string[] = [];
     if (data.planInformation?.planType) {
       tags.push(data.planInformation.planType.toLowerCase());

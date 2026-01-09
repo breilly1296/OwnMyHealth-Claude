@@ -6,3 +6,4 @@
 
 export * from './useApi';
 export * from './useRBAC';
+export * from './useModals';

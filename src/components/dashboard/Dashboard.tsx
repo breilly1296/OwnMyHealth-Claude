@@ -20,6 +20,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown, Settings, Menu, X } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
+import { useModals } from '../../hooks';
 // Biomarker components
 import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, BiomarkerActionPlan, BiomarkerInsurancePanel } from '../biomarkers';
 // Insurance components
@@ -60,21 +61,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   // UI State (kept in React state - not PHI)
   // ============================================
   const [selectedCategory, setSelectedCategory] = useState('Dashboard');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
-  const [isLabUploadModalOpen, setIsLabUploadModalOpen] = useState(false);
-  const [isClinicalUploadOpen, setIsClinicalUploadOpen] = useState(false);
-  const [isTrendModalOpen, setIsTrendModalOpen] = useState(false);
-  const [isSBCUploadOpen, setIsSBCUploadOpen] = useState(false);
-  const [isEnhancedUploadOpen, setIsEnhancedUploadOpen] = useState(false);
-  const [isInsuranceViewerOpen, setIsInsuranceViewerOpen] = useState(false);
-  const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(false);
   const [selectedBiomarker, setSelectedBiomarker] = useState<Biomarker | null>(null);
   const [trendBiomarker, setTrendBiomarker] = useState<Biomarker | null>(null);
   const [selectedBiomarkerForInsurance, setSelectedBiomarkerForInsurance] = useState<Biomarker | null>(null);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Modal state management - consolidated into single hook
+  const modals = useModals();
 
   // ============================================
   // Data State (fetched from API, cleared when not needed)
@@ -321,8 +314,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const handleTrendClick = useCallback((biomarker: Biomarker, e: React.MouseEvent) => {
     e.stopPropagation();
     setTrendBiomarker(biomarker);
-    setIsTrendModalOpen(true);
-  }, []);
+    modals.open('trend');
+  }, [modals]);
 
   const handleInsuranceClick = useCallback((biomarker: Biomarker, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -442,7 +435,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           {/* Quick Actions - Responsive grid */}
           <div className="sm:col-span-2 md:col-span-6 grid grid-cols-3 gap-2 md:gap-3">
             <button
-              onClick={() => setIsLabUploadModalOpen(true)}
+              onClick={() => modals.open('labUpload')}
               className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-brand-300 dark:hover:border-brand-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
             >
               <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
@@ -452,7 +445,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Auto-extract</p>
             </button>
             <button
-              onClick={() => setIsPDFModalOpen(true)}
+              onClick={() => modals.open('pdfUpload')}
               className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group text-left min-h-[88px]"
             >
               <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
@@ -462,7 +455,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Local OCR</p>
             </button>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => modals.open('addMeasurement')}
               className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-wellness-300 dark:hover:border-wellness-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
             >
               <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-wellness-50 dark:bg-wellness-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-wellness-100 dark:group-hover:bg-wellness-900/50 transition-colors">
@@ -543,9 +536,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return (
       <InsuranceHub
         insurancePlans={insurancePlans}
-        onUploadSBC={() => setIsSBCUploadOpen(true)}
-        onSmartUpload={() => setIsEnhancedUploadOpen(true)}
-        onViewPlanDetails={() => setIsInsuranceViewerOpen(true)}
+        onUploadSBC={() => modals.open('sbcUpload')}
+        onSmartUpload={() => modals.open('enhancedUpload')}
+        onViewPlanDetails={() => modals.open('insuranceViewer')}
       />
     );
   };
@@ -554,9 +547,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return (
       <InsuranceHub
         insurancePlans={insurancePlans}
-        onUploadSBC={() => setIsSBCUploadOpen(true)}
-        onSmartUpload={() => setIsEnhancedUploadOpen(true)}
-        onViewPlanDetails={() => setIsInsuranceViewerOpen(true)}
+        onUploadSBC={() => modals.open('sbcUpload')}
+        onSmartUpload={() => modals.open('enhancedUpload')}
+        onViewPlanDetails={() => modals.open('insuranceViewer')}
       />
     );
   };
@@ -567,8 +560,28 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const renderFilesContent = () => {
     return (
-      <FilesPage onUploadClick={() => setIsLabUploadModalOpen(true)} />
+      <FilesPage onUploadClick={() => modals.open('labUpload')} />
     );
+  };
+
+  // Content renderer - maps category to rendered content
+  const renderContent = () => {
+    switch (selectedCategory) {
+      case 'Dashboard':
+        return renderDashboardContent();
+      case 'Trends':
+        return <TrendsPage biomarkers={biomarkers} />;
+      case 'Insurance':
+        return renderInsuranceContent();
+      case 'Insurance Guide':
+        return renderInsuranceGuideContent();
+      case 'Knowledge Base':
+        return renderKnowledgeBaseContent();
+      case 'Files':
+        return renderFilesContent();
+      default:
+        return renderCategoryContent();
+    }
   };
 
   const renderCategoryContent = () => {
@@ -590,14 +603,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
         <div className="flex flex-wrap gap-2 mb-8">
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => modals.open('addMeasurement')}
             className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Data
           </button>
           <button
-            onClick={() => setIsPDFModalOpen(true)}
+            onClick={() => modals.open('pdfUpload')}
             className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <FileUp className="w-4 h-4 mr-2" />
@@ -742,7 +755,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No {selectedCategory} Data</h3>
               <p className="text-slate-500 dark:text-slate-400 mb-6">Add your first measurement to start tracking.</p>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => modals.open('addMeasurement')}
                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -773,7 +786,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             <div className="flex items-center space-x-2 md:space-x-3">
               {/* Hamburger Menu - Mobile Only */}
               <button
-                onClick={() => setIsMobileSidebarOpen(true)}
+                onClick={() => modals.open('mobileSidebar')}
                 className="md:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 aria-label="Open menu"
               >
@@ -796,7 +809,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               {user && onLogout && (
                 <div className="relative">
                   <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    onClick={() => modals.toggle('userMenu')}
                     className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
                     <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
@@ -805,16 +818,16 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300 hidden sm:block max-w-[120px] truncate">
                       {user.email}
                     </span>
-                    <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform ${modals.isOpen('userMenu') ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Dropdown Menu */}
-                  {isUserMenuOpen && (
+                  {modals.isOpen('userMenu') && (
                     <>
                       {/* Backdrop */}
                       <div
                         className="fixed inset-0 z-40"
-                        onClick={() => setIsUserMenuOpen(false)}
+                        onClick={() => modals.close('userMenu')}
                       />
                       {/* Menu */}
                       <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
@@ -824,7 +837,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         </div>
                         <button
                           onClick={() => {
-                            setIsUserMenuOpen(false);
+                            modals.close('userMenu');
                             setShowSettings(true);
                           }}
                           className="w-full flex items-center px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -834,7 +847,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         </button>
                         <button
                           onClick={async () => {
-                            setIsUserMenuOpen(false);
+                            modals.close('userMenu');
                             await onLogout();
                           }}
                           className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -853,12 +866,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       </nav>
 
       {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
+      {modals.isOpen('mobileSidebar') && (
         <div className="fixed inset-0 z-50 md:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setIsMobileSidebarOpen(false)}
+            onClick={() => modals.close('mobileSidebar')}
           />
           {/* Drawer */}
           <aside className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white dark:bg-slate-900 shadow-xl animate-slide-in-left overflow-y-auto">
@@ -870,7 +883,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 <span className="text-lg font-bold text-slate-900 dark:text-white">Menu</span>
               </div>
               <button
-                onClick={() => setIsMobileSidebarOpen(false)}
+                onClick={() => modals.close('mobileSidebar')}
                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 aria-label="Close menu"
               >
@@ -890,7 +903,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                       onCategorySelect={(category) => {
                         setSelectedCategory(category);
                         setSelectedBiomarker(null);
-                        setIsMobileSidebarOpen(false);
+                        modals.close('mobileSidebar');
                       }}
                       defaultExpanded={group.id === 'overview' || group.id === 'insurance'}
                       categoryCounts={categoryCounts}
@@ -943,71 +956,65 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-8 py-6 md:py-8 min-h-[calc(100vh-3.5rem)] md:min-h-[calc(100vh-4rem)]">
-          {selectedCategory === 'Dashboard' ? renderDashboardContent() :
-           selectedCategory === 'Trends' ? <TrendsPage biomarkers={biomarkers} /> :
-           selectedCategory === 'Insurance' ? renderInsuranceContent() :
-           selectedCategory === 'Insurance Guide' ? renderInsuranceGuideContent() :
-           selectedCategory === 'Knowledge Base' ? renderKnowledgeBaseContent() :
-           selectedCategory === 'Files' ? renderFilesContent() :
-           renderCategoryContent()}
+          {renderContent()}
         </main>
       </div>
 
       {/* Modals */}
       <AddMeasurementModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={modals.isOpen('addMeasurement')}
+        onClose={() => modals.close('addMeasurement')}
         category={selectedCategory}
         onAdd={handleAddMeasurement}
       />
 
       <PDFUploadModal
-        isOpen={isPDFModalOpen}
-        onClose={() => setIsPDFModalOpen(false)}
+        isOpen={modals.isOpen('pdfUpload')}
+        onClose={() => modals.close('pdfUpload')}
         onExtract={handlePDFExtract}
       />
 
       <LabUploadModal
-        isOpen={isLabUploadModalOpen}
-        onClose={() => setIsLabUploadModalOpen(false)}
+        isOpen={modals.isOpen('labUpload')}
+        onClose={() => modals.close('labUpload')}
         onSuccess={handleLabOCRSuccess}
       />
 
       <ClinicalFileUpload
-        isOpen={isClinicalUploadOpen}
-        onClose={() => setIsClinicalUploadOpen(false)}
+        isOpen={modals.isOpen('clinicalUpload')}
+        onClose={() => modals.close('clinicalUpload')}
         onExtract={handleClinicalFileExtract}
       />
 
       <InsuranceSBCUpload
-        isOpen={isSBCUploadOpen}
-        onClose={() => setIsSBCUploadOpen(false)}
+        isOpen={modals.isOpen('sbcUpload')}
+        onClose={() => modals.close('sbcUpload')}
         onPlanExtracted={handleInsurancePlanExtracted}
       />
 
       <EnhancedInsuranceUpload
-        isOpen={isEnhancedUploadOpen}
-        onClose={() => setIsEnhancedUploadOpen(false)}
+        isOpen={modals.isOpen('enhancedUpload')}
+        onClose={() => modals.close('enhancedUpload')}
         onPlanExtracted={handleInsurancePlanExtracted}
       />
 
       <InsurancePlanViewer
         plans={insurancePlans}
-        isOpen={isInsuranceViewerOpen}
-        onClose={() => setIsInsuranceViewerOpen(false)}
+        isOpen={modals.isOpen('insuranceViewer')}
+        onClose={() => modals.close('insuranceViewer')}
       />
 
       <InsurancePlanCompare
         plans={insurancePlans}
-        isOpen={isKnowledgeBaseOpen}
-        onClose={() => setIsKnowledgeBaseOpen(false)}
+        isOpen={modals.isOpen('knowledgeBase')}
+        onClose={() => modals.close('knowledgeBase')}
       />
 
       {trendBiomarker && (
         <TrendModal
-          isOpen={isTrendModalOpen}
+          isOpen={modals.isOpen('trend')}
           onClose={() => {
-            setIsTrendModalOpen(false);
+            modals.close('trend');
             setTrendBiomarker(null);
           }}
           biomarker={trendBiomarker}

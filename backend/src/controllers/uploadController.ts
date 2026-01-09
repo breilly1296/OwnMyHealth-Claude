@@ -27,17 +27,135 @@ interface UploadRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
 }
 
-// Response types
+// ============================================
+// Shared Types
+// ============================================
+
+/** Shared biomarker response structure */
+interface BiomarkerResult {
+  id: string;
+  name: string;
+  value: number;
+  unit: string;
+  category: string;
+  isOutOfRange: boolean;
+}
+
+// ============================================
+// Validation Utilities
+// ============================================
+
+/** Supported MIME types for different upload types */
+const SUPPORTED_MIME_TYPES = {
+  pdf: ['application/pdf'],
+  ocr: ['application/pdf', 'image/png', 'image/jpeg', 'image/tiff', 'image/gif', 'image/webp'],
+} as const;
+
+type UploadType = keyof typeof SUPPORTED_MIME_TYPES;
+
+/** Validate uploaded file - throws ValidationError if invalid */
+function validateUploadFile(
+  file: Express.Multer.File | undefined,
+  uploadType: UploadType,
+  maxSizeMB: number = 10
+): asserts file is Express.Multer.File {
+  if (!file) {
+    throw new ValidationError('No file uploaded');
+  }
+
+  const supportedTypes: readonly string[] = SUPPORTED_MIME_TYPES[uploadType];
+  if (!supportedTypes.includes(file.mimetype)) {
+    const typeNames = uploadType === 'pdf'
+      ? 'PDF files'
+      : 'PDF and image files (PNG, JPG, TIFF)';
+    throw new ValidationError(`Only ${typeNames} are accepted`);
+  }
+
+  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+  if (file.size > maxSizeBytes) {
+    throw new ValidationError(`File size must be less than ${maxSizeMB}MB`);
+  }
+}
+
+// ============================================
+// Biomarker Creation Helper
+// ============================================
+
+interface OCRBiomarker {
+  name: string;
+  value: number;
+  unit: string;
+  category: string;
+  confidence: number;
+  normalRange: { min: number; max: number; source?: string };
+}
+
+interface CreateBiomarkersOptions {
+  userId: string;
+  biomarkers: OCRBiomarker[];
+  reportDate: Date;
+  labName?: string;
+  notesPrefix: string;
+  normalRangeSource: string;
+  userFileId?: string | null;
+}
+
+/** Create biomarkers from OCR results - handles encryption and database creation */
+async function createBiomarkersFromOCRResult(
+  prisma: ReturnType<typeof getPrismaClient>,
+  encryptionService: ReturnType<typeof getEncryptionService>,
+  userSalt: string,
+  options: CreateBiomarkersOptions
+): Promise<BiomarkerResult[]> {
+  const { userId, biomarkers, reportDate, labName, notesPrefix, normalRangeSource, userFileId } = options;
+  const results: BiomarkerResult[] = [];
+
+  for (const biomarker of biomarkers) {
+    const valueEncrypted = encryptionService.encrypt(biomarker.value.toString(), userSalt);
+
+    const notes = labName ? `${notesPrefix}: ${labName}` : notesPrefix;
+    const notesEncrypted = encryptionService.encrypt(notes, userSalt);
+
+    const isOutOfRange = biomarker.value < biomarker.normalRange.min ||
+                         biomarker.value > biomarker.normalRange.max;
+
+    const created = await prisma.biomarker.create({
+      data: {
+        userId,
+        category: biomarker.category,
+        name: biomarker.name,
+        unit: biomarker.unit,
+        valueEncrypted,
+        notesEncrypted,
+        normalRangeMin: biomarker.normalRange.min,
+        normalRangeMax: biomarker.normalRange.max,
+        normalRangeSource: biomarker.normalRange.source || normalRangeSource,
+        measurementDate: reportDate,
+        isOutOfRange,
+        userFileId: userFileId ?? null,
+      },
+    });
+
+    results.push({
+      id: created.id,
+      name: biomarker.name,
+      value: biomarker.value,
+      unit: biomarker.unit,
+      category: biomarker.category,
+      isOutOfRange,
+    });
+  }
+
+  return results;
+}
+
+// ============================================
+// Response Types
+// ============================================
+
 interface LabReportUploadResponse {
   biomarkersCreated: number;
-  biomarkers: {
-    id: string;
-    name: string;
-    value: number;
-    unit: string;
-    category: string;
-    isOutOfRange: boolean;
-  }[];
+  biomarkers: BiomarkerResult[];
   labName?: string;
   reportDate?: string;
   extractionConfidence: number;
@@ -59,14 +177,7 @@ interface SBCUploadResponse {
 
 interface LabResultOCRResponse {
   biomarkersCreated: number;
-  biomarkers: {
-    id: string;
-    name: string;
-    value: number;
-    unit: string;
-    category: string;
-    isOutOfRange: boolean;
-  }[];
+  biomarkers: BiomarkerResult[];
   labName?: string;
   reportDate?: string;
   extractionConfidence: number;
@@ -93,17 +204,7 @@ export async function uploadLabReport(
   const userId = req.user!.id;
   const file = req.file;
 
-  if (!file) {
-    throw new ValidationError('No file uploaded');
-  }
-
-  if (file.mimetype !== 'application/pdf') {
-    throw new ValidationError('Only PDF files are accepted');
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
-    throw new ValidationError('File size must be less than 10MB');
-  }
+  validateUploadFile(file, 'pdf');
 
   const prisma = getPrismaClient();
   const encryptionService = getEncryptionService();
@@ -114,14 +215,12 @@ export async function uploadLabReport(
   const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname);
 
   if (ocrResult.biomarkers.length === 0) {
-    // Audit log: failed extraction
     await auditService.logAccess(LAB_REPORT_RESOURCE, undefined, { req, userId }, {
       operation: 'PARSE_FAILED',
       filename: file.originalname,
       fileSize: file.size,
       reason: 'No biomarkers extracted',
     });
-
     throw new ValidationError('Could not extract any biomarkers from the PDF. Please ensure it is a valid lab report.');
   }
 
@@ -130,57 +229,20 @@ export async function uploadLabReport(
   const reportDateStr = ocrResult.metadata.labDate || extractDateFromText(ocrResult.text);
   const reportDate = reportDateStr ? new Date(reportDateStr) : new Date();
 
-  // Create biomarkers in database
-  const createdBiomarkers: {
-    id: string;
-    name: string;
-    value: number;
-    unit: string;
-    category: string;
-    isOutOfRange: boolean;
-  }[] = [];
-
-  for (const biomarker of ocrResult.biomarkers) {
-    // Encrypt the value
-    const valueEncrypted = encryptionService.encrypt(biomarker.value.toString(), userSalt);
-
-    // Encrypt notes if present
-    const notesEncrypted = labName
-      ? encryptionService.encrypt(`Extracted from lab report: ${labName}`, userSalt)
-      : null;
-
-    // Check if out of range
-    const isOutOfRange = biomarker.value < biomarker.normalRange.min ||
-                         biomarker.value > biomarker.normalRange.max;
-
-    const created = await prisma.biomarker.create({
-      data: {
-        userId,
-        category: biomarker.category,
-        name: biomarker.name,
-        unit: biomarker.unit,
-        valueEncrypted,
-        notesEncrypted,
-        normalRangeMin: biomarker.normalRange.min,
-        normalRangeMax: biomarker.normalRange.max,
-        normalRangeSource: biomarker.normalRange.source || 'Lab Report',
-        measurementDate: reportDate,
-        isOutOfRange,
-      },
-    });
-
-    createdBiomarkers.push({
-      id: created.id,
-      name: biomarker.name,
-      value: biomarker.value,
-      unit: biomarker.unit,
-      category: biomarker.category,
-      isOutOfRange,
-    });
-  }
-
-  // Use confidence from OCR result
-  const avgConfidence = ocrResult.confidence;
+  // Create biomarkers in database using shared helper
+  const createdBiomarkers = await createBiomarkersFromOCRResult(
+    prisma,
+    encryptionService,
+    userSalt,
+    {
+      userId,
+      biomarkers: ocrResult.biomarkers,
+      reportDate,
+      labName: labName || undefined,
+      notesPrefix: 'Extracted from lab report',
+      normalRangeSource: 'Lab Report',
+    }
+  );
 
   // Audit log: successful upload and extraction
   await auditService.logCreate(LAB_REPORT_RESOURCE, 'BATCH', {
@@ -188,7 +250,7 @@ export async function uploadLabReport(
     fileSize: file.size,
     biomarkersExtracted: createdBiomarkers.length,
     labName: labName || undefined,
-    extractionConfidence: avgConfidence,
+    extractionConfidence: ocrResult.confidence,
     processorType: ocrResult.metadata.processorType,
   }, { req, userId });
 
@@ -199,7 +261,7 @@ export async function uploadLabReport(
       biomarkers: createdBiomarkers,
       labName: labName || undefined,
       reportDate: reportDate.toISOString(),
-      extractionConfidence: avgConfidence,
+      extractionConfidence: ocrResult.confidence,
     },
   };
 
@@ -217,17 +279,7 @@ export async function uploadSBC(
   const userId = req.user!.id;
   const file = req.file;
 
-  if (!file) {
-    throw new ValidationError('No file uploaded');
-  }
-
-  if (file.mimetype !== 'application/pdf') {
-    throw new ValidationError('Only PDF files are accepted');
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
-    throw new ValidationError('File size must be less than 10MB');
-  }
+  validateUploadFile(file, 'pdf');
 
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
@@ -332,29 +384,7 @@ export async function uploadLabResultOCR(
   const userId = req.user!.id;
   const file = req.file;
 
-  if (!file) {
-    throw new ValidationError('No file uploaded');
-  }
-
-  // Supported MIME types for OCR
-  const supportedTypes = [
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'image/tiff',
-    'image/gif',
-    'image/webp',
-  ];
-
-  if (!supportedTypes.includes(file.mimetype)) {
-    throw new ValidationError(
-      'Only PDF and image files (PNG, JPG, TIFF) are accepted for OCR processing'
-    );
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
-    throw new ValidationError('File size must be less than 10MB');
-  }
+  validateUploadFile(file, 'ocr');
 
   const prisma = getPrismaClient();
   const encryptionService = getEncryptionService();
@@ -365,7 +395,6 @@ export async function uploadLabResultOCR(
   const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname);
 
   if (ocrResult.biomarkers.length === 0) {
-    // Audit log: failed extraction
     await auditService.logAccess(LAB_OCR_RESOURCE, undefined, { req, userId }, {
       operation: 'OCR_PARSE_FAILED',
       filename: file.originalname,
@@ -374,7 +403,6 @@ export async function uploadLabResultOCR(
       reason: 'No biomarkers extracted from OCR text',
       ocrConfidence: ocrResult.confidence,
     });
-
     throw new ValidationError(
       'Could not extract any biomarkers from the document. Please ensure it is a valid lab report with readable text.'
     );
@@ -390,16 +418,13 @@ export async function uploadLabResultOCR(
     ocrResult.biomarkers.reduce((sum, b) => sum + b.confidence, 0) /
     ocrResult.biomarkers.length;
 
-  // Generate a unique file ID
+  // Generate a unique file ID and upload to GCS
   const fileId = crypto.randomUUID();
-
-  // Upload file to GCS
   let storageKey: string | null = null;
   try {
     storageKey = await uploadToGCS(userId, fileId, file.buffer, file.mimetype);
     logger.info('File uploaded to GCS', { data: { fileId, storageKey, userId } });
   } catch (error) {
-    // Log error but continue - we can still create biomarkers without file storage
     logger.error('Failed to upload file to GCS', {
       data: {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -444,62 +469,24 @@ export async function uploadLabResultOCR(
           userId,
         },
       });
-      // Continue without file record - biomarkers can still be created
     }
   }
 
-  // Create biomarkers in database
-  const createdBiomarkers: {
-    id: string;
-    name: string;
-    value: number;
-    unit: string;
-    category: string;
-    isOutOfRange: boolean;
-  }[] = [];
-
-  for (const biomarker of ocrResult.biomarkers) {
-    // Encrypt the value
-    const valueEncrypted = encryptionService.encrypt(biomarker.value.toString(), userSalt);
-
-    // Encrypt notes if present
-    const notes = labName
-      ? `OCR extracted from: ${labName}`
-      : 'OCR extracted from uploaded document';
-    const notesEncrypted = encryptionService.encrypt(notes, userSalt);
-
-    // Check if out of range
-    const isOutOfRange =
-      biomarker.value < biomarker.normalRange.min ||
-      biomarker.value > biomarker.normalRange.max;
-
-    const created = await prisma.biomarker.create({
-      data: {
-        userId,
-        category: biomarker.category,
-        name: biomarker.name,
-        unit: biomarker.unit,
-        valueEncrypted,
-        notesEncrypted,
-        normalRangeMin: biomarker.normalRange.min,
-        normalRangeMax: biomarker.normalRange.max,
-        normalRangeSource: biomarker.normalRange.source || 'OCR Extraction',
-        measurementDate: reportDate,
-        isOutOfRange,
-        // Link to UserFile if created
-        userFileId: userFile?.id || null,
-      },
-    });
-
-    createdBiomarkers.push({
-      id: created.id,
-      name: biomarker.name,
-      value: biomarker.value,
-      unit: biomarker.unit,
-      category: biomarker.category,
-      isOutOfRange,
-    });
-  }
+  // Create biomarkers in database using shared helper
+  const createdBiomarkers = await createBiomarkersFromOCRResult(
+    prisma,
+    encryptionService,
+    userSalt,
+    {
+      userId,
+      biomarkers: ocrResult.biomarkers,
+      reportDate,
+      labName: labName || undefined,
+      notesPrefix: 'OCR extracted from',
+      normalRangeSource: 'OCR Extraction',
+      userFileId: userFile?.id,
+    }
+  );
 
   // Audit log: successful upload and extraction
   await auditService.logCreate(
