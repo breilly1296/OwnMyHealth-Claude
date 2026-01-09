@@ -18,7 +18,8 @@ export default defineConfig({
           // PDF processing - only loaded when uploading/viewing PDFs
           if (id.includes('node_modules/pdfjs-dist/') ||
               id.includes('node_modules/jspdf/') ||
-              id.includes('node_modules/pdf-lib/')) {
+              id.includes('node_modules/pdf-lib/') ||
+              id.includes('node_modules/html2canvas/')) {
             return 'pdf';
           }
 
@@ -28,8 +29,12 @@ export default defineConfig({
             return 'ocr';
           }
 
-          // Don't split React, recharts, or UI libs - they need to load together
-          // to avoid forwardRef and hook errors
+          // Charts - recharts and d3 dependencies (loaded when viewing trends/graphs)
+          if (id.includes('node_modules/recharts/') ||
+              id.includes('node_modules/d3-') ||
+              id.includes('node_modules/victory-vendor/')) {
+            return 'charts';
+          }
         },
       },
     },

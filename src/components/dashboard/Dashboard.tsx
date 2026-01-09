@@ -17,24 +17,36 @@
  * @module components/dashboard/Dashboard
  */
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { LineChart, Activity, Zap, Plus, AlertCircle, FileUp, Heart, Shield, Loader2, LogOut, User, ChevronDown, Settings, Menu, X } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
 import { useModals } from '../../hooks';
-// Biomarker components
-import { BiomarkerGraph, BiomarkerSummary, TrendModal, AddMeasurementModal, BiomarkerActionPlan, BiomarkerInsurancePanel } from '../biomarkers';
-// Insurance components
-import { InsuranceSBCUpload, InsurancePlanViewer, EnhancedInsuranceUpload, InsurancePlanCompare, InsuranceHub, InsuranceKnowledgeBase } from '../insurance';
-// Upload components
-import { PDFUploadModal, ClinicalFileUpload, LabUploadModal } from '../upload';
-// Files components
-import FilesPage from '../files/FilesPage';
-// Trends components
-import { TrendsPage, BiomarkerAIGuidance } from '../trends';
-// Settings components
-import { AccountSettingsPage } from '../settings';
-// Dashboard components
+
+// Static imports - lightweight, always needed
+import { BiomarkerSummary } from '../biomarkers';
 import { CollapsibleNavGroup } from './index';
+
+// Lazy-loaded modals (only loaded when opened)
+const TrendModal = lazy(() => import('../biomarkers/TrendModal'));
+const AddMeasurementModal = lazy(() => import('../biomarkers/AddMeasurementModal'));
+const BiomarkerInsurancePanel = lazy(() => import('../biomarkers/BiomarkerInsurancePanel'));
+const PDFUploadModal = lazy(() => import('../upload/PDFUploadModal'));
+const ClinicalFileUpload = lazy(() => import('../upload/ClinicalFileUpload'));
+const LabUploadModal = lazy(() => import('../upload/LabUploadModal'));
+const InsuranceSBCUpload = lazy(() => import('../insurance/InsuranceSBCUpload'));
+const InsurancePlanViewer = lazy(() => import('../insurance/InsurancePlanViewer'));
+const EnhancedInsuranceUpload = lazy(() => import('../insurance/EnhancedInsuranceUpload'));
+const InsurancePlanCompare = lazy(() => import('../insurance/InsurancePlanCompare'));
+
+// Lazy-loaded pages (only loaded when navigating to them)
+const BiomarkerGraph = lazy(() => import('../biomarkers/BiomarkerGraph'));
+const BiomarkerActionPlan = lazy(() => import('../biomarkers/BiomarkerActionPlan'));
+const InsuranceHub = lazy(() => import('../insurance/InsuranceHub'));
+const InsuranceKnowledgeBase = lazy(() => import('../insurance/InsuranceKnowledgeBase'));
+const FilesPage = lazy(() => import('../files/FilesPage'));
+const TrendsPage = lazy(() => import('../trends/TrendsPage'));
+const BiomarkerAIGuidance = lazy(() => import('../trends/BiomarkerAIGuidance'));
+const AccountSettingsPage = lazy(() => import('../settings/AccountSettingsPage'));
 // Data (for demo mode / fallback)
 import { initialBiomarkers, categories, navGroups } from '../../data/sampleData';
 // API services
@@ -44,6 +56,27 @@ import { dashboardLogger } from '../../utils/logger';
 
 // Demo mode flag - only enabled in development when explicitly set
 const DEMO_MODE = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === 'true';
+
+/** Loading fallback for lazy-loaded components */
+function LazyLoadSpinner() {
+  return (
+    <div className="flex items-center justify-center p-8">
+      <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+    </div>
+  );
+}
+
+/** Modal loading fallback - smaller spinner for modals */
+function ModalLoadSpinner() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-xl">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto" />
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 interface DashboardProps {
   user?: { id: string; email: string; role: string } | null;
@@ -534,33 +567,43 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   const renderInsuranceContent = () => {
     return (
-      <InsuranceHub
-        insurancePlans={insurancePlans}
-        onUploadSBC={() => modals.open('sbcUpload')}
-        onSmartUpload={() => modals.open('enhancedUpload')}
-        onViewPlanDetails={() => modals.open('insuranceViewer')}
-      />
+      <Suspense fallback={<LazyLoadSpinner />}>
+        <InsuranceHub
+          insurancePlans={insurancePlans}
+          onUploadSBC={() => modals.open('sbcUpload')}
+          onSmartUpload={() => modals.open('enhancedUpload')}
+          onViewPlanDetails={() => modals.open('insuranceViewer')}
+        />
+      </Suspense>
     );
   };
 
   const renderInsuranceGuideContent = () => {
     return (
-      <InsuranceHub
-        insurancePlans={insurancePlans}
-        onUploadSBC={() => modals.open('sbcUpload')}
-        onSmartUpload={() => modals.open('enhancedUpload')}
-        onViewPlanDetails={() => modals.open('insuranceViewer')}
-      />
+      <Suspense fallback={<LazyLoadSpinner />}>
+        <InsuranceHub
+          insurancePlans={insurancePlans}
+          onUploadSBC={() => modals.open('sbcUpload')}
+          onSmartUpload={() => modals.open('enhancedUpload')}
+          onViewPlanDetails={() => modals.open('insuranceViewer')}
+        />
+      </Suspense>
     );
   };
 
   const renderKnowledgeBaseContent = () => {
-    return <InsuranceKnowledgeBase plans={insurancePlans} />;
+    return (
+      <Suspense fallback={<LazyLoadSpinner />}>
+        <InsuranceKnowledgeBase plans={insurancePlans} />
+      </Suspense>
+    );
   };
 
   const renderFilesContent = () => {
     return (
-      <FilesPage onUploadClick={() => modals.open('labUpload')} />
+      <Suspense fallback={<LazyLoadSpinner />}>
+        <FilesPage onUploadClick={() => modals.open('labUpload')} />
+      </Suspense>
     );
   };
 
@@ -570,7 +613,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       case 'Dashboard':
         return renderDashboardContent();
       case 'Trends':
-        return <TrendsPage biomarkers={biomarkers} />;
+        return (
+          <Suspense fallback={<LazyLoadSpinner />}>
+            <TrendsPage biomarkers={biomarkers} />
+          </Suspense>
+        );
       case 'Insurance':
         return renderInsuranceContent();
       case 'Insurance Guide':
@@ -620,7 +667,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
         {selectedBiomarker && (
           <div className="mb-8">
-            <BiomarkerGraph biomarker={selectedBiomarker} />
+            <Suspense fallback={<LazyLoadSpinner />}>
+              <BiomarkerGraph biomarker={selectedBiomarker} />
+            </Suspense>
           </div>
         )}
 
@@ -685,8 +734,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
                       {isSelected && (
                         <div className="mt-4 pt-4 border-t border-red-100 dark:border-red-800">
-                          <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
-                          <BiomarkerActionPlan biomarker={biomarker} insurancePlans={insurancePlans} />
+                          <Suspense fallback={<LazyLoadSpinner />}>
+                            <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
+                            <BiomarkerActionPlan biomarker={biomarker} insurancePlans={insurancePlans} />
+                          </Suspense>
                         </div>
                       )}
                     </div>
@@ -739,7 +790,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
                       {isSelected && (
                         <div className="mt-4 pt-4 border-t border-wellness-100 dark:border-wellness-800">
-                          <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
+                          <Suspense fallback={<LazyLoadSpinner />}>
+                            <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
+                          </Suspense>
                         </div>
                       )}
                     </div>
@@ -774,7 +827,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   // Show Account Settings page if enabled
   if (showSettings) {
-    return <AccountSettingsPage onBack={() => setShowSettings(false)} />;
+    return (
+      <Suspense fallback={<LazyLoadSpinner />}>
+        <AccountSettingsPage onBack={() => setShowSettings(false)} />
+      </Suspense>
+    );
   }
 
   return (
@@ -960,74 +1017,92 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         </main>
       </div>
 
-      {/* Modals */}
-      <AddMeasurementModal
-        isOpen={modals.isOpen('addMeasurement')}
-        onClose={() => modals.close('addMeasurement')}
-        category={selectedCategory}
-        onAdd={handleAddMeasurement}
-      />
+      {/* Modals - Lazy loaded, only rendered when open */}
+      <Suspense fallback={<ModalLoadSpinner />}>
+        {modals.isOpen('addMeasurement') && (
+          <AddMeasurementModal
+            isOpen={true}
+            onClose={() => modals.close('addMeasurement')}
+            category={selectedCategory}
+            onAdd={handleAddMeasurement}
+          />
+        )}
 
-      <PDFUploadModal
-        isOpen={modals.isOpen('pdfUpload')}
-        onClose={() => modals.close('pdfUpload')}
-        onExtract={handlePDFExtract}
-      />
+        {modals.isOpen('pdfUpload') && (
+          <PDFUploadModal
+            isOpen={true}
+            onClose={() => modals.close('pdfUpload')}
+            onExtract={handlePDFExtract}
+          />
+        )}
 
-      <LabUploadModal
-        isOpen={modals.isOpen('labUpload')}
-        onClose={() => modals.close('labUpload')}
-        onSuccess={handleLabOCRSuccess}
-      />
+        {modals.isOpen('labUpload') && (
+          <LabUploadModal
+            isOpen={true}
+            onClose={() => modals.close('labUpload')}
+            onSuccess={handleLabOCRSuccess}
+          />
+        )}
 
-      <ClinicalFileUpload
-        isOpen={modals.isOpen('clinicalUpload')}
-        onClose={() => modals.close('clinicalUpload')}
-        onExtract={handleClinicalFileExtract}
-      />
+        {modals.isOpen('clinicalUpload') && (
+          <ClinicalFileUpload
+            isOpen={true}
+            onClose={() => modals.close('clinicalUpload')}
+            onExtract={handleClinicalFileExtract}
+          />
+        )}
 
-      <InsuranceSBCUpload
-        isOpen={modals.isOpen('sbcUpload')}
-        onClose={() => modals.close('sbcUpload')}
-        onPlanExtracted={handleInsurancePlanExtracted}
-      />
+        {modals.isOpen('sbcUpload') && (
+          <InsuranceSBCUpload
+            isOpen={true}
+            onClose={() => modals.close('sbcUpload')}
+            onPlanExtracted={handleInsurancePlanExtracted}
+          />
+        )}
 
-      <EnhancedInsuranceUpload
-        isOpen={modals.isOpen('enhancedUpload')}
-        onClose={() => modals.close('enhancedUpload')}
-        onPlanExtracted={handleInsurancePlanExtracted}
-      />
+        {modals.isOpen('enhancedUpload') && (
+          <EnhancedInsuranceUpload
+            isOpen={true}
+            onClose={() => modals.close('enhancedUpload')}
+            onPlanExtracted={handleInsurancePlanExtracted}
+          />
+        )}
 
-      <InsurancePlanViewer
-        plans={insurancePlans}
-        isOpen={modals.isOpen('insuranceViewer')}
-        onClose={() => modals.close('insuranceViewer')}
-      />
+        {modals.isOpen('insuranceViewer') && (
+          <InsurancePlanViewer
+            plans={insurancePlans}
+            isOpen={true}
+            onClose={() => modals.close('insuranceViewer')}
+          />
+        )}
 
-      <InsurancePlanCompare
-        plans={insurancePlans}
-        isOpen={modals.isOpen('knowledgeBase')}
-        onClose={() => modals.close('knowledgeBase')}
-      />
+        {modals.isOpen('knowledgeBase') && (
+          <InsurancePlanCompare
+            plans={insurancePlans}
+            isOpen={true}
+            onClose={() => modals.close('knowledgeBase')}
+          />
+        )}
 
-      {trendBiomarker && (
-        <TrendModal
-          isOpen={modals.isOpen('trend')}
-          onClose={() => {
-            modals.close('trend');
-            setTrendBiomarker(null);
-          }}
-          biomarker={trendBiomarker}
-        />
-      )}
+        {trendBiomarker && modals.isOpen('trend') && (
+          <TrendModal
+            isOpen={true}
+            onClose={() => {
+              modals.close('trend');
+              setTrendBiomarker(null);
+            }}
+            biomarker={trendBiomarker}
+          />
+        )}
 
-      {selectedBiomarkerForInsurance && (
-        <BiomarkerInsurancePanel
-          biomarker={selectedBiomarkerForInsurance}
-          insurancePlans={insurancePlans}
-          onClose={() => setSelectedBiomarkerForInsurance(null)}
-        />
-      )}
+        {selectedBiomarkerForInsurance && (
+          <BiomarkerInsurancePanel
+            biomarker={selectedBiomarkerForInsurance}
+            insurancePlans={insurancePlans}
+            onClose={() => setSelectedBiomarkerForInsurance(null)}
+          />
+        )}
+      </Suspense>
 
       {/* Error Toast Notification */}
       {showError && errorMessage && (
