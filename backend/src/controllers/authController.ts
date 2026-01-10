@@ -351,8 +351,13 @@ export async function refreshToken(
   setAccessTokenCookie(res, result.tokens.accessToken);
   setRefreshTokenCookie(res, result.tokens.refreshToken, result.isDemo);
 
-  const response: ApiResponse = {
+  // Return the access token in response body so frontend can store it
+  // for Authorization header (needed for API calls after page refresh)
+  const response: ApiResponse<{ token: string }> = {
     success: true,
+    data: {
+      token: result.tokens.accessToken,
+    },
   };
 
   res.json(response);
