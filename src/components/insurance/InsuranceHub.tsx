@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
 import AddInsurancePlanModal from './AddInsurancePlanModal';
+import InsurancePlanDetail from './InsurancePlanDetail';
 
 interface InsuranceHubProps {
   insurancePlans: InsurancePlan[];
@@ -74,12 +75,13 @@ export default function InsuranceHub({
   guide = defaultGuide,
   onUploadSBC: _onUploadSBC,
   onSmartUpload,
-  onViewPlanDetails,
+  onViewPlanDetails: _onViewPlanDetails,
   onRefresh,
 }: InsuranceHubProps) {
   const [activeTab, setActiveTab] = useState<TabType>('plans');
   const [expandedTerm, setExpandedTerm] = useState<string | null>(null);
   const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
 
   const handlePlanAdded = () => {
     setIsAddPlanModalOpen(false);
@@ -104,6 +106,16 @@ export default function InsuranceHub({
     { id: 'costs' as TabType, label: 'Cost Analysis', icon: CreditCard },
     { id: 'learn' as TabType, label: 'Learn & Save', icon: Lightbulb },
   ];
+
+  // If a plan is selected, show the detail view
+  if (selectedPlan) {
+    return (
+      <InsurancePlanDetail
+        plan={selectedPlan}
+        onBack={() => setSelectedPlan(null)}
+      />
+    );
+  }
 
   return (
     <div className="animate-fade-in max-w-6xl mx-auto">
@@ -216,7 +228,7 @@ export default function InsuranceHub({
                   <div
                     key={plan.id}
                     className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-6 hover:border-blue-200 dark:hover:border-blue-500 transition-all cursor-pointer group"
-                    onClick={onViewPlanDetails}
+                    onClick={() => setSelectedPlan(plan)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
@@ -245,14 +257,14 @@ export default function InsuranceHub({
                         <div className="flex justify-between items-center mb-1.5">
                           <p className="text-xs text-slate-400 dark:text-slate-500">Deductible</p>
                           <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                            {formatCurrency(plan.deductibleMetIndividual || 0)} / {formatCurrency(plan.costs.find(c => c.type === 'Deductible')?.amount || 0)}
+                            {formatCurrency(plan.deductibleMetIndividual || 0)} / {formatCurrency(plan.deductibleIndividual || 0)}
                           </p>
                         </div>
                         <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-blue-500 rounded-full transition-all"
                             style={{
-                              width: `${Math.min(100, ((plan.deductibleMetIndividual || 0) / (plan.costs.find(c => c.type === 'Deductible')?.amount || 1)) * 100)}%`
+                              width: `${Math.min(100, ((plan.deductibleMetIndividual || 0) / (plan.deductibleIndividual || 1)) * 100)}%`
                             }}
                           />
                         </div>
@@ -261,14 +273,14 @@ export default function InsuranceHub({
                         <div className="flex justify-between items-center mb-1.5">
                           <p className="text-xs text-slate-400 dark:text-slate-500">Out-of-Pocket</p>
                           <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                            {formatCurrency(plan.oopMetIndividual || 0)} / {formatCurrency(plan.costs.find(c => c.type === 'Out-of-Pocket Maximum')?.amount || 0)}
+                            {formatCurrency(plan.oopMetIndividual || 0)} / {formatCurrency(plan.oopMaxIndividual || 0)}
                           </p>
                         </div>
                         <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-emerald-500 rounded-full transition-all"
                             style={{
-                              width: `${Math.min(100, ((plan.oopMetIndividual || 0) / (plan.costs.find(c => c.type === 'Out-of-Pocket Maximum')?.amount || 1)) * 100)}%`
+                              width: `${Math.min(100, ((plan.oopMetIndividual || 0) / (plan.oopMaxIndividual || 1)) * 100)}%`
                             }}
                           />
                         </div>

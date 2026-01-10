@@ -20,6 +20,14 @@ import type { InsurancePlan as PrismaInsurancePlan, InsuranceBenefit as PrismaIn
 
 const RESOURCE_TYPE = 'InsurancePlan';
 
+// Service limit data structure for JSON arrays
+interface ServiceLimitData {
+  service: string;
+  limit: number;
+  limitType: 'visits' | 'days' | 'dollars' | 'lifetime';
+  period: 'per year' | 'per admission' | 'lifetime' | 'per occurrence';
+}
+
 // Response types with decrypted values
 interface InsurancePlanResponse {
   id: string;
@@ -33,21 +41,115 @@ interface InsurancePlanResponse {
   effectiveDate: string;
   terminationDate?: string;
   premium?: number;
-  deductible: number;
+  deductibleIndividual: number;
   deductibleFamily: number;
-  outOfPocketMax: number;
-  outOfPocketMaxFamily: number;
+  oopMaxIndividual: number;
+  oopMaxFamily: number;
   // Tracking fields (how much has been paid toward limits)
   deductibleMetIndividual?: number;
   deductibleMetFamily?: number;
   oopMetIndividual?: number;
   oopMetFamily?: number;
-  // Copay amounts
+  // Core copay amounts
   copayPrimaryCare?: number;
   copaySpecialist?: number;
   copayUrgentCare?: number;
   copayEmergency?: number;
+  copayTelehealth?: number;
+  copayLabWork?: number;
+  copayXray?: number;
+  copayAdvancedImaging?: number;
   coinsuranceRate?: number;
+
+  // Inpatient coverage
+  inpatientHospitalCopay?: number;
+  inpatientHospitalCoinsurance?: number;
+  inpatientMentalHealthCopay?: number;
+  inpatientMentalCoinsurance?: number;
+  maternityCopay?: number;
+  maternityCoinsurance?: number;
+  skilledNursingCopay?: number;
+  skilledNursingCoinsurance?: number;
+  skilledNursingDaysLimit?: number;
+
+  // Outpatient coverage
+  outpatientSurgeryCopay?: number;
+  outpatientSurgeryCoinsurance?: number;
+  outpatientMentalHealthCopay?: number;
+  outpatientMentalCoinsurance?: number;
+
+  // Therapy/Rehab coverage
+  physicalTherapyCopay?: number;
+  physicalTherapyVisitsLimit?: number;
+  occupationalTherapyCopay?: number;
+  occupationalTherapyVisitsLimit?: number;
+  speechTherapyCopay?: number;
+  speechTherapyVisitsLimit?: number;
+  chiropracticCopay?: number;
+  chiropracticVisitsLimit?: number;
+  acupunctureCopay?: number;
+  acupunctureVisitsLimit?: number;
+  cardiacRehabCopay?: number;
+  cardiacRehabVisitsLimit?: number;
+  pulmonaryRehabCopay?: number;
+  pulmonaryRehabVisitsLimit?: number;
+
+  // Prescription (Rx) benefits
+  rxTier1Copay?: number;
+  rxTier2Copay?: number;
+  rxTier3Copay?: number;
+  rxTier4Copay?: number;
+  rxRetailDaysSupply?: number;
+  rxMailOrderDaysSupply?: number;
+  rxDeductibleIndividual?: number;
+  rxDeductibleFamily?: number;
+  rxOopMaxIndividual?: number;
+  rxOopMaxFamily?: number;
+
+  // Emergency/Ambulance coverage
+  ambulanceGroundCopay?: number;
+  ambulanceGroundCoinsurance?: number;
+  ambulanceAirCopay?: number;
+  ambulanceAirCoinsurance?: number;
+
+  // Vision coverage
+  visionExamCopay?: number;
+  visionExamFrequency?: string;
+  visionLensesAllowance?: number;
+  visionFramesAllowance?: number;
+  visionContactsAllowance?: number;
+
+  // Dental coverage
+  dentalPreventiveCoinsurance?: number;
+  dentalBasicCoinsurance?: number;
+  dentalMajorCoinsurance?: number;
+  dentalAnnualMax?: number;
+  dentalDeductible?: number;
+  dentalOrthodontiaCoinsurance?: number;
+  dentalOrthodontiaLifetimeMax?: number;
+
+  // DME coverage
+  dmeCopay?: number;
+  dmeCoinsurance?: number;
+
+  // Home Health coverage
+  homeHealthVisitCopay?: number;
+  homeHealthVisitCoinsurance?: number;
+  homeHealthVisitLimit?: number;
+
+  // Hospice coverage
+  hospiceInpatientCopay?: number;
+  hospiceInpatientCoinsurance?: number;
+  hospiceRespiteCopay?: number;
+  hospiceRespiteCoinsurance?: number;
+  hospiceRespiteDayLimit?: number;
+
+  // JSON list fields (parsed from strings)
+  preventiveServicesList?: string[];
+  exclusionsList?: string[];
+  priorAuthRequirements?: string[];
+  servicesWithLimits?: ServiceLimitData[];
+
   // Source tracking
   extractedFromSbc: boolean;
   sbcExtractionConfidence?: number;
@@ -76,6 +178,19 @@ interface InsuranceBenefitResponse {
   };
   limitations?: string;
   preAuthRequired: boolean;
+}
+
+/**
+ * Safely parses a JSON string field into an array, returning undefined on failure
+ */
+function parseJsonArray<T>(jsonStr: string | null | undefined): T[] | undefined {
+  if (!jsonStr) return undefined;
+  try {
+    const parsed = JSON.parse(jsonStr);
+    return Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -130,21 +245,117 @@ function toResponse(
       ? plan.terminationDate.toISOString().split('T')[0]
       : undefined,
     premium: plan.premiumMonthly ? toNumber(plan.premiumMonthly) : undefined,
-    deductible: toNumber(plan.deductibleIndividual),
+    deductibleIndividual: toNumber(plan.deductibleIndividual),
     deductibleFamily: toNumber(plan.deductibleFamily),
-    outOfPocketMax: toNumber(plan.oopMaxIndividual),
-    outOfPocketMaxFamily: toNumber(plan.oopMaxFamily),
+    oopMaxIndividual: toNumber(plan.oopMaxIndividual),
+    oopMaxFamily: toNumber(plan.oopMaxFamily),
+
     // Tracking fields
     deductibleMetIndividual: plan.deductibleMetIndividual ? toNumber(plan.deductibleMetIndividual) : undefined,
     deductibleMetFamily: plan.deductibleMetFamily ? toNumber(plan.deductibleMetFamily) : undefined,
     oopMetIndividual: plan.oopMetIndividual ? toNumber(plan.oopMetIndividual) : undefined,
     oopMetFamily: plan.oopMetFamily ? toNumber(plan.oopMetFamily) : undefined,
-    // Copay amounts
+
+    // Core copay amounts
     copayPrimaryCare: plan.copayPrimaryCare ? toNumber(plan.copayPrimaryCare) : undefined,
     copaySpecialist: plan.copaySpecialist ? toNumber(plan.copaySpecialist) : undefined,
     copayUrgentCare: plan.copayUrgentCare ? toNumber(plan.copayUrgentCare) : undefined,
     copayEmergency: plan.copayEmergency ? toNumber(plan.copayEmergency) : undefined,
+    copayTelehealth: plan.copayTelehealth ? toNumber(plan.copayTelehealth) : undefined,
+    copayLabWork: plan.copayLabWork ? toNumber(plan.copayLabWork) : undefined,
+    copayXray: plan.copayXray ? toNumber(plan.copayXray) : undefined,
+    copayAdvancedImaging: plan.copayAdvancedImaging ? toNumber(plan.copayAdvancedImaging) : undefined,
     coinsuranceRate: plan.coinsuranceRate ? toNumber(plan.coinsuranceRate) : undefined,
+
+    // Inpatient coverage
+    inpatientHospitalCopay: plan.inpatientHospitalCopay ? toNumber(plan.inpatientHospitalCopay) : undefined,
+    inpatientHospitalCoinsurance: plan.inpatientHospitalCoinsurance ? toNumber(plan.inpatientHospitalCoinsurance) : undefined,
+    inpatientMentalHealthCopay: plan.inpatientMentalHealthCopay ? toNumber(plan.inpatientMentalHealthCopay) : undefined,
+    inpatientMentalCoinsurance: plan.inpatientMentalCoinsurance ? toNumber(plan.inpatientMentalCoinsurance) : undefined,
+    maternityCopay: plan.maternityCopay ? toNumber(plan.maternityCopay) : undefined,
+    maternityCoinsurance: plan.maternityCoinsurance ? toNumber(plan.maternityCoinsurance) : undefined,
+    skilledNursingCopay: plan.skilledNursingCopay ? toNumber(plan.skilledNursingCopay) : undefined,
+    skilledNursingCoinsurance: plan.skilledNursingCoinsurance ? toNumber(plan.skilledNursingCoinsurance) : undefined,
+    skilledNursingDaysLimit: plan.skilledNursingDaysLimit ?? undefined,
+
+    // Outpatient coverage
+    outpatientSurgeryCopay: plan.outpatientSurgeryCopay ? toNumber(plan.outpatientSurgeryCopay) : undefined,
+    outpatientSurgeryCoinsurance: plan.outpatientSurgeryCoinsurance ? toNumber(plan.outpatientSurgeryCoinsurance) : undefined,
+    outpatientMentalHealthCopay: plan.outpatientMentalHealthCopay ? toNumber(plan.outpatientMentalHealthCopay) : undefined,
+    outpatientMentalCoinsurance: plan.outpatientMentalCoinsurance ? toNumber(plan.outpatientMentalCoinsurance) : undefined,
+
+    // Therapy/Rehab coverage
+    physicalTherapyCopay: plan.physicalTherapyCopay ? toNumber(plan.physicalTherapyCopay) : undefined,
+    physicalTherapyVisitsLimit: plan.physicalTherapyVisitsLimit ?? undefined,
+    occupationalTherapyCopay: plan.occupationalTherapyCopay ? toNumber(plan.occupationalTherapyCopay) : undefined,
+    occupationalTherapyVisitsLimit: plan.occupationalTherapyVisitsLimit ?? undefined,
+    speechTherapyCopay: plan.speechTherapyCopay ? toNumber(plan.speechTherapyCopay) : undefined,
+    speechTherapyVisitsLimit: plan.speechTherapyVisitsLimit ?? undefined,
+    chiropracticCopay: plan.chiropracticCopay ? toNumber(plan.chiropracticCopay) : undefined,
+    chiropracticVisitsLimit: plan.chiropracticVisitsLimit ?? undefined,
+    acupunctureCopay: plan.acupunctureCopay ? toNumber(plan.acupunctureCopay) : undefined,
+    acupunctureVisitsLimit: plan.acupunctureVisitsLimit ?? undefined,
+    cardiacRehabCopay: plan.cardiacRehabCopay ? toNumber(plan.cardiacRehabCopay) : undefined,
+    cardiacRehabVisitsLimit: plan.cardiacRehabVisitsLimit ?? undefined,
+    pulmonaryRehabCopay: plan.pulmonaryRehabCopay ? toNumber(plan.pulmonaryRehabCopay) : undefined,
+    pulmonaryRehabVisitsLimit: plan.pulmonaryRehabVisitsLimit ?? undefined,
+
+    // Prescription (Rx) benefits
+    rxTier1Copay: plan.rxTier1Copay ? toNumber(plan.rxTier1Copay) : undefined,
+    rxTier2Copay: plan.rxTier2Copay ? toNumber(plan.rxTier2Copay) : undefined,
+    rxTier3Copay: plan.rxTier3Copay ? toNumber(plan.rxTier3Copay) : undefined,
+    rxTier4Copay: plan.rxTier4Copay ? toNumber(plan.rxTier4Copay) : undefined,
+    rxRetailDaysSupply: plan.rxRetailDaysSupply ?? undefined,
+    rxMailOrderDaysSupply: plan.rxMailOrderDaysSupply ?? undefined,
+    rxDeductibleIndividual: plan.rxDeductibleIndividual ? toNumber(plan.rxDeductibleIndividual) : undefined,
+    rxDeductibleFamily: plan.rxDeductibleFamily ? toNumber(plan.rxDeductibleFamily) : undefined,
+    rxOopMaxIndividual: plan.rxOopMaxIndividual ? toNumber(plan.rxOopMaxIndividual) : undefined,
+    rxOopMaxFamily: plan.rxOopMaxFamily ? toNumber(plan.rxOopMaxFamily) : undefined,
+
+    // Emergency/Ambulance coverage
+    ambulanceGroundCopay: plan.ambulanceGroundCopay ? toNumber(plan.ambulanceGroundCopay) : undefined,
+    ambulanceGroundCoinsurance: plan.ambulanceGroundCoinsurance ? toNumber(plan.ambulanceGroundCoinsurance) : undefined,
+    ambulanceAirCopay: plan.ambulanceAirCopay ? toNumber(plan.ambulanceAirCopay) : undefined,
+    ambulanceAirCoinsurance: plan.ambulanceAirCoinsurance ? toNumber(plan.ambulanceAirCoinsurance) : undefined,
+
+    // Vision coverage
+    visionExamCopay: plan.visionExamCopay ? toNumber(plan.visionExamCopay) : undefined,
+    visionExamFrequency: plan.visionExamFrequency ?? undefined,
+    visionLensesAllowance: plan.visionLensesAllowance ? toNumber(plan.visionLensesAllowance) : undefined,
+    visionFramesAllowance: plan.visionFramesAllowance ? toNumber(plan.visionFramesAllowance) : undefined,
+    visionContactsAllowance: plan.visionContactsAllowance ? toNumber(plan.visionContactsAllowance) : undefined,
+
+    // Dental coverage
+    dentalPreventiveCoinsurance: plan.dentalPreventiveCoinsurance ? toNumber(plan.dentalPreventiveCoinsurance) : undefined,
+    dentalBasicCoinsurance: plan.dentalBasicCoinsurance ? toNumber(plan.dentalBasicCoinsurance) : undefined,
+    dentalMajorCoinsurance: plan.dentalMajorCoinsurance ? toNumber(plan.dentalMajorCoinsurance) : undefined,
+    dentalAnnualMax: plan.dentalAnnualMax ? toNumber(plan.dentalAnnualMax) : undefined,
+    dentalDeductible: plan.dentalDeductible ? toNumber(plan.dentalDeductible) : undefined,
+    dentalOrthodontiaCoinsurance: plan.dentalOrthodontiaCoinsurance ? toNumber(plan.dentalOrthodontiaCoinsurance) : undefined,
+    dentalOrthodontiaLifetimeMax: plan.dentalOrthodontiaLifetimeMax ? toNumber(plan.dentalOrthodontiaLifetimeMax) : undefined,
+
+    // DME coverage
+    dmeCopay: plan.dmeCopay ? toNumber(plan.dmeCopay) : undefined,
+    dmeCoinsurance: plan.dmeCoinsurance ? toNumber(plan.dmeCoinsurance) : undefined,
+
+    // Home Health coverage
+    homeHealthVisitCopay: plan.homeHealthVisitCopay ? toNumber(plan.homeHealthVisitCopay) : undefined,
+    homeHealthVisitCoinsurance: plan.homeHealthVisitCoinsurance ? toNumber(plan.homeHealthVisitCoinsurance) : undefined,
+    homeHealthVisitLimit: plan.homeHealthVisitLimit ?? undefined,
+
+    // Hospice coverage
+    hospiceInpatientCopay: plan.hospiceInpatientCopay ? toNumber(plan.hospiceInpatientCopay) : undefined,
+    hospiceInpatientCoinsurance: plan.hospiceInpatientCoinsurance ? toNumber(plan.hospiceInpatientCoinsurance) : undefined,
+    hospiceRespiteCopay: plan.hospiceRespiteCopay ? toNumber(plan.hospiceRespiteCopay) : undefined,
+    hospiceRespiteCoinsurance: plan.hospiceRespiteCoinsurance ? toNumber(plan.hospiceRespiteCoinsurance) : undefined,
+    hospiceRespiteDayLimit: plan.hospiceRespiteDayLimit ?? undefined,
+
+    // JSON list fields (parsed from strings)
+    preventiveServicesList: parseJsonArray<string>(plan.preventiveServicesList),
+    exclusionsList: parseJsonArray<string>(plan.exclusionsList),
+    priorAuthRequirements: parseJsonArray<string>(plan.priorAuthRequirements),
+    servicesWithLimits: parseJsonArray<ServiceLimitData>(plan.servicesWithLimits),
+
     // Source tracking
     extractedFromSbc: plan.extractedFromSbc,
     sbcExtractionConfidence: plan.sbcExtractionConfidence ? toNumber(plan.sbcExtractionConfidence) : undefined,
@@ -508,8 +719,8 @@ export async function comparePlans(
       name: p.planName,
       type: p.planType,
       premium: p.premium,
-      deductible: p.deductible,
-      outOfPocketMax: p.outOfPocketMax,
+      deductibleIndividual: p.deductibleIndividual,
+      oopMaxIndividual: p.oopMaxIndividual,
     })),
     benefitComparison: compareBenefits(decryptedPlans),
   };

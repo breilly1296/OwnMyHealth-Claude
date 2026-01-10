@@ -4,6 +4,13 @@
 
 import { apiFetch } from './client';
 
+export interface ServiceLimitData {
+  service: string;
+  limit: number;
+  limitType: 'visits' | 'days' | 'dollars' | 'lifetime';
+  period: 'per year' | 'per admission' | 'lifetime' | 'per occurrence';
+}
+
 export interface InsurancePlanData {
   id: string;
   planName: string;
@@ -61,6 +68,14 @@ export interface InsurancePlanData {
   occupationalTherapyVisitsLimit?: number;
   speechTherapyCopay?: number;
   speechTherapyVisitsLimit?: number;
+  chiropracticCopay?: number;
+  chiropracticVisitsLimit?: number;
+  acupunctureCopay?: number;
+  acupunctureVisitsLimit?: number;
+  cardiacRehabCopay?: number;
+  cardiacRehabVisitsLimit?: number;
+  pulmonaryRehabCopay?: number;
+  pulmonaryRehabVisitsLimit?: number;
 
   // Prescription (Rx) benefits
   rxTier1Copay?: number;
@@ -74,10 +89,49 @@ export interface InsurancePlanData {
   rxOopMaxIndividual?: number;
   rxOopMaxFamily?: number;
 
-  // JSON lists (parsed from string)
+  // Emergency/Ambulance coverage
+  ambulanceGroundCopay?: number;
+  ambulanceGroundCoinsurance?: number;
+  ambulanceAirCopay?: number;
+  ambulanceAirCoinsurance?: number;
+
+  // Vision coverage
+  visionExamCopay?: number;
+  visionExamFrequency?: string;
+  visionLensesAllowance?: number;
+  visionFramesAllowance?: number;
+  visionContactsAllowance?: number;
+
+  // Dental coverage
+  dentalPreventiveCoinsurance?: number;
+  dentalBasicCoinsurance?: number;
+  dentalMajorCoinsurance?: number;
+  dentalAnnualMax?: number;
+  dentalDeductible?: number;
+  dentalOrthodontiaCoinsurance?: number;
+  dentalOrthodontiaLifetimeMax?: number;
+
+  // DME coverage
+  dmeCopay?: number;
+  dmeCoinsurance?: number;
+
+  // Home Health coverage
+  homeHealthVisitCopay?: number;
+  homeHealthVisitCoinsurance?: number;
+  homeHealthVisitLimit?: number;
+
+  // Hospice coverage
+  hospiceInpatientCopay?: number;
+  hospiceInpatientCoinsurance?: number;
+  hospiceRespiteCopay?: number;
+  hospiceRespiteCoinsurance?: number;
+  hospiceRespiteDayLimit?: number;
+
+  // JSON lists (parsed from string by backend controller)
   preventiveServicesList?: string[];
   exclusionsList?: string[];
   priorAuthRequirements?: string[];
+  servicesWithLimits?: ServiceLimitData[];
 
   // Source tracking
   extractedFromSbc?: boolean;

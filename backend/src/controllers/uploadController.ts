@@ -12,7 +12,20 @@ import { ValidationError } from '../middleware/errorHandler.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseSBC } from '../services/pdfParser.js';
-import { extractInsuranceFromSBC, isSBCExtractionConfigured } from '../services/sbcExtraction.js';
+import {
+  extractInsuranceFromSBC,
+  isSBCExtractionConfigured,
+  type ExtractedInpatientCoverage,
+  type ExtractedOutpatientCoverage,
+  type ExtractedTherapyCoverage,
+  type ExtractedRxBenefits,
+  type ExtractedEmergencyCoverage,
+  type ExtractedVisionCoverage,
+  type ExtractedDentalCoverage,
+  type ExtractedDMECoverage,
+  type ExtractedHomeHealthCoverage,
+  type ExtractedHospiceCoverage,
+} from '../services/sbcExtraction.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { processDocument, extractDateFromText, extractLabNameFromText } from '../services/ocrService.js';
@@ -303,6 +316,7 @@ export async function uploadSBC(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
+  // Type for extracted data - combines Claude extraction with legacy regex parser format
   let extractedData: {
     planName?: string;
     insurerName?: string;
@@ -316,6 +330,7 @@ export async function uploadSBC(
     // Core copays
     copayPrimaryCare?: number;
     copaySpecialist?: number;
+    copayPreventive?: number;
     copayUrgentCare?: number;
     copayEmergency?: number;
     copayTelehealth?: number;
@@ -323,55 +338,30 @@ export async function uploadSBC(
     copayXray?: number;
     copayAdvancedImaging?: number;
     coinsuranceRate?: number;
-    // Inpatient coverage
-    inpatientCoverage?: {
-      hospitalCopay?: number;
-      hospitalCoinsurance?: number;
-      mentalHealthCopay?: number;
-      mentalHealthCoinsurance?: number;
-      maternityCopay?: number;
-      maternityCoinsurance?: number;
-      skilledNursingCopay?: number;
-      skilledNursingCoinsurance?: number;
-      skilledNursingDaysLimit?: number;
-    };
-    // Outpatient coverage
-    outpatientCoverage?: {
-      surgeryCopay?: number;
-      surgeryCoinsurance?: number;
-      mentalHealthCopay?: number;
-      mentalHealthCoinsurance?: number;
-      labWorkCopay?: number;
-      xrayCopay?: number;
-      advancedImagingCopay?: number;
-    };
-    // Therapy coverage
-    therapyCoverage?: {
-      physicalTherapyCopay?: number;
-      physicalTherapyVisitsLimit?: number;
-      occupationalTherapyCopay?: number;
-      occupationalTherapyVisitsLimit?: number;
-      speechTherapyCopay?: number;
-      speechTherapyVisitsLimit?: number;
-    };
-    // Rx benefits
-    rxBenefits?: {
-      tier1Copay?: number;
-      tier2Copay?: number;
-      tier3Copay?: number;
-      tier4Copay?: number;
-      retailDaysSupply?: number;
-      mailOrderDaysSupply?: number;
-      deductibleIndividual?: number;
-      deductibleFamily?: number;
-      oopMaxIndividual?: number;
-      oopMaxFamily?: number;
-    };
+    // Detailed coverage objects from Claude extraction
+    inpatientCoverage?: ExtractedInpatientCoverage;
+    outpatientCoverage?: ExtractedOutpatientCoverage;
+    therapyCoverage?: ExtractedTherapyCoverage;
+    emergencyCoverage?: ExtractedEmergencyCoverage;
+    rxBenefits?: ExtractedRxBenefits;
+    visionCoverage?: ExtractedVisionCoverage;
+    dentalCoverage?: ExtractedDentalCoverage;
+    dmeCoverage?: ExtractedDMECoverage;
+    homeHealthCoverage?: ExtractedHomeHealthCoverage;
+    hospiceCoverage?: ExtractedHospiceCoverage;
     // Lists
     preventiveServices?: string[];
     exclusions?: string[];
     priorAuthRequirements?: string[];
+    // Services with limits
+    servicesWithLimits?: Array<{
+      service: string;
+      limit: number;
+      limitType: 'visits' | 'days' | 'dollars' | 'lifetime';
+      period: 'per year' | 'per admission' | 'lifetime' | 'per occurrence';
+    }>;
     effectiveDate?: string;
+    pagesProcessed?: number;
     benefits: Array<{
       serviceName: string;
       serviceCategory: string;
@@ -384,6 +374,8 @@ export async function uploadSBC(
       outNetworkCoinsurance?: number;
       outNetworkDeductibleApplies: boolean;
       preAuthRequired: boolean;
+      visitLimit?: number;
+      dayLimit?: number;
       limitations?: string;
     }>;
     extractionConfidence: number;
@@ -396,8 +388,52 @@ export async function uploadSBC(
       logger.info('Attempting Claude Sonnet SBC extraction');
       const claudeResult = await extractInsuranceFromSBC(file.buffer);
 
+      // Map all Claude extraction fields including the new comprehensive coverage
       extractedData = {
-        ...claudeResult,
+        // Plan identification
+        planName: claudeResult.planName,
+        insurerName: claudeResult.insurerName,
+        planType: claudeResult.planType,
+        planIdNumber: claudeResult.planIdNumber,
+        // Core financial
+        deductibleIndividual: claudeResult.deductibleIndividual,
+        deductibleFamily: claudeResult.deductibleFamily,
+        oopMaxIndividual: claudeResult.oopMaxIndividual,
+        oopMaxFamily: claudeResult.oopMaxFamily,
+        premiumMonthly: claudeResult.premiumMonthly,
+        coinsuranceRate: claudeResult.coinsuranceRate,
+        // Copays
+        copayPrimaryCare: claudeResult.copayPrimaryCare,
+        copaySpecialist: claudeResult.copaySpecialist,
+        copayPreventive: claudeResult.copayPreventive,
+        copayUrgentCare: claudeResult.copayUrgentCare,
+        copayEmergency: claudeResult.copayEmergency,
+        copayTelehealth: claudeResult.copayTelehealth,
+        copayLabWork: claudeResult.copayLabWork,
+        copayXray: claudeResult.copayXray,
+        copayAdvancedImaging: claudeResult.copayAdvancedImaging,
+        // Detailed coverage objects
+        inpatientCoverage: claudeResult.inpatientCoverage,
+        outpatientCoverage: claudeResult.outpatientCoverage,
+        therapyCoverage: claudeResult.therapyCoverage,
+        emergencyCoverage: claudeResult.emergencyCoverage,
+        rxBenefits: claudeResult.rxBenefits,
+        visionCoverage: claudeResult.visionCoverage,
+        dentalCoverage: claudeResult.dentalCoverage,
+        dmeCoverage: claudeResult.dmeCoverage,
+        homeHealthCoverage: claudeResult.homeHealthCoverage,
+        hospiceCoverage: claudeResult.hospiceCoverage,
+        // Lists
+        preventiveServices: claudeResult.preventiveServices,
+        exclusions: claudeResult.exclusions,
+        priorAuthRequirements: claudeResult.priorAuthRequirements,
+        servicesWithLimits: claudeResult.servicesWithLimits,
+        // Dates
+        effectiveDate: claudeResult.effectiveDate,
+        // Metadata
+        pagesProcessed: claudeResult.pagesProcessed,
+        extractionConfidence: claudeResult.extractionConfidence,
+        // Benefits array
         benefits: claudeResult.benefits.map((b) => ({
           serviceName: b.serviceName,
           serviceCategory: b.serviceCategory,
@@ -410,6 +446,8 @@ export async function uploadSBC(
           outNetworkCoinsurance: b.outNetworkCoinsurance,
           outNetworkDeductibleApplies: b.outNetworkDeductibleApplies,
           preAuthRequired: b.preAuthRequired,
+          visitLimit: b.visitLimit,
+          dayLimit: b.dayLimit,
           limitations: b.limitations,
         })),
         usedClaudeExtraction: true,
@@ -512,6 +550,7 @@ export async function uploadSBC(
   const outpatient = extractedData.outpatientCoverage || {};
   const therapy = extractedData.therapyCoverage || {};
   const rx = extractedData.rxBenefits || {};
+  const emergency = extractedData.emergencyCoverage || {};
 
   const createdPlan = await prisma.insurancePlan.create({
     data: {
@@ -539,11 +578,11 @@ export async function uploadSBC(
       oopMetIndividual: 0,
       oopMetFamily: 0,
 
-      // Core copay fields
+      // Core copay fields - use top-level values, fall back to nested coverage objects
       copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
       copaySpecialist: extractedData.copaySpecialist ?? null,
-      copayUrgentCare: extractedData.copayUrgentCare ?? null,
-      copayEmergency: extractedData.copayEmergency ?? null,
+      copayUrgentCare: extractedData.copayUrgentCare ?? emergency.urgentCareCopay ?? null,
+      copayEmergency: extractedData.copayEmergency ?? emergency.emergencyRoomCopay ?? null,
       copayTelehealth: extractedData.copayTelehealth ?? null,
       copayLabWork: extractedData.copayLabWork ?? outpatient.labWorkCopay ?? null,
       copayXray: extractedData.copayXray ?? outpatient.xrayCopay ?? null,
@@ -551,7 +590,8 @@ export async function uploadSBC(
       coinsuranceRate: extractedData.coinsuranceRate ?? null,
 
       // Inpatient coverage
-      inpatientHospitalCopay: inpatient.hospitalCopay ?? null,
+      // Prefer per-day copay, fall back to per-admission
+      inpatientHospitalCopay: inpatient.hospitalCopayPerDay ?? inpatient.hospitalCopayPerAdmission ?? null,
       inpatientHospitalCoinsurance: inpatient.hospitalCoinsurance ?? null,
       inpatientMentalHealthCopay: inpatient.mentalHealthCopay ?? null,
       inpatientMentalCoinsurance: inpatient.mentalHealthCoinsurance ?? null,
@@ -564,7 +604,8 @@ export async function uploadSBC(
       // Outpatient coverage
       outpatientSurgeryCopay: outpatient.surgeryCopay ?? null,
       outpatientSurgeryCoinsurance: outpatient.surgeryCoinsurance ?? null,
-      outpatientMentalHealthCopay: outpatient.mentalHealthCopay ?? null,
+      // Prefer individual therapy copay, fall back to group
+      outpatientMentalHealthCopay: outpatient.mentalHealthIndividualCopay ?? outpatient.mentalHealthGroupCopay ?? null,
       outpatientMentalCoinsurance: outpatient.mentalHealthCoinsurance ?? null,
 
       // Therapy/Rehab coverage
@@ -587,6 +628,54 @@ export async function uploadSBC(
       rxOopMaxIndividual: rx.oopMaxIndividual ?? null,
       rxOopMaxFamily: rx.oopMaxFamily ?? null,
 
+      // Emergency/Ambulance coverage
+      ambulanceGroundCopay: emergency.ambulanceGroundCopay ?? null,
+      ambulanceGroundCoinsurance: emergency.ambulanceGroundCoinsurance ?? null,
+      ambulanceAirCopay: emergency.ambulanceAirCopay ?? null,
+      ambulanceAirCoinsurance: emergency.ambulanceAirCoinsurance ?? null,
+
+      // Vision coverage
+      visionExamCopay: extractedData.visionCoverage?.examCopay ?? null,
+      visionExamFrequency: extractedData.visionCoverage?.examFrequency ?? null,
+      visionLensesAllowance: extractedData.visionCoverage?.lensesAllowance ?? null,
+      visionFramesAllowance: extractedData.visionCoverage?.framesAllowance ?? null,
+      visionContactsAllowance: extractedData.visionCoverage?.contactsAllowance ?? null,
+
+      // Dental coverage
+      dentalPreventiveCoinsurance: extractedData.dentalCoverage?.preventiveCoinsurance ?? null,
+      dentalBasicCoinsurance: extractedData.dentalCoverage?.basicCoinsurance ?? null,
+      dentalMajorCoinsurance: extractedData.dentalCoverage?.majorCoinsurance ?? null,
+      dentalAnnualMax: extractedData.dentalCoverage?.annualMaximum ?? null,
+      dentalDeductible: extractedData.dentalCoverage?.deductible ?? null,
+      dentalOrthodontiaCoinsurance: extractedData.dentalCoverage?.orthodontiaCoinsurance ?? null,
+      dentalOrthodontiaLifetimeMax: extractedData.dentalCoverage?.orthodontiaLifetimeMax ?? null,
+
+      // DME coverage
+      dmeCopay: extractedData.dmeCoverage?.copay ?? null,
+      dmeCoinsurance: extractedData.dmeCoverage?.coinsurance ?? null,
+
+      // Home Health coverage
+      homeHealthVisitCopay: extractedData.homeHealthCoverage?.visitCopay ?? null,
+      homeHealthVisitCoinsurance: extractedData.homeHealthCoverage?.visitCoinsurance ?? null,
+      homeHealthVisitLimit: extractedData.homeHealthCoverage?.visitLimit ?? null,
+
+      // Hospice coverage
+      hospiceInpatientCopay: extractedData.hospiceCoverage?.inpatientCopay ?? null,
+      hospiceInpatientCoinsurance: extractedData.hospiceCoverage?.inpatientCoinsurance ?? null,
+      hospiceRespiteCopay: extractedData.hospiceCoverage?.respiteCopay ?? null,
+      hospiceRespiteCoinsurance: extractedData.hospiceCoverage?.respiteCoinsurance ?? null,
+      hospiceRespiteDayLimit: extractedData.hospiceCoverage?.respiteDayLimit ?? null,
+
+      // Additional therapy types
+      chiropracticCopay: therapy.chiropracticCopay ?? null,
+      chiropracticVisitsLimit: therapy.chiropracticVisitsLimit ?? null,
+      acupunctureCopay: therapy.acupunctureCopay ?? null,
+      acupunctureVisitsLimit: therapy.acupunctureVisitsLimit ?? null,
+      cardiacRehabCopay: therapy.cardiacRehabCopay ?? null,
+      cardiacRehabVisitsLimit: therapy.cardiacRehabVisitsLimit ?? null,
+      pulmonaryRehabCopay: therapy.pulmonaryRehabCopay ?? null,
+      pulmonaryRehabVisitsLimit: therapy.pulmonaryRehabVisitsLimit ?? null,
+
       // JSON lists (stored as stringified JSON)
       preventiveServicesList: extractedData.preventiveServices?.length
         ? JSON.stringify(extractedData.preventiveServices)
@@ -596,6 +685,9 @@ export async function uploadSBC(
         : null,
       priorAuthRequirements: extractedData.priorAuthRequirements?.length
         ? JSON.stringify(extractedData.priorAuthRequirements)
+        : null,
+      servicesWithLimits: extractedData.servicesWithLimits?.length
+        ? JSON.stringify(extractedData.servicesWithLimits)
         : null,
 
       // Source tracking

@@ -11556,6 +11556,39 @@ export namespace Prisma {
     rxDeductibleFamily: Decimal | null
     rxOopMaxIndividual: Decimal | null
     rxOopMaxFamily: Decimal | null
+    ambulanceGroundCopay: Decimal | null
+    ambulanceGroundCoinsurance: Decimal | null
+    ambulanceAirCopay: Decimal | null
+    ambulanceAirCoinsurance: Decimal | null
+    visionExamCopay: Decimal | null
+    visionLensesAllowance: Decimal | null
+    visionFramesAllowance: Decimal | null
+    visionContactsAllowance: Decimal | null
+    dentalPreventiveCoinsurance: Decimal | null
+    dentalBasicCoinsurance: Decimal | null
+    dentalMajorCoinsurance: Decimal | null
+    dentalAnnualMax: Decimal | null
+    dentalDeductible: Decimal | null
+    dentalOrthodontiaCoinsurance: Decimal | null
+    dentalOrthodontiaLifetimeMax: Decimal | null
+    dmeCopay: Decimal | null
+    dmeCoinsurance: Decimal | null
+    homeHealthVisitCopay: Decimal | null
+    homeHealthVisitCoinsurance: Decimal | null
+    homeHealthVisitLimit: number | null
+    hospiceInpatientCopay: Decimal | null
+    hospiceInpatientCoinsurance: Decimal | null
+    hospiceRespiteCopay: Decimal | null
+    hospiceRespiteCoinsurance: Decimal | null
+    hospiceRespiteDayLimit: number | null
+    chiropracticCopay: Decimal | null
+    chiropracticVisitsLimit: number | null
+    acupunctureCopay: Decimal | null
+    acupunctureVisitsLimit: number | null
+    cardiacRehabCopay: Decimal | null
+    cardiacRehabVisitsLimit: number | null
+    pulmonaryRehabCopay: Decimal | null
+    pulmonaryRehabVisitsLimit: number | null
     sbcExtractionConfidence: Decimal | null
   }
 
@@ -11607,6 +11640,39 @@ export namespace Prisma {
     rxDeductibleFamily: Decimal | null
     rxOopMaxIndividual: Decimal | null
     rxOopMaxFamily: Decimal | null
+    ambulanceGroundCopay: Decimal | null
+    ambulanceGroundCoinsurance: Decimal | null
+    ambulanceAirCopay: Decimal | null
+    ambulanceAirCoinsurance: Decimal | null
+    visionExamCopay: Decimal | null
+    visionLensesAllowance: Decimal | null
+    visionFramesAllowance: Decimal | null
+    visionContactsAllowance: Decimal | null
+    dentalPreventiveCoinsurance: Decimal | null
+    dentalBasicCoinsurance: Decimal | null
+    dentalMajorCoinsurance: Decimal | null
+    dentalAnnualMax: Decimal | null
+    dentalDeductible: Decimal | null
+    dentalOrthodontiaCoinsurance: Decimal | null
+    dentalOrthodontiaLifetimeMax: Decimal | null
+    dmeCopay: Decimal | null
+    dmeCoinsurance: Decimal | null
+    homeHealthVisitCopay: Decimal | null
+    homeHealthVisitCoinsurance: Decimal | null
+    homeHealthVisitLimit: number | null
+    hospiceInpatientCopay: Decimal | null
+    hospiceInpatientCoinsurance: Decimal | null
+    hospiceRespiteCopay: Decimal | null
+    hospiceRespiteCoinsurance: Decimal | null
+    hospiceRespiteDayLimit: number | null
+    chiropracticCopay: Decimal | null
+    chiropracticVisitsLimit: number | null
+    acupunctureCopay: Decimal | null
+    acupunctureVisitsLimit: number | null
+    cardiacRehabCopay: Decimal | null
+    cardiacRehabVisitsLimit: number | null
+    pulmonaryRehabCopay: Decimal | null
+    pulmonaryRehabVisitsLimit: number | null
     sbcExtractionConfidence: Decimal | null
   }
 
@@ -11668,9 +11734,44 @@ export namespace Prisma {
     rxDeductibleFamily: Decimal | null
     rxOopMaxIndividual: Decimal | null
     rxOopMaxFamily: Decimal | null
+    ambulanceGroundCopay: Decimal | null
+    ambulanceGroundCoinsurance: Decimal | null
+    ambulanceAirCopay: Decimal | null
+    ambulanceAirCoinsurance: Decimal | null
+    visionExamCopay: Decimal | null
+    visionExamFrequency: string | null
+    visionLensesAllowance: Decimal | null
+    visionFramesAllowance: Decimal | null
+    visionContactsAllowance: Decimal | null
+    dentalPreventiveCoinsurance: Decimal | null
+    dentalBasicCoinsurance: Decimal | null
+    dentalMajorCoinsurance: Decimal | null
+    dentalAnnualMax: Decimal | null
+    dentalDeductible: Decimal | null
+    dentalOrthodontiaCoinsurance: Decimal | null
+    dentalOrthodontiaLifetimeMax: Decimal | null
+    dmeCopay: Decimal | null
+    dmeCoinsurance: Decimal | null
+    homeHealthVisitCopay: Decimal | null
+    homeHealthVisitCoinsurance: Decimal | null
+    homeHealthVisitLimit: number | null
+    hospiceInpatientCopay: Decimal | null
+    hospiceInpatientCoinsurance: Decimal | null
+    hospiceRespiteCopay: Decimal | null
+    hospiceRespiteCoinsurance: Decimal | null
+    hospiceRespiteDayLimit: number | null
+    chiropracticCopay: Decimal | null
+    chiropracticVisitsLimit: number | null
+    acupunctureCopay: Decimal | null
+    acupunctureVisitsLimit: number | null
+    cardiacRehabCopay: Decimal | null
+    cardiacRehabVisitsLimit: number | null
+    pulmonaryRehabCopay: Decimal | null
+    pulmonaryRehabVisitsLimit: number | null
     preventiveServicesList: string | null
     exclusionsList: string | null
     priorAuthRequirements: string | null
+    servicesWithLimits: string | null
     extractedFromSbc: boolean | null
     sbcExtractionConfidence: Decimal | null
     isActive: boolean | null
@@ -11737,9 +11838,44 @@ export namespace Prisma {
     rxDeductibleFamily: Decimal | null
     rxOopMaxIndividual: Decimal | null
     rxOopMaxFamily: Decimal | null
+    ambulanceGroundCopay: Decimal | null
+    ambulanceGroundCoinsurance: Decimal | null
+    ambulanceAirCopay: Decimal | null
+    ambulanceAirCoinsurance: Decimal | null
+    visionExamCopay: Decimal | null
+    visionExamFrequency: string | null
+    visionLensesAllowance: Decimal | null
+    visionFramesAllowance: Decimal | null
+    visionContactsAllowance: Decimal | null
+    dentalPreventiveCoinsurance: Decimal | null
+    dentalBasicCoinsurance: Decimal | null
+    dentalMajorCoinsurance: Decimal | null
+    dentalAnnualMax: Decimal | null
+    dentalDeductible: Decimal | null
+    dentalOrthodontiaCoinsurance: Decimal | null
+    dentalOrthodontiaLifetimeMax: Decimal | null
+    dmeCopay: Decimal | null
+    dmeCoinsurance: Decimal | null
+    homeHealthVisitCopay: Decimal | null
+    homeHealthVisitCoinsurance: Decimal | null
+    homeHealthVisitLimit: number | null
+    hospiceInpatientCopay: Decimal | null
+    hospiceInpatientCoinsurance: Decimal | null
+    hospiceRespiteCopay: Decimal | null
+    hospiceRespiteCoinsurance: Decimal | null
+    hospiceRespiteDayLimit: number | null
+    chiropracticCopay: Decimal | null
+    chiropracticVisitsLimit: number | null
+    acupunctureCopay: Decimal | null
+    acupunctureVisitsLimit: number | null
+    cardiacRehabCopay: Decimal | null
+    cardiacRehabVisitsLimit: number | null
+    pulmonaryRehabCopay: Decimal | null
+    pulmonaryRehabVisitsLimit: number | null
     preventiveServicesList: string | null
     exclusionsList: string | null
     priorAuthRequirements: string | null
+    servicesWithLimits: string | null
     extractedFromSbc: boolean | null
     sbcExtractionConfidence: Decimal | null
     isActive: boolean | null
@@ -11806,9 +11942,44 @@ export namespace Prisma {
     rxDeductibleFamily: number
     rxOopMaxIndividual: number
     rxOopMaxFamily: number
+    ambulanceGroundCopay: number
+    ambulanceGroundCoinsurance: number
+    ambulanceAirCopay: number
+    ambulanceAirCoinsurance: number
+    visionExamCopay: number
+    visionExamFrequency: number
+    visionLensesAllowance: number
+    visionFramesAllowance: number
+    visionContactsAllowance: number
+    dentalPreventiveCoinsurance: number
+    dentalBasicCoinsurance: number
+    dentalMajorCoinsurance: number
+    dentalAnnualMax: number
+    dentalDeductible: number
+    dentalOrthodontiaCoinsurance: number
+    dentalOrthodontiaLifetimeMax: number
+    dmeCopay: number
+    dmeCoinsurance: number
+    homeHealthVisitCopay: number
+    homeHealthVisitCoinsurance: number
+    homeHealthVisitLimit: number
+    hospiceInpatientCopay: number
+    hospiceInpatientCoinsurance: number
+    hospiceRespiteCopay: number
+    hospiceRespiteCoinsurance: number
+    hospiceRespiteDayLimit: number
+    chiropracticCopay: number
+    chiropracticVisitsLimit: number
+    acupunctureCopay: number
+    acupunctureVisitsLimit: number
+    cardiacRehabCopay: number
+    cardiacRehabVisitsLimit: number
+    pulmonaryRehabCopay: number
+    pulmonaryRehabVisitsLimit: number
     preventiveServicesList: number
     exclusionsList: number
     priorAuthRequirements: number
+    servicesWithLimits: number
     extractedFromSbc: number
     sbcExtractionConfidence: number
     isActive: number
@@ -11867,6 +12038,39 @@ export namespace Prisma {
     rxDeductibleFamily?: true
     rxOopMaxIndividual?: true
     rxOopMaxFamily?: true
+    ambulanceGroundCopay?: true
+    ambulanceGroundCoinsurance?: true
+    ambulanceAirCopay?: true
+    ambulanceAirCoinsurance?: true
+    visionExamCopay?: true
+    visionLensesAllowance?: true
+    visionFramesAllowance?: true
+    visionContactsAllowance?: true
+    dentalPreventiveCoinsurance?: true
+    dentalBasicCoinsurance?: true
+    dentalMajorCoinsurance?: true
+    dentalAnnualMax?: true
+    dentalDeductible?: true
+    dentalOrthodontiaCoinsurance?: true
+    dentalOrthodontiaLifetimeMax?: true
+    dmeCopay?: true
+    dmeCoinsurance?: true
+    homeHealthVisitCopay?: true
+    homeHealthVisitCoinsurance?: true
+    homeHealthVisitLimit?: true
+    hospiceInpatientCopay?: true
+    hospiceInpatientCoinsurance?: true
+    hospiceRespiteCopay?: true
+    hospiceRespiteCoinsurance?: true
+    hospiceRespiteDayLimit?: true
+    chiropracticCopay?: true
+    chiropracticVisitsLimit?: true
+    acupunctureCopay?: true
+    acupunctureVisitsLimit?: true
+    cardiacRehabCopay?: true
+    cardiacRehabVisitsLimit?: true
+    pulmonaryRehabCopay?: true
+    pulmonaryRehabVisitsLimit?: true
     sbcExtractionConfidence?: true
   }
 
@@ -11918,6 +12122,39 @@ export namespace Prisma {
     rxDeductibleFamily?: true
     rxOopMaxIndividual?: true
     rxOopMaxFamily?: true
+    ambulanceGroundCopay?: true
+    ambulanceGroundCoinsurance?: true
+    ambulanceAirCopay?: true
+    ambulanceAirCoinsurance?: true
+    visionExamCopay?: true
+    visionLensesAllowance?: true
+    visionFramesAllowance?: true
+    visionContactsAllowance?: true
+    dentalPreventiveCoinsurance?: true
+    dentalBasicCoinsurance?: true
+    dentalMajorCoinsurance?: true
+    dentalAnnualMax?: true
+    dentalDeductible?: true
+    dentalOrthodontiaCoinsurance?: true
+    dentalOrthodontiaLifetimeMax?: true
+    dmeCopay?: true
+    dmeCoinsurance?: true
+    homeHealthVisitCopay?: true
+    homeHealthVisitCoinsurance?: true
+    homeHealthVisitLimit?: true
+    hospiceInpatientCopay?: true
+    hospiceInpatientCoinsurance?: true
+    hospiceRespiteCopay?: true
+    hospiceRespiteCoinsurance?: true
+    hospiceRespiteDayLimit?: true
+    chiropracticCopay?: true
+    chiropracticVisitsLimit?: true
+    acupunctureCopay?: true
+    acupunctureVisitsLimit?: true
+    cardiacRehabCopay?: true
+    cardiacRehabVisitsLimit?: true
+    pulmonaryRehabCopay?: true
+    pulmonaryRehabVisitsLimit?: true
     sbcExtractionConfidence?: true
   }
 
@@ -11979,9 +12216,44 @@ export namespace Prisma {
     rxDeductibleFamily?: true
     rxOopMaxIndividual?: true
     rxOopMaxFamily?: true
+    ambulanceGroundCopay?: true
+    ambulanceGroundCoinsurance?: true
+    ambulanceAirCopay?: true
+    ambulanceAirCoinsurance?: true
+    visionExamCopay?: true
+    visionExamFrequency?: true
+    visionLensesAllowance?: true
+    visionFramesAllowance?: true
+    visionContactsAllowance?: true
+    dentalPreventiveCoinsurance?: true
+    dentalBasicCoinsurance?: true
+    dentalMajorCoinsurance?: true
+    dentalAnnualMax?: true
+    dentalDeductible?: true
+    dentalOrthodontiaCoinsurance?: true
+    dentalOrthodontiaLifetimeMax?: true
+    dmeCopay?: true
+    dmeCoinsurance?: true
+    homeHealthVisitCopay?: true
+    homeHealthVisitCoinsurance?: true
+    homeHealthVisitLimit?: true
+    hospiceInpatientCopay?: true
+    hospiceInpatientCoinsurance?: true
+    hospiceRespiteCopay?: true
+    hospiceRespiteCoinsurance?: true
+    hospiceRespiteDayLimit?: true
+    chiropracticCopay?: true
+    chiropracticVisitsLimit?: true
+    acupunctureCopay?: true
+    acupunctureVisitsLimit?: true
+    cardiacRehabCopay?: true
+    cardiacRehabVisitsLimit?: true
+    pulmonaryRehabCopay?: true
+    pulmonaryRehabVisitsLimit?: true
     preventiveServicesList?: true
     exclusionsList?: true
     priorAuthRequirements?: true
+    servicesWithLimits?: true
     extractedFromSbc?: true
     sbcExtractionConfidence?: true
     isActive?: true
@@ -12048,9 +12320,44 @@ export namespace Prisma {
     rxDeductibleFamily?: true
     rxOopMaxIndividual?: true
     rxOopMaxFamily?: true
+    ambulanceGroundCopay?: true
+    ambulanceGroundCoinsurance?: true
+    ambulanceAirCopay?: true
+    ambulanceAirCoinsurance?: true
+    visionExamCopay?: true
+    visionExamFrequency?: true
+    visionLensesAllowance?: true
+    visionFramesAllowance?: true
+    visionContactsAllowance?: true
+    dentalPreventiveCoinsurance?: true
+    dentalBasicCoinsurance?: true
+    dentalMajorCoinsurance?: true
+    dentalAnnualMax?: true
+    dentalDeductible?: true
+    dentalOrthodontiaCoinsurance?: true
+    dentalOrthodontiaLifetimeMax?: true
+    dmeCopay?: true
+    dmeCoinsurance?: true
+    homeHealthVisitCopay?: true
+    homeHealthVisitCoinsurance?: true
+    homeHealthVisitLimit?: true
+    hospiceInpatientCopay?: true
+    hospiceInpatientCoinsurance?: true
+    hospiceRespiteCopay?: true
+    hospiceRespiteCoinsurance?: true
+    hospiceRespiteDayLimit?: true
+    chiropracticCopay?: true
+    chiropracticVisitsLimit?: true
+    acupunctureCopay?: true
+    acupunctureVisitsLimit?: true
+    cardiacRehabCopay?: true
+    cardiacRehabVisitsLimit?: true
+    pulmonaryRehabCopay?: true
+    pulmonaryRehabVisitsLimit?: true
     preventiveServicesList?: true
     exclusionsList?: true
     priorAuthRequirements?: true
+    servicesWithLimits?: true
     extractedFromSbc?: true
     sbcExtractionConfidence?: true
     isActive?: true
@@ -12117,9 +12424,44 @@ export namespace Prisma {
     rxDeductibleFamily?: true
     rxOopMaxIndividual?: true
     rxOopMaxFamily?: true
+    ambulanceGroundCopay?: true
+    ambulanceGroundCoinsurance?: true
+    ambulanceAirCopay?: true
+    ambulanceAirCoinsurance?: true
+    visionExamCopay?: true
+    visionExamFrequency?: true
+    visionLensesAllowance?: true
+    visionFramesAllowance?: true
+    visionContactsAllowance?: true
+    dentalPreventiveCoinsurance?: true
+    dentalBasicCoinsurance?: true
+    dentalMajorCoinsurance?: true
+    dentalAnnualMax?: true
+    dentalDeductible?: true
+    dentalOrthodontiaCoinsurance?: true
+    dentalOrthodontiaLifetimeMax?: true
+    dmeCopay?: true
+    dmeCoinsurance?: true
+    homeHealthVisitCopay?: true
+    homeHealthVisitCoinsurance?: true
+    homeHealthVisitLimit?: true
+    hospiceInpatientCopay?: true
+    hospiceInpatientCoinsurance?: true
+    hospiceRespiteCopay?: true
+    hospiceRespiteCoinsurance?: true
+    hospiceRespiteDayLimit?: true
+    chiropracticCopay?: true
+    chiropracticVisitsLimit?: true
+    acupunctureCopay?: true
+    acupunctureVisitsLimit?: true
+    cardiacRehabCopay?: true
+    cardiacRehabVisitsLimit?: true
+    pulmonaryRehabCopay?: true
+    pulmonaryRehabVisitsLimit?: true
     preventiveServicesList?: true
     exclusionsList?: true
     priorAuthRequirements?: true
+    servicesWithLimits?: true
     extractedFromSbc?: true
     sbcExtractionConfidence?: true
     isActive?: true
@@ -12273,9 +12615,44 @@ export namespace Prisma {
     rxDeductibleFamily: Decimal | null
     rxOopMaxIndividual: Decimal | null
     rxOopMaxFamily: Decimal | null
+    ambulanceGroundCopay: Decimal | null
+    ambulanceGroundCoinsurance: Decimal | null
+    ambulanceAirCopay: Decimal | null
+    ambulanceAirCoinsurance: Decimal | null
+    visionExamCopay: Decimal | null
+    visionExamFrequency: string | null
+    visionLensesAllowance: Decimal | null
+    visionFramesAllowance: Decimal | null
+    visionContactsAllowance: Decimal | null
+    dentalPreventiveCoinsurance: Decimal | null
+    dentalBasicCoinsurance: Decimal | null
+    dentalMajorCoinsurance: Decimal | null
+    dentalAnnualMax: Decimal | null
+    dentalDeductible: Decimal | null
+    dentalOrthodontiaCoinsurance: Decimal | null
+    dentalOrthodontiaLifetimeMax: Decimal | null
+    dmeCopay: Decimal | null
+    dmeCoinsurance: Decimal | null
+    homeHealthVisitCopay: Decimal | null
+    homeHealthVisitCoinsurance: Decimal | null
+    homeHealthVisitLimit: number | null
+    hospiceInpatientCopay: Decimal | null
+    hospiceInpatientCoinsurance: Decimal | null
+    hospiceRespiteCopay: Decimal | null
+    hospiceRespiteCoinsurance: Decimal | null
+    hospiceRespiteDayLimit: number | null
+    chiropracticCopay: Decimal | null
+    chiropracticVisitsLimit: number | null
+    acupunctureCopay: Decimal | null
+    acupunctureVisitsLimit: number | null
+    cardiacRehabCopay: Decimal | null
+    cardiacRehabVisitsLimit: number | null
+    pulmonaryRehabCopay: Decimal | null
+    pulmonaryRehabVisitsLimit: number | null
     preventiveServicesList: string | null
     exclusionsList: string | null
     priorAuthRequirements: string | null
+    servicesWithLimits: string | null
     extractedFromSbc: boolean
     sbcExtractionConfidence: Decimal | null
     isActive: boolean
@@ -12361,9 +12738,44 @@ export namespace Prisma {
     rxDeductibleFamily?: boolean
     rxOopMaxIndividual?: boolean
     rxOopMaxFamily?: boolean
+    ambulanceGroundCopay?: boolean
+    ambulanceGroundCoinsurance?: boolean
+    ambulanceAirCopay?: boolean
+    ambulanceAirCoinsurance?: boolean
+    visionExamCopay?: boolean
+    visionExamFrequency?: boolean
+    visionLensesAllowance?: boolean
+    visionFramesAllowance?: boolean
+    visionContactsAllowance?: boolean
+    dentalPreventiveCoinsurance?: boolean
+    dentalBasicCoinsurance?: boolean
+    dentalMajorCoinsurance?: boolean
+    dentalAnnualMax?: boolean
+    dentalDeductible?: boolean
+    dentalOrthodontiaCoinsurance?: boolean
+    dentalOrthodontiaLifetimeMax?: boolean
+    dmeCopay?: boolean
+    dmeCoinsurance?: boolean
+    homeHealthVisitCopay?: boolean
+    homeHealthVisitCoinsurance?: boolean
+    homeHealthVisitLimit?: boolean
+    hospiceInpatientCopay?: boolean
+    hospiceInpatientCoinsurance?: boolean
+    hospiceRespiteCopay?: boolean
+    hospiceRespiteCoinsurance?: boolean
+    hospiceRespiteDayLimit?: boolean
+    chiropracticCopay?: boolean
+    chiropracticVisitsLimit?: boolean
+    acupunctureCopay?: boolean
+    acupunctureVisitsLimit?: boolean
+    cardiacRehabCopay?: boolean
+    cardiacRehabVisitsLimit?: boolean
+    pulmonaryRehabCopay?: boolean
+    pulmonaryRehabVisitsLimit?: boolean
     preventiveServicesList?: boolean
     exclusionsList?: boolean
     priorAuthRequirements?: boolean
+    servicesWithLimits?: boolean
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: boolean
     isActive?: boolean
@@ -12433,9 +12845,44 @@ export namespace Prisma {
     rxDeductibleFamily?: boolean
     rxOopMaxIndividual?: boolean
     rxOopMaxFamily?: boolean
+    ambulanceGroundCopay?: boolean
+    ambulanceGroundCoinsurance?: boolean
+    ambulanceAirCopay?: boolean
+    ambulanceAirCoinsurance?: boolean
+    visionExamCopay?: boolean
+    visionExamFrequency?: boolean
+    visionLensesAllowance?: boolean
+    visionFramesAllowance?: boolean
+    visionContactsAllowance?: boolean
+    dentalPreventiveCoinsurance?: boolean
+    dentalBasicCoinsurance?: boolean
+    dentalMajorCoinsurance?: boolean
+    dentalAnnualMax?: boolean
+    dentalDeductible?: boolean
+    dentalOrthodontiaCoinsurance?: boolean
+    dentalOrthodontiaLifetimeMax?: boolean
+    dmeCopay?: boolean
+    dmeCoinsurance?: boolean
+    homeHealthVisitCopay?: boolean
+    homeHealthVisitCoinsurance?: boolean
+    homeHealthVisitLimit?: boolean
+    hospiceInpatientCopay?: boolean
+    hospiceInpatientCoinsurance?: boolean
+    hospiceRespiteCopay?: boolean
+    hospiceRespiteCoinsurance?: boolean
+    hospiceRespiteDayLimit?: boolean
+    chiropracticCopay?: boolean
+    chiropracticVisitsLimit?: boolean
+    acupunctureCopay?: boolean
+    acupunctureVisitsLimit?: boolean
+    cardiacRehabCopay?: boolean
+    cardiacRehabVisitsLimit?: boolean
+    pulmonaryRehabCopay?: boolean
+    pulmonaryRehabVisitsLimit?: boolean
     preventiveServicesList?: boolean
     exclusionsList?: boolean
     priorAuthRequirements?: boolean
+    servicesWithLimits?: boolean
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: boolean
     isActive?: boolean
@@ -12503,9 +12950,44 @@ export namespace Prisma {
     rxDeductibleFamily?: boolean
     rxOopMaxIndividual?: boolean
     rxOopMaxFamily?: boolean
+    ambulanceGroundCopay?: boolean
+    ambulanceGroundCoinsurance?: boolean
+    ambulanceAirCopay?: boolean
+    ambulanceAirCoinsurance?: boolean
+    visionExamCopay?: boolean
+    visionExamFrequency?: boolean
+    visionLensesAllowance?: boolean
+    visionFramesAllowance?: boolean
+    visionContactsAllowance?: boolean
+    dentalPreventiveCoinsurance?: boolean
+    dentalBasicCoinsurance?: boolean
+    dentalMajorCoinsurance?: boolean
+    dentalAnnualMax?: boolean
+    dentalDeductible?: boolean
+    dentalOrthodontiaCoinsurance?: boolean
+    dentalOrthodontiaLifetimeMax?: boolean
+    dmeCopay?: boolean
+    dmeCoinsurance?: boolean
+    homeHealthVisitCopay?: boolean
+    homeHealthVisitCoinsurance?: boolean
+    homeHealthVisitLimit?: boolean
+    hospiceInpatientCopay?: boolean
+    hospiceInpatientCoinsurance?: boolean
+    hospiceRespiteCopay?: boolean
+    hospiceRespiteCoinsurance?: boolean
+    hospiceRespiteDayLimit?: boolean
+    chiropracticCopay?: boolean
+    chiropracticVisitsLimit?: boolean
+    acupunctureCopay?: boolean
+    acupunctureVisitsLimit?: boolean
+    cardiacRehabCopay?: boolean
+    cardiacRehabVisitsLimit?: boolean
+    pulmonaryRehabCopay?: boolean
+    pulmonaryRehabVisitsLimit?: boolean
     preventiveServicesList?: boolean
     exclusionsList?: boolean
     priorAuthRequirements?: boolean
+    servicesWithLimits?: boolean
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: boolean
     isActive?: boolean
@@ -12573,9 +13055,44 @@ export namespace Prisma {
     rxDeductibleFamily?: boolean
     rxOopMaxIndividual?: boolean
     rxOopMaxFamily?: boolean
+    ambulanceGroundCopay?: boolean
+    ambulanceGroundCoinsurance?: boolean
+    ambulanceAirCopay?: boolean
+    ambulanceAirCoinsurance?: boolean
+    visionExamCopay?: boolean
+    visionExamFrequency?: boolean
+    visionLensesAllowance?: boolean
+    visionFramesAllowance?: boolean
+    visionContactsAllowance?: boolean
+    dentalPreventiveCoinsurance?: boolean
+    dentalBasicCoinsurance?: boolean
+    dentalMajorCoinsurance?: boolean
+    dentalAnnualMax?: boolean
+    dentalDeductible?: boolean
+    dentalOrthodontiaCoinsurance?: boolean
+    dentalOrthodontiaLifetimeMax?: boolean
+    dmeCopay?: boolean
+    dmeCoinsurance?: boolean
+    homeHealthVisitCopay?: boolean
+    homeHealthVisitCoinsurance?: boolean
+    homeHealthVisitLimit?: boolean
+    hospiceInpatientCopay?: boolean
+    hospiceInpatientCoinsurance?: boolean
+    hospiceRespiteCopay?: boolean
+    hospiceRespiteCoinsurance?: boolean
+    hospiceRespiteDayLimit?: boolean
+    chiropracticCopay?: boolean
+    chiropracticVisitsLimit?: boolean
+    acupunctureCopay?: boolean
+    acupunctureVisitsLimit?: boolean
+    cardiacRehabCopay?: boolean
+    cardiacRehabVisitsLimit?: boolean
+    pulmonaryRehabCopay?: boolean
+    pulmonaryRehabVisitsLimit?: boolean
     preventiveServicesList?: boolean
     exclusionsList?: boolean
     priorAuthRequirements?: boolean
+    servicesWithLimits?: boolean
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: boolean
     isActive?: boolean
@@ -12584,7 +13101,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "copayTelehealth" | "copayLabWork" | "copayXray" | "copayAdvancedImaging" | "coinsuranceRate" | "inpatientHospitalCopay" | "inpatientHospitalCoinsurance" | "inpatientMentalHealthCopay" | "inpatientMentalCoinsurance" | "maternityCopay" | "maternityCoinsurance" | "skilledNursingCopay" | "skilledNursingCoinsurance" | "skilledNursingDaysLimit" | "outpatientSurgeryCopay" | "outpatientSurgeryCoinsurance" | "outpatientMentalHealthCopay" | "outpatientMentalCoinsurance" | "physicalTherapyVisitsLimit" | "occupationalTherapyVisitsLimit" | "speechTherapyVisitsLimit" | "physicalTherapyCopay" | "occupationalTherapyCopay" | "speechTherapyCopay" | "rxTier1Copay" | "rxTier2Copay" | "rxTier3Copay" | "rxTier4Copay" | "rxRetailDaysSupply" | "rxMailOrderDaysSupply" | "rxDeductibleIndividual" | "rxDeductibleFamily" | "rxOopMaxIndividual" | "rxOopMaxFamily" | "preventiveServicesList" | "exclusionsList" | "priorAuthRequirements" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
+  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "copayTelehealth" | "copayLabWork" | "copayXray" | "copayAdvancedImaging" | "coinsuranceRate" | "inpatientHospitalCopay" | "inpatientHospitalCoinsurance" | "inpatientMentalHealthCopay" | "inpatientMentalCoinsurance" | "maternityCopay" | "maternityCoinsurance" | "skilledNursingCopay" | "skilledNursingCoinsurance" | "skilledNursingDaysLimit" | "outpatientSurgeryCopay" | "outpatientSurgeryCoinsurance" | "outpatientMentalHealthCopay" | "outpatientMentalCoinsurance" | "physicalTherapyVisitsLimit" | "occupationalTherapyVisitsLimit" | "speechTherapyVisitsLimit" | "physicalTherapyCopay" | "occupationalTherapyCopay" | "speechTherapyCopay" | "rxTier1Copay" | "rxTier2Copay" | "rxTier3Copay" | "rxTier4Copay" | "rxRetailDaysSupply" | "rxMailOrderDaysSupply" | "rxDeductibleIndividual" | "rxDeductibleFamily" | "rxOopMaxIndividual" | "rxOopMaxFamily" | "ambulanceGroundCopay" | "ambulanceGroundCoinsurance" | "ambulanceAirCopay" | "ambulanceAirCoinsurance" | "visionExamCopay" | "visionExamFrequency" | "visionLensesAllowance" | "visionFramesAllowance" | "visionContactsAllowance" | "dentalPreventiveCoinsurance" | "dentalBasicCoinsurance" | "dentalMajorCoinsurance" | "dentalAnnualMax" | "dentalDeductible" | "dentalOrthodontiaCoinsurance" | "dentalOrthodontiaLifetimeMax" | "dmeCopay" | "dmeCoinsurance" | "homeHealthVisitCopay" | "homeHealthVisitCoinsurance" | "homeHealthVisitLimit" | "hospiceInpatientCopay" | "hospiceInpatientCoinsurance" | "hospiceRespiteCopay" | "hospiceRespiteCoinsurance" | "hospiceRespiteDayLimit" | "chiropracticCopay" | "chiropracticVisitsLimit" | "acupunctureCopay" | "acupunctureVisitsLimit" | "cardiacRehabCopay" | "cardiacRehabVisitsLimit" | "pulmonaryRehabCopay" | "pulmonaryRehabVisitsLimit" | "preventiveServicesList" | "exclusionsList" | "priorAuthRequirements" | "servicesWithLimits" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
   export type InsurancePlanInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -12661,9 +13178,44 @@ export namespace Prisma {
       rxDeductibleFamily: Prisma.Decimal | null
       rxOopMaxIndividual: Prisma.Decimal | null
       rxOopMaxFamily: Prisma.Decimal | null
+      ambulanceGroundCopay: Prisma.Decimal | null
+      ambulanceGroundCoinsurance: Prisma.Decimal | null
+      ambulanceAirCopay: Prisma.Decimal | null
+      ambulanceAirCoinsurance: Prisma.Decimal | null
+      visionExamCopay: Prisma.Decimal | null
+      visionExamFrequency: string | null
+      visionLensesAllowance: Prisma.Decimal | null
+      visionFramesAllowance: Prisma.Decimal | null
+      visionContactsAllowance: Prisma.Decimal | null
+      dentalPreventiveCoinsurance: Prisma.Decimal | null
+      dentalBasicCoinsurance: Prisma.Decimal | null
+      dentalMajorCoinsurance: Prisma.Decimal | null
+      dentalAnnualMax: Prisma.Decimal | null
+      dentalDeductible: Prisma.Decimal | null
+      dentalOrthodontiaCoinsurance: Prisma.Decimal | null
+      dentalOrthodontiaLifetimeMax: Prisma.Decimal | null
+      dmeCopay: Prisma.Decimal | null
+      dmeCoinsurance: Prisma.Decimal | null
+      homeHealthVisitCopay: Prisma.Decimal | null
+      homeHealthVisitCoinsurance: Prisma.Decimal | null
+      homeHealthVisitLimit: number | null
+      hospiceInpatientCopay: Prisma.Decimal | null
+      hospiceInpatientCoinsurance: Prisma.Decimal | null
+      hospiceRespiteCopay: Prisma.Decimal | null
+      hospiceRespiteCoinsurance: Prisma.Decimal | null
+      hospiceRespiteDayLimit: number | null
+      chiropracticCopay: Prisma.Decimal | null
+      chiropracticVisitsLimit: number | null
+      acupunctureCopay: Prisma.Decimal | null
+      acupunctureVisitsLimit: number | null
+      cardiacRehabCopay: Prisma.Decimal | null
+      cardiacRehabVisitsLimit: number | null
+      pulmonaryRehabCopay: Prisma.Decimal | null
+      pulmonaryRehabVisitsLimit: number | null
       preventiveServicesList: string | null
       exclusionsList: string | null
       priorAuthRequirements: string | null
+      servicesWithLimits: string | null
       extractedFromSbc: boolean
       sbcExtractionConfidence: Prisma.Decimal | null
       isActive: boolean
@@ -13152,9 +13704,44 @@ export namespace Prisma {
     readonly rxDeductibleFamily: FieldRef<"InsurancePlan", 'Decimal'>
     readonly rxOopMaxIndividual: FieldRef<"InsurancePlan", 'Decimal'>
     readonly rxOopMaxFamily: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly ambulanceGroundCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly ambulanceGroundCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly ambulanceAirCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly ambulanceAirCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly visionExamCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly visionExamFrequency: FieldRef<"InsurancePlan", 'String'>
+    readonly visionLensesAllowance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly visionFramesAllowance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly visionContactsAllowance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalPreventiveCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalBasicCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalMajorCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalAnnualMax: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalDeductible: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalOrthodontiaCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dentalOrthodontiaLifetimeMax: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dmeCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly dmeCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly homeHealthVisitCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly homeHealthVisitCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly homeHealthVisitLimit: FieldRef<"InsurancePlan", 'Int'>
+    readonly hospiceInpatientCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly hospiceInpatientCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly hospiceRespiteCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly hospiceRespiteCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly hospiceRespiteDayLimit: FieldRef<"InsurancePlan", 'Int'>
+    readonly chiropracticCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly chiropracticVisitsLimit: FieldRef<"InsurancePlan", 'Int'>
+    readonly acupunctureCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly acupunctureVisitsLimit: FieldRef<"InsurancePlan", 'Int'>
+    readonly cardiacRehabCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly cardiacRehabVisitsLimit: FieldRef<"InsurancePlan", 'Int'>
+    readonly pulmonaryRehabCopay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly pulmonaryRehabVisitsLimit: FieldRef<"InsurancePlan", 'Int'>
     readonly preventiveServicesList: FieldRef<"InsurancePlan", 'String'>
     readonly exclusionsList: FieldRef<"InsurancePlan", 'String'>
     readonly priorAuthRequirements: FieldRef<"InsurancePlan", 'String'>
+    readonly servicesWithLimits: FieldRef<"InsurancePlan", 'String'>
     readonly extractedFromSbc: FieldRef<"InsurancePlan", 'Boolean'>
     readonly sbcExtractionConfidence: FieldRef<"InsurancePlan", 'Decimal'>
     readonly isActive: FieldRef<"InsurancePlan", 'Boolean'>
@@ -24385,9 +24972,44 @@ export namespace Prisma {
     rxDeductibleFamily: 'rxDeductibleFamily',
     rxOopMaxIndividual: 'rxOopMaxIndividual',
     rxOopMaxFamily: 'rxOopMaxFamily',
+    ambulanceGroundCopay: 'ambulanceGroundCopay',
+    ambulanceGroundCoinsurance: 'ambulanceGroundCoinsurance',
+    ambulanceAirCopay: 'ambulanceAirCopay',
+    ambulanceAirCoinsurance: 'ambulanceAirCoinsurance',
+    visionExamCopay: 'visionExamCopay',
+    visionExamFrequency: 'visionExamFrequency',
+    visionLensesAllowance: 'visionLensesAllowance',
+    visionFramesAllowance: 'visionFramesAllowance',
+    visionContactsAllowance: 'visionContactsAllowance',
+    dentalPreventiveCoinsurance: 'dentalPreventiveCoinsurance',
+    dentalBasicCoinsurance: 'dentalBasicCoinsurance',
+    dentalMajorCoinsurance: 'dentalMajorCoinsurance',
+    dentalAnnualMax: 'dentalAnnualMax',
+    dentalDeductible: 'dentalDeductible',
+    dentalOrthodontiaCoinsurance: 'dentalOrthodontiaCoinsurance',
+    dentalOrthodontiaLifetimeMax: 'dentalOrthodontiaLifetimeMax',
+    dmeCopay: 'dmeCopay',
+    dmeCoinsurance: 'dmeCoinsurance',
+    homeHealthVisitCopay: 'homeHealthVisitCopay',
+    homeHealthVisitCoinsurance: 'homeHealthVisitCoinsurance',
+    homeHealthVisitLimit: 'homeHealthVisitLimit',
+    hospiceInpatientCopay: 'hospiceInpatientCopay',
+    hospiceInpatientCoinsurance: 'hospiceInpatientCoinsurance',
+    hospiceRespiteCopay: 'hospiceRespiteCopay',
+    hospiceRespiteCoinsurance: 'hospiceRespiteCoinsurance',
+    hospiceRespiteDayLimit: 'hospiceRespiteDayLimit',
+    chiropracticCopay: 'chiropracticCopay',
+    chiropracticVisitsLimit: 'chiropracticVisitsLimit',
+    acupunctureCopay: 'acupunctureCopay',
+    acupunctureVisitsLimit: 'acupunctureVisitsLimit',
+    cardiacRehabCopay: 'cardiacRehabCopay',
+    cardiacRehabVisitsLimit: 'cardiacRehabVisitsLimit',
+    pulmonaryRehabCopay: 'pulmonaryRehabCopay',
+    pulmonaryRehabVisitsLimit: 'pulmonaryRehabVisitsLimit',
     preventiveServicesList: 'preventiveServicesList',
     exclusionsList: 'exclusionsList',
     priorAuthRequirements: 'priorAuthRequirements',
+    servicesWithLimits: 'servicesWithLimits',
     extractedFromSbc: 'extractedFromSbc',
     sbcExtractionConfidence: 'sbcExtractionConfidence',
     isActive: 'isActive',
@@ -25650,9 +26272,44 @@ export namespace Prisma {
     rxDeductibleFamily?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: StringNullableFilter<"InsurancePlan"> | string | null
+    visionLensesAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    hospiceInpatientCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    chiropracticCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    acupunctureCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    cardiacRehabCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    pulmonaryRehabCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
     preventiveServicesList?: StringNullableFilter<"InsurancePlan"> | string | null
     exclusionsList?: StringNullableFilter<"InsurancePlan"> | string | null
     priorAuthRequirements?: StringNullableFilter<"InsurancePlan"> | string | null
+    servicesWithLimits?: StringNullableFilter<"InsurancePlan"> | string | null
     extractedFromSbc?: BoolFilter<"InsurancePlan"> | boolean
     sbcExtractionConfidence?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFilter<"InsurancePlan"> | boolean
@@ -25721,9 +26378,44 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrderInput | SortOrder
     rxOopMaxIndividual?: SortOrderInput | SortOrder
     rxOopMaxFamily?: SortOrderInput | SortOrder
+    ambulanceGroundCopay?: SortOrderInput | SortOrder
+    ambulanceGroundCoinsurance?: SortOrderInput | SortOrder
+    ambulanceAirCopay?: SortOrderInput | SortOrder
+    ambulanceAirCoinsurance?: SortOrderInput | SortOrder
+    visionExamCopay?: SortOrderInput | SortOrder
+    visionExamFrequency?: SortOrderInput | SortOrder
+    visionLensesAllowance?: SortOrderInput | SortOrder
+    visionFramesAllowance?: SortOrderInput | SortOrder
+    visionContactsAllowance?: SortOrderInput | SortOrder
+    dentalPreventiveCoinsurance?: SortOrderInput | SortOrder
+    dentalBasicCoinsurance?: SortOrderInput | SortOrder
+    dentalMajorCoinsurance?: SortOrderInput | SortOrder
+    dentalAnnualMax?: SortOrderInput | SortOrder
+    dentalDeductible?: SortOrderInput | SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrderInput | SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrderInput | SortOrder
+    dmeCopay?: SortOrderInput | SortOrder
+    dmeCoinsurance?: SortOrderInput | SortOrder
+    homeHealthVisitCopay?: SortOrderInput | SortOrder
+    homeHealthVisitCoinsurance?: SortOrderInput | SortOrder
+    homeHealthVisitLimit?: SortOrderInput | SortOrder
+    hospiceInpatientCopay?: SortOrderInput | SortOrder
+    hospiceInpatientCoinsurance?: SortOrderInput | SortOrder
+    hospiceRespiteCopay?: SortOrderInput | SortOrder
+    hospiceRespiteCoinsurance?: SortOrderInput | SortOrder
+    hospiceRespiteDayLimit?: SortOrderInput | SortOrder
+    chiropracticCopay?: SortOrderInput | SortOrder
+    chiropracticVisitsLimit?: SortOrderInput | SortOrder
+    acupunctureCopay?: SortOrderInput | SortOrder
+    acupunctureVisitsLimit?: SortOrderInput | SortOrder
+    cardiacRehabCopay?: SortOrderInput | SortOrder
+    cardiacRehabVisitsLimit?: SortOrderInput | SortOrder
+    pulmonaryRehabCopay?: SortOrderInput | SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrderInput | SortOrder
     preventiveServicesList?: SortOrderInput | SortOrder
     exclusionsList?: SortOrderInput | SortOrder
     priorAuthRequirements?: SortOrderInput | SortOrder
+    servicesWithLimits?: SortOrderInput | SortOrder
     extractedFromSbc?: SortOrder
     sbcExtractionConfidence?: SortOrderInput | SortOrder
     isActive?: SortOrder
@@ -25795,9 +26487,44 @@ export namespace Prisma {
     rxDeductibleFamily?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: StringNullableFilter<"InsurancePlan"> | string | null
+    visionLensesAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    hospiceInpatientCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    chiropracticCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    acupunctureCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    cardiacRehabCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    pulmonaryRehabCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
     preventiveServicesList?: StringNullableFilter<"InsurancePlan"> | string | null
     exclusionsList?: StringNullableFilter<"InsurancePlan"> | string | null
     priorAuthRequirements?: StringNullableFilter<"InsurancePlan"> | string | null
+    servicesWithLimits?: StringNullableFilter<"InsurancePlan"> | string | null
     extractedFromSbc?: BoolFilter<"InsurancePlan"> | boolean
     sbcExtractionConfidence?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFilter<"InsurancePlan"> | boolean
@@ -25866,9 +26593,44 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrderInput | SortOrder
     rxOopMaxIndividual?: SortOrderInput | SortOrder
     rxOopMaxFamily?: SortOrderInput | SortOrder
+    ambulanceGroundCopay?: SortOrderInput | SortOrder
+    ambulanceGroundCoinsurance?: SortOrderInput | SortOrder
+    ambulanceAirCopay?: SortOrderInput | SortOrder
+    ambulanceAirCoinsurance?: SortOrderInput | SortOrder
+    visionExamCopay?: SortOrderInput | SortOrder
+    visionExamFrequency?: SortOrderInput | SortOrder
+    visionLensesAllowance?: SortOrderInput | SortOrder
+    visionFramesAllowance?: SortOrderInput | SortOrder
+    visionContactsAllowance?: SortOrderInput | SortOrder
+    dentalPreventiveCoinsurance?: SortOrderInput | SortOrder
+    dentalBasicCoinsurance?: SortOrderInput | SortOrder
+    dentalMajorCoinsurance?: SortOrderInput | SortOrder
+    dentalAnnualMax?: SortOrderInput | SortOrder
+    dentalDeductible?: SortOrderInput | SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrderInput | SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrderInput | SortOrder
+    dmeCopay?: SortOrderInput | SortOrder
+    dmeCoinsurance?: SortOrderInput | SortOrder
+    homeHealthVisitCopay?: SortOrderInput | SortOrder
+    homeHealthVisitCoinsurance?: SortOrderInput | SortOrder
+    homeHealthVisitLimit?: SortOrderInput | SortOrder
+    hospiceInpatientCopay?: SortOrderInput | SortOrder
+    hospiceInpatientCoinsurance?: SortOrderInput | SortOrder
+    hospiceRespiteCopay?: SortOrderInput | SortOrder
+    hospiceRespiteCoinsurance?: SortOrderInput | SortOrder
+    hospiceRespiteDayLimit?: SortOrderInput | SortOrder
+    chiropracticCopay?: SortOrderInput | SortOrder
+    chiropracticVisitsLimit?: SortOrderInput | SortOrder
+    acupunctureCopay?: SortOrderInput | SortOrder
+    acupunctureVisitsLimit?: SortOrderInput | SortOrder
+    cardiacRehabCopay?: SortOrderInput | SortOrder
+    cardiacRehabVisitsLimit?: SortOrderInput | SortOrder
+    pulmonaryRehabCopay?: SortOrderInput | SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrderInput | SortOrder
     preventiveServicesList?: SortOrderInput | SortOrder
     exclusionsList?: SortOrderInput | SortOrder
     priorAuthRequirements?: SortOrderInput | SortOrder
+    servicesWithLimits?: SortOrderInput | SortOrder
     extractedFromSbc?: SortOrder
     sbcExtractionConfidence?: SortOrderInput | SortOrder
     isActive?: SortOrder
@@ -25943,9 +26705,44 @@ export namespace Prisma {
     rxDeductibleFamily?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
+    visionLensesAllowance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
+    hospiceInpatientCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
+    chiropracticCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
+    acupunctureCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
+    cardiacRehabCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
+    pulmonaryRehabCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
     preventiveServicesList?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
     exclusionsList?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
     priorAuthRequirements?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
+    servicesWithLimits?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
     extractedFromSbc?: BoolWithAggregatesFilter<"InsurancePlan"> | boolean
     sbcExtractionConfidence?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolWithAggregatesFilter<"InsurancePlan"> | boolean
@@ -27645,9 +28442,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -27716,9 +28548,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -27785,9 +28652,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -27856,9 +28758,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -27926,9 +28863,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -27994,9 +28966,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -28063,9 +29070,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -29934,9 +30976,44 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrder
     rxOopMaxIndividual?: SortOrder
     rxOopMaxFamily?: SortOrder
+    ambulanceGroundCopay?: SortOrder
+    ambulanceGroundCoinsurance?: SortOrder
+    ambulanceAirCopay?: SortOrder
+    ambulanceAirCoinsurance?: SortOrder
+    visionExamCopay?: SortOrder
+    visionExamFrequency?: SortOrder
+    visionLensesAllowance?: SortOrder
+    visionFramesAllowance?: SortOrder
+    visionContactsAllowance?: SortOrder
+    dentalPreventiveCoinsurance?: SortOrder
+    dentalBasicCoinsurance?: SortOrder
+    dentalMajorCoinsurance?: SortOrder
+    dentalAnnualMax?: SortOrder
+    dentalDeductible?: SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrder
+    dmeCopay?: SortOrder
+    dmeCoinsurance?: SortOrder
+    homeHealthVisitCopay?: SortOrder
+    homeHealthVisitCoinsurance?: SortOrder
+    homeHealthVisitLimit?: SortOrder
+    hospiceInpatientCopay?: SortOrder
+    hospiceInpatientCoinsurance?: SortOrder
+    hospiceRespiteCopay?: SortOrder
+    hospiceRespiteCoinsurance?: SortOrder
+    hospiceRespiteDayLimit?: SortOrder
+    chiropracticCopay?: SortOrder
+    chiropracticVisitsLimit?: SortOrder
+    acupunctureCopay?: SortOrder
+    acupunctureVisitsLimit?: SortOrder
+    cardiacRehabCopay?: SortOrder
+    cardiacRehabVisitsLimit?: SortOrder
+    pulmonaryRehabCopay?: SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrder
     preventiveServicesList?: SortOrder
     exclusionsList?: SortOrder
     priorAuthRequirements?: SortOrder
+    servicesWithLimits?: SortOrder
     extractedFromSbc?: SortOrder
     sbcExtractionConfidence?: SortOrder
     isActive?: SortOrder
@@ -29993,6 +31070,39 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrder
     rxOopMaxIndividual?: SortOrder
     rxOopMaxFamily?: SortOrder
+    ambulanceGroundCopay?: SortOrder
+    ambulanceGroundCoinsurance?: SortOrder
+    ambulanceAirCopay?: SortOrder
+    ambulanceAirCoinsurance?: SortOrder
+    visionExamCopay?: SortOrder
+    visionLensesAllowance?: SortOrder
+    visionFramesAllowance?: SortOrder
+    visionContactsAllowance?: SortOrder
+    dentalPreventiveCoinsurance?: SortOrder
+    dentalBasicCoinsurance?: SortOrder
+    dentalMajorCoinsurance?: SortOrder
+    dentalAnnualMax?: SortOrder
+    dentalDeductible?: SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrder
+    dmeCopay?: SortOrder
+    dmeCoinsurance?: SortOrder
+    homeHealthVisitCopay?: SortOrder
+    homeHealthVisitCoinsurance?: SortOrder
+    homeHealthVisitLimit?: SortOrder
+    hospiceInpatientCopay?: SortOrder
+    hospiceInpatientCoinsurance?: SortOrder
+    hospiceRespiteCopay?: SortOrder
+    hospiceRespiteCoinsurance?: SortOrder
+    hospiceRespiteDayLimit?: SortOrder
+    chiropracticCopay?: SortOrder
+    chiropracticVisitsLimit?: SortOrder
+    acupunctureCopay?: SortOrder
+    acupunctureVisitsLimit?: SortOrder
+    cardiacRehabCopay?: SortOrder
+    cardiacRehabVisitsLimit?: SortOrder
+    pulmonaryRehabCopay?: SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrder
     sbcExtractionConfidence?: SortOrder
   }
 
@@ -30054,9 +31164,44 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrder
     rxOopMaxIndividual?: SortOrder
     rxOopMaxFamily?: SortOrder
+    ambulanceGroundCopay?: SortOrder
+    ambulanceGroundCoinsurance?: SortOrder
+    ambulanceAirCopay?: SortOrder
+    ambulanceAirCoinsurance?: SortOrder
+    visionExamCopay?: SortOrder
+    visionExamFrequency?: SortOrder
+    visionLensesAllowance?: SortOrder
+    visionFramesAllowance?: SortOrder
+    visionContactsAllowance?: SortOrder
+    dentalPreventiveCoinsurance?: SortOrder
+    dentalBasicCoinsurance?: SortOrder
+    dentalMajorCoinsurance?: SortOrder
+    dentalAnnualMax?: SortOrder
+    dentalDeductible?: SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrder
+    dmeCopay?: SortOrder
+    dmeCoinsurance?: SortOrder
+    homeHealthVisitCopay?: SortOrder
+    homeHealthVisitCoinsurance?: SortOrder
+    homeHealthVisitLimit?: SortOrder
+    hospiceInpatientCopay?: SortOrder
+    hospiceInpatientCoinsurance?: SortOrder
+    hospiceRespiteCopay?: SortOrder
+    hospiceRespiteCoinsurance?: SortOrder
+    hospiceRespiteDayLimit?: SortOrder
+    chiropracticCopay?: SortOrder
+    chiropracticVisitsLimit?: SortOrder
+    acupunctureCopay?: SortOrder
+    acupunctureVisitsLimit?: SortOrder
+    cardiacRehabCopay?: SortOrder
+    cardiacRehabVisitsLimit?: SortOrder
+    pulmonaryRehabCopay?: SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrder
     preventiveServicesList?: SortOrder
     exclusionsList?: SortOrder
     priorAuthRequirements?: SortOrder
+    servicesWithLimits?: SortOrder
     extractedFromSbc?: SortOrder
     sbcExtractionConfidence?: SortOrder
     isActive?: SortOrder
@@ -30123,9 +31268,44 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrder
     rxOopMaxIndividual?: SortOrder
     rxOopMaxFamily?: SortOrder
+    ambulanceGroundCopay?: SortOrder
+    ambulanceGroundCoinsurance?: SortOrder
+    ambulanceAirCopay?: SortOrder
+    ambulanceAirCoinsurance?: SortOrder
+    visionExamCopay?: SortOrder
+    visionExamFrequency?: SortOrder
+    visionLensesAllowance?: SortOrder
+    visionFramesAllowance?: SortOrder
+    visionContactsAllowance?: SortOrder
+    dentalPreventiveCoinsurance?: SortOrder
+    dentalBasicCoinsurance?: SortOrder
+    dentalMajorCoinsurance?: SortOrder
+    dentalAnnualMax?: SortOrder
+    dentalDeductible?: SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrder
+    dmeCopay?: SortOrder
+    dmeCoinsurance?: SortOrder
+    homeHealthVisitCopay?: SortOrder
+    homeHealthVisitCoinsurance?: SortOrder
+    homeHealthVisitLimit?: SortOrder
+    hospiceInpatientCopay?: SortOrder
+    hospiceInpatientCoinsurance?: SortOrder
+    hospiceRespiteCopay?: SortOrder
+    hospiceRespiteCoinsurance?: SortOrder
+    hospiceRespiteDayLimit?: SortOrder
+    chiropracticCopay?: SortOrder
+    chiropracticVisitsLimit?: SortOrder
+    acupunctureCopay?: SortOrder
+    acupunctureVisitsLimit?: SortOrder
+    cardiacRehabCopay?: SortOrder
+    cardiacRehabVisitsLimit?: SortOrder
+    pulmonaryRehabCopay?: SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrder
     preventiveServicesList?: SortOrder
     exclusionsList?: SortOrder
     priorAuthRequirements?: SortOrder
+    servicesWithLimits?: SortOrder
     extractedFromSbc?: SortOrder
     sbcExtractionConfidence?: SortOrder
     isActive?: SortOrder
@@ -30182,6 +31362,39 @@ export namespace Prisma {
     rxDeductibleFamily?: SortOrder
     rxOopMaxIndividual?: SortOrder
     rxOopMaxFamily?: SortOrder
+    ambulanceGroundCopay?: SortOrder
+    ambulanceGroundCoinsurance?: SortOrder
+    ambulanceAirCopay?: SortOrder
+    ambulanceAirCoinsurance?: SortOrder
+    visionExamCopay?: SortOrder
+    visionLensesAllowance?: SortOrder
+    visionFramesAllowance?: SortOrder
+    visionContactsAllowance?: SortOrder
+    dentalPreventiveCoinsurance?: SortOrder
+    dentalBasicCoinsurance?: SortOrder
+    dentalMajorCoinsurance?: SortOrder
+    dentalAnnualMax?: SortOrder
+    dentalDeductible?: SortOrder
+    dentalOrthodontiaCoinsurance?: SortOrder
+    dentalOrthodontiaLifetimeMax?: SortOrder
+    dmeCopay?: SortOrder
+    dmeCoinsurance?: SortOrder
+    homeHealthVisitCopay?: SortOrder
+    homeHealthVisitCoinsurance?: SortOrder
+    homeHealthVisitLimit?: SortOrder
+    hospiceInpatientCopay?: SortOrder
+    hospiceInpatientCoinsurance?: SortOrder
+    hospiceRespiteCopay?: SortOrder
+    hospiceRespiteCoinsurance?: SortOrder
+    hospiceRespiteDayLimit?: SortOrder
+    chiropracticCopay?: SortOrder
+    chiropracticVisitsLimit?: SortOrder
+    acupunctureCopay?: SortOrder
+    acupunctureVisitsLimit?: SortOrder
+    cardiacRehabCopay?: SortOrder
+    cardiacRehabVisitsLimit?: SortOrder
+    pulmonaryRehabCopay?: SortOrder
+    pulmonaryRehabVisitsLimit?: SortOrder
     sbcExtractionConfidence?: SortOrder
   }
 
@@ -32825,9 +34038,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -32894,9 +34142,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -33370,9 +34653,44 @@ export namespace Prisma {
     rxDeductibleFamily?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: StringNullableFilter<"InsurancePlan"> | string | null
+    visionLensesAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    hospiceInpatientCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    chiropracticCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    acupunctureCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    cardiacRehabCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
+    pulmonaryRehabCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: IntNullableFilter<"InsurancePlan"> | number | null
     preventiveServicesList?: StringNullableFilter<"InsurancePlan"> | string | null
     exclusionsList?: StringNullableFilter<"InsurancePlan"> | string | null
     priorAuthRequirements?: StringNullableFilter<"InsurancePlan"> | string | null
+    servicesWithLimits?: StringNullableFilter<"InsurancePlan"> | string | null
     extractedFromSbc?: BoolFilter<"InsurancePlan"> | boolean
     sbcExtractionConfidence?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFilter<"InsurancePlan"> | boolean
@@ -35042,9 +36360,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -35112,9 +36465,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -35196,9 +36584,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -35266,9 +36689,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -36465,9 +37923,44 @@ export namespace Prisma {
     rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
     preventiveServicesList?: string | null
     exclusionsList?: string | null
     priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
     extractedFromSbc?: boolean
     sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
@@ -36871,9 +38364,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -36940,9 +38468,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -37009,9 +38572,44 @@ export namespace Prisma {
     rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
     preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
     exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
     priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
     extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
     sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean

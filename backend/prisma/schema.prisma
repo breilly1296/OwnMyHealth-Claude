@@ -247,6 +247,54 @@ model InsurancePlan {
   rxOopMaxIndividual        Decimal?         @map("rx_oop_max_individual") @db.Decimal(10, 2)
   rxOopMaxFamily            Decimal?         @map("rx_oop_max_family") @db.Decimal(10, 2)
 
+  // Emergency/Ambulance coverage
+  ambulanceGroundCopay      Decimal?         @map("ambulance_ground_copay") @db.Decimal(10, 2)
+  ambulanceGroundCoinsurance Decimal?        @map("ambulance_ground_coinsurance") @db.Decimal(5, 2)
+  ambulanceAirCopay         Decimal?         @map("ambulance_air_copay") @db.Decimal(10, 2)
+  ambulanceAirCoinsurance   Decimal?         @map("ambulance_air_coinsurance") @db.Decimal(5, 2)
+
+  // Vision coverage
+  visionExamCopay           Decimal?         @map("vision_exam_copay") @db.Decimal(10, 2)
+  visionExamFrequency       String?          @map("vision_exam_frequency") @db.VarChar(100)
+  visionLensesAllowance     Decimal?         @map("vision_lenses_allowance") @db.Decimal(10, 2)
+  visionFramesAllowance     Decimal?         @map("vision_frames_allowance") @db.Decimal(10, 2)
+  visionContactsAllowance   Decimal?         @map("vision_contacts_allowance") @db.Decimal(10, 2)
+
+  // Dental coverage
+  dentalPreventiveCoinsurance Decimal?       @map("dental_preventive_coinsurance") @db.Decimal(5, 2)
+  dentalBasicCoinsurance    Decimal?         @map("dental_basic_coinsurance") @db.Decimal(5, 2)
+  dentalMajorCoinsurance    Decimal?         @map("dental_major_coinsurance") @db.Decimal(5, 2)
+  dentalAnnualMax           Decimal?         @map("dental_annual_max") @db.Decimal(10, 2)
+  dentalDeductible          Decimal?         @map("dental_deductible") @db.Decimal(10, 2)
+  dentalOrthodontiaCoinsurance Decimal?      @map("dental_orthodontia_coinsurance") @db.Decimal(5, 2)
+  dentalOrthodontiaLifetimeMax Decimal?      @map("dental_orthodontia_lifetime_max") @db.Decimal(10, 2)
+
+  // DME (Durable Medical Equipment) coverage
+  dmeCopay                  Decimal?         @map("dme_copay") @db.Decimal(10, 2)
+  dmeCoinsurance            Decimal?         @map("dme_coinsurance") @db.Decimal(5, 2)
+
+  // Home Health coverage
+  homeHealthVisitCopay      Decimal?         @map("home_health_visit_copay") @db.Decimal(10, 2)
+  homeHealthVisitCoinsurance Decimal?        @map("home_health_visit_coinsurance") @db.Decimal(5, 2)
+  homeHealthVisitLimit      Int?             @map("home_health_visit_limit")
+
+  // Hospice coverage
+  hospiceInpatientCopay     Decimal?         @map("hospice_inpatient_copay") @db.Decimal(10, 2)
+  hospiceInpatientCoinsurance Decimal?       @map("hospice_inpatient_coinsurance") @db.Decimal(5, 2)
+  hospiceRespiteCopay       Decimal?         @map("hospice_respite_copay") @db.Decimal(10, 2)
+  hospiceRespiteCoinsurance Decimal?         @map("hospice_respite_coinsurance") @db.Decimal(5, 2)
+  hospiceRespiteDayLimit    Int?             @map("hospice_respite_day_limit")
+
+  // Additional therapy types
+  chiropracticCopay         Decimal?         @map("chiropractic_copay") @db.Decimal(10, 2)
+  chiropracticVisitsLimit   Int?             @map("chiropractic_visits_limit")
+  acupunctureCopay          Decimal?         @map("acupuncture_copay") @db.Decimal(10, 2)
+  acupunctureVisitsLimit    Int?             @map("acupuncture_visits_limit")
+  cardiacRehabCopay         Decimal?         @map("cardiac_rehab_copay") @db.Decimal(10, 2)
+  cardiacRehabVisitsLimit   Int?             @map("cardiac_rehab_visits_limit")
+  pulmonaryRehabCopay       Decimal?         @map("pulmonary_rehab_copay") @db.Decimal(10, 2)
+  pulmonaryRehabVisitsLimit Int?             @map("pulmonary_rehab_visits_limit")
+
   // Preventive services (JSON array)
   preventiveServicesList    String?          @map("preventive_services_list") @db.Text
 
@@ -255,6 +303,9 @@ model InsurancePlan {
 
   // Prior authorization requirements (JSON array)
   priorAuthRequirements     String?          @map("prior_auth_requirements") @db.Text
+
+  // Services with limits (JSON array)
+  servicesWithLimits        String?          @map("services_with_limits") @db.Text
 
   // Extraction metadata
   extractedFromSbc        Boolean            @default(false) @map("extracted_from_sbc")

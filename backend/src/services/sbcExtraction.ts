@@ -30,6 +30,7 @@ export interface ExtractedBenefit {
   outNetworkDeductibleApplies: boolean;
   preAuthRequired: boolean;
   visitLimit?: number;
+  dayLimit?: number;
   limitations?: string;
 }
 
@@ -38,30 +39,48 @@ export interface ExtractedBenefit {
  */
 export interface ExtractedRxBenefits {
   tier1Copay?: number;
+  tier1CoinsurancePercent?: number;
   tier2Copay?: number;
+  tier2CoinsurancePercent?: number;
   tier3Copay?: number;
+  tier3CoinsurancePercent?: number;
   tier4Copay?: number;
+  tier4CoinsurancePercent?: number;
+  specialtyCopay?: number;
+  specialtyCoinsurancePercent?: number;
   retailDaysSupply?: number;
   mailOrderDaysSupply?: number;
+  mailOrderCostMultiplier?: number;
   deductibleIndividual?: number;
   deductibleFamily?: number;
   oopMaxIndividual?: number;
   oopMaxFamily?: number;
+  separateRxDeductible?: boolean;
+  preferredPharmacyRequired?: boolean;
 }
 
 /**
  * Inpatient coverage structure
  */
 export interface ExtractedInpatientCoverage {
-  hospitalCopay?: number;
+  hospitalCopayPerDay?: number;
+  hospitalCopayPerAdmission?: number;
   hospitalCoinsurance?: number;
+  hospitalDayLimit?: number;
   mentalHealthCopay?: number;
   mentalHealthCoinsurance?: number;
+  mentalHealthDayLimit?: number;
+  substanceAbuseCopay?: number;
+  substanceAbuseCoinsurance?: number;
+  substanceAbuseDayLimit?: number;
   maternityCopay?: number;
   maternityCoinsurance?: number;
   skilledNursingCopay?: number;
   skilledNursingCoinsurance?: number;
   skilledNursingDaysLimit?: number;
+  rehabilitationCopay?: number;
+  rehabilitationCoinsurance?: number;
+  rehabilitationDayLimit?: number;
 }
 
 /**
@@ -70,11 +89,25 @@ export interface ExtractedInpatientCoverage {
 export interface ExtractedOutpatientCoverage {
   surgeryCopay?: number;
   surgeryCoinsurance?: number;
-  mentalHealthCopay?: number;
+  mentalHealthIndividualCopay?: number;
+  mentalHealthGroupCopay?: number;
   mentalHealthCoinsurance?: number;
+  mentalHealthVisitLimit?: number;
+  substanceAbuseIndividualCopay?: number;
+  substanceAbuseGroupCopay?: number;
+  substanceAbuseCoinsurance?: number;
   labWorkCopay?: number;
+  labWorkCoinsurance?: number;
   xrayCopay?: number;
+  xrayCoinsurance?: number;
   advancedImagingCopay?: number;
+  advancedImagingCoinsurance?: number;
+  chemotherapyCopay?: number;
+  chemotherapyCoinsurance?: number;
+  radiationCopay?: number;
+  radiationCoinsurance?: number;
+  dialysisCopay?: number;
+  dialysisCoinsurance?: number;
 }
 
 /**
@@ -82,11 +115,97 @@ export interface ExtractedOutpatientCoverage {
  */
 export interface ExtractedTherapyCoverage {
   physicalTherapyCopay?: number;
+  physicalTherapyCoinsurance?: number;
   physicalTherapyVisitsLimit?: number;
   occupationalTherapyCopay?: number;
+  occupationalTherapyCoinsurance?: number;
   occupationalTherapyVisitsLimit?: number;
   speechTherapyCopay?: number;
+  speechTherapyCoinsurance?: number;
   speechTherapyVisitsLimit?: number;
+  cardiacRehabCopay?: number;
+  cardiacRehabVisitsLimit?: number;
+  pulmonaryRehabCopay?: number;
+  pulmonaryRehabVisitsLimit?: number;
+  chiropracticCopay?: number;
+  chiropracticVisitsLimit?: number;
+  acupunctureCopay?: number;
+  acupunctureVisitsLimit?: number;
+}
+
+/**
+ * Vision coverage structure
+ */
+export interface ExtractedVisionCoverage {
+  examCopay?: number;
+  examFrequency?: string;
+  lensesAllowance?: number;
+  lensesFrequency?: string;
+  framesAllowance?: number;
+  framesFrequency?: string;
+  contactsAllowance?: number;
+  contactsFrequency?: string;
+  includedInMedical?: boolean;
+}
+
+/**
+ * Dental coverage structure
+ */
+export interface ExtractedDentalCoverage {
+  preventiveCoinsurance?: number;
+  basicCoinsurance?: number;
+  majorCoinsurance?: number;
+  annualMaximum?: number;
+  deductible?: number;
+  orthodontiaCoinsurance?: number;
+  orthodontiaLifetimeMax?: number;
+  includedInMedical?: boolean;
+}
+
+/**
+ * Emergency/Urgent care coverage
+ */
+export interface ExtractedEmergencyCoverage {
+  emergencyRoomCopay?: number;
+  emergencyRoomCoinsurance?: number;
+  emergencyRoomDeductibleApplies?: boolean;
+  urgentCareCopay?: number;
+  urgentCareCoinsurance?: number;
+  ambulanceGroundCopay?: number;
+  ambulanceGroundCoinsurance?: number;
+  ambulanceAirCopay?: number;
+  ambulanceAirCoinsurance?: number;
+}
+
+/**
+ * Durable Medical Equipment coverage
+ */
+export interface ExtractedDMECoverage {
+  copay?: number;
+  coinsurance?: number;
+  priorAuthRequired?: boolean;
+  rentalVsPurchase?: string;
+}
+
+/**
+ * Home Health coverage
+ */
+export interface ExtractedHomeHealthCoverage {
+  visitCopay?: number;
+  visitCoinsurance?: number;
+  visitLimit?: number;
+  priorAuthRequired?: boolean;
+}
+
+/**
+ * Hospice coverage
+ */
+export interface ExtractedHospiceCoverage {
+  inpatientCopay?: number;
+  inpatientCoinsurance?: number;
+  respiteCopay?: number;
+  respiteCoinsurance?: number;
+  respiteDayLimit?: number;
 }
 
 /**
@@ -98,6 +217,8 @@ export interface ExtractedInsuranceData {
   insurerName?: string;
   planType?: 'HMO' | 'PPO' | 'EPO' | 'POS' | 'HDHP';
   planIdNumber?: string;
+  groupNumber?: string;
+  networkName?: string;
 
   // Core financial details (individual AND family)
   deductibleIndividual?: number;
@@ -105,31 +226,37 @@ export interface ExtractedInsuranceData {
   oopMaxIndividual?: number;
   oopMaxFamily?: number;
   premiumMonthly?: number;
+  coinsuranceRate?: number;
+
+  // Deductible details
+  deductibleCrossAccumulation?: boolean;
+  deductibleIncludesRx?: boolean;
+  oopIncludesDeductible?: boolean;
 
   // Common copays
   copayPrimaryCare?: number;
   copaySpecialist?: number;
+  copayPreventive?: number;
   copayUrgentCare?: number;
   copayEmergency?: number;
   copayTelehealth?: number;
   copayLabWork?: number;
   copayXray?: number;
   copayAdvancedImaging?: number;
-  coinsuranceRate?: number;
 
-  // Inpatient coverage
+  // Detailed coverage sections
   inpatientCoverage?: ExtractedInpatientCoverage;
-
-  // Outpatient coverage
   outpatientCoverage?: ExtractedOutpatientCoverage;
-
-  // Therapy/Rehab coverage with visit limits
   therapyCoverage?: ExtractedTherapyCoverage;
-
-  // Prescription (Rx) benefits
+  emergencyCoverage?: ExtractedEmergencyCoverage;
   rxBenefits?: ExtractedRxBenefits;
+  visionCoverage?: ExtractedVisionCoverage;
+  dentalCoverage?: ExtractedDentalCoverage;
+  dmeCoverage?: ExtractedDMECoverage;
+  homeHealthCoverage?: ExtractedHomeHealthCoverage;
+  hospiceCoverage?: ExtractedHospiceCoverage;
 
-  // Preventive services list
+  // Preventive services list (covered at 100%)
   preventiveServices?: string[];
 
   // Exclusions (what's NOT covered)
@@ -138,9 +265,18 @@ export interface ExtractedInsuranceData {
   // Prior authorization requirements
   priorAuthRequirements?: string[];
 
+  // Services with visit/day limits
+  servicesWithLimits?: Array<{
+    service: string;
+    limit: number;
+    limitType: 'visits' | 'days' | 'dollars' | 'lifetime';
+    period: 'per year' | 'per admission' | 'lifetime' | 'per occurrence';
+  }>;
+
   // Effective dates
   effectiveDate?: string;
   terminationDate?: string;
+  planYear?: string;
 
   // Benefits by category (detailed breakdown)
   benefits: ExtractedBenefit[];
@@ -148,6 +284,7 @@ export interface ExtractedInsuranceData {
   // Extraction metadata
   extractionConfidence: number;
   warnings?: string[];
+  pagesProcessed?: number;
 }
 
 /**
@@ -173,111 +310,259 @@ function getAnthropicClient(): Anthropic {
 /**
  * Comprehensive SBC extraction prompt for Claude Sonnet
  */
-const SBC_EXTRACTION_PROMPT = `You are an expert at extracting comprehensive insurance plan information from Summary of Benefits and Coverage (SBC) documents.
+const SBC_EXTRACTION_PROMPT = `You are an expert insurance analyst. Your task is to extract EVERY detail from this Summary of Benefits and Coverage (SBC) document.
 
-Analyze this insurance document thoroughly and extract ALL relevant plan details.
+CRITICAL: This document has MULTIPLE PAGES. You MUST read and extract information from ALL pages, not just the first page. SBC documents typically have:
+- Page 1-2: Summary of important coverage features
+- Page 3-4: Common medical events and services table
+- Page 5-6: Excluded services and other covered services
+- Page 7+: Coverage examples, definitions, and additional details
 
-Return ONLY valid JSON in this exact format (no markdown, no code blocks, just raw JSON):
+READ EVERY PAGE THOROUGHLY before responding.
+
+Return ONLY valid JSON (no markdown, no code blocks, no explanation text):
+
 {
-  "planName": "Plan name as shown in document",
+  "planName": "Full plan name from document header",
   "insurerName": "Insurance company name",
   "planType": "HMO|PPO|EPO|POS|HDHP",
-  "planIdNumber": "Plan ID or contract number if shown",
+  "planIdNumber": "Plan ID/contract number if shown",
+  "groupNumber": "Group number if shown",
+  "networkName": "Network name (e.g., BlueCard PPO)",
 
   "deductibleIndividual": 1500,
   "deductibleFamily": 3000,
   "oopMaxIndividual": 6000,
   "oopMaxFamily": 12000,
   "premiumMonthly": null,
+  "coinsuranceRate": 20,
+  "deductibleCrossAccumulation": true,
+  "deductibleIncludesRx": false,
+  "oopIncludesDeductible": true,
 
   "copayPrimaryCare": 25,
   "copaySpecialist": 50,
+  "copayPreventive": 0,
   "copayUrgentCare": 75,
   "copayEmergency": 250,
   "copayTelehealth": 0,
-  "copayLabWork": 20,
-  "copayXray": 30,
-  "copayAdvancedImaging": 100,
-  "coinsuranceRate": 20,
+  "copayLabWork": 0,
+  "copayXray": 0,
+  "copayAdvancedImaging": 250,
+
+  "emergencyCoverage": {
+    "emergencyRoomCopay": 250,
+    "emergencyRoomCoinsurance": null,
+    "emergencyRoomDeductibleApplies": true,
+    "urgentCareCopay": 75,
+    "urgentCareCoinsurance": null,
+    "ambulanceGroundCopay": null,
+    "ambulanceGroundCoinsurance": 20,
+    "ambulanceAirCopay": null,
+    "ambulanceAirCoinsurance": 20
+  },
 
   "inpatientCoverage": {
-    "hospitalCopay": null,
+    "hospitalCopayPerDay": 500,
+    "hospitalCopayPerAdmission": null,
     "hospitalCoinsurance": 20,
+    "hospitalDayLimit": null,
     "mentalHealthCopay": null,
     "mentalHealthCoinsurance": 20,
+    "mentalHealthDayLimit": 30,
+    "substanceAbuseCopay": null,
+    "substanceAbuseCoinsurance": 20,
+    "substanceAbuseDayLimit": 30,
     "maternityCopay": null,
     "maternityCoinsurance": 20,
     "skilledNursingCopay": null,
     "skilledNursingCoinsurance": 20,
-    "skilledNursingDaysLimit": 60
+    "skilledNursingDaysLimit": 60,
+    "rehabilitationCopay": null,
+    "rehabilitationCoinsurance": 20,
+    "rehabilitationDayLimit": 60
   },
 
   "outpatientCoverage": {
     "surgeryCopay": 250,
-    "surgeryCoinsurance": null,
-    "mentalHealthCopay": 25,
+    "surgeryCoinsurance": 20,
+    "mentalHealthIndividualCopay": 25,
+    "mentalHealthGroupCopay": 15,
     "mentalHealthCoinsurance": null,
-    "labWorkCopay": 20,
-    "xrayCopay": 30,
-    "advancedImagingCopay": 100
+    "mentalHealthVisitLimit": null,
+    "substanceAbuseIndividualCopay": 25,
+    "substanceAbuseGroupCopay": 15,
+    "substanceAbuseCoinsurance": null,
+    "labWorkCopay": 0,
+    "labWorkCoinsurance": null,
+    "xrayCopay": 0,
+    "xrayCoinsurance": null,
+    "advancedImagingCopay": 250,
+    "advancedImagingCoinsurance": null,
+    "chemotherapyCopay": null,
+    "chemotherapyCoinsurance": 20,
+    "radiationCopay": null,
+    "radiationCoinsurance": 20,
+    "dialysisCopay": null,
+    "dialysisCoinsurance": 20
   },
 
   "therapyCoverage": {
     "physicalTherapyCopay": 40,
+    "physicalTherapyCoinsurance": null,
     "physicalTherapyVisitsLimit": 30,
     "occupationalTherapyCopay": 40,
+    "occupationalTherapyCoinsurance": null,
     "occupationalTherapyVisitsLimit": 30,
     "speechTherapyCopay": 40,
-    "speechTherapyVisitsLimit": 30
+    "speechTherapyCoinsurance": null,
+    "speechTherapyVisitsLimit": 30,
+    "cardiacRehabCopay": 40,
+    "cardiacRehabVisitsLimit": 36,
+    "pulmonaryRehabCopay": 40,
+    "pulmonaryRehabVisitsLimit": null,
+    "chiropracticCopay": 40,
+    "chiropracticVisitsLimit": 20,
+    "acupunctureCopay": 40,
+    "acupunctureVisitsLimit": 20
   },
 
   "rxBenefits": {
     "tier1Copay": 10,
+    "tier1CoinsurancePercent": null,
     "tier2Copay": 35,
+    "tier2CoinsurancePercent": null,
     "tier3Copay": 60,
-    "tier4Copay": 150,
+    "tier3CoinsurancePercent": null,
+    "tier4Copay": null,
+    "tier4CoinsurancePercent": 30,
+    "specialtyCopay": null,
+    "specialtyCoinsurancePercent": 30,
     "retailDaysSupply": 30,
     "mailOrderDaysSupply": 90,
+    "mailOrderCostMultiplier": 2.5,
     "deductibleIndividual": null,
     "deductibleFamily": null,
     "oopMaxIndividual": null,
-    "oopMaxFamily": null
+    "oopMaxFamily": null,
+    "separateRxDeductible": false,
+    "preferredPharmacyRequired": true
+  },
+
+  "visionCoverage": {
+    "examCopay": 10,
+    "examFrequency": "once per 12 months",
+    "lensesAllowance": 150,
+    "lensesFrequency": "once per 12 months",
+    "framesAllowance": 150,
+    "framesFrequency": "once per 24 months",
+    "contactsAllowance": 150,
+    "contactsFrequency": "once per 12 months",
+    "includedInMedical": false
+  },
+
+  "dentalCoverage": {
+    "preventiveCoinsurance": 0,
+    "basicCoinsurance": 20,
+    "majorCoinsurance": 50,
+    "annualMaximum": 1500,
+    "deductible": 50,
+    "orthodontiaCoinsurance": 50,
+    "orthodontiaLifetimeMax": 1500,
+    "includedInMedical": false
+  },
+
+  "dmeCoverage": {
+    "copay": null,
+    "coinsurance": 20,
+    "priorAuthRequired": true,
+    "rentalVsPurchase": "rental preferred"
+  },
+
+  "homeHealthCoverage": {
+    "visitCopay": null,
+    "visitCoinsurance": 20,
+    "visitLimit": 60,
+    "priorAuthRequired": true
+  },
+
+  "hospiceCoverage": {
+    "inpatientCopay": null,
+    "inpatientCoinsurance": 0,
+    "respiteCopay": null,
+    "respiteCoinsurance": 0,
+    "respiteDayLimit": 5
   },
 
   "preventiveServices": [
-    "Annual wellness exam",
-    "Immunizations per guidelines",
-    "Routine screenings (mammogram, colonoscopy, etc.)",
-    "Well-child visits",
-    "Preventive lab tests"
+    "Annual wellness exam - $0",
+    "Routine immunizations - $0",
+    "Well-child visits - $0",
+    "Mammogram screening - $0",
+    "Colonoscopy screening - $0",
+    "Cervical cancer screening (Pap) - $0",
+    "Prostate cancer screening (PSA) - $0",
+    "Bone density test (DEXA) - $0",
+    "Diabetes screening - $0",
+    "Cholesterol screening - $0",
+    "Blood pressure screening - $0",
+    "Depression screening - $0",
+    "Obesity screening and counseling - $0",
+    "Tobacco cessation counseling - $0",
+    "Contraceptive counseling - $0",
+    "STI screening - $0"
   ],
 
   "exclusions": [
-    "Cosmetic surgery",
-    "Long-term care",
-    "Dental care (adult)",
-    "Vision care (routine)",
-    "Weight loss programs",
-    "Infertility treatment"
+    "Cosmetic surgery (unless medically necessary)",
+    "Long-term care / custodial care",
+    "Routine dental care (adults)",
+    "Routine vision care (if not included)",
+    "Weight loss surgery (unless criteria met)",
+    "Infertility treatment (or limited)",
+    "Hearing aids",
+    "Private duty nursing",
+    "Non-emergency care outside US",
+    "Experimental/investigational treatments",
+    "Services not medically necessary"
   ],
 
   "priorAuthRequirements": [
-    "Inpatient hospital stays",
-    "Outpatient surgery",
-    "Advanced imaging (MRI, CT, PET)",
-    "Specialty drugs",
+    "Inpatient hospital admissions (non-emergency)",
+    "Inpatient mental health/substance abuse",
+    "Skilled nursing facility stays",
+    "Inpatient rehabilitation",
+    "Outpatient surgery (select procedures)",
+    "Advanced imaging (MRI, CT, PET scans)",
+    "Specialty drugs / biologics",
     "Durable medical equipment over $500",
     "Home health care",
-    "Skilled nursing facility"
+    "Private duty nursing",
+    "Transplants",
+    "Bariatric surgery",
+    "Genetic testing",
+    "Sleep studies"
+  ],
+
+  "servicesWithLimits": [
+    {"service": "Physical therapy", "limit": 30, "limitType": "visits", "period": "per year"},
+    {"service": "Occupational therapy", "limit": 30, "limitType": "visits", "period": "per year"},
+    {"service": "Speech therapy", "limit": 30, "limitType": "visits", "period": "per year"},
+    {"service": "Chiropractic care", "limit": 20, "limitType": "visits", "period": "per year"},
+    {"service": "Skilled nursing facility", "limit": 60, "limitType": "days", "period": "per year"},
+    {"service": "Inpatient mental health", "limit": 30, "limitType": "days", "period": "per year"},
+    {"service": "Home health visits", "limit": 60, "limitType": "visits", "period": "per year"},
+    {"service": "Hospice respite care", "limit": 5, "limitType": "days", "period": "per occurrence"}
   ],
 
   "effectiveDate": "2024-01-01",
   "terminationDate": "2024-12-31",
+  "planYear": "2024",
 
   "benefits": [
     {
       "serviceName": "Primary Care Visit",
-      "serviceCategory": "Office Visits",
+      "serviceCategory": "Physician Services",
       "inNetworkCovered": true,
       "inNetworkCopay": 25,
       "inNetworkCoinsurance": null,
@@ -288,85 +573,142 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
       "outNetworkDeductibleApplies": true,
       "preAuthRequired": false,
       "visitLimit": null,
+      "dayLimit": null,
+      "limitations": null
+    },
+    {
+      "serviceName": "Specialist Visit",
+      "serviceCategory": "Physician Services",
+      "inNetworkCovered": true,
+      "inNetworkCopay": 50,
+      "inNetworkCoinsurance": null,
+      "inNetworkDeductibleApplies": false,
+      "outNetworkCovered": true,
+      "outNetworkCopay": null,
+      "outNetworkCoinsurance": 40,
+      "outNetworkDeductibleApplies": true,
+      "preAuthRequired": false,
+      "visitLimit": null,
+      "dayLimit": null,
       "limitations": null
     }
   ],
 
   "extractionConfidence": 0.85,
-  "warnings": ["Some benefit details may be incomplete"]
+  "warnings": [],
+  "pagesProcessed": 7
 }
 
-CRITICAL EXTRACTION INSTRUCTIONS:
+EXTRACTION INSTRUCTIONS - READ CAREFULLY:
 
-1. DEDUCTIBLES & OOP MAX:
-   - Extract BOTH individual AND family amounts
-   - Check if there are separate medical and Rx deductibles
-   - Note if deductible is embedded (combined) or separate
+1. DEDUCTIBLES & OUT-OF-POCKET MAXIMUMS:
+   - Get BOTH individual AND family amounts
+   - Check if Rx has separate deductible
+   - Note if deductible cross-accumulates between family members
+   - Check if OOP max includes deductible or is in addition
 
-2. COPAYS - Extract for ALL service types:
-   - Primary care, Specialist, Urgent care, Emergency room
-   - Telehealth/virtual visits
-   - Lab work, X-rays, Advanced imaging (CT/MRI/PET)
+2. OFFICE VISITS (Look in "If you visit a health care provider's office"):
+   - Primary care visit copay
+   - Specialist visit copay
+   - Preventive/wellness visit copay (usually $0)
+   - Telehealth/virtual visit copay
 
-3. COINSURANCE:
-   - The percentage the MEMBER pays (e.g., 20 means 20%)
-   - Often applies after deductible is met
+3. INPATIENT HOSPITAL (Look in "If you have a hospital stay"):
+   - Hospital facility fee (per day OR per admission)
+   - Physician/surgeon fees
+   - Mental health inpatient
+   - Substance abuse inpatient
+   - Maternity (facility and professional fees)
+   - Skilled nursing facility (and day limits!)
+   - Inpatient rehabilitation
 
-4. INPATIENT COVERAGE:
-   - Hospital stays (per day or per admission)
-   - Mental health/substance abuse inpatient
-   - Maternity (facility fee)
-   - Skilled nursing facility (SNF) with day limits
+4. OUTPATIENT SERVICES (Look in "If you have outpatient surgery" and "If you need mental health"):
+   - Outpatient surgery (facility fee)
+   - Mental health visits (individual vs group therapy)
+   - Substance abuse outpatient
+   - Lab tests
+   - X-rays and diagnostic imaging
+   - CT/MRI/PET scans (advanced imaging)
+   - Chemotherapy
+   - Radiation therapy
+   - Dialysis
 
-5. OUTPATIENT COVERAGE:
-   - Ambulatory/outpatient surgery
-   - Mental health visits
-   - Lab and diagnostic imaging
+5. THERAPY SERVICES (Look for rehabilitation/habilitation):
+   - Physical therapy (copay AND visit limit)
+   - Occupational therapy (copay AND visit limit)
+   - Speech therapy (copay AND visit limit)
+   - Cardiac rehabilitation
+   - Pulmonary rehabilitation
+   - Chiropractic (often has visit limits)
+   - Acupuncture (if covered)
 
-6. THERAPY/REHAB VISIT LIMITS:
-   - Physical therapy (PT) visits per year
-   - Occupational therapy (OT) visits per year
-   - Speech therapy visits per year
-   - Combined limits if applicable
+6. EMERGENCY & URGENT CARE (Look in "If you need immediate"):
+   - Emergency room (copay, deductible applies?)
+   - Urgent care
+   - Ground ambulance
+   - Air ambulance
 
-7. PRESCRIPTION (Rx) BENEFITS:
-   - Tier 1 (generic) copay
-   - Tier 2 (preferred brand) copay
-   - Tier 3 (non-preferred brand) copay
-   - Tier 4 (specialty) copay or coinsurance
-   - Retail days supply (usually 30)
-   - Mail order days supply (usually 90)
-   - Separate Rx deductible if applicable
+7. PRESCRIPTION DRUGS (Look for "If you need drugs"):
+   - Tier 1/Generic copay
+   - Tier 2/Preferred brand copay
+   - Tier 3/Non-preferred copay
+   - Tier 4/Specialty (often coinsurance %)
+   - Retail supply days (usually 30)
+   - Mail order supply days (usually 90)
+   - Mail order pricing (e.g., 2x copay for 3x supply)
+   - Separate Rx deductible?
 
-8. PREVENTIVE SERVICES:
-   - List all covered preventive services
-   - Usually covered at 100% (no cost sharing)
-   - Examples: annual exam, immunizations, screenings
+8. VISION & DENTAL (if included - often separate):
+   - Vision exam copay/frequency
+   - Lens/frame allowances
+   - Dental preventive/basic/major coinsurance
+   - Annual and lifetime maximums
 
-9. EXCLUSIONS (What's NOT Covered):
-   - Cosmetic procedures
-   - Experimental treatments
-   - Services not listed
-   - Specific limitations
+9. OTHER SERVICES:
+   - Durable medical equipment (DME)
+   - Home health care (visit limits)
+   - Hospice care
+   - Habilitative services
 
-10. PRIOR AUTHORIZATION REQUIREMENTS:
-    - List services requiring prior auth
-    - Hospital admissions, surgeries, specialty drugs, DME, etc.
+10. PREVENTIVE SERVICES (Usually page 5-6):
+    - List ALL services covered at 100%
+    - Wellness exams, screenings, immunizations
+    - Cancer screenings (mammogram, colonoscopy, PSA, Pap)
+    - Bone density (DEXA)
 
-FORMATTING RULES:
-- All dollar amounts: numbers without $ or commas
-- Coinsurance/percentages: just the number (20, not 20%)
-- Dates: ISO format YYYY-MM-DD
-- null for values not found in document
-- Empty arrays [] if no items found for lists
+11. EXCLUSIONS (Look for "Excluded Services & Other"):
+    - What is NOT covered
+    - Services requiring medical necessity
+    - Experimental treatments
+    - Coverage limitations
 
-EXTRACTION CONFIDENCE (0.0-1.0):
-- 0.9+: Clear SBC with all major fields found
-- 0.7-0.9: Most fields found, some unclear
-- 0.5-0.7: Limited information extracted
-- <0.5: Document may not be an SBC
+12. PRIOR AUTHORIZATION:
+    - Services requiring pre-approval
+    - Usually indicated by footnotes or asterisks
+    - Common: hospital admits, imaging, specialty drugs
 
-Return ONLY the JSON object, no other text.`;
+13. VISIT/DAY LIMITS:
+    - Extract ALL limits mentioned
+    - Therapy visits, SNF days, mental health days
+    - Often buried in footnotes or limitations
+
+FORMATTING:
+- Dollar amounts: numbers only (no $, no commas)
+- Percentages: number only (20 not 20%)
+- null for not found (not "N/A" or empty string)
+- Empty arrays [] if no items found
+- Dates: YYYY-MM-DD format
+
+CONFIDENCE SCORING:
+- 0.95+: All major sections found, clear document
+- 0.85-0.94: Most details found, minor gaps
+- 0.70-0.84: Key information found, some sections unclear
+- 0.50-0.69: Limited extraction, document quality issues
+- <0.50: Unable to extract meaningful data
+
+Set pagesProcessed to the number of pages you actually read.
+
+Return ONLY the JSON object. No other text.`;
 
 /**
  * Extract insurance plan data from an SBC PDF using Claude Sonnet API
@@ -393,7 +735,7 @@ export async function extractInsuranceFromSBC(
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 16384,
+      max_tokens: 32000,
       messages: [
         {
           role: 'user',
@@ -490,6 +832,9 @@ export async function extractInsuranceFromSBC(
     if (!Array.isArray(result.priorAuthRequirements)) {
       result.priorAuthRequirements = [];
     }
+    if (!Array.isArray(result.servicesWithLimits)) {
+      result.servicesWithLimits = [];
+    }
 
     // Ensure extractionConfidence is valid
     if (
@@ -503,11 +848,20 @@ export async function extractInsuranceFromSBC(
     sbcLogger.info('Claude SBC extraction complete', {
       planName: result.planName || 'Unknown',
       planType: result.planType || 'Unknown',
+      insurerName: result.insurerName || 'Unknown',
       benefitsExtracted: result.benefits.length,
       preventiveServicesCount: result.preventiveServices?.length || 0,
       exclusionsCount: result.exclusions?.length || 0,
       priorAuthCount: result.priorAuthRequirements?.length || 0,
+      servicesWithLimitsCount: result.servicesWithLimits?.length || 0,
+      hasInpatientCoverage: !!result.inpatientCoverage,
+      hasOutpatientCoverage: !!result.outpatientCoverage,
+      hasTherapyCoverage: !!result.therapyCoverage,
+      hasRxBenefits: !!result.rxBenefits,
+      hasVisionCoverage: !!result.visionCoverage,
+      hasDentalCoverage: !!result.dentalCoverage,
       extractionConfidence: result.extractionConfidence,
+      pagesProcessed: result.pagesProcessed,
       processingTimeMs,
     });
 

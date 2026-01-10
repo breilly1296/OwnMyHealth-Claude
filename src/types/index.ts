@@ -139,24 +139,136 @@ export interface InsurancePlan {
   uploadDate: string;
   sourceFile: string;
   extractionConfidence: number;
+
+  // Core financial fields
+  deductibleIndividual?: number;
+  deductibleFamily?: number;
+  oopMaxIndividual?: number;
+  oopMaxFamily?: number;
+  premiumMonthly?: number;
+
   // Tracking fields (how much has been paid toward limits)
   deductibleMetIndividual?: number;
   deductibleMetFamily?: number;
   oopMetIndividual?: number;
   oopMetFamily?: number;
-  // Copay amounts
+
+  // Core copay amounts
   copayPrimaryCare?: number;
   copaySpecialist?: number;
   copayUrgentCare?: number;
   copayEmergency?: number;
+  copayTelehealth?: number;
+  copayLabWork?: number;
+  copayXray?: number;
+  copayAdvancedImaging?: number;
   coinsuranceRate?: number;
+
+  // Inpatient coverage
+  inpatientHospitalCopay?: number;
+  inpatientHospitalCoinsurance?: number;
+  inpatientMentalHealthCopay?: number;
+  inpatientMentalCoinsurance?: number;
+  maternityCopay?: number;
+  maternityCoinsurance?: number;
+  skilledNursingCopay?: number;
+  skilledNursingCoinsurance?: number;
+  skilledNursingDaysLimit?: number;
+
+  // Outpatient coverage
+  outpatientSurgeryCopay?: number;
+  outpatientSurgeryCoinsurance?: number;
+  outpatientMentalHealthCopay?: number;
+  outpatientMentalCoinsurance?: number;
+
+  // Therapy/Rehab coverage
+  physicalTherapyCopay?: number;
+  physicalTherapyVisitsLimit?: number;
+  occupationalTherapyCopay?: number;
+  occupationalTherapyVisitsLimit?: number;
+  speechTherapyCopay?: number;
+  speechTherapyVisitsLimit?: number;
+  chiropracticCopay?: number;
+  chiropracticVisitsLimit?: number;
+  acupunctureCopay?: number;
+  acupunctureVisitsLimit?: number;
+  cardiacRehabCopay?: number;
+  cardiacRehabVisitsLimit?: number;
+  pulmonaryRehabCopay?: number;
+  pulmonaryRehabVisitsLimit?: number;
+
+  // Prescription (Rx) benefits
+  rxTier1Copay?: number;
+  rxTier2Copay?: number;
+  rxTier3Copay?: number;
+  rxTier4Copay?: number;
+  rxRetailDaysSupply?: number;
+  rxMailOrderDaysSupply?: number;
+  rxDeductibleIndividual?: number;
+  rxDeductibleFamily?: number;
+  rxOopMaxIndividual?: number;
+  rxOopMaxFamily?: number;
+
+  // Emergency/Ambulance coverage
+  ambulanceGroundCopay?: number;
+  ambulanceGroundCoinsurance?: number;
+  ambulanceAirCopay?: number;
+  ambulanceAirCoinsurance?: number;
+
+  // Vision coverage
+  visionExamCopay?: number;
+  visionExamFrequency?: string;
+  visionLensesAllowance?: number;
+  visionFramesAllowance?: number;
+  visionContactsAllowance?: number;
+
+  // Dental coverage
+  dentalPreventiveCoinsurance?: number;
+  dentalBasicCoinsurance?: number;
+  dentalMajorCoinsurance?: number;
+  dentalAnnualMax?: number;
+  dentalDeductible?: number;
+  dentalOrthodontiaCoinsurance?: number;
+  dentalOrthodontiaLifetimeMax?: number;
+
+  // DME coverage
+  dmeCopay?: number;
+  dmeCoinsurance?: number;
+
+  // Home Health coverage
+  homeHealthVisitCopay?: number;
+  homeHealthVisitCoinsurance?: number;
+  homeHealthVisitLimit?: number;
+
+  // Hospice coverage
+  hospiceInpatientCopay?: number;
+  hospiceInpatientCoinsurance?: number;
+  hospiceRespiteCopay?: number;
+  hospiceRespiteCoinsurance?: number;
+  hospiceRespiteDayLimit?: number;
+
+  // JSON list fields (parsed from strings)
+  preventiveServicesList?: string[];
+  exclusionsList?: string[];
+  priorAuthRequirements?: string[];
+  servicesWithLimits?: ServiceLimit[];
+
   // Source tracking
   extractedFromSbc?: boolean;
   sbcExtractionConfidence?: number;
+
+  // Legacy fields for backwards compatibility
   benefits: InsuranceBenefit[];
   costs: InsuranceCost[];
   limitations: InsuranceLimitation[];
   network: NetworkInfo;
+}
+
+export interface ServiceLimit {
+  service: string;
+  limit: number;
+  limitType: 'visits' | 'days' | 'dollars' | 'lifetime';
+  period: 'per year' | 'per admission' | 'lifetime' | 'per occurrence';
 }
 
 export interface InsuranceBenefit {
