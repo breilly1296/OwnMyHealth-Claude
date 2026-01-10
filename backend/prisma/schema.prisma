@@ -198,11 +198,65 @@ model InsurancePlan {
   oopMaxFamily            Decimal            @map("oop_max_family") @db.Decimal(10, 2)
   oopMetIndividual        Decimal            @default(0) @map("oop_met_individual") @db.Decimal(10, 2)
   oopMetFamily            Decimal            @default(0) @map("oop_met_family") @db.Decimal(10, 2)
+
+  // Copays
   copayPrimaryCare        Decimal?           @map("copay_primary_care") @db.Decimal(10, 2)
   copaySpecialist         Decimal?           @map("copay_specialist") @db.Decimal(10, 2)
   copayUrgentCare         Decimal?           @map("copay_urgent_care") @db.Decimal(10, 2)
   copayEmergency          Decimal?           @map("copay_emergency") @db.Decimal(10, 2)
+  copayTelehealth         Decimal?           @map("copay_telehealth") @db.Decimal(10, 2)
+  copayLabWork            Decimal?           @map("copay_lab_work") @db.Decimal(10, 2)
+  copayXray               Decimal?           @map("copay_xray") @db.Decimal(10, 2)
+  copayAdvancedImaging    Decimal?           @map("copay_advanced_imaging") @db.Decimal(10, 2)
   coinsuranceRate         Decimal?           @map("coinsurance_rate") @db.Decimal(5, 2)
+
+  // Inpatient coverage
+  inpatientHospitalCopay        Decimal?     @map("inpatient_hospital_copay") @db.Decimal(10, 2)
+  inpatientHospitalCoinsurance  Decimal?     @map("inpatient_hospital_coinsurance") @db.Decimal(5, 2)
+  inpatientMentalHealthCopay    Decimal?     @map("inpatient_mental_health_copay") @db.Decimal(10, 2)
+  inpatientMentalCoinsurance    Decimal?     @map("inpatient_mental_coinsurance") @db.Decimal(5, 2)
+  maternityCopay                Decimal?     @map("maternity_copay") @db.Decimal(10, 2)
+  maternityCoinsurance          Decimal?     @map("maternity_coinsurance") @db.Decimal(5, 2)
+  skilledNursingCopay           Decimal?     @map("skilled_nursing_copay") @db.Decimal(10, 2)
+  skilledNursingCoinsurance     Decimal?     @map("skilled_nursing_coinsurance") @db.Decimal(5, 2)
+  skilledNursingDaysLimit       Int?         @map("skilled_nursing_days_limit")
+
+  // Outpatient coverage
+  outpatientSurgeryCopay        Decimal?     @map("outpatient_surgery_copay") @db.Decimal(10, 2)
+  outpatientSurgeryCoinsurance  Decimal?     @map("outpatient_surgery_coinsurance") @db.Decimal(5, 2)
+  outpatientMentalHealthCopay   Decimal?     @map("outpatient_mental_health_copay") @db.Decimal(10, 2)
+  outpatientMentalCoinsurance   Decimal?     @map("outpatient_mental_coinsurance") @db.Decimal(5, 2)
+
+  // Rehab/Therapy visit limits
+  physicalTherapyVisitsLimit    Int?         @map("physical_therapy_visits_limit")
+  occupationalTherapyVisitsLimit Int?        @map("occupational_therapy_visits_limit")
+  speechTherapyVisitsLimit      Int?         @map("speech_therapy_visits_limit")
+  physicalTherapyCopay          Decimal?     @map("physical_therapy_copay") @db.Decimal(10, 2)
+  occupationalTherapyCopay      Decimal?     @map("occupational_therapy_copay") @db.Decimal(10, 2)
+  speechTherapyCopay            Decimal?     @map("speech_therapy_copay") @db.Decimal(10, 2)
+
+  // Prescription (Rx) benefits
+  rxTier1Copay              Decimal?         @map("rx_tier1_copay") @db.Decimal(10, 2)
+  rxTier2Copay              Decimal?         @map("rx_tier2_copay") @db.Decimal(10, 2)
+  rxTier3Copay              Decimal?         @map("rx_tier3_copay") @db.Decimal(10, 2)
+  rxTier4Copay              Decimal?         @map("rx_tier4_copay") @db.Decimal(10, 2)
+  rxRetailDaysSupply        Int?             @map("rx_retail_days_supply")
+  rxMailOrderDaysSupply     Int?             @map("rx_mail_order_days_supply")
+  rxDeductibleIndividual    Decimal?         @map("rx_deductible_individual") @db.Decimal(10, 2)
+  rxDeductibleFamily        Decimal?         @map("rx_deductible_family") @db.Decimal(10, 2)
+  rxOopMaxIndividual        Decimal?         @map("rx_oop_max_individual") @db.Decimal(10, 2)
+  rxOopMaxFamily            Decimal?         @map("rx_oop_max_family") @db.Decimal(10, 2)
+
+  // Preventive services (JSON array)
+  preventiveServicesList    String?          @map("preventive_services_list") @db.Text
+
+  // Exclusions (what's NOT covered - JSON array)
+  exclusionsList            String?          @map("exclusions_list") @db.Text
+
+  // Prior authorization requirements (JSON array)
+  priorAuthRequirements     String?          @map("prior_auth_requirements") @db.Text
+
+  // Extraction metadata
   extractedFromSbc        Boolean            @default(false) @map("extracted_from_sbc")
   sbcExtractionConfidence Decimal?           @map("sbc_extraction_confidence") @db.Decimal(3, 2)
   isActive                Boolean            @default(true) @map("is_active")

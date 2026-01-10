@@ -1,8 +1,8 @@
 /**
  * Claude Sonnet SBC Extraction Service
  *
- * Uses Claude Sonnet's document understanding to extract insurance plan details
- * from Summary of Benefits and Coverage (SBC) PDF documents.
+ * Uses Claude Sonnet's document understanding to extract comprehensive insurance
+ * plan details from Summary of Benefits and Coverage (SBC) PDF documents.
  *
  * @module services/sbcExtraction
  */
@@ -29,7 +29,64 @@ export interface ExtractedBenefit {
   outNetworkCoinsurance?: number;
   outNetworkDeductibleApplies: boolean;
   preAuthRequired: boolean;
+  visitLimit?: number;
   limitations?: string;
+}
+
+/**
+ * Prescription (Rx) benefits structure
+ */
+export interface ExtractedRxBenefits {
+  tier1Copay?: number;
+  tier2Copay?: number;
+  tier3Copay?: number;
+  tier4Copay?: number;
+  retailDaysSupply?: number;
+  mailOrderDaysSupply?: number;
+  deductibleIndividual?: number;
+  deductibleFamily?: number;
+  oopMaxIndividual?: number;
+  oopMaxFamily?: number;
+}
+
+/**
+ * Inpatient coverage structure
+ */
+export interface ExtractedInpatientCoverage {
+  hospitalCopay?: number;
+  hospitalCoinsurance?: number;
+  mentalHealthCopay?: number;
+  mentalHealthCoinsurance?: number;
+  maternityCopay?: number;
+  maternityCoinsurance?: number;
+  skilledNursingCopay?: number;
+  skilledNursingCoinsurance?: number;
+  skilledNursingDaysLimit?: number;
+}
+
+/**
+ * Outpatient coverage structure
+ */
+export interface ExtractedOutpatientCoverage {
+  surgeryCopay?: number;
+  surgeryCoinsurance?: number;
+  mentalHealthCopay?: number;
+  mentalHealthCoinsurance?: number;
+  labWorkCopay?: number;
+  xrayCopay?: number;
+  advancedImagingCopay?: number;
+}
+
+/**
+ * Therapy/Rehab coverage structure
+ */
+export interface ExtractedTherapyCoverage {
+  physicalTherapyCopay?: number;
+  physicalTherapyVisitsLimit?: number;
+  occupationalTherapyCopay?: number;
+  occupationalTherapyVisitsLimit?: number;
+  speechTherapyCopay?: number;
+  speechTherapyVisitsLimit?: number;
 }
 
 /**
@@ -42,7 +99,7 @@ export interface ExtractedInsuranceData {
   planType?: 'HMO' | 'PPO' | 'EPO' | 'POS' | 'HDHP';
   planIdNumber?: string;
 
-  // Financial details
+  // Core financial details (individual AND family)
   deductibleIndividual?: number;
   deductibleFamily?: number;
   oopMaxIndividual?: number;
@@ -54,13 +111,38 @@ export interface ExtractedInsuranceData {
   copaySpecialist?: number;
   copayUrgentCare?: number;
   copayEmergency?: number;
+  copayTelehealth?: number;
+  copayLabWork?: number;
+  copayXray?: number;
+  copayAdvancedImaging?: number;
   coinsuranceRate?: number;
+
+  // Inpatient coverage
+  inpatientCoverage?: ExtractedInpatientCoverage;
+
+  // Outpatient coverage
+  outpatientCoverage?: ExtractedOutpatientCoverage;
+
+  // Therapy/Rehab coverage with visit limits
+  therapyCoverage?: ExtractedTherapyCoverage;
+
+  // Prescription (Rx) benefits
+  rxBenefits?: ExtractedRxBenefits;
+
+  // Preventive services list
+  preventiveServices?: string[];
+
+  // Exclusions (what's NOT covered)
+  exclusions?: string[];
+
+  // Prior authorization requirements
+  priorAuthRequirements?: string[];
 
   // Effective dates
   effectiveDate?: string;
   terminationDate?: string;
 
-  // Benefits by category
+  // Benefits by category (detailed breakdown)
   benefits: ExtractedBenefit[];
 
   // Extraction metadata
@@ -89,11 +171,11 @@ function getAnthropicClient(): Anthropic {
 }
 
 /**
- * The extraction prompt for Claude Sonnet
+ * Comprehensive SBC extraction prompt for Claude Sonnet
  */
-const SBC_EXTRACTION_PROMPT = `You are an expert at extracting insurance plan information from Summary of Benefits and Coverage (SBC) documents.
+const SBC_EXTRACTION_PROMPT = `You are an expert at extracting comprehensive insurance plan information from Summary of Benefits and Coverage (SBC) documents.
 
-Analyze this insurance document and extract all relevant plan details.
+Analyze this insurance document thoroughly and extract ALL relevant plan details.
 
 Return ONLY valid JSON in this exact format (no markdown, no code blocks, just raw JSON):
 {
@@ -112,7 +194,82 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
   "copaySpecialist": 50,
   "copayUrgentCare": 75,
   "copayEmergency": 250,
+  "copayTelehealth": 0,
+  "copayLabWork": 20,
+  "copayXray": 30,
+  "copayAdvancedImaging": 100,
   "coinsuranceRate": 20,
+
+  "inpatientCoverage": {
+    "hospitalCopay": null,
+    "hospitalCoinsurance": 20,
+    "mentalHealthCopay": null,
+    "mentalHealthCoinsurance": 20,
+    "maternityCopay": null,
+    "maternityCoinsurance": 20,
+    "skilledNursingCopay": null,
+    "skilledNursingCoinsurance": 20,
+    "skilledNursingDaysLimit": 60
+  },
+
+  "outpatientCoverage": {
+    "surgeryCopay": 250,
+    "surgeryCoinsurance": null,
+    "mentalHealthCopay": 25,
+    "mentalHealthCoinsurance": null,
+    "labWorkCopay": 20,
+    "xrayCopay": 30,
+    "advancedImagingCopay": 100
+  },
+
+  "therapyCoverage": {
+    "physicalTherapyCopay": 40,
+    "physicalTherapyVisitsLimit": 30,
+    "occupationalTherapyCopay": 40,
+    "occupationalTherapyVisitsLimit": 30,
+    "speechTherapyCopay": 40,
+    "speechTherapyVisitsLimit": 30
+  },
+
+  "rxBenefits": {
+    "tier1Copay": 10,
+    "tier2Copay": 35,
+    "tier3Copay": 60,
+    "tier4Copay": 150,
+    "retailDaysSupply": 30,
+    "mailOrderDaysSupply": 90,
+    "deductibleIndividual": null,
+    "deductibleFamily": null,
+    "oopMaxIndividual": null,
+    "oopMaxFamily": null
+  },
+
+  "preventiveServices": [
+    "Annual wellness exam",
+    "Immunizations per guidelines",
+    "Routine screenings (mammogram, colonoscopy, etc.)",
+    "Well-child visits",
+    "Preventive lab tests"
+  ],
+
+  "exclusions": [
+    "Cosmetic surgery",
+    "Long-term care",
+    "Dental care (adult)",
+    "Vision care (routine)",
+    "Weight loss programs",
+    "Infertility treatment"
+  ],
+
+  "priorAuthRequirements": [
+    "Inpatient hospital stays",
+    "Outpatient surgery",
+    "Advanced imaging (MRI, CT, PET)",
+    "Specialty drugs",
+    "Durable medical equipment over $500",
+    "Home health care",
+    "Skilled nursing facility"
+  ],
 
   "effectiveDate": "2024-01-01",
   "terminationDate": "2024-12-31",
@@ -130,6 +287,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
       "outNetworkCoinsurance": 40,
       "outNetworkDeductibleApplies": true,
       "preAuthRequired": false,
+      "visitLimit": null,
       "limitations": null
     }
   ],
@@ -138,39 +296,75 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
   "warnings": ["Some benefit details may be incomplete"]
 }
 
-IMPORTANT INSTRUCTIONS:
-1. Extract the plan type (HMO, PPO, EPO, POS, or HDHP) based on document content
-2. All dollar amounts should be numbers without $ symbol or commas
-3. Coinsurance rates should be the percentage the member pays (e.g., 20 for 20%)
-4. For dates, use ISO format (YYYY-MM-DD)
-5. Set null for values not found in the document
+CRITICAL EXTRACTION INSTRUCTIONS:
 
-BENEFITS TO EXTRACT (use these exact service categories):
-- Office Visits: Primary Care Visit, Specialist Visit, Telehealth Visit
-- Preventive: Preventive Care, Immunizations, Screening Tests
-- Emergency: Emergency Room, Urgent Care, Ambulance
-- Hospital: Hospital Stay (Inpatient), Outpatient Surgery, Skilled Nursing
-- Mental Health: Mental Health (Outpatient), Mental Health (Inpatient), Substance Abuse
-- Pharmacy: Generic Drugs, Preferred Brand Drugs, Non-Preferred Drugs, Specialty Drugs
-- Diagnostic: Lab Tests, X-Ray, Advanced Imaging (CT/MRI/PET)
-- Therapy: Physical Therapy, Occupational Therapy, Speech Therapy
-- Maternity: Prenatal Care, Delivery, Postnatal Care
-- Equipment: Durable Medical Equipment, Prosthetics
+1. DEDUCTIBLES & OOP MAX:
+   - Extract BOTH individual AND family amounts
+   - Check if there are separate medical and Rx deductibles
+   - Note if deductible is embedded (combined) or separate
 
-For each benefit, determine:
-- If it's covered in-network and out-of-network
-- The copay amount (if flat fee) or coinsurance percentage
-- Whether deductible applies before coverage
-- If prior authorization is required
-- Any limitations (visit limits, waiting periods, etc.)
+2. COPAYS - Extract for ALL service types:
+   - Primary care, Specialist, Urgent care, Emergency room
+   - Telehealth/virtual visits
+   - Lab work, X-rays, Advanced imaging (CT/MRI/PET)
 
-Calculate extractionConfidence (0.0-1.0) based on:
-- 0.9+ : Clear SBC document with all major fields found
-- 0.7-0.9: Most fields found but some unclear or missing
+3. COINSURANCE:
+   - The percentage the MEMBER pays (e.g., 20 means 20%)
+   - Often applies after deductible is met
+
+4. INPATIENT COVERAGE:
+   - Hospital stays (per day or per admission)
+   - Mental health/substance abuse inpatient
+   - Maternity (facility fee)
+   - Skilled nursing facility (SNF) with day limits
+
+5. OUTPATIENT COVERAGE:
+   - Ambulatory/outpatient surgery
+   - Mental health visits
+   - Lab and diagnostic imaging
+
+6. THERAPY/REHAB VISIT LIMITS:
+   - Physical therapy (PT) visits per year
+   - Occupational therapy (OT) visits per year
+   - Speech therapy visits per year
+   - Combined limits if applicable
+
+7. PRESCRIPTION (Rx) BENEFITS:
+   - Tier 1 (generic) copay
+   - Tier 2 (preferred brand) copay
+   - Tier 3 (non-preferred brand) copay
+   - Tier 4 (specialty) copay or coinsurance
+   - Retail days supply (usually 30)
+   - Mail order days supply (usually 90)
+   - Separate Rx deductible if applicable
+
+8. PREVENTIVE SERVICES:
+   - List all covered preventive services
+   - Usually covered at 100% (no cost sharing)
+   - Examples: annual exam, immunizations, screenings
+
+9. EXCLUSIONS (What's NOT Covered):
+   - Cosmetic procedures
+   - Experimental treatments
+   - Services not listed
+   - Specific limitations
+
+10. PRIOR AUTHORIZATION REQUIREMENTS:
+    - List services requiring prior auth
+    - Hospital admissions, surgeries, specialty drugs, DME, etc.
+
+FORMATTING RULES:
+- All dollar amounts: numbers without $ or commas
+- Coinsurance/percentages: just the number (20, not 20%)
+- Dates: ISO format YYYY-MM-DD
+- null for values not found in document
+- Empty arrays [] if no items found for lists
+
+EXTRACTION CONFIDENCE (0.0-1.0):
+- 0.9+: Clear SBC with all major fields found
+- 0.7-0.9: Most fields found, some unclear
 - 0.5-0.7: Limited information extracted
-- <0.5: Document may not be an SBC or is poorly formatted
-
-Add warnings for any fields that were ambiguous or required assumptions.
+- <0.5: Document may not be an SBC
 
 Return ONLY the JSON object, no other text.`;
 
@@ -178,7 +372,7 @@ Return ONLY the JSON object, no other text.`;
  * Extract insurance plan data from an SBC PDF using Claude Sonnet API
  *
  * @param pdfBuffer - The PDF file as a buffer
- * @returns Extraction result with plan details and benefits
+ * @returns Extraction result with comprehensive plan details
  */
 export async function extractInsuranceFromSBC(
   pdfBuffer: Buffer
@@ -199,7 +393,7 @@ export async function extractInsuranceFromSBC(
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 8192,
+      max_tokens: 16384,
       messages: [
         {
           role: 'user',
@@ -238,7 +432,6 @@ export async function extractInsuranceFromSBC(
     });
 
     // Parse JSON from response
-    // Try to find JSON object in the response (handles potential markdown code blocks)
     let jsonText = responseText;
 
     // Remove markdown code blocks if present
@@ -287,6 +480,17 @@ export async function extractInsuranceFromSBC(
       return true;
     });
 
+    // Ensure arrays are valid
+    if (!Array.isArray(result.preventiveServices)) {
+      result.preventiveServices = [];
+    }
+    if (!Array.isArray(result.exclusions)) {
+      result.exclusions = [];
+    }
+    if (!Array.isArray(result.priorAuthRequirements)) {
+      result.priorAuthRequirements = [];
+    }
+
     // Ensure extractionConfidence is valid
     if (
       typeof result.extractionConfidence !== 'number' ||
@@ -300,6 +504,9 @@ export async function extractInsuranceFromSBC(
       planName: result.planName || 'Unknown',
       planType: result.planType || 'Unknown',
       benefitsExtracted: result.benefits.length,
+      preventiveServicesCount: result.preventiveServices?.length || 0,
+      exclusionsCount: result.exclusions?.length || 0,
+      priorAuthCount: result.priorAuthRequirements?.length || 0,
       extractionConfidence: result.extractionConfidence,
       processingTimeMs,
     });

@@ -313,11 +313,64 @@ export async function uploadSBC(
     oopMaxIndividual?: number;
     oopMaxFamily?: number;
     premiumMonthly?: number;
+    // Core copays
     copayPrimaryCare?: number;
     copaySpecialist?: number;
     copayUrgentCare?: number;
     copayEmergency?: number;
+    copayTelehealth?: number;
+    copayLabWork?: number;
+    copayXray?: number;
+    copayAdvancedImaging?: number;
     coinsuranceRate?: number;
+    // Inpatient coverage
+    inpatientCoverage?: {
+      hospitalCopay?: number;
+      hospitalCoinsurance?: number;
+      mentalHealthCopay?: number;
+      mentalHealthCoinsurance?: number;
+      maternityCopay?: number;
+      maternityCoinsurance?: number;
+      skilledNursingCopay?: number;
+      skilledNursingCoinsurance?: number;
+      skilledNursingDaysLimit?: number;
+    };
+    // Outpatient coverage
+    outpatientCoverage?: {
+      surgeryCopay?: number;
+      surgeryCoinsurance?: number;
+      mentalHealthCopay?: number;
+      mentalHealthCoinsurance?: number;
+      labWorkCopay?: number;
+      xrayCopay?: number;
+      advancedImagingCopay?: number;
+    };
+    // Therapy coverage
+    therapyCoverage?: {
+      physicalTherapyCopay?: number;
+      physicalTherapyVisitsLimit?: number;
+      occupationalTherapyCopay?: number;
+      occupationalTherapyVisitsLimit?: number;
+      speechTherapyCopay?: number;
+      speechTherapyVisitsLimit?: number;
+    };
+    // Rx benefits
+    rxBenefits?: {
+      tier1Copay?: number;
+      tier2Copay?: number;
+      tier3Copay?: number;
+      tier4Copay?: number;
+      retailDaysSupply?: number;
+      mailOrderDaysSupply?: number;
+      deductibleIndividual?: number;
+      deductibleFamily?: number;
+      oopMaxIndividual?: number;
+      oopMaxFamily?: number;
+    };
+    // Lists
+    preventiveServices?: string[];
+    exclusions?: string[];
+    priorAuthRequirements?: string[];
     effectiveDate?: string;
     benefits: Array<{
       serviceName: string;
@@ -454,6 +507,12 @@ export async function uploadSBC(
     ? new Date(extractedData.effectiveDate)
     : new Date();
 
+  // Extract nested coverage objects with defaults
+  const inpatient = extractedData.inpatientCoverage || {};
+  const outpatient = extractedData.outpatientCoverage || {};
+  const therapy = extractedData.therapyCoverage || {};
+  const rx = extractedData.rxBenefits || {};
+
   const createdPlan = await prisma.insurancePlan.create({
     data: {
       userId,
@@ -479,12 +538,66 @@ export async function uploadSBC(
       deductibleMetFamily: 0,
       oopMetIndividual: 0,
       oopMetFamily: 0,
-      // Copay fields from extraction
+
+      // Core copay fields
       copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
       copaySpecialist: extractedData.copaySpecialist ?? null,
       copayUrgentCare: extractedData.copayUrgentCare ?? null,
       copayEmergency: extractedData.copayEmergency ?? null,
+      copayTelehealth: extractedData.copayTelehealth ?? null,
+      copayLabWork: extractedData.copayLabWork ?? outpatient.labWorkCopay ?? null,
+      copayXray: extractedData.copayXray ?? outpatient.xrayCopay ?? null,
+      copayAdvancedImaging: extractedData.copayAdvancedImaging ?? outpatient.advancedImagingCopay ?? null,
       coinsuranceRate: extractedData.coinsuranceRate ?? null,
+
+      // Inpatient coverage
+      inpatientHospitalCopay: inpatient.hospitalCopay ?? null,
+      inpatientHospitalCoinsurance: inpatient.hospitalCoinsurance ?? null,
+      inpatientMentalHealthCopay: inpatient.mentalHealthCopay ?? null,
+      inpatientMentalCoinsurance: inpatient.mentalHealthCoinsurance ?? null,
+      maternityCopay: inpatient.maternityCopay ?? null,
+      maternityCoinsurance: inpatient.maternityCoinsurance ?? null,
+      skilledNursingCopay: inpatient.skilledNursingCopay ?? null,
+      skilledNursingCoinsurance: inpatient.skilledNursingCoinsurance ?? null,
+      skilledNursingDaysLimit: inpatient.skilledNursingDaysLimit ?? null,
+
+      // Outpatient coverage
+      outpatientSurgeryCopay: outpatient.surgeryCopay ?? null,
+      outpatientSurgeryCoinsurance: outpatient.surgeryCoinsurance ?? null,
+      outpatientMentalHealthCopay: outpatient.mentalHealthCopay ?? null,
+      outpatientMentalCoinsurance: outpatient.mentalHealthCoinsurance ?? null,
+
+      // Therapy/Rehab coverage
+      physicalTherapyCopay: therapy.physicalTherapyCopay ?? null,
+      physicalTherapyVisitsLimit: therapy.physicalTherapyVisitsLimit ?? null,
+      occupationalTherapyCopay: therapy.occupationalTherapyCopay ?? null,
+      occupationalTherapyVisitsLimit: therapy.occupationalTherapyVisitsLimit ?? null,
+      speechTherapyCopay: therapy.speechTherapyCopay ?? null,
+      speechTherapyVisitsLimit: therapy.speechTherapyVisitsLimit ?? null,
+
+      // Prescription (Rx) benefits
+      rxTier1Copay: rx.tier1Copay ?? null,
+      rxTier2Copay: rx.tier2Copay ?? null,
+      rxTier3Copay: rx.tier3Copay ?? null,
+      rxTier4Copay: rx.tier4Copay ?? null,
+      rxRetailDaysSupply: rx.retailDaysSupply ?? null,
+      rxMailOrderDaysSupply: rx.mailOrderDaysSupply ?? null,
+      rxDeductibleIndividual: rx.deductibleIndividual ?? null,
+      rxDeductibleFamily: rx.deductibleFamily ?? null,
+      rxOopMaxIndividual: rx.oopMaxIndividual ?? null,
+      rxOopMaxFamily: rx.oopMaxFamily ?? null,
+
+      // JSON lists (stored as stringified JSON)
+      preventiveServicesList: extractedData.preventiveServices?.length
+        ? JSON.stringify(extractedData.preventiveServices)
+        : null,
+      exclusionsList: extractedData.exclusions?.length
+        ? JSON.stringify(extractedData.exclusions)
+        : null,
+      priorAuthRequirements: extractedData.priorAuthRequirements?.length
+        ? JSON.stringify(extractedData.priorAuthRequirements)
+        : null,
+
       // Source tracking
       extractedFromSbc: true,
       sbcExtractionConfidence: extractedData.extractionConfidence,

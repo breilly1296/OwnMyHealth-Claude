@@ -19,17 +19,66 @@ export interface InsurancePlanData {
   oopMaxIndividual: number;
   oopMaxFamily: number;
   premiumMonthly?: number;
+
   // Tracking fields
   deductibleMetIndividual?: number;
   deductibleMetFamily?: number;
   oopMetIndividual?: number;
   oopMetFamily?: number;
-  // Copay amounts
+
+  // Core copays
   copayPrimaryCare?: number;
   copaySpecialist?: number;
   copayUrgentCare?: number;
   copayEmergency?: number;
+  copayTelehealth?: number;
+  copayLabWork?: number;
+  copayXray?: number;
+  copayAdvancedImaging?: number;
   coinsuranceRate?: number;
+
+  // Inpatient coverage
+  inpatientHospitalCopay?: number;
+  inpatientHospitalCoinsurance?: number;
+  inpatientMentalHealthCopay?: number;
+  inpatientMentalCoinsurance?: number;
+  maternityCopay?: number;
+  maternityCoinsurance?: number;
+  skilledNursingCopay?: number;
+  skilledNursingCoinsurance?: number;
+  skilledNursingDaysLimit?: number;
+
+  // Outpatient coverage
+  outpatientSurgeryCopay?: number;
+  outpatientSurgeryCoinsurance?: number;
+  outpatientMentalHealthCopay?: number;
+  outpatientMentalCoinsurance?: number;
+
+  // Therapy/Rehab coverage
+  physicalTherapyCopay?: number;
+  physicalTherapyVisitsLimit?: number;
+  occupationalTherapyCopay?: number;
+  occupationalTherapyVisitsLimit?: number;
+  speechTherapyCopay?: number;
+  speechTherapyVisitsLimit?: number;
+
+  // Prescription (Rx) benefits
+  rxTier1Copay?: number;
+  rxTier2Copay?: number;
+  rxTier3Copay?: number;
+  rxTier4Copay?: number;
+  rxRetailDaysSupply?: number;
+  rxMailOrderDaysSupply?: number;
+  rxDeductibleIndividual?: number;
+  rxDeductibleFamily?: number;
+  rxOopMaxIndividual?: number;
+  rxOopMaxFamily?: number;
+
+  // JSON lists (parsed from string)
+  preventiveServicesList?: string[];
+  exclusionsList?: string[];
+  priorAuthRequirements?: string[];
+
   // Source tracking
   extractedFromSbc?: boolean;
   sbcExtractionConfidence?: number;
