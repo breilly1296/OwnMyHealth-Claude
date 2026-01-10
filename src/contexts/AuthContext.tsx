@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await authApi.refreshToken();
           console.log('[AuthContext] Access token refreshed from refresh token');
-        } catch (refreshError) {
+        } catch {
           // Refresh token invalid or expired - user must re-login
           console.log('[AuthContext] Refresh token invalid, user not authenticated');
           setUser(null);
