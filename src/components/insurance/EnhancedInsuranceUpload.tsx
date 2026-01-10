@@ -242,7 +242,14 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
         ));
 
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
+        // Handle both Error instances and ApiError objects
+        let errorMessage = 'Failed to process file';
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        } else if (err && typeof err === 'object' && 'message' in err) {
+          errorMessage = (err as { message: string }).message;
+        }
+        console.error('SBC upload failed:', err);
         setUploadedFiles(prev => prev.map(pf =>
           pf.file.name === file.name
             ? {
