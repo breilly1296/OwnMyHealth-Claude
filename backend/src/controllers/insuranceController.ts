@@ -202,13 +202,28 @@ function toResponse(
 ): InsurancePlanResponse {
   const encryptionService = getEncryptionService();
 
-  // Decrypt PHI fields
-  const memberId = plan.memberIdEncrypted
-    ? encryptionService.decrypt(plan.memberIdEncrypted, userSalt)
-    : undefined;
-  const groupNumber = plan.groupIdEncrypted
-    ? encryptionService.decrypt(plan.groupIdEncrypted, userSalt)
-    : undefined;
+  // Decrypt PHI fields with error handling
+  // If decryption fails (e.g., key mismatch), return undefined instead of crashing
+  let memberId: string | undefined;
+  let groupNumber: string | undefined;
+
+  if (plan.memberIdEncrypted) {
+    try {
+      memberId = encryptionService.decrypt(plan.memberIdEncrypted, userSalt);
+    } catch (error) {
+      console.error(`[Insurance] Failed to decrypt memberId for plan ${plan.id}:`, error);
+      memberId = undefined;
+    }
+  }
+
+  if (plan.groupIdEncrypted) {
+    try {
+      groupNumber = encryptionService.decrypt(plan.groupIdEncrypted, userSalt);
+    } catch (error) {
+      console.error(`[Insurance] Failed to decrypt groupId for plan ${plan.id}:`, error);
+      groupNumber = undefined;
+    }
+  }
 
   // Convert benefits
   const benefits: InsuranceBenefitResponse[] = (plan.benefits || []).map((b) => ({
