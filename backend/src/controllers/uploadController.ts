@@ -163,17 +163,34 @@ interface LabReportUploadResponse {
 }
 
 interface SBCUploadResponse {
-  planCreated: boolean;
-  plan: {
-    id: string;
-    planName: string;
-    insurerName: string;
-    planType: string;
-    deductible: number;
-    outOfPocketMax: number;
-    benefitsCount: number;
-  };
-  extractionConfidence: number;
+  id: string;
+  planName: string;
+  insurerName: string;
+  planType: string;
+  planIdNumber?: string;
+  effectiveDate: string;
+  terminationDate?: string;
+  isActive: boolean;
+  isPrimary: boolean;
+  deductibleIndividual: number;
+  deductibleFamily: number;
+  oopMaxIndividual: number;
+  oopMaxFamily: number;
+  premiumMonthly?: number;
+  // Tracking fields
+  deductibleMetIndividual?: number;
+  deductibleMetFamily?: number;
+  oopMetIndividual?: number;
+  oopMetFamily?: number;
+  // Copay amounts
+  copayPrimaryCare?: number;
+  copaySpecialist?: number;
+  copayUrgentCare?: number;
+  copayEmergency?: number;
+  coinsuranceRate?: number;
+  // Source tracking
+  extractedFromSbc?: boolean;
+  sbcExtractionConfidence?: number;
 }
 
 interface LabResultOCRResponse {
@@ -512,17 +529,34 @@ export async function uploadSBC(
   const response: ApiResponse<SBCUploadResponse> = {
     success: true,
     data: {
-      planCreated: true,
-      plan: {
-        id: createdPlan.id,
-        planName: createdPlan.planName,
-        insurerName: createdPlan.insurerName,
-        planType: createdPlan.planType,
-        deductible: Number(createdPlan.deductibleIndividual),
-        outOfPocketMax: Number(createdPlan.oopMaxIndividual),
-        benefitsCount: createdPlan.benefits.length,
-      },
-      extractionConfidence: extractedData.extractionConfidence,
+      id: createdPlan.id,
+      planName: createdPlan.planName,
+      insurerName: createdPlan.insurerName,
+      planType: createdPlan.planType,
+      planIdNumber: createdPlan.planIdNumber || undefined,
+      effectiveDate: createdPlan.effectiveDate.toISOString(),
+      terminationDate: createdPlan.terminationDate?.toISOString() || undefined,
+      isActive: createdPlan.isActive,
+      isPrimary: createdPlan.isPrimary,
+      deductibleIndividual: Number(createdPlan.deductibleIndividual),
+      deductibleFamily: Number(createdPlan.deductibleFamily),
+      oopMaxIndividual: Number(createdPlan.oopMaxIndividual),
+      oopMaxFamily: Number(createdPlan.oopMaxFamily),
+      premiumMonthly: createdPlan.premiumMonthly ? Number(createdPlan.premiumMonthly) : undefined,
+      // Tracking fields
+      deductibleMetIndividual: createdPlan.deductibleMetIndividual ? Number(createdPlan.deductibleMetIndividual) : undefined,
+      deductibleMetFamily: createdPlan.deductibleMetFamily ? Number(createdPlan.deductibleMetFamily) : undefined,
+      oopMetIndividual: createdPlan.oopMetIndividual ? Number(createdPlan.oopMetIndividual) : undefined,
+      oopMetFamily: createdPlan.oopMetFamily ? Number(createdPlan.oopMetFamily) : undefined,
+      // Copay amounts
+      copayPrimaryCare: createdPlan.copayPrimaryCare ? Number(createdPlan.copayPrimaryCare) : undefined,
+      copaySpecialist: createdPlan.copaySpecialist ? Number(createdPlan.copaySpecialist) : undefined,
+      copayUrgentCare: createdPlan.copayUrgentCare ? Number(createdPlan.copayUrgentCare) : undefined,
+      copayEmergency: createdPlan.copayEmergency ? Number(createdPlan.copayEmergency) : undefined,
+      coinsuranceRate: createdPlan.coinsuranceRate ? Number(createdPlan.coinsuranceRate) : undefined,
+      // Source tracking
+      extractedFromSbc: createdPlan.extractedFromSbc,
+      sbcExtractionConfidence: createdPlan.sbcExtractionConfidence ? Number(createdPlan.sbcExtractionConfidence) : undefined,
     },
   };
 

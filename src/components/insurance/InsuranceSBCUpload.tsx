@@ -2,7 +2,7 @@
  * InsuranceSBCUpload Component
  *
  * A modal for uploading and processing Summary of Benefits and Coverage (SBC) documents.
- * Extracts insurance plan details from PDF documents using the sbcParser utility.
+ * Uploads PDFs to the backend where Claude Sonnet extracts plan details.
  *
  * Features:
  * - Drag-and-drop or click-to-upload interface for PDF files
@@ -10,9 +10,8 @@
  * - Real-time processing indicators (loading spinner, success checkmark, error alert)
  * - Expandable preview for each successfully processed plan showing:
  *   - Plan information (name, insurer, type, effective date)
- *   - Key benefits coverage (specialist, imaging, ER, preventive)
+ *   - Key benefits coverage (copays, coinsurance)
  *   - Cost summary grid (deductible, premium, OOP max)
- *   - Extraction warnings if any fields couldn't be parsed
  * - Import button to add extracted plan to user's insurance data
  *
  * Processing shows confidence score indicating extraction accuracy.
@@ -22,8 +21,15 @@
 
 import React, { useState, useCallback } from 'react';
 import { Upload, X, FileText, Shield, DollarSign, Loader2, CheckCircle, AlertCircle, Eye } from 'lucide-react';
-import type { InsurancePlan, SBCProcessingResult } from '../../types';
-import { processSBCFile, getKeyPlanFeatures, formatCoverageDisplay } from '../../utils/insurance/sbcParser';
+import type { InsurancePlan } from '../../types';
+import { insuranceApi, InsurancePlanData } from '../../services/api/insurance';
+
+interface UploadResult {
+  success: boolean;
+  plan?: InsurancePlanData;
+  error?: string;
+  confidence?: number;
+}
 
 interface InsuranceSBCUploadProps {
   isOpen: boolean;
@@ -32,7 +38,7 @@ interface InsuranceSBCUploadProps {
 }
 
 export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }: InsuranceSBCUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ file: File; result?: SBCProcessingResult }>>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ file: File; result?: UploadResult }>>([]);
   const [processingFiles, setProcessingFiles] = useState<Set<string>>(new Set());
   const [dragActive, setDragActive] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -68,24 +74,31 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
       setProcessingFiles(prev => new Set(prev.add(file.name)));
 
       try {
-        const result = await processSBCFile(file);
-        
-        setUploadedFiles(prev => prev.map(entry => 
-          entry.file.name === file.name 
-            ? { ...entry, result }
+        // Upload directly to backend - Claude Sonnet extracts the data
+        const planData = await insuranceApi.uploadSBC(file);
+
+        setUploadedFiles(prev => prev.map(entry =>
+          entry.file.name === file.name
+            ? {
+                ...entry,
+                result: {
+                  success: true,
+                  plan: planData,
+                  confidence: planData.sbcExtractionConfidence ?? 0.85
+                }
+              }
             : entry
         ));
 
-      } catch {
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
         setUploadedFiles(prev => prev.map(entry =>
           entry.file.name === file.name
             ? {
                 ...entry,
                 result: {
                   success: false,
-                  errors: ['Failed to process file'],
-                  processingTime: 0,
-                  confidence: 0
+                  error: errorMessage
                 }
               }
             : entry
@@ -100,14 +113,69 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
     }
   };
 
-  const handleImportPlan = (plan: InsurancePlan) => {
+  const handleImportPlan = (planData: InsurancePlanData) => {
+    // Convert InsurancePlanData to InsurancePlan for the callback
+    const plan: InsurancePlan = {
+      id: planData.id,
+      planName: planData.planName,
+      insurerName: planData.insurerName,
+      planType: planData.planType,
+      planIdNumber: planData.planIdNumber,
+      effectiveDate: planData.effectiveDate,
+      terminationDate: planData.terminationDate,
+      uploadDate: new Date().toISOString(),
+      sourceFile: 'SBC Upload',
+      extractionConfidence: planData.sbcExtractionConfidence ?? 0.85,
+      deductibleMetIndividual: planData.deductibleMetIndividual,
+      deductibleMetFamily: planData.deductibleMetFamily,
+      oopMetIndividual: planData.oopMetIndividual,
+      oopMetFamily: planData.oopMetFamily,
+      copayPrimaryCare: planData.copayPrimaryCare,
+      copaySpecialist: planData.copaySpecialist,
+      copayUrgentCare: planData.copayUrgentCare,
+      copayEmergency: planData.copayEmergency,
+      coinsuranceRate: planData.coinsuranceRate,
+      extractedFromSbc: planData.extractedFromSbc,
+      sbcExtractionConfidence: planData.sbcExtractionConfidence,
+      benefits: [],
+      costs: [
+        {
+          id: '1',
+          type: 'Deductible',
+          amount: planData.deductibleIndividual,
+          frequency: 'Annual',
+          description: 'Individual deductible',
+          appliesTo: 'Individual'
+        },
+        {
+          id: '2',
+          type: 'Out-of-Pocket Maximum',
+          amount: planData.oopMaxIndividual,
+          frequency: 'Annual',
+          description: 'Individual out-of-pocket maximum',
+          appliesTo: 'Individual'
+        },
+        ...(planData.premiumMonthly ? [{
+          id: '3',
+          type: 'Premium' as const,
+          amount: planData.premiumMonthly,
+          frequency: 'Monthly' as const,
+          description: 'Monthly premium',
+          appliesTo: 'Individual' as const
+        }] : [])
+      ],
+      limitations: [],
+      network: {
+        geographicCoverage: []
+      }
+    };
     onPlanExtracted(plan);
     onClose();
     setUploadedFiles([]);
     setSelectedPlan(null);
   };
 
-  const getStatusIcon = (result?: SBCProcessingResult, isProcessing?: boolean) => {
+  const getStatusIcon = (result?: UploadResult, isProcessing?: boolean) => {
     if (isProcessing) {
       return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
     }
@@ -204,9 +272,9 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
               {uploadedFiles.map((fileEntry, index) => {
                 const isProcessing = processingFiles.has(fileEntry.file.name);
                 const result = fileEntry.result;
-                const plan = result?.extractedPlan;
+                const plan = result?.plan;
                 const isExpanded = selectedPlan === fileEntry.file.name;
-                
+
                 return (
                   <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
                     {/* File Header */}
@@ -215,7 +283,7 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                         <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                           <FileText className="w-5 h-5" />
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {fileEntry.file.name}
@@ -224,7 +292,7 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                             <span>{formatFileSize(fileEntry.file.size)}</span>
                             {result && result.success && plan && (
                               <span className="text-green-600">
-                                {plan.benefits.length} benefits found
+                                Plan extracted successfully
                               </span>
                             )}
                             {result && result.confidence && (
@@ -246,7 +314,7 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                             {isExpanded ? 'Hide' : 'Preview'}
                           </button>
                         )}
-                        
+
                         {getStatusIcon(result, isProcessing)}
                       </div>
                     </div>
@@ -271,6 +339,12 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                                 <span className="text-gray-600">Plan Type:</span>
                                 <span className="font-medium">{plan.planType}</span>
                               </div>
+                              {plan.planIdNumber && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Plan ID:</span>
+                                  <span className="font-medium">{plan.planIdNumber}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Effective Date:</span>
                                 <span className="font-medium">{new Date(plan.effectiveDate).toLocaleDateString()}</span>
@@ -278,87 +352,91 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                             </div>
                           </div>
 
-                          {/* Key Benefits */}
+                          {/* Copays & Coverage */}
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-3">Key Benefits</h4>
+                            <h4 className="font-medium text-gray-900 mb-3">Copays & Coverage</h4>
                             <div className="space-y-2 text-sm">
-                              {(() => {
-                                const keyFeatures = getKeyPlanFeatures(plan);
-                                return (
-                                  <>
-                                    {keyFeatures.specialistCoverage && (
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-600">Specialist Visits:</span>
-                                        <span className="font-medium">
-                                          {formatCoverageDisplay(keyFeatures.specialistCoverage.inNetworkCoverage)}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {keyFeatures.imagingCoverage.length > 0 && (
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-600">Imaging:</span>
-                                        <span className="font-medium">
-                                          {formatCoverageDisplay(keyFeatures.imagingCoverage[0].inNetworkCoverage)}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {keyFeatures.emergencyCoverage && (
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-600">Emergency Room:</span>
-                                        <span className="font-medium">
-                                          {formatCoverageDisplay(keyFeatures.emergencyCoverage.inNetworkCoverage)}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {keyFeatures.preventiveCoverage && (
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-600">Preventive Care:</span>
-                                        <span className="font-medium">
-                                          {formatCoverageDisplay(keyFeatures.preventiveCoverage.inNetworkCoverage)}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </>
-                                );
-                              })()}
+                              {plan.copayPrimaryCare !== undefined && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Primary Care:</span>
+                                  <span className="font-medium">${plan.copayPrimaryCare} copay</span>
+                                </div>
+                              )}
+                              {plan.copaySpecialist !== undefined && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Specialist:</span>
+                                  <span className="font-medium">${plan.copaySpecialist} copay</span>
+                                </div>
+                              )}
+                              {plan.copayUrgentCare !== undefined && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Urgent Care:</span>
+                                  <span className="font-medium">${plan.copayUrgentCare} copay</span>
+                                </div>
+                              )}
+                              {plan.copayEmergency !== undefined && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Emergency Room:</span>
+                                  <span className="font-medium">${plan.copayEmergency} copay</span>
+                                </div>
+                              )}
+                              {plan.coinsuranceRate !== undefined && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Coinsurance:</span>
+                                  <span className="font-medium">{plan.coinsuranceRate}%</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
 
                         {/* Costs Summary */}
-                        {plan.costs.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <h4 className="font-medium text-gray-900 mb-3">Cost Summary</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              {plan.costs.map((cost, costIndex) => (
-                                <div key={costIndex} className="text-center p-3 bg-gray-50 rounded-lg">
-                                  <p className="text-xs text-gray-600 mb-1">{cost.type}</p>
-                                  <p className="text-lg font-bold text-gray-900">
-                                    ${cost.amount.toLocaleString()}
-                                  </p>
-                                  {cost.frequency && (
-                                    <p className="text-xs text-gray-500">{cost.frequency}</p>
-                                  )}
-                                </div>
-                              ))}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <h4 className="font-medium text-gray-900 mb-3">Cost Summary</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="text-center p-3 bg-gray-50 rounded-lg">
+                              <p className="text-xs text-gray-600 mb-1">Deductible (Individual)</p>
+                              <p className="text-lg font-bold text-gray-900">
+                                ${plan.deductibleIndividual.toLocaleString()}
+                              </p>
+                              <p className="text-xs text-gray-500">Annual</p>
                             </div>
+                            {plan.deductibleFamily > 0 && (
+                              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-600 mb-1">Deductible (Family)</p>
+                                <p className="text-lg font-bold text-gray-900">
+                                  ${plan.deductibleFamily.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-gray-500">Annual</p>
+                              </div>
+                            )}
+                            <div className="text-center p-3 bg-gray-50 rounded-lg">
+                              <p className="text-xs text-gray-600 mb-1">OOP Max (Individual)</p>
+                              <p className="text-lg font-bold text-gray-900">
+                                ${plan.oopMaxIndividual.toLocaleString()}
+                              </p>
+                              <p className="text-xs text-gray-500">Annual</p>
+                            </div>
+                            {plan.oopMaxFamily > 0 && (
+                              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-600 mb-1">OOP Max (Family)</p>
+                                <p className="text-lg font-bold text-gray-900">
+                                  ${plan.oopMaxFamily.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-gray-500">Annual</p>
+                              </div>
+                            )}
+                            {plan.premiumMonthly && (
+                              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-600 mb-1">Premium</p>
+                                <p className="text-lg font-bold text-gray-900">
+                                  ${plan.premiumMonthly.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-gray-500">Monthly</p>
+                              </div>
+                            )}
                           </div>
-                        )}
-
-                        {/* Warnings */}
-                        {result.warnings && result.warnings.length > 0 && (
-                          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <h5 className="text-sm font-medium text-yellow-800 mb-2">Extraction Warnings:</h5>
-                            <ul className="text-sm text-yellow-700 space-y-1">
-                              {result.warnings.map((warning, wIndex) => (
-                                <li key={wIndex} className="flex items-start">
-                                  <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0" />
-                                  {warning}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        </div>
 
                         {/* Import Button */}
                         <div className="mt-4 flex justify-end">
@@ -376,15 +454,10 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                     {result && !result.success && (
                       <div className="p-4 border-t border-gray-200 bg-red-50">
                         <h4 className="font-medium text-red-800 mb-2">Processing Failed</h4>
-                        {result.errors && (
-                          <ul className="text-sm text-red-700 space-y-1">
-                            {result.errors.map((error, errorIndex) => (
-                              <li key={errorIndex} className="flex items-start">
-                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full mt-2 mr-2 flex-shrink-0" />
-                                {error}
-                              </li>
-                            ))}
-                          </ul>
+                        {result.error && (
+                          <p className="text-sm text-red-700">
+                            {result.error}
+                          </p>
                         )}
                       </div>
                     )}
