@@ -16,6 +16,7 @@ vi.mock('../../services/api', () => ({
     register: vi.fn(),
     logout: vi.fn(),
     getCurrentUser: vi.fn(),
+    refreshToken: vi.fn(),
   },
   clearAuthToken: vi.fn(),
 }));
@@ -72,7 +73,8 @@ function ActionTestComponent() {
 describe('AuthContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: no existing session
+    // Default: no existing session (refreshToken fails, so getCurrentUser is never called)
+    vi.mocked(authApi.refreshToken).mockRejectedValue(new Error('No refresh token'));
     vi.mocked(authApi.getCurrentUser).mockRejectedValue(new Error('Not authenticated'));
   });
 
@@ -82,8 +84,8 @@ describe('AuthContext', () => {
 
   describe('Initial State', () => {
     it('should start with loading true', async () => {
-      // Make getCurrentUser hang to catch the loading state
-      vi.mocked(authApi.getCurrentUser).mockImplementation(
+      // Make refreshToken hang to catch the loading state
+      vi.mocked(authApi.refreshToken).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
@@ -134,6 +136,8 @@ describe('AuthContext', () => {
 
     it('should restore session if token exists', async () => {
       const mockUser = { id: '1', email: 'existing@example.com', role: 'user' };
+      // refreshToken must succeed first, then getCurrentUser is called
+      vi.mocked(authApi.refreshToken).mockResolvedValue({ token: 'mock-token' });
       vi.mocked(authApi.getCurrentUser).mockResolvedValue(mockUser);
 
       render(
@@ -351,6 +355,8 @@ describe('AuthContext', () => {
   describe('Logout', () => {
     it('should clear user state on logout', async () => {
       const mockUser = { id: '1', email: 'test@example.com', role: 'user' };
+      // refreshToken must succeed first for session restore
+      vi.mocked(authApi.refreshToken).mockResolvedValue({ token: 'mock-token' });
       vi.mocked(authApi.getCurrentUser).mockResolvedValue(mockUser);
       vi.mocked(authApi.logout).mockResolvedValue(undefined);
 
@@ -378,6 +384,8 @@ describe('AuthContext', () => {
 
     it('should call clearAuthToken on logout', async () => {
       const mockUser = { id: '1', email: 'test@example.com', role: 'user' };
+      // refreshToken must succeed first for session restore
+      vi.mocked(authApi.refreshToken).mockResolvedValue({ token: 'mock-token' });
       vi.mocked(authApi.getCurrentUser).mockResolvedValue(mockUser);
       vi.mocked(authApi.logout).mockResolvedValue(undefined);
 
@@ -400,6 +408,8 @@ describe('AuthContext', () => {
 
     it('should clear state even if logout API fails', async () => {
       const mockUser = { id: '1', email: 'test@example.com', role: 'user' };
+      // refreshToken must succeed first for session restore
+      vi.mocked(authApi.refreshToken).mockResolvedValue({ token: 'mock-token' });
       vi.mocked(authApi.getCurrentUser).mockResolvedValue(mockUser);
       vi.mocked(authApi.logout).mockRejectedValue(new Error('Network error'));
 
