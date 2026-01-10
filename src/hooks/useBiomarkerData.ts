@@ -39,6 +39,7 @@ interface UseBiomarkerDataReturn {
     isOutOfRange: boolean;
   }[]) => void;
   handleInsurancePlanExtracted: (plan: InsurancePlan) => Promise<void>;
+  handleDeleteInsurancePlan: (planId: string) => Promise<void>;
   refreshBiomarkers: () => Promise<void>;
 }
 
@@ -379,6 +380,25 @@ export function useBiomarkerData({
     }
   }, []);
 
+  // Delete insurance plan
+  const handleDeleteInsurancePlan = useCallback(async (planId: string) => {
+    if (DEMO_MODE) {
+      setInsurancePlans(prev => prev.filter(p => p.id !== planId));
+      return;
+    }
+
+    try {
+      await insuranceApi.deletePlan(planId);
+      setInsurancePlans(prev => prev.filter(p => p.id !== planId));
+      dashboardLogger.info('Insurance plan deleted', { planId });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete insurance plan';
+      dashboardLogger.error('Error deleting insurance plan', { error: errorMsg, planId });
+      onErrorRef.current(errorMsg);
+      throw error; // Re-throw so caller can handle
+    }
+  }, []);
+
   return {
     biomarkers,
     insurancePlans,
@@ -388,6 +408,7 @@ export function useBiomarkerData({
     handleClinicalFileExtract,
     handleLabOCRSuccess,
     handleInsurancePlanExtracted,
+    handleDeleteInsurancePlan,
     refreshBiomarkers,
   };
 }

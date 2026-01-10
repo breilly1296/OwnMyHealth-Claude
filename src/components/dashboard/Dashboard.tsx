@@ -98,6 +98,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
     handleClinicalFileExtract,
     handleLabOCRSuccess,
     handleInsurancePlanExtracted,
+    handleDeleteInsurancePlan,
     refreshBiomarkers,
   } = useBiomarkerData({
     user,
@@ -150,6 +151,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
               onUploadSBC={() => modals.open('sbcUpload')}
               onSmartUpload={() => modals.open('enhancedUpload')}
               onViewPlanDetails={() => modals.open('insuranceViewer')}
+              onDeletePlan={handleDeleteInsurancePlan}
               onRefresh={refreshBiomarkers}
             />
           </Suspense>
