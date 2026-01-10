@@ -608,10 +608,14 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
    - Check if OOP max includes deductible or is in addition
 
 2. OFFICE VISITS (Look in "If you visit a health care provider's office"):
-   - Primary care visit copay
-   - Specialist visit copay
+   - Primary care visit copay OR coinsurance (some plans have "0% after deductible" = no copay, just coinsurance)
+   - Specialist visit copay OR coinsurance
    - Preventive/wellness visit copay (usually $0)
    - Telehealth/virtual visit copay
+   IMPORTANT: If the plan says "0% coinsurance after deductible" with no flat copay:
+   - Set copay fields to null
+   - Set coinsuranceRate to 0 (meaning plan pays 100% after deductible)
+   - This is common for HDHP and some PPO plans
 
 3. INPATIENT HOSPITAL (Look in "If you have a hospital stay"):
    - Hospital facility fee (per day OR per admission)
@@ -653,10 +657,11 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
    - Tier 2/Preferred brand copay
    - Tier 3/Non-preferred copay
    - Tier 4/Specialty (often coinsurance %)
-   - Retail supply days (usually 30)
-   - Mail order supply days (usually 90)
+   - Retail supply days (usually 30 days - look for "30-day supply" or "retail: 30 days")
+   - Mail order supply days (usually 90 days - look for "90-day supply" or "mail order: 90 days")
    - Mail order pricing (e.g., 2x copay for 3x supply)
    - Separate Rx deductible?
+   IMPORTANT: Always extract retailDaysSupply and mailOrderDaysSupply even if using default values
 
 8. VISION & DENTAL (if included - often separate):
    - Vision exam copay/frequency
@@ -687,10 +692,17 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
     - Usually indicated by footnotes or asterisks
     - Common: hospital admits, imaging, specialty drugs
 
-13. VISIT/DAY LIMITS:
-    - Extract ALL limits mentioned
-    - Therapy visits, SNF days, mental health days
-    - Often buried in footnotes or limitations
+13. VISIT/DAY LIMITS (CRITICAL - often missed):
+    - Extract ALL limits mentioned in the document
+    - Look for phrases like "X visits per year", "limited to X days", "up to X visits"
+    - Common limits to look for:
+      * Physical/Occupational/Speech therapy: often combined limit (e.g., "45 visits per year for PT/OT/ST")
+      * Skilled nursing facility: days per year (e.g., "45 days", "60 days")
+      * Inpatient rehabilitation: days per year (e.g., "60 days")
+      * Chiropractic: visits per year
+      * Mental health inpatient: days per year
+    - These are often buried in footnotes, limitations columns, or "Other" sections
+    - If PT/OT/Speech share a combined limit, use same number for all three
 
 FORMATTING:
 - Dollar amounts: numbers only (no $, no commas)
@@ -845,6 +857,7 @@ export async function extractInsuranceFromSBC(
     }
     result.extractionConfidence = Math.max(0, Math.min(1, result.extractionConfidence));
 
+    // Log detailed extraction results for debugging
     sbcLogger.info('Claude SBC extraction complete', {
       planName: result.planName || 'Unknown',
       planType: result.planType || 'Unknown',
@@ -854,15 +867,50 @@ export async function extractInsuranceFromSBC(
       exclusionsCount: result.exclusions?.length || 0,
       priorAuthCount: result.priorAuthRequirements?.length || 0,
       servicesWithLimitsCount: result.servicesWithLimits?.length || 0,
-      hasInpatientCoverage: !!result.inpatientCoverage,
-      hasOutpatientCoverage: !!result.outpatientCoverage,
-      hasTherapyCoverage: !!result.therapyCoverage,
-      hasRxBenefits: !!result.rxBenefits,
-      hasVisionCoverage: !!result.visionCoverage,
-      hasDentalCoverage: !!result.dentalCoverage,
       extractionConfidence: result.extractionConfidence,
       pagesProcessed: result.pagesProcessed,
       processingTimeMs,
+    });
+
+    // Log detailed coverage sections for debugging extraction issues
+    sbcLogger.info('Extracted coverage details', {
+      // Core copays
+      copayPrimaryCare: result.copayPrimaryCare,
+      copaySpecialist: result.copaySpecialist,
+      copayUrgentCare: result.copayUrgentCare,
+      copayEmergency: result.copayEmergency,
+      copayTelehealth: result.copayTelehealth,
+      copayLabWork: result.copayLabWork,
+      copayXray: result.copayXray,
+      coinsuranceRate: result.coinsuranceRate,
+      // Therapy coverage (check for visit limits)
+      therapyCoverage: result.therapyCoverage ? {
+        physicalTherapyCopay: result.therapyCoverage.physicalTherapyCopay,
+        physicalTherapyVisitsLimit: result.therapyCoverage.physicalTherapyVisitsLimit,
+        occupationalTherapyCopay: result.therapyCoverage.occupationalTherapyCopay,
+        occupationalTherapyVisitsLimit: result.therapyCoverage.occupationalTherapyVisitsLimit,
+        speechTherapyCopay: result.therapyCoverage.speechTherapyCopay,
+        speechTherapyVisitsLimit: result.therapyCoverage.speechTherapyVisitsLimit,
+      } : 'NOT EXTRACTED',
+      // Inpatient coverage (check for day limits)
+      inpatientCoverage: result.inpatientCoverage ? {
+        skilledNursingDaysLimit: result.inpatientCoverage.skilledNursingDaysLimit,
+        rehabilitationDayLimit: result.inpatientCoverage.rehabilitationDayLimit,
+        hospitalCoinsurance: result.inpatientCoverage.hospitalCoinsurance,
+      } : 'NOT EXTRACTED',
+      // Rx benefits
+      rxBenefits: result.rxBenefits ? {
+        tier1Copay: result.rxBenefits.tier1Copay,
+        tier2Copay: result.rxBenefits.tier2Copay,
+        tier3Copay: result.rxBenefits.tier3Copay,
+        retailDaysSupply: result.rxBenefits.retailDaysSupply,
+        mailOrderDaysSupply: result.rxBenefits.mailOrderDaysSupply,
+      } : 'NOT EXTRACTED',
+      // Emergency coverage
+      emergencyCoverage: result.emergencyCoverage ? {
+        emergencyRoomCopay: result.emergencyCoverage.emergencyRoomCopay,
+        urgentCareCopay: result.emergencyCoverage.urgentCareCopay,
+      } : 'NOT EXTRACTED',
     });
 
     return result;
