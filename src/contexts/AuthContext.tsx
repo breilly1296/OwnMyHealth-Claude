@@ -80,6 +80,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Try to get current user (if token exists in httpOnly cookie)
         const currentUser = await authApi.getCurrentUser();
         setUser(currentUser);
+
+        // CRITICAL: After restoring session via cookies, get a fresh access token
+        // and store it in memory. Without this, API calls will fail because
+        // the in-memory authToken is null after page refresh.
+        try {
+          await authApi.refreshToken();
+          console.log('[AuthContext] Session restored, access token refreshed');
+        } catch (refreshError) {
+          // Token refresh failed - user may need to re-login
+          console.warn('[AuthContext] Failed to refresh access token:', refreshError);
+        }
       } catch {
         // Not authenticated, that's fine
         setUser(null);

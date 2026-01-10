@@ -69,8 +69,12 @@ export const authApi = {
     return response.data;
   },
 
-  async refreshToken(): Promise<void> {
-    await apiFetch('/auth/refresh', { method: 'POST' });
+  async refreshToken(): Promise<{ token?: string }> {
+    const response = await apiFetch<{ token?: string }>('/auth/refresh', { method: 'POST' });
+    if (response.data.token) {
+      setAuthToken(response.data.token);
+    }
+    return response.data;
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
