@@ -77,20 +77,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Try to get current user (if token exists in httpOnly cookie)
-        const currentUser = await authApi.getCurrentUser();
-        setUser(currentUser);
-
-        // CRITICAL: After restoring session via cookies, get a fresh access token
-        // and store it in memory. Without this, API calls will fail because
-        // the in-memory authToken is null after page refresh.
+        // CRITICAL FIX: Call refreshToken FIRST to get a fresh access token.
+        // The access token cookie expires after 15 min, but refresh token lasts 7 days.
+        // If we call getCurrentUser first with an expired access token, it fails with 401
+        // and we never reach the refreshToken call.
+        //
+        // Order matters:
+        // 1. refreshToken() - uses refresh_token cookie (7 days) to get new access token
+        // 2. getCurrentUser() - now works with fresh access token in cookie + memory
         try {
           await authApi.refreshToken();
-          console.log('[AuthContext] Session restored, access token refreshed');
+          console.log('[AuthContext] Access token refreshed from refresh token');
         } catch (refreshError) {
-          // Token refresh failed - user may need to re-login
-          console.warn('[AuthContext] Failed to refresh access token:', refreshError);
+          // Refresh token invalid or expired - user must re-login
+          console.log('[AuthContext] Refresh token invalid, user not authenticated');
+          setUser(null);
+          setIsLoading(false);
+          return;
         }
+
+        // Now get current user with the fresh access token
+        const currentUser = await authApi.getCurrentUser();
+        setUser(currentUser);
+        console.log('[AuthContext] Session restored successfully');
       } catch {
         // Not authenticated, that's fine
         setUser(null);
