@@ -19,7 +19,7 @@
  * @module components/insurance/InsuranceHub
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield,
   CreditCard,
@@ -43,6 +43,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
+import { SuccessToast } from '../common';
 import AddInsurancePlanModal from './AddInsurancePlanModal';
 import InsurancePlanDetail from './InsurancePlanDetail';
 
@@ -87,6 +88,17 @@ export default function InsuranceHub({
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
   const [deleteConfirmPlan, setDeleteConfirmPlan] = useState<InsurancePlan | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Auto-hide success message after 3 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  const hideSuccessMessage = useCallback(() => setSuccessMessage(null), []);
 
   const handlePlanAdded = () => {
     setIsAddPlanModalOpen(false);
@@ -105,6 +117,7 @@ export default function InsuranceHub({
     try {
       await onDeletePlan(deleteConfirmPlan.id);
       setDeleteConfirmPlan(null);
+      setSuccessMessage('Plan deleted');
     } catch {
       // Error already handled by parent
     } finally {
@@ -143,6 +156,13 @@ export default function InsuranceHub({
 
   return (
     <div className="animate-fade-in max-w-6xl mx-auto">
+      {/* Success Toast */}
+      <SuccessToast
+        message={successMessage}
+        isVisible={!!successMessage}
+        onDismiss={hideSuccessMessage}
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Insurance</h1>

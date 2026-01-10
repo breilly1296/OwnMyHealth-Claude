@@ -10,3 +10,4 @@ export {
   RoleBadge,
 } from './RoleGuard';
 export { ErrorToast } from './ErrorToast';
+export { SuccessToast } from './SuccessToast';
