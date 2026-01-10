@@ -76,11 +76,13 @@ function createPrismaClient(): PrismaClient {
   const connectionString = getDatabaseConfig();
 
   // Create PostgreSQL connection pool
+  // Cloud SQL through Auth Proxy needs longer timeouts, especially on cold starts
   pool = new Pool({
     connectionString,
-    max: 10, // Maximum connections in pool
+    max: 5, // Reduced for Cloud Run (limited resources per instance)
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 30000, // 30s for Cloud SQL Auth Proxy
+    statement_timeout: 30000, // 30s statement timeout
   });
 
   // Create Prisma adapter
