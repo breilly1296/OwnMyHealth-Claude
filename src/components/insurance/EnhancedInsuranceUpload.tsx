@@ -16,7 +16,7 @@
  *   - Extraction warnings for uncertain fields
  * - Import functionality to convert extracted data to InsurancePlan format
  *
- * Uses the documentParser utility which simulates NLP-based extraction
+ * Uses the backend Claude Sonnet API for intelligent document extraction
  * with term importance classification (high/medium/low) and category tagging.
  *
  * @module components/insurance/EnhancedInsuranceUpload
@@ -25,7 +25,70 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X, FileText, Shield, DollarSign, Loader2, CheckCircle, AlertCircle, Eye, Brain, Tag, Search } from 'lucide-react';
 import type { InsurancePlan, InsuranceBenefit, InsuranceCost, InsuranceLimitation } from '../../types';
-import { parseInsuranceDocument, type DocumentParsingResult, type ExtractedInsuranceData, type ExtractedTerm } from '../../utils/documents/documentParser';
+import { insuranceApi, type InsurancePlanData } from '../../services/api/insurance';
+
+// Type for backend upload result
+interface UploadResult {
+  success: boolean;
+  plan?: InsurancePlanData;
+  error?: string;
+  confidence?: number;
+}
+
+// Legacy types for compatibility with existing UI
+interface ExtractedTerm {
+  term: string;
+  value: string;
+  importance: 'high' | 'medium' | 'low';
+  category: string;
+}
+
+interface ExtractedInsuranceData {
+  planInformation?: {
+    planName?: string;
+    insurerName?: string;
+    planType?: string;
+    effectiveDate?: string;
+  };
+  costs?: Array<{
+    type: string;
+    amount: number;
+    frequency?: string;
+    category: string;
+  }>;
+  benefits?: Array<{
+    serviceName: string;
+    category: string;
+    inNetworkCoverage: {
+      covered: boolean;
+      copay?: number;
+      coinsurance?: number;
+    };
+    outNetworkCoverage?: {
+      covered: boolean;
+      copay?: number;
+      coinsurance?: number;
+    };
+    preAuthRequired?: boolean;
+  }>;
+  limitations?: Array<{
+    category: string;
+    description: string;
+    limitType: string;
+    limitValue?: number;
+  }>;
+  extractedTerms?: ExtractedTerm[];
+}
+
+interface DocumentParsingResult {
+  success: boolean;
+  documentType: string;
+  extractedData: ExtractedInsuranceData;
+  confidence: number;
+  processingTime: number;
+  errors?: string[];
+  warnings?: string[];
+}
 
 // Helper functions to map extracted data to proper types
 function mapPlanType(planType?: string): InsurancePlan['planType'] {
@@ -137,8 +200,8 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
 
   const handleFiles = async (files: File[]) => {
     for (const file of files) {
-      if (!file.type.includes('pdf') && !file.type.includes('image')) {
-        continue; // Skip non-supported files
+      if (!file.type.includes('pdf')) {
+        continue; // Only PDF files supported for backend extraction
       }
 
       const processedFile: ProcessedFile = {
@@ -149,15 +212,45 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
       setUploadedFiles(prev => [...prev, processedFile]);
 
       try {
-        const result = await parseInsuranceDocument(file);
-        
-        setUploadedFiles(prev => prev.map(pf => 
-          pf.file.name === file.name 
+        // Upload to backend - Claude Sonnet extracts the data
+        const planData = await insuranceApi.uploadSBC(file);
+
+        // Convert backend response to DocumentParsingResult format
+        const result: DocumentParsingResult = {
+          success: true,
+          documentType: 'SBC',
+          confidence: planData.sbcExtractionConfidence ?? 0.85,
+          processingTime: 0,
+          extractedData: {
+            planInformation: {
+              planName: planData.planName,
+              insurerName: planData.insurerName,
+              planType: planData.planType,
+              effectiveDate: planData.effectiveDate,
+            },
+            costs: [
+              { type: 'Deductible', amount: planData.deductibleIndividual, category: 'Individual', frequency: 'Annual' },
+              { type: 'Out-of-Pocket Maximum', amount: planData.oopMaxIndividual, category: 'Individual', frequency: 'Annual' },
+              ...(planData.premiumMonthly ? [{ type: 'Premium', amount: planData.premiumMonthly, category: 'Individual', frequency: 'Monthly' }] : []),
+            ],
+            benefits: [],
+            extractedTerms: [
+              ...(planData.copayPrimaryCare !== undefined ? [{ term: 'Primary Care Copay', value: `$${planData.copayPrimaryCare}`, importance: 'high' as const, category: 'Copays' }] : []),
+              ...(planData.copaySpecialist !== undefined ? [{ term: 'Specialist Copay', value: `$${planData.copaySpecialist}`, importance: 'high' as const, category: 'Copays' }] : []),
+              ...(planData.copayEmergency !== undefined ? [{ term: 'Emergency Copay', value: `$${planData.copayEmergency}`, importance: 'high' as const, category: 'Copays' }] : []),
+              ...(planData.coinsuranceRate !== undefined ? [{ term: 'Coinsurance Rate', value: `${planData.coinsuranceRate}%`, importance: 'medium' as const, category: 'Coverage' }] : []),
+            ],
+          },
+        };
+
+        setUploadedFiles(prev => prev.map(pf =>
+          pf.file.name === file.name
             ? { ...pf, result, isProcessing: false }
             : pf
         ));
 
-      } catch {
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
         setUploadedFiles(prev => prev.map(pf =>
           pf.file.name === file.name
             ? {
@@ -169,7 +262,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                   extractedData: {},
                   confidence: 0,
                   processingTime: 0,
-                  errors: ['Failed to process file']
+                  errors: [errorMessage]
                 }
               }
             : pf
