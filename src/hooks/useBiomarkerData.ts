@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Biomarker, InsurancePlan } from '../types';
-import { biomarkersApi, insuranceApi } from '../services/api';
+import { biomarkersApi, insuranceApi, getAuthToken } from '../services/api';
 import { dashboardLogger } from '../utils/logger';
 import { transformPlanForDisplay } from '../utils/insurance/insuranceUtils';
 
@@ -151,26 +151,48 @@ export function useBiomarkerData({
     let cancelled = false;
 
     const fetchInsurancePlans = async () => {
-      console.log('[useBiomarkerData] fetchInsurancePlans called', { DEMO_MODE, user: user?.id });
+      const authToken = getAuthToken();
+      console.log('[useBiomarkerData] fetchInsurancePlans called', {
+        DEMO_MODE,
+        userId: user?.id,
+        hasAuthToken: !!authToken,
+        authTokenPreview: authToken ? `${authToken.substring(0, 20)}...` : 'NULL',
+      });
 
       if (DEMO_MODE || !user) {
         console.log('[useBiomarkerData] Skipping insurance fetch - DEMO_MODE or no user');
         return;
       }
 
+      // CRITICAL: Check if auth token is available
+      if (!authToken) {
+        console.warn('[useBiomarkerData] WARNING: No auth token available! API request will likely fail.');
+        console.warn('[useBiomarkerData] This usually happens on page refresh - token not restored from session.');
+      }
+
       try {
         console.log('[useBiomarkerData] Calling insuranceApi.getPlans()...');
         const plans = await insuranceApi.getPlans();
-        console.log('[useBiomarkerData] Got plans from API:', plans);
+        console.log('[useBiomarkerData] Got plans from API:', {
+          count: plans?.length ?? 0,
+          plans: plans,
+        });
 
-        if (!cancelled) {
-          // Transform flat API fields to benefits/costs arrays for UI display
-          const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
-          console.log('[useBiomarkerData] Transformed plans:', transformedPlans);
-          setInsurancePlans(transformedPlans);
+        if (cancelled) {
+          console.log('[useBiomarkerData] Fetch completed but cancelled=true, not setting state');
+          return;
         }
+
+        // Transform flat API fields to benefits/costs arrays for UI display
+        const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
+        console.log('[useBiomarkerData] Setting transformed plans:', transformedPlans.length);
+        setInsurancePlans(transformedPlans);
       } catch (error) {
-        console.error('[useBiomarkerData] Error fetching insurance plans:', error);
+        console.error('[useBiomarkerData] Error fetching insurance plans:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          status: (error as { status?: number }).status,
+        });
         if (!cancelled) {
           const errorMsg = error instanceof Error ? error.message : 'Failed to load insurance plans';
           dashboardLogger.error('Error fetching insurance plans', { error: errorMsg });
