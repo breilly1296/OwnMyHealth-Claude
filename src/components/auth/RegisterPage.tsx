@@ -1,12 +1,24 @@
 /**
  * Register Page Component
  *
- * Provides user registration functionality with form validation,
+ * Premium dark-themed registration page with form validation,
  * password strength requirements, and error handling.
  */
 
 import React, { useState, useMemo } from 'react';
-import { Heart, Eye, EyeOff, Mail, Lock, User, AlertCircle, Loader2, Check, X } from 'lucide-react';
+import {
+  Heart,
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  AlertCircle,
+  Loader2,
+  Check,
+  X,
+  Shield,
+} from 'lucide-react';
 
 interface RegisterPageProps {
   onRegister: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
@@ -93,18 +105,16 @@ export default function RegisterPage({
   const displayError = localError || error;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-950 flex flex-col">
       {/* Header */}
-      <header className="p-6">
-        <div className="flex items-center space-x-3">
+      <header className="p-6 border-b border-slate-800">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/25">
             <Heart className="w-5 h-5 text-white" />
           </div>
           <div>
-            <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              OwnMyHealth
-            </span>
-            <p className="text-xs text-slate-500 -mt-0.5">Your personal health companion</p>
+            <span className="text-xl font-bold text-white">OwnMyHealth</span>
+            <p className="text-xs text-slate-500">Personal Health Platform</p>
           </div>
         </div>
       </header>
@@ -113,17 +123,17 @@ export default function RegisterPage({
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Register Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xl shadow-slate-200/50 p-8">
+          <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl p-8">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Create your account</h1>
-              <p className="text-slate-500">Start tracking your health journey today</p>
+              <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
+              <p className="text-slate-400">Start tracking your health journey today</p>
             </div>
 
             {/* Error Message */}
             {displayError && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-700">{displayError}</p>
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400">{displayError}</p>
               </div>
             )}
 
@@ -132,19 +142,19 @@ export default function RegisterPage({
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="firstName" className="block text-sm font-medium text-slate-300 mb-2">
                     First name
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="w-5 h-5 text-slate-400" />
+                      <User className="w-5 h-5 text-slate-500" />
                     </div>
                     <input
                       id="firstName"
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                      className="block w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
                       placeholder="John"
                       disabled={isLoading}
                       autoComplete="given-name"
@@ -152,7 +162,7 @@ export default function RegisterPage({
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="lastName" className="block text-sm font-medium text-slate-300 mb-2">
                     Last name
                   </label>
                   <input
@@ -160,7 +170,7 @@ export default function RegisterPage({
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                    className="block w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
                     placeholder="Doe"
                     disabled={isLoading}
                     autoComplete="family-name"
@@ -170,19 +180,19 @@ export default function RegisterPage({
 
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                  Email address <span className="text-red-500">*</span>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+                  Email address <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="w-5 h-5 text-slate-400" />
+                    <Mail className="w-5 h-5 text-slate-500" />
                   </div>
                   <input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                    className="block w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
                     placeholder="you@example.com"
                     disabled={isLoading}
                     autoComplete="email"
@@ -193,19 +203,19 @@ export default function RegisterPage({
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                  Password <span className="text-red-500">*</span>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                  Password <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="w-5 h-5 text-slate-400" />
+                    <Lock className="w-5 h-5 text-slate-500" />
                   </div>
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                    className="block w-full pl-10 pr-12 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
                     placeholder="Create a strong password"
                     disabled={isLoading}
                     autoComplete="new-password"
@@ -217,23 +227,23 @@ export default function RegisterPage({
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                      <EyeOff className="w-5 h-5 text-slate-500 hover:text-slate-400 transition-colors" />
                     ) : (
-                      <Eye className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                      <Eye className="w-5 h-5 text-slate-500 hover:text-slate-400 transition-colors" />
                     )}
                   </button>
                 </div>
 
                 {/* Password Requirements */}
                 {password && (
-                  <div className="mt-3 p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs font-medium text-slate-600 mb-2">Password requirements:</p>
+                  <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p className="text-xs font-medium text-slate-400 mb-2">Password requirements:</p>
                     <ul className="space-y-1">
                       {passwordRequirements.map((req, index) => (
                         <li
                           key={index}
                           className={`text-xs flex items-center gap-2 ${
-                            req.met ? 'text-wellness-600' : 'text-slate-400'
+                            req.met ? 'text-wellness-400' : 'text-slate-500'
                           }`}
                         >
                           {req.met ? (
@@ -251,24 +261,24 @@ export default function RegisterPage({
 
               {/* Confirm Password Field */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
-                  Confirm password <span className="text-red-500">*</span>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
+                  Confirm password <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="w-5 h-5 text-slate-400" />
+                    <Lock className="w-5 h-5 text-slate-500" />
                   </div>
                   <input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors ${
+                    className={`block w-full pl-10 pr-12 py-3 bg-slate-900 border rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
                       confirmPassword && !passwordsMatch
-                        ? 'border-red-300 bg-red-50'
+                        ? 'border-red-500/50 bg-red-500/5'
                         : confirmPassword && passwordsMatch
-                        ? 'border-wellness-300 bg-wellness-50'
-                        : 'border-slate-200'
+                        ? 'border-wellness-500/50 bg-wellness-500/5'
+                        : 'border-slate-700'
                     }`}
                     placeholder="Confirm your password"
                     disabled={isLoading}
@@ -281,17 +291,17 @@ export default function RegisterPage({
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                      <EyeOff className="w-5 h-5 text-slate-500 hover:text-slate-400 transition-colors" />
                     ) : (
-                      <Eye className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                      <Eye className="w-5 h-5 text-slate-500 hover:text-slate-400 transition-colors" />
                     )}
                   </button>
                 </div>
                 {confirmPassword && !passwordsMatch && (
-                  <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                  <p className="mt-1 text-xs text-red-400">Passwords do not match</p>
                 )}
                 {confirmPassword && passwordsMatch && (
-                  <p className="mt-1 text-xs text-wellness-600 flex items-center gap-1">
+                  <p className="mt-1 text-xs text-wellness-400 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
                     Passwords match
                   </p>
@@ -302,7 +312,7 @@ export default function RegisterPage({
               <button
                 type="submit"
                 disabled={isLoading || !allRequirementsMet || !passwordsMatch}
-                className="w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25"
               >
                 {isLoading ? (
                   <>
@@ -316,12 +326,12 @@ export default function RegisterPage({
             </form>
 
             {/* Login Link */}
-            <p className="mt-6 text-center text-sm text-slate-600">
+            <p className="mt-6 text-center text-sm text-slate-400">
               Already have an account?{' '}
               <button
                 type="button"
                 onClick={onSwitchToLogin}
-                className="font-medium text-brand-600 hover:text-brand-500"
+                className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
               >
                 Sign in
               </button>
@@ -329,11 +339,13 @@ export default function RegisterPage({
           </div>
 
           {/* Privacy Notice */}
-          <p className="mt-6 text-center text-xs text-slate-400">
-            By creating an account, you agree to our Terms of Service
-            <br />
-            and Privacy Policy. Your health data is encrypted and secure.
-          </p>
+          <div className="mt-6 text-center">
+            <div className="flex items-center justify-center gap-2 text-slate-500 text-xs">
+              <Shield className="w-4 h-4" />
+              <span>By creating an account, you agree to our Terms of Service and Privacy Policy.</span>
+            </div>
+            <p className="mt-2 text-xs text-slate-600">Your health data is encrypted and secure.</p>
+          </div>
         </div>
       </main>
     </div>

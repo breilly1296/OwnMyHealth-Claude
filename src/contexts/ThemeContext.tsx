@@ -34,14 +34,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         return stored;
       }
     }
-    return 'system';
+    // Default to dark mode for premium health app experience
+    return 'dark';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
-    if (theme === 'system') {
+    // Get stored theme or default to dark
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    const effectiveTheme = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark';
+
+    if (effectiveTheme === 'system') {
       return getSystemTheme();
     }
-    return theme;
+    return effectiveTheme;
   });
 
   // Update resolved theme when theme changes or system preference changes
