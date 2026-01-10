@@ -106,11 +106,11 @@ export interface CreateInsurancePlanData {
   planIdNumber?: string;
   effectiveDate: string;
   terminationDate?: string;
-  deductibleIndividual: number;
+  // Backend expects 'deductible' and 'outOfPocketMax' (not 'deductibleIndividual'/'oopMaxIndividual')
+  deductible: number;
   deductibleFamily?: number;
-  oopMaxIndividual: number;
-  oopMaxFamily?: number;
-  premiumMonthly?: number;
+  outOfPocketMax: number;
+  outOfPocketMaxFamily?: number;
   premium?: number;
   // Tracking fields
   deductibleMetIndividual?: number;

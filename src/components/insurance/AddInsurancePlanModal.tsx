@@ -98,12 +98,13 @@ export default function AddInsurancePlanModal({
         effectiveDate: formData.effectiveDate,
         terminationDate: formData.terminationDate || undefined,
         premium: formData.premium ? parseFloat(formData.premium) : undefined,
-        deductibleIndividual: parseFloat(formData.deductible) || 0,
+        // Backend expects 'deductible' and 'outOfPocketMax'
+        deductible: parseFloat(formData.deductible) || 0,
         deductibleFamily: formData.deductibleFamily
           ? parseFloat(formData.deductibleFamily)
           : undefined,
-        oopMaxIndividual: parseFloat(formData.outOfPocketMax) || 0,
-        oopMaxFamily: formData.outOfPocketMaxFamily
+        outOfPocketMax: parseFloat(formData.outOfPocketMax) || 0,
+        outOfPocketMaxFamily: formData.outOfPocketMaxFamily
           ? parseFloat(formData.outOfPocketMaxFamily)
           : undefined,
         deductibleMetIndividual: parseFloat(formData.deductibleMetIndividual) || 0,

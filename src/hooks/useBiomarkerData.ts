@@ -306,10 +306,11 @@ export function useBiomarkerData({
         insurerName: plan.insurerName,
         planType: plan.planType,
         effectiveDate: plan.effectiveDate,
-        deductibleIndividual,
+        // Backend expects 'deductible' and 'outOfPocketMax' (not deductibleIndividual/oopMaxIndividual)
+        deductible: deductibleIndividual,
         deductibleFamily,
-        oopMaxIndividual,
-        oopMaxFamily,
+        outOfPocketMax: oopMaxIndividual,
+        outOfPocketMaxFamily: oopMaxFamily,
       });
       setInsurancePlans(prev => [...prev, created as unknown as InsurancePlan]);
     } catch (error) {
