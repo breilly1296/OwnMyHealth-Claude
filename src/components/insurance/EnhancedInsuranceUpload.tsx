@@ -25,15 +25,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X, FileText, Shield, DollarSign, Loader2, CheckCircle, AlertCircle, Eye, Brain, Tag, Search } from 'lucide-react';
 import type { InsurancePlan, InsuranceBenefit, InsuranceCost, InsuranceLimitation } from '../../types';
-import { insuranceApi, type InsurancePlanData } from '../../services/api/insurance';
-
-// Type for backend upload result
-interface UploadResult {
-  success: boolean;
-  plan?: InsurancePlanData;
-  error?: string;
-  confidence?: number;
-}
+import { insuranceApi } from '../../services/api/insurance';
 
 // Legacy types for compatibility with existing UI
 interface ExtractedTerm {
