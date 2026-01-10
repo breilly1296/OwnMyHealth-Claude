@@ -210,6 +210,16 @@ model InsurancePlan {
   copayAdvancedImaging    Decimal?           @map("copay_advanced_imaging") @db.Decimal(10, 2)
   coinsuranceRate         Decimal?           @map("coinsurance_rate") @db.Decimal(5, 2)
 
+  // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+  coinsurancePrimaryCare    Decimal?         @map("coinsurance_primary_care") @db.Decimal(5, 2)
+  coinsuranceSpecialist     Decimal?         @map("coinsurance_specialist") @db.Decimal(5, 2)
+  coinsuranceUrgentCare     Decimal?         @map("coinsurance_urgent_care") @db.Decimal(5, 2)
+  coinsuranceEmergency      Decimal?         @map("coinsurance_emergency") @db.Decimal(5, 2)
+  coinsuranceTelehealth     Decimal?         @map("coinsurance_telehealth") @db.Decimal(5, 2)
+  coinsuranceLabWork        Decimal?         @map("coinsurance_lab_work") @db.Decimal(5, 2)
+  coinsuranceXray           Decimal?         @map("coinsurance_xray") @db.Decimal(5, 2)
+  coinsuranceAdvancedImaging Decimal?        @map("coinsurance_advanced_imaging") @db.Decimal(5, 2)
+
   // Inpatient coverage
   inpatientHospitalCopay        Decimal?     @map("inpatient_hospital_copay") @db.Decimal(10, 2)
   inpatientHospitalCoinsurance  Decimal?     @map("inpatient_hospital_coinsurance") @db.Decimal(5, 2)
@@ -240,6 +250,10 @@ model InsurancePlan {
   rxTier2Copay              Decimal?         @map("rx_tier2_copay") @db.Decimal(10, 2)
   rxTier3Copay              Decimal?         @map("rx_tier3_copay") @db.Decimal(10, 2)
   rxTier4Copay              Decimal?         @map("rx_tier4_copay") @db.Decimal(10, 2)
+  rxTier1Coinsurance        Decimal?         @map("rx_tier1_coinsurance") @db.Decimal(5, 2)
+  rxTier2Coinsurance        Decimal?         @map("rx_tier2_coinsurance") @db.Decimal(5, 2)
+  rxTier3Coinsurance        Decimal?         @map("rx_tier3_coinsurance") @db.Decimal(5, 2)
+  rxTier4Coinsurance        Decimal?         @map("rx_tier4_coinsurance") @db.Decimal(5, 2)
   rxRetailDaysSupply        Int?             @map("rx_retail_days_supply")
   rxMailOrderDaysSupply     Int?             @map("rx_mail_order_days_supply")
   rxDeductibleIndividual    Decimal?         @map("rx_deductible_individual") @db.Decimal(10, 2)

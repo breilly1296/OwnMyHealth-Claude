@@ -244,6 +244,16 @@ export interface ExtractedInsuranceData {
   copayXray?: number;
   copayAdvancedImaging?: number;
 
+  // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+  coinsurancePrimaryCare?: number;
+  coinsuranceSpecialist?: number;
+  coinsuranceUrgentCare?: number;
+  coinsuranceEmergency?: number;
+  coinsuranceTelehealth?: number;
+  coinsuranceLabWork?: number;
+  coinsuranceXray?: number;
+  coinsuranceAdvancedImaging?: number;
+
   // Detailed coverage sections
   inpatientCoverage?: ExtractedInpatientCoverage;
   outpatientCoverage?: ExtractedOutpatientCoverage;
@@ -349,6 +359,15 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation text):
   "copayLabWork": 0,
   "copayXray": 0,
   "copayAdvancedImaging": 250,
+
+  "coinsurancePrimaryCare": null,
+  "coinsuranceSpecialist": null,
+  "coinsuranceUrgentCare": null,
+  "coinsuranceEmergency": null,
+  "coinsuranceTelehealth": null,
+  "coinsuranceLabWork": null,
+  "coinsuranceXray": null,
+  "coinsuranceAdvancedImaging": null,
 
   "emergencyCoverage": {
     "emergencyRoomCopay": 250,
@@ -608,10 +627,17 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
    - Check if OOP max includes deductible or is in addition
 
 2. OFFICE VISITS (Look in "If you visit a health care provider's office"):
-   - Primary care visit copay
-   - Specialist visit copay
+   - Primary care visit copay OR coinsurance
+   - Specialist visit copay OR coinsurance
    - Preventive/wellness visit copay (usually $0)
-   - Telehealth/virtual visit copay
+   - Telehealth/virtual visit copay OR coinsurance
+
+   IMPORTANT: Many plans (especially HDHP) have NO copays - they use coinsurance instead.
+   If the document shows "X% coinsurance" or "X% after deductible" instead of a dollar copay:
+   - Set the copay field to null (e.g., copayPrimaryCare: null)
+   - Set the coinsurance field to the percentage (e.g., coinsurancePrimaryCare: 0 for "0% after deductible")
+   - "0% after deductible" means patient pays 0% (plan pays 100%) after deductible is met
+   - "20% after deductible" means patient pays 20% after deductible is met
 
 3. INPATIENT HOSPITAL (Look in "If you have a hospital stay"):
    - Hospital facility fee (per day OR per admission)
@@ -626,12 +652,14 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
    - Outpatient surgery (facility fee)
    - Mental health visits (individual vs group therapy)
    - Substance abuse outpatient
-   - Lab tests
-   - X-rays and diagnostic imaging
-   - CT/MRI/PET scans (advanced imaging)
+   - Lab tests - use copayLabWork/coinsuranceLabWork
+   - X-rays and diagnostic imaging - use copayXray/coinsuranceXray
+   - CT/MRI/PET scans (advanced imaging) - use copayAdvancedImaging/coinsuranceAdvancedImaging
    - Chemotherapy
    - Radiation therapy
    - Dialysis
+   NOTE: For lab/imaging, if document shows "0% after deductible" or "X% coinsurance",
+   use the coinsurance fields (coinsuranceLabWork, coinsuranceXray, coinsuranceAdvancedImaging)
 
 5. THERAPY SERVICES (Look for rehabilitation/habilitation):
    - Physical therapy (copay AND visit limit)
@@ -643,20 +671,24 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
    - Acupuncture (if covered)
 
 6. EMERGENCY & URGENT CARE (Look in "If you need immediate"):
-   - Emergency room (copay, deductible applies?)
-   - Urgent care
+   - Emergency room copay OR coinsurance (use copayEmergency/coinsuranceEmergency)
+   - Urgent care copay OR coinsurance (use copayUrgentCare/coinsuranceUrgentCare)
    - Ground ambulance
    - Air ambulance
+   NOTE: If ER shows "0% after deductible", set copayEmergency: null and coinsuranceEmergency: 0
+   Some plans waive ER copay if admitted - note this but still extract the copay/coinsurance
 
 7. PRESCRIPTION DRUGS (Look for "If you need drugs"):
-   - Tier 1/Generic copay
-   - Tier 2/Preferred brand copay
-   - Tier 3/Non-preferred copay
-   - Tier 4/Specialty (often coinsurance %)
+   - Tier 1/Generic: copay (tier1Copay) OR coinsurance % (tier1CoinsurancePercent)
+   - Tier 2/Preferred brand: copay (tier2Copay) OR coinsurance % (tier2CoinsurancePercent)
+   - Tier 3/Non-preferred: copay (tier3Copay) OR coinsurance % (tier3CoinsurancePercent)
+   - Tier 4/Specialty: copay (tier4Copay) OR coinsurance % (tier4CoinsurancePercent)
    - Retail supply days (usually 30)
    - Mail order supply days (usually 90)
    - Mail order pricing (e.g., 2x copay for 3x supply)
    - Separate Rx deductible?
+   NOTE: HDHP plans often have "X% after deductible" for all tiers instead of flat copays.
+   If drug tier shows "0% after deductible", set copay to null and coinsurance to 0.
 
 8. VISION & DENTAL (if included - often separate):
    - Vision exam copay/frequency
@@ -863,6 +895,52 @@ export async function extractInsuranceFromSBC(
       extractionConfidence: result.extractionConfidence,
       pagesProcessed: result.pagesProcessed,
       processingTimeMs,
+    });
+
+    // Debug logging for fields that often show "--" in UI
+    sbcLogger.info('SBC extraction details - Office visits & copays', {
+      copayPrimaryCare: result.copayPrimaryCare,
+      copaySpecialist: result.copaySpecialist,
+      copayTelehealth: result.copayTelehealth,
+      copayLabWork: result.copayLabWork,
+      copayXray: result.copayXray,
+      copayAdvancedImaging: result.copayAdvancedImaging,
+      copayUrgentCare: result.copayUrgentCare,
+      copayEmergency: result.copayEmergency,
+      coinsuranceRate: result.coinsuranceRate,
+      // New coinsurance fields
+      coinsurancePrimaryCare: result.coinsurancePrimaryCare,
+      coinsuranceSpecialist: result.coinsuranceSpecialist,
+      coinsuranceTelehealth: result.coinsuranceTelehealth,
+      coinsuranceLabWork: result.coinsuranceLabWork,
+      coinsuranceXray: result.coinsuranceXray,
+      coinsuranceAdvancedImaging: result.coinsuranceAdvancedImaging,
+      coinsuranceUrgentCare: result.coinsuranceUrgentCare,
+      coinsuranceEmergency: result.coinsuranceEmergency,
+    });
+
+    sbcLogger.info('SBC extraction details - Rx tiers', {
+      rxTier1Copay: result.rxBenefits?.tier1Copay,
+      rxTier1Coinsurance: result.rxBenefits?.tier1CoinsurancePercent,
+      rxTier2Copay: result.rxBenefits?.tier2Copay,
+      rxTier2Coinsurance: result.rxBenefits?.tier2CoinsurancePercent,
+      rxTier3Copay: result.rxBenefits?.tier3Copay,
+      rxTier3Coinsurance: result.rxBenefits?.tier3CoinsurancePercent,
+      rxTier4Copay: result.rxBenefits?.tier4Copay,
+      rxTier4Coinsurance: result.rxBenefits?.tier4CoinsurancePercent,
+      rxRetailDaysSupply: result.rxBenefits?.retailDaysSupply,
+      rxMailOrderDaysSupply: result.rxBenefits?.mailOrderDaysSupply,
+    });
+
+    sbcLogger.info('SBC extraction details - Emergency coverage', {
+      emergencyRoomCopay: result.emergencyCoverage?.emergencyRoomCopay,
+      emergencyRoomCoinsurance: result.emergencyCoverage?.emergencyRoomCoinsurance,
+      urgentCareCopay: result.emergencyCoverage?.urgentCareCopay,
+      urgentCareCoinsurance: result.emergencyCoverage?.urgentCareCoinsurance,
+      ambulanceGroundCopay: result.emergencyCoverage?.ambulanceGroundCopay,
+      ambulanceGroundCoinsurance: result.emergencyCoverage?.ambulanceGroundCoinsurance,
+      ambulanceAirCopay: result.emergencyCoverage?.ambulanceAirCopay,
+      ambulanceAirCoinsurance: result.emergencyCoverage?.ambulanceAirCoinsurance,
     });
 
     return result;

@@ -339,6 +339,15 @@ export async function uploadSBC(
     copayXray?: number;
     copayAdvancedImaging?: number;
     coinsuranceRate?: number;
+    // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+    coinsurancePrimaryCare?: number;
+    coinsuranceSpecialist?: number;
+    coinsuranceUrgentCare?: number;
+    coinsuranceEmergency?: number;
+    coinsuranceTelehealth?: number;
+    coinsuranceLabWork?: number;
+    coinsuranceXray?: number;
+    coinsuranceAdvancedImaging?: number;
     // Detailed coverage objects from Claude extraction
     inpatientCoverage?: ExtractedInpatientCoverage;
     outpatientCoverage?: ExtractedOutpatientCoverage;
@@ -413,6 +422,15 @@ export async function uploadSBC(
         copayLabWork: claudeResult.copayLabWork,
         copayXray: claudeResult.copayXray,
         copayAdvancedImaging: claudeResult.copayAdvancedImaging,
+        // Per-service coinsurance
+        coinsurancePrimaryCare: claudeResult.coinsurancePrimaryCare,
+        coinsuranceSpecialist: claudeResult.coinsuranceSpecialist,
+        coinsuranceUrgentCare: claudeResult.coinsuranceUrgentCare,
+        coinsuranceEmergency: claudeResult.coinsuranceEmergency,
+        coinsuranceTelehealth: claudeResult.coinsuranceTelehealth,
+        coinsuranceLabWork: claudeResult.coinsuranceLabWork,
+        coinsuranceXray: claudeResult.coinsuranceXray,
+        coinsuranceAdvancedImaging: claudeResult.coinsuranceAdvancedImaging,
         // Detailed coverage objects
         inpatientCoverage: claudeResult.inpatientCoverage,
         outpatientCoverage: claudeResult.outpatientCoverage,
@@ -590,6 +608,16 @@ export async function uploadSBC(
       copayAdvancedImaging: extractedData.copayAdvancedImaging ?? outpatient.advancedImagingCopay ?? null,
       coinsuranceRate: extractedData.coinsuranceRate ?? null,
 
+      // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+      coinsurancePrimaryCare: extractedData.coinsurancePrimaryCare ?? null,
+      coinsuranceSpecialist: extractedData.coinsuranceSpecialist ?? null,
+      coinsuranceUrgentCare: extractedData.coinsuranceUrgentCare ?? emergency.urgentCareCoinsurance ?? null,
+      coinsuranceEmergency: extractedData.coinsuranceEmergency ?? emergency.emergencyRoomCoinsurance ?? null,
+      coinsuranceTelehealth: extractedData.coinsuranceTelehealth ?? null,
+      coinsuranceLabWork: extractedData.coinsuranceLabWork ?? outpatient.labWorkCoinsurance ?? null,
+      coinsuranceXray: extractedData.coinsuranceXray ?? outpatient.xrayCoinsurance ?? null,
+      coinsuranceAdvancedImaging: extractedData.coinsuranceAdvancedImaging ?? outpatient.advancedImagingCoinsurance ?? null,
+
       // Inpatient coverage
       // Prefer per-day copay, fall back to per-admission
       inpatientHospitalCopay: inpatient.hospitalCopayPerDay ?? inpatient.hospitalCopayPerAdmission ?? null,
@@ -622,6 +650,10 @@ export async function uploadSBC(
       rxTier2Copay: rx.tier2Copay ?? null,
       rxTier3Copay: rx.tier3Copay ?? null,
       rxTier4Copay: rx.tier4Copay ?? null,
+      rxTier1Coinsurance: rx.tier1CoinsurancePercent ?? null,
+      rxTier2Coinsurance: rx.tier2CoinsurancePercent ?? null,
+      rxTier3Coinsurance: rx.tier3CoinsurancePercent ?? null,
+      rxTier4Coinsurance: rx.tier4CoinsurancePercent ?? null,
       rxRetailDaysSupply: rx.retailDaysSupply ?? null,
       rxMailOrderDaysSupply: rx.mailOrderDaysSupply ?? null,
       rxDeductibleIndividual: rx.deductibleIndividual ?? null,

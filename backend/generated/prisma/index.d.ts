@@ -11527,6 +11527,14 @@ export namespace Prisma {
     copayXray: Decimal | null
     copayAdvancedImaging: Decimal | null
     coinsuranceRate: Decimal | null
+    coinsurancePrimaryCare: Decimal | null
+    coinsuranceSpecialist: Decimal | null
+    coinsuranceUrgentCare: Decimal | null
+    coinsuranceEmergency: Decimal | null
+    coinsuranceTelehealth: Decimal | null
+    coinsuranceLabWork: Decimal | null
+    coinsuranceXray: Decimal | null
+    coinsuranceAdvancedImaging: Decimal | null
     inpatientHospitalCopay: Decimal | null
     inpatientHospitalCoinsurance: Decimal | null
     inpatientMentalHealthCopay: Decimal | null
@@ -11550,6 +11558,10 @@ export namespace Prisma {
     rxTier2Copay: Decimal | null
     rxTier3Copay: Decimal | null
     rxTier4Copay: Decimal | null
+    rxTier1Coinsurance: Decimal | null
+    rxTier2Coinsurance: Decimal | null
+    rxTier3Coinsurance: Decimal | null
+    rxTier4Coinsurance: Decimal | null
     rxRetailDaysSupply: number | null
     rxMailOrderDaysSupply: number | null
     rxDeductibleIndividual: Decimal | null
@@ -11611,6 +11623,14 @@ export namespace Prisma {
     copayXray: Decimal | null
     copayAdvancedImaging: Decimal | null
     coinsuranceRate: Decimal | null
+    coinsurancePrimaryCare: Decimal | null
+    coinsuranceSpecialist: Decimal | null
+    coinsuranceUrgentCare: Decimal | null
+    coinsuranceEmergency: Decimal | null
+    coinsuranceTelehealth: Decimal | null
+    coinsuranceLabWork: Decimal | null
+    coinsuranceXray: Decimal | null
+    coinsuranceAdvancedImaging: Decimal | null
     inpatientHospitalCopay: Decimal | null
     inpatientHospitalCoinsurance: Decimal | null
     inpatientMentalHealthCopay: Decimal | null
@@ -11634,6 +11654,10 @@ export namespace Prisma {
     rxTier2Copay: Decimal | null
     rxTier3Copay: Decimal | null
     rxTier4Copay: Decimal | null
+    rxTier1Coinsurance: Decimal | null
+    rxTier2Coinsurance: Decimal | null
+    rxTier3Coinsurance: Decimal | null
+    rxTier4Coinsurance: Decimal | null
     rxRetailDaysSupply: number | null
     rxMailOrderDaysSupply: number | null
     rxDeductibleIndividual: Decimal | null
@@ -11705,6 +11729,14 @@ export namespace Prisma {
     copayXray: Decimal | null
     copayAdvancedImaging: Decimal | null
     coinsuranceRate: Decimal | null
+    coinsurancePrimaryCare: Decimal | null
+    coinsuranceSpecialist: Decimal | null
+    coinsuranceUrgentCare: Decimal | null
+    coinsuranceEmergency: Decimal | null
+    coinsuranceTelehealth: Decimal | null
+    coinsuranceLabWork: Decimal | null
+    coinsuranceXray: Decimal | null
+    coinsuranceAdvancedImaging: Decimal | null
     inpatientHospitalCopay: Decimal | null
     inpatientHospitalCoinsurance: Decimal | null
     inpatientMentalHealthCopay: Decimal | null
@@ -11728,6 +11760,10 @@ export namespace Prisma {
     rxTier2Copay: Decimal | null
     rxTier3Copay: Decimal | null
     rxTier4Copay: Decimal | null
+    rxTier1Coinsurance: Decimal | null
+    rxTier2Coinsurance: Decimal | null
+    rxTier3Coinsurance: Decimal | null
+    rxTier4Coinsurance: Decimal | null
     rxRetailDaysSupply: number | null
     rxMailOrderDaysSupply: number | null
     rxDeductibleIndividual: Decimal | null
@@ -11809,6 +11845,14 @@ export namespace Prisma {
     copayXray: Decimal | null
     copayAdvancedImaging: Decimal | null
     coinsuranceRate: Decimal | null
+    coinsurancePrimaryCare: Decimal | null
+    coinsuranceSpecialist: Decimal | null
+    coinsuranceUrgentCare: Decimal | null
+    coinsuranceEmergency: Decimal | null
+    coinsuranceTelehealth: Decimal | null
+    coinsuranceLabWork: Decimal | null
+    coinsuranceXray: Decimal | null
+    coinsuranceAdvancedImaging: Decimal | null
     inpatientHospitalCopay: Decimal | null
     inpatientHospitalCoinsurance: Decimal | null
     inpatientMentalHealthCopay: Decimal | null
@@ -11832,6 +11876,10 @@ export namespace Prisma {
     rxTier2Copay: Decimal | null
     rxTier3Copay: Decimal | null
     rxTier4Copay: Decimal | null
+    rxTier1Coinsurance: Decimal | null
+    rxTier2Coinsurance: Decimal | null
+    rxTier3Coinsurance: Decimal | null
+    rxTier4Coinsurance: Decimal | null
     rxRetailDaysSupply: number | null
     rxMailOrderDaysSupply: number | null
     rxDeductibleIndividual: Decimal | null
@@ -11913,6 +11961,14 @@ export namespace Prisma {
     copayXray: number
     copayAdvancedImaging: number
     coinsuranceRate: number
+    coinsurancePrimaryCare: number
+    coinsuranceSpecialist: number
+    coinsuranceUrgentCare: number
+    coinsuranceEmergency: number
+    coinsuranceTelehealth: number
+    coinsuranceLabWork: number
+    coinsuranceXray: number
+    coinsuranceAdvancedImaging: number
     inpatientHospitalCopay: number
     inpatientHospitalCoinsurance: number
     inpatientMentalHealthCopay: number
@@ -11936,6 +11992,10 @@ export namespace Prisma {
     rxTier2Copay: number
     rxTier3Copay: number
     rxTier4Copay: number
+    rxTier1Coinsurance: number
+    rxTier2Coinsurance: number
+    rxTier3Coinsurance: number
+    rxTier4Coinsurance: number
     rxRetailDaysSupply: number
     rxMailOrderDaysSupply: number
     rxDeductibleIndividual: number
@@ -12009,6 +12069,14 @@ export namespace Prisma {
     copayXray?: true
     copayAdvancedImaging?: true
     coinsuranceRate?: true
+    coinsurancePrimaryCare?: true
+    coinsuranceSpecialist?: true
+    coinsuranceUrgentCare?: true
+    coinsuranceEmergency?: true
+    coinsuranceTelehealth?: true
+    coinsuranceLabWork?: true
+    coinsuranceXray?: true
+    coinsuranceAdvancedImaging?: true
     inpatientHospitalCopay?: true
     inpatientHospitalCoinsurance?: true
     inpatientMentalHealthCopay?: true
@@ -12032,6 +12100,10 @@ export namespace Prisma {
     rxTier2Copay?: true
     rxTier3Copay?: true
     rxTier4Copay?: true
+    rxTier1Coinsurance?: true
+    rxTier2Coinsurance?: true
+    rxTier3Coinsurance?: true
+    rxTier4Coinsurance?: true
     rxRetailDaysSupply?: true
     rxMailOrderDaysSupply?: true
     rxDeductibleIndividual?: true
@@ -12093,6 +12165,14 @@ export namespace Prisma {
     copayXray?: true
     copayAdvancedImaging?: true
     coinsuranceRate?: true
+    coinsurancePrimaryCare?: true
+    coinsuranceSpecialist?: true
+    coinsuranceUrgentCare?: true
+    coinsuranceEmergency?: true
+    coinsuranceTelehealth?: true
+    coinsuranceLabWork?: true
+    coinsuranceXray?: true
+    coinsuranceAdvancedImaging?: true
     inpatientHospitalCopay?: true
     inpatientHospitalCoinsurance?: true
     inpatientMentalHealthCopay?: true
@@ -12116,6 +12196,10 @@ export namespace Prisma {
     rxTier2Copay?: true
     rxTier3Copay?: true
     rxTier4Copay?: true
+    rxTier1Coinsurance?: true
+    rxTier2Coinsurance?: true
+    rxTier3Coinsurance?: true
+    rxTier4Coinsurance?: true
     rxRetailDaysSupply?: true
     rxMailOrderDaysSupply?: true
     rxDeductibleIndividual?: true
@@ -12187,6 +12271,14 @@ export namespace Prisma {
     copayXray?: true
     copayAdvancedImaging?: true
     coinsuranceRate?: true
+    coinsurancePrimaryCare?: true
+    coinsuranceSpecialist?: true
+    coinsuranceUrgentCare?: true
+    coinsuranceEmergency?: true
+    coinsuranceTelehealth?: true
+    coinsuranceLabWork?: true
+    coinsuranceXray?: true
+    coinsuranceAdvancedImaging?: true
     inpatientHospitalCopay?: true
     inpatientHospitalCoinsurance?: true
     inpatientMentalHealthCopay?: true
@@ -12210,6 +12302,10 @@ export namespace Prisma {
     rxTier2Copay?: true
     rxTier3Copay?: true
     rxTier4Copay?: true
+    rxTier1Coinsurance?: true
+    rxTier2Coinsurance?: true
+    rxTier3Coinsurance?: true
+    rxTier4Coinsurance?: true
     rxRetailDaysSupply?: true
     rxMailOrderDaysSupply?: true
     rxDeductibleIndividual?: true
@@ -12291,6 +12387,14 @@ export namespace Prisma {
     copayXray?: true
     copayAdvancedImaging?: true
     coinsuranceRate?: true
+    coinsurancePrimaryCare?: true
+    coinsuranceSpecialist?: true
+    coinsuranceUrgentCare?: true
+    coinsuranceEmergency?: true
+    coinsuranceTelehealth?: true
+    coinsuranceLabWork?: true
+    coinsuranceXray?: true
+    coinsuranceAdvancedImaging?: true
     inpatientHospitalCopay?: true
     inpatientHospitalCoinsurance?: true
     inpatientMentalHealthCopay?: true
@@ -12314,6 +12418,10 @@ export namespace Prisma {
     rxTier2Copay?: true
     rxTier3Copay?: true
     rxTier4Copay?: true
+    rxTier1Coinsurance?: true
+    rxTier2Coinsurance?: true
+    rxTier3Coinsurance?: true
+    rxTier4Coinsurance?: true
     rxRetailDaysSupply?: true
     rxMailOrderDaysSupply?: true
     rxDeductibleIndividual?: true
@@ -12395,6 +12503,14 @@ export namespace Prisma {
     copayXray?: true
     copayAdvancedImaging?: true
     coinsuranceRate?: true
+    coinsurancePrimaryCare?: true
+    coinsuranceSpecialist?: true
+    coinsuranceUrgentCare?: true
+    coinsuranceEmergency?: true
+    coinsuranceTelehealth?: true
+    coinsuranceLabWork?: true
+    coinsuranceXray?: true
+    coinsuranceAdvancedImaging?: true
     inpatientHospitalCopay?: true
     inpatientHospitalCoinsurance?: true
     inpatientMentalHealthCopay?: true
@@ -12418,6 +12534,10 @@ export namespace Prisma {
     rxTier2Copay?: true
     rxTier3Copay?: true
     rxTier4Copay?: true
+    rxTier1Coinsurance?: true
+    rxTier2Coinsurance?: true
+    rxTier3Coinsurance?: true
+    rxTier4Coinsurance?: true
     rxRetailDaysSupply?: true
     rxMailOrderDaysSupply?: true
     rxDeductibleIndividual?: true
@@ -12586,6 +12706,14 @@ export namespace Prisma {
     copayXray: Decimal | null
     copayAdvancedImaging: Decimal | null
     coinsuranceRate: Decimal | null
+    coinsurancePrimaryCare: Decimal | null
+    coinsuranceSpecialist: Decimal | null
+    coinsuranceUrgentCare: Decimal | null
+    coinsuranceEmergency: Decimal | null
+    coinsuranceTelehealth: Decimal | null
+    coinsuranceLabWork: Decimal | null
+    coinsuranceXray: Decimal | null
+    coinsuranceAdvancedImaging: Decimal | null
     inpatientHospitalCopay: Decimal | null
     inpatientHospitalCoinsurance: Decimal | null
     inpatientMentalHealthCopay: Decimal | null
@@ -12609,6 +12737,10 @@ export namespace Prisma {
     rxTier2Copay: Decimal | null
     rxTier3Copay: Decimal | null
     rxTier4Copay: Decimal | null
+    rxTier1Coinsurance: Decimal | null
+    rxTier2Coinsurance: Decimal | null
+    rxTier3Coinsurance: Decimal | null
+    rxTier4Coinsurance: Decimal | null
     rxRetailDaysSupply: number | null
     rxMailOrderDaysSupply: number | null
     rxDeductibleIndividual: Decimal | null
@@ -12709,6 +12841,14 @@ export namespace Prisma {
     copayXray?: boolean
     copayAdvancedImaging?: boolean
     coinsuranceRate?: boolean
+    coinsurancePrimaryCare?: boolean
+    coinsuranceSpecialist?: boolean
+    coinsuranceUrgentCare?: boolean
+    coinsuranceEmergency?: boolean
+    coinsuranceTelehealth?: boolean
+    coinsuranceLabWork?: boolean
+    coinsuranceXray?: boolean
+    coinsuranceAdvancedImaging?: boolean
     inpatientHospitalCopay?: boolean
     inpatientHospitalCoinsurance?: boolean
     inpatientMentalHealthCopay?: boolean
@@ -12732,6 +12872,10 @@ export namespace Prisma {
     rxTier2Copay?: boolean
     rxTier3Copay?: boolean
     rxTier4Copay?: boolean
+    rxTier1Coinsurance?: boolean
+    rxTier2Coinsurance?: boolean
+    rxTier3Coinsurance?: boolean
+    rxTier4Coinsurance?: boolean
     rxRetailDaysSupply?: boolean
     rxMailOrderDaysSupply?: boolean
     rxDeductibleIndividual?: boolean
@@ -12816,6 +12960,14 @@ export namespace Prisma {
     copayXray?: boolean
     copayAdvancedImaging?: boolean
     coinsuranceRate?: boolean
+    coinsurancePrimaryCare?: boolean
+    coinsuranceSpecialist?: boolean
+    coinsuranceUrgentCare?: boolean
+    coinsuranceEmergency?: boolean
+    coinsuranceTelehealth?: boolean
+    coinsuranceLabWork?: boolean
+    coinsuranceXray?: boolean
+    coinsuranceAdvancedImaging?: boolean
     inpatientHospitalCopay?: boolean
     inpatientHospitalCoinsurance?: boolean
     inpatientMentalHealthCopay?: boolean
@@ -12839,6 +12991,10 @@ export namespace Prisma {
     rxTier2Copay?: boolean
     rxTier3Copay?: boolean
     rxTier4Copay?: boolean
+    rxTier1Coinsurance?: boolean
+    rxTier2Coinsurance?: boolean
+    rxTier3Coinsurance?: boolean
+    rxTier4Coinsurance?: boolean
     rxRetailDaysSupply?: boolean
     rxMailOrderDaysSupply?: boolean
     rxDeductibleIndividual?: boolean
@@ -12921,6 +13077,14 @@ export namespace Prisma {
     copayXray?: boolean
     copayAdvancedImaging?: boolean
     coinsuranceRate?: boolean
+    coinsurancePrimaryCare?: boolean
+    coinsuranceSpecialist?: boolean
+    coinsuranceUrgentCare?: boolean
+    coinsuranceEmergency?: boolean
+    coinsuranceTelehealth?: boolean
+    coinsuranceLabWork?: boolean
+    coinsuranceXray?: boolean
+    coinsuranceAdvancedImaging?: boolean
     inpatientHospitalCopay?: boolean
     inpatientHospitalCoinsurance?: boolean
     inpatientMentalHealthCopay?: boolean
@@ -12944,6 +13108,10 @@ export namespace Prisma {
     rxTier2Copay?: boolean
     rxTier3Copay?: boolean
     rxTier4Copay?: boolean
+    rxTier1Coinsurance?: boolean
+    rxTier2Coinsurance?: boolean
+    rxTier3Coinsurance?: boolean
+    rxTier4Coinsurance?: boolean
     rxRetailDaysSupply?: boolean
     rxMailOrderDaysSupply?: boolean
     rxDeductibleIndividual?: boolean
@@ -13026,6 +13194,14 @@ export namespace Prisma {
     copayXray?: boolean
     copayAdvancedImaging?: boolean
     coinsuranceRate?: boolean
+    coinsurancePrimaryCare?: boolean
+    coinsuranceSpecialist?: boolean
+    coinsuranceUrgentCare?: boolean
+    coinsuranceEmergency?: boolean
+    coinsuranceTelehealth?: boolean
+    coinsuranceLabWork?: boolean
+    coinsuranceXray?: boolean
+    coinsuranceAdvancedImaging?: boolean
     inpatientHospitalCopay?: boolean
     inpatientHospitalCoinsurance?: boolean
     inpatientMentalHealthCopay?: boolean
@@ -13049,6 +13225,10 @@ export namespace Prisma {
     rxTier2Copay?: boolean
     rxTier3Copay?: boolean
     rxTier4Copay?: boolean
+    rxTier1Coinsurance?: boolean
+    rxTier2Coinsurance?: boolean
+    rxTier3Coinsurance?: boolean
+    rxTier4Coinsurance?: boolean
     rxRetailDaysSupply?: boolean
     rxMailOrderDaysSupply?: boolean
     rxDeductibleIndividual?: boolean
@@ -13101,7 +13281,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "copayTelehealth" | "copayLabWork" | "copayXray" | "copayAdvancedImaging" | "coinsuranceRate" | "inpatientHospitalCopay" | "inpatientHospitalCoinsurance" | "inpatientMentalHealthCopay" | "inpatientMentalCoinsurance" | "maternityCopay" | "maternityCoinsurance" | "skilledNursingCopay" | "skilledNursingCoinsurance" | "skilledNursingDaysLimit" | "outpatientSurgeryCopay" | "outpatientSurgeryCoinsurance" | "outpatientMentalHealthCopay" | "outpatientMentalCoinsurance" | "physicalTherapyVisitsLimit" | "occupationalTherapyVisitsLimit" | "speechTherapyVisitsLimit" | "physicalTherapyCopay" | "occupationalTherapyCopay" | "speechTherapyCopay" | "rxTier1Copay" | "rxTier2Copay" | "rxTier3Copay" | "rxTier4Copay" | "rxRetailDaysSupply" | "rxMailOrderDaysSupply" | "rxDeductibleIndividual" | "rxDeductibleFamily" | "rxOopMaxIndividual" | "rxOopMaxFamily" | "ambulanceGroundCopay" | "ambulanceGroundCoinsurance" | "ambulanceAirCopay" | "ambulanceAirCoinsurance" | "visionExamCopay" | "visionExamFrequency" | "visionLensesAllowance" | "visionFramesAllowance" | "visionContactsAllowance" | "dentalPreventiveCoinsurance" | "dentalBasicCoinsurance" | "dentalMajorCoinsurance" | "dentalAnnualMax" | "dentalDeductible" | "dentalOrthodontiaCoinsurance" | "dentalOrthodontiaLifetimeMax" | "dmeCopay" | "dmeCoinsurance" | "homeHealthVisitCopay" | "homeHealthVisitCoinsurance" | "homeHealthVisitLimit" | "hospiceInpatientCopay" | "hospiceInpatientCoinsurance" | "hospiceRespiteCopay" | "hospiceRespiteCoinsurance" | "hospiceRespiteDayLimit" | "chiropracticCopay" | "chiropracticVisitsLimit" | "acupunctureCopay" | "acupunctureVisitsLimit" | "cardiacRehabCopay" | "cardiacRehabVisitsLimit" | "pulmonaryRehabCopay" | "pulmonaryRehabVisitsLimit" | "preventiveServicesList" | "exclusionsList" | "priorAuthRequirements" | "servicesWithLimits" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
+  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "copayTelehealth" | "copayLabWork" | "copayXray" | "copayAdvancedImaging" | "coinsuranceRate" | "coinsurancePrimaryCare" | "coinsuranceSpecialist" | "coinsuranceUrgentCare" | "coinsuranceEmergency" | "coinsuranceTelehealth" | "coinsuranceLabWork" | "coinsuranceXray" | "coinsuranceAdvancedImaging" | "inpatientHospitalCopay" | "inpatientHospitalCoinsurance" | "inpatientMentalHealthCopay" | "inpatientMentalCoinsurance" | "maternityCopay" | "maternityCoinsurance" | "skilledNursingCopay" | "skilledNursingCoinsurance" | "skilledNursingDaysLimit" | "outpatientSurgeryCopay" | "outpatientSurgeryCoinsurance" | "outpatientMentalHealthCopay" | "outpatientMentalCoinsurance" | "physicalTherapyVisitsLimit" | "occupationalTherapyVisitsLimit" | "speechTherapyVisitsLimit" | "physicalTherapyCopay" | "occupationalTherapyCopay" | "speechTherapyCopay" | "rxTier1Copay" | "rxTier2Copay" | "rxTier3Copay" | "rxTier4Copay" | "rxTier1Coinsurance" | "rxTier2Coinsurance" | "rxTier3Coinsurance" | "rxTier4Coinsurance" | "rxRetailDaysSupply" | "rxMailOrderDaysSupply" | "rxDeductibleIndividual" | "rxDeductibleFamily" | "rxOopMaxIndividual" | "rxOopMaxFamily" | "ambulanceGroundCopay" | "ambulanceGroundCoinsurance" | "ambulanceAirCopay" | "ambulanceAirCoinsurance" | "visionExamCopay" | "visionExamFrequency" | "visionLensesAllowance" | "visionFramesAllowance" | "visionContactsAllowance" | "dentalPreventiveCoinsurance" | "dentalBasicCoinsurance" | "dentalMajorCoinsurance" | "dentalAnnualMax" | "dentalDeductible" | "dentalOrthodontiaCoinsurance" | "dentalOrthodontiaLifetimeMax" | "dmeCopay" | "dmeCoinsurance" | "homeHealthVisitCopay" | "homeHealthVisitCoinsurance" | "homeHealthVisitLimit" | "hospiceInpatientCopay" | "hospiceInpatientCoinsurance" | "hospiceRespiteCopay" | "hospiceRespiteCoinsurance" | "hospiceRespiteDayLimit" | "chiropracticCopay" | "chiropracticVisitsLimit" | "acupunctureCopay" | "acupunctureVisitsLimit" | "cardiacRehabCopay" | "cardiacRehabVisitsLimit" | "pulmonaryRehabCopay" | "pulmonaryRehabVisitsLimit" | "preventiveServicesList" | "exclusionsList" | "priorAuthRequirements" | "servicesWithLimits" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
   export type InsurancePlanInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -13149,6 +13329,14 @@ export namespace Prisma {
       copayXray: Prisma.Decimal | null
       copayAdvancedImaging: Prisma.Decimal | null
       coinsuranceRate: Prisma.Decimal | null
+      coinsurancePrimaryCare: Prisma.Decimal | null
+      coinsuranceSpecialist: Prisma.Decimal | null
+      coinsuranceUrgentCare: Prisma.Decimal | null
+      coinsuranceEmergency: Prisma.Decimal | null
+      coinsuranceTelehealth: Prisma.Decimal | null
+      coinsuranceLabWork: Prisma.Decimal | null
+      coinsuranceXray: Prisma.Decimal | null
+      coinsuranceAdvancedImaging: Prisma.Decimal | null
       inpatientHospitalCopay: Prisma.Decimal | null
       inpatientHospitalCoinsurance: Prisma.Decimal | null
       inpatientMentalHealthCopay: Prisma.Decimal | null
@@ -13172,6 +13360,10 @@ export namespace Prisma {
       rxTier2Copay: Prisma.Decimal | null
       rxTier3Copay: Prisma.Decimal | null
       rxTier4Copay: Prisma.Decimal | null
+      rxTier1Coinsurance: Prisma.Decimal | null
+      rxTier2Coinsurance: Prisma.Decimal | null
+      rxTier3Coinsurance: Prisma.Decimal | null
+      rxTier4Coinsurance: Prisma.Decimal | null
       rxRetailDaysSupply: number | null
       rxMailOrderDaysSupply: number | null
       rxDeductibleIndividual: Prisma.Decimal | null
@@ -13675,6 +13867,14 @@ export namespace Prisma {
     readonly copayXray: FieldRef<"InsurancePlan", 'Decimal'>
     readonly copayAdvancedImaging: FieldRef<"InsurancePlan", 'Decimal'>
     readonly coinsuranceRate: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsurancePrimaryCare: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceSpecialist: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceUrgentCare: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceEmergency: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceTelehealth: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceLabWork: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceXray: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceAdvancedImaging: FieldRef<"InsurancePlan", 'Decimal'>
     readonly inpatientHospitalCopay: FieldRef<"InsurancePlan", 'Decimal'>
     readonly inpatientHospitalCoinsurance: FieldRef<"InsurancePlan", 'Decimal'>
     readonly inpatientMentalHealthCopay: FieldRef<"InsurancePlan", 'Decimal'>
@@ -13698,6 +13898,10 @@ export namespace Prisma {
     readonly rxTier2Copay: FieldRef<"InsurancePlan", 'Decimal'>
     readonly rxTier3Copay: FieldRef<"InsurancePlan", 'Decimal'>
     readonly rxTier4Copay: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly rxTier1Coinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly rxTier2Coinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly rxTier3Coinsurance: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly rxTier4Coinsurance: FieldRef<"InsurancePlan", 'Decimal'>
     readonly rxRetailDaysSupply: FieldRef<"InsurancePlan", 'Int'>
     readonly rxMailOrderDaysSupply: FieldRef<"InsurancePlan", 'Int'>
     readonly rxDeductibleIndividual: FieldRef<"InsurancePlan", 'Decimal'>
@@ -24943,6 +25147,14 @@ export namespace Prisma {
     copayXray: 'copayXray',
     copayAdvancedImaging: 'copayAdvancedImaging',
     coinsuranceRate: 'coinsuranceRate',
+    coinsurancePrimaryCare: 'coinsurancePrimaryCare',
+    coinsuranceSpecialist: 'coinsuranceSpecialist',
+    coinsuranceUrgentCare: 'coinsuranceUrgentCare',
+    coinsuranceEmergency: 'coinsuranceEmergency',
+    coinsuranceTelehealth: 'coinsuranceTelehealth',
+    coinsuranceLabWork: 'coinsuranceLabWork',
+    coinsuranceXray: 'coinsuranceXray',
+    coinsuranceAdvancedImaging: 'coinsuranceAdvancedImaging',
     inpatientHospitalCopay: 'inpatientHospitalCopay',
     inpatientHospitalCoinsurance: 'inpatientHospitalCoinsurance',
     inpatientMentalHealthCopay: 'inpatientMentalHealthCopay',
@@ -24966,6 +25178,10 @@ export namespace Prisma {
     rxTier2Copay: 'rxTier2Copay',
     rxTier3Copay: 'rxTier3Copay',
     rxTier4Copay: 'rxTier4Copay',
+    rxTier1Coinsurance: 'rxTier1Coinsurance',
+    rxTier2Coinsurance: 'rxTier2Coinsurance',
+    rxTier3Coinsurance: 'rxTier3Coinsurance',
+    rxTier4Coinsurance: 'rxTier4Coinsurance',
     rxRetailDaysSupply: 'rxRetailDaysSupply',
     rxMailOrderDaysSupply: 'rxMailOrderDaysSupply',
     rxDeductibleIndividual: 'rxDeductibleIndividual',
@@ -26243,6 +26459,14 @@ export namespace Prisma {
     copayXray?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26266,6 +26490,10 @@ export namespace Prisma {
     rxTier2Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: IntNullableFilter<"InsurancePlan"> | number | null
     rxMailOrderDaysSupply?: IntNullableFilter<"InsurancePlan"> | number | null
     rxDeductibleIndividual?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26349,6 +26577,14 @@ export namespace Prisma {
     copayXray?: SortOrderInput | SortOrder
     copayAdvancedImaging?: SortOrderInput | SortOrder
     coinsuranceRate?: SortOrderInput | SortOrder
+    coinsurancePrimaryCare?: SortOrderInput | SortOrder
+    coinsuranceSpecialist?: SortOrderInput | SortOrder
+    coinsuranceUrgentCare?: SortOrderInput | SortOrder
+    coinsuranceEmergency?: SortOrderInput | SortOrder
+    coinsuranceTelehealth?: SortOrderInput | SortOrder
+    coinsuranceLabWork?: SortOrderInput | SortOrder
+    coinsuranceXray?: SortOrderInput | SortOrder
+    coinsuranceAdvancedImaging?: SortOrderInput | SortOrder
     inpatientHospitalCopay?: SortOrderInput | SortOrder
     inpatientHospitalCoinsurance?: SortOrderInput | SortOrder
     inpatientMentalHealthCopay?: SortOrderInput | SortOrder
@@ -26372,6 +26608,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrderInput | SortOrder
     rxTier3Copay?: SortOrderInput | SortOrder
     rxTier4Copay?: SortOrderInput | SortOrder
+    rxTier1Coinsurance?: SortOrderInput | SortOrder
+    rxTier2Coinsurance?: SortOrderInput | SortOrder
+    rxTier3Coinsurance?: SortOrderInput | SortOrder
+    rxTier4Coinsurance?: SortOrderInput | SortOrder
     rxRetailDaysSupply?: SortOrderInput | SortOrder
     rxMailOrderDaysSupply?: SortOrderInput | SortOrder
     rxDeductibleIndividual?: SortOrderInput | SortOrder
@@ -26458,6 +26698,14 @@ export namespace Prisma {
     copayXray?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26481,6 +26729,10 @@ export namespace Prisma {
     rxTier2Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: IntNullableFilter<"InsurancePlan"> | number | null
     rxMailOrderDaysSupply?: IntNullableFilter<"InsurancePlan"> | number | null
     rxDeductibleIndividual?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26564,6 +26816,14 @@ export namespace Prisma {
     copayXray?: SortOrderInput | SortOrder
     copayAdvancedImaging?: SortOrderInput | SortOrder
     coinsuranceRate?: SortOrderInput | SortOrder
+    coinsurancePrimaryCare?: SortOrderInput | SortOrder
+    coinsuranceSpecialist?: SortOrderInput | SortOrder
+    coinsuranceUrgentCare?: SortOrderInput | SortOrder
+    coinsuranceEmergency?: SortOrderInput | SortOrder
+    coinsuranceTelehealth?: SortOrderInput | SortOrder
+    coinsuranceLabWork?: SortOrderInput | SortOrder
+    coinsuranceXray?: SortOrderInput | SortOrder
+    coinsuranceAdvancedImaging?: SortOrderInput | SortOrder
     inpatientHospitalCopay?: SortOrderInput | SortOrder
     inpatientHospitalCoinsurance?: SortOrderInput | SortOrder
     inpatientMentalHealthCopay?: SortOrderInput | SortOrder
@@ -26587,6 +26847,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrderInput | SortOrder
     rxTier3Copay?: SortOrderInput | SortOrder
     rxTier4Copay?: SortOrderInput | SortOrder
+    rxTier1Coinsurance?: SortOrderInput | SortOrder
+    rxTier2Coinsurance?: SortOrderInput | SortOrder
+    rxTier3Coinsurance?: SortOrderInput | SortOrder
+    rxTier4Coinsurance?: SortOrderInput | SortOrder
     rxRetailDaysSupply?: SortOrderInput | SortOrder
     rxMailOrderDaysSupply?: SortOrderInput | SortOrder
     rxDeductibleIndividual?: SortOrderInput | SortOrder
@@ -26676,6 +26940,14 @@ export namespace Prisma {
     copayXray?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26699,6 +26971,10 @@ export namespace Prisma {
     rxTier2Copay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
     rxMailOrderDaysSupply?: IntNullableWithAggregatesFilter<"InsurancePlan"> | number | null
     rxDeductibleIndividual?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -28413,6 +28689,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -28436,6 +28720,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -28519,6 +28807,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -28542,6 +28838,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -28623,6 +28923,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -28646,6 +28954,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -28729,6 +29041,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -28752,6 +29072,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -28834,6 +29158,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -28857,6 +29189,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -28937,6 +29273,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -28960,6 +29304,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -29041,6 +29389,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -29064,6 +29420,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -30947,6 +31307,14 @@ export namespace Prisma {
     copayXray?: SortOrder
     copayAdvancedImaging?: SortOrder
     coinsuranceRate?: SortOrder
+    coinsurancePrimaryCare?: SortOrder
+    coinsuranceSpecialist?: SortOrder
+    coinsuranceUrgentCare?: SortOrder
+    coinsuranceEmergency?: SortOrder
+    coinsuranceTelehealth?: SortOrder
+    coinsuranceLabWork?: SortOrder
+    coinsuranceXray?: SortOrder
+    coinsuranceAdvancedImaging?: SortOrder
     inpatientHospitalCopay?: SortOrder
     inpatientHospitalCoinsurance?: SortOrder
     inpatientMentalHealthCopay?: SortOrder
@@ -30970,6 +31338,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrder
     rxTier3Copay?: SortOrder
     rxTier4Copay?: SortOrder
+    rxTier1Coinsurance?: SortOrder
+    rxTier2Coinsurance?: SortOrder
+    rxTier3Coinsurance?: SortOrder
+    rxTier4Coinsurance?: SortOrder
     rxRetailDaysSupply?: SortOrder
     rxMailOrderDaysSupply?: SortOrder
     rxDeductibleIndividual?: SortOrder
@@ -31041,6 +31413,14 @@ export namespace Prisma {
     copayXray?: SortOrder
     copayAdvancedImaging?: SortOrder
     coinsuranceRate?: SortOrder
+    coinsurancePrimaryCare?: SortOrder
+    coinsuranceSpecialist?: SortOrder
+    coinsuranceUrgentCare?: SortOrder
+    coinsuranceEmergency?: SortOrder
+    coinsuranceTelehealth?: SortOrder
+    coinsuranceLabWork?: SortOrder
+    coinsuranceXray?: SortOrder
+    coinsuranceAdvancedImaging?: SortOrder
     inpatientHospitalCopay?: SortOrder
     inpatientHospitalCoinsurance?: SortOrder
     inpatientMentalHealthCopay?: SortOrder
@@ -31064,6 +31444,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrder
     rxTier3Copay?: SortOrder
     rxTier4Copay?: SortOrder
+    rxTier1Coinsurance?: SortOrder
+    rxTier2Coinsurance?: SortOrder
+    rxTier3Coinsurance?: SortOrder
+    rxTier4Coinsurance?: SortOrder
     rxRetailDaysSupply?: SortOrder
     rxMailOrderDaysSupply?: SortOrder
     rxDeductibleIndividual?: SortOrder
@@ -31135,6 +31519,14 @@ export namespace Prisma {
     copayXray?: SortOrder
     copayAdvancedImaging?: SortOrder
     coinsuranceRate?: SortOrder
+    coinsurancePrimaryCare?: SortOrder
+    coinsuranceSpecialist?: SortOrder
+    coinsuranceUrgentCare?: SortOrder
+    coinsuranceEmergency?: SortOrder
+    coinsuranceTelehealth?: SortOrder
+    coinsuranceLabWork?: SortOrder
+    coinsuranceXray?: SortOrder
+    coinsuranceAdvancedImaging?: SortOrder
     inpatientHospitalCopay?: SortOrder
     inpatientHospitalCoinsurance?: SortOrder
     inpatientMentalHealthCopay?: SortOrder
@@ -31158,6 +31550,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrder
     rxTier3Copay?: SortOrder
     rxTier4Copay?: SortOrder
+    rxTier1Coinsurance?: SortOrder
+    rxTier2Coinsurance?: SortOrder
+    rxTier3Coinsurance?: SortOrder
+    rxTier4Coinsurance?: SortOrder
     rxRetailDaysSupply?: SortOrder
     rxMailOrderDaysSupply?: SortOrder
     rxDeductibleIndividual?: SortOrder
@@ -31239,6 +31635,14 @@ export namespace Prisma {
     copayXray?: SortOrder
     copayAdvancedImaging?: SortOrder
     coinsuranceRate?: SortOrder
+    coinsurancePrimaryCare?: SortOrder
+    coinsuranceSpecialist?: SortOrder
+    coinsuranceUrgentCare?: SortOrder
+    coinsuranceEmergency?: SortOrder
+    coinsuranceTelehealth?: SortOrder
+    coinsuranceLabWork?: SortOrder
+    coinsuranceXray?: SortOrder
+    coinsuranceAdvancedImaging?: SortOrder
     inpatientHospitalCopay?: SortOrder
     inpatientHospitalCoinsurance?: SortOrder
     inpatientMentalHealthCopay?: SortOrder
@@ -31262,6 +31666,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrder
     rxTier3Copay?: SortOrder
     rxTier4Copay?: SortOrder
+    rxTier1Coinsurance?: SortOrder
+    rxTier2Coinsurance?: SortOrder
+    rxTier3Coinsurance?: SortOrder
+    rxTier4Coinsurance?: SortOrder
     rxRetailDaysSupply?: SortOrder
     rxMailOrderDaysSupply?: SortOrder
     rxDeductibleIndividual?: SortOrder
@@ -31333,6 +31741,14 @@ export namespace Prisma {
     copayXray?: SortOrder
     copayAdvancedImaging?: SortOrder
     coinsuranceRate?: SortOrder
+    coinsurancePrimaryCare?: SortOrder
+    coinsuranceSpecialist?: SortOrder
+    coinsuranceUrgentCare?: SortOrder
+    coinsuranceEmergency?: SortOrder
+    coinsuranceTelehealth?: SortOrder
+    coinsuranceLabWork?: SortOrder
+    coinsuranceXray?: SortOrder
+    coinsuranceAdvancedImaging?: SortOrder
     inpatientHospitalCopay?: SortOrder
     inpatientHospitalCoinsurance?: SortOrder
     inpatientMentalHealthCopay?: SortOrder
@@ -31356,6 +31772,10 @@ export namespace Prisma {
     rxTier2Copay?: SortOrder
     rxTier3Copay?: SortOrder
     rxTier4Copay?: SortOrder
+    rxTier1Coinsurance?: SortOrder
+    rxTier2Coinsurance?: SortOrder
+    rxTier3Coinsurance?: SortOrder
+    rxTier4Coinsurance?: SortOrder
     rxRetailDaysSupply?: SortOrder
     rxMailOrderDaysSupply?: SortOrder
     rxDeductibleIndividual?: SortOrder
@@ -34009,6 +34429,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -34032,6 +34460,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -34113,6 +34545,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -34136,6 +34576,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -34624,6 +35068,14 @@ export namespace Prisma {
     copayXray?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -34647,6 +35099,10 @@ export namespace Prisma {
     rxTier2Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: IntNullableFilter<"InsurancePlan"> | number | null
     rxMailOrderDaysSupply?: IntNullableFilter<"InsurancePlan"> | number | null
     rxDeductibleIndividual?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -36331,6 +36787,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -36354,6 +36818,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -36436,6 +36904,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -36459,6 +36935,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -36555,6 +37035,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -36578,6 +37066,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -36660,6 +37152,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -36683,6 +37183,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -37894,6 +38398,14 @@ export namespace Prisma {
     copayXray?: Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
@@ -37917,6 +38429,10 @@ export namespace Prisma {
     rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: number | null
     rxMailOrderDaysSupply?: number | null
     rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
@@ -38335,6 +38851,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38358,6 +38882,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38439,6 +38967,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38462,6 +38998,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38543,6 +39083,14 @@ export namespace Prisma {
     copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38566,6 +39114,10 @@ export namespace Prisma {
     rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
     rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
