@@ -164,6 +164,16 @@ export interface InsurancePlan {
   copayAdvancedImaging?: number;
   coinsuranceRate?: number;
 
+  // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+  coinsurancePrimaryCare?: number;
+  coinsuranceSpecialist?: number;
+  coinsuranceUrgentCare?: number;
+  coinsuranceEmergency?: number;
+  coinsuranceTelehealth?: number;
+  coinsuranceLabWork?: number;
+  coinsuranceXray?: number;
+  coinsuranceAdvancedImaging?: number;
+
   // Inpatient coverage
   inpatientHospitalCopay?: number;
   inpatientHospitalCoinsurance?: number;
@@ -202,6 +212,10 @@ export interface InsurancePlan {
   rxTier2Copay?: number;
   rxTier3Copay?: number;
   rxTier4Copay?: number;
+  rxTier1Coinsurance?: number;
+  rxTier2Coinsurance?: number;
+  rxTier3Coinsurance?: number;
+  rxTier4Coinsurance?: number;
   rxRetailDaysSupply?: number;
   rxMailOrderDaysSupply?: number;
   rxDeductibleIndividual?: number;

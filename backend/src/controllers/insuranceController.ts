@@ -60,6 +60,15 @@ interface InsurancePlanResponse {
   copayXray?: number;
   copayAdvancedImaging?: number;
   coinsuranceRate?: number;
+  // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+  coinsurancePrimaryCare?: number;
+  coinsuranceSpecialist?: number;
+  coinsuranceUrgentCare?: number;
+  coinsuranceEmergency?: number;
+  coinsuranceTelehealth?: number;
+  coinsuranceLabWork?: number;
+  coinsuranceXray?: number;
+  coinsuranceAdvancedImaging?: number;
 
   // Inpatient coverage
   inpatientHospitalCopay?: number;
@@ -99,6 +108,10 @@ interface InsurancePlanResponse {
   rxTier2Copay?: number;
   rxTier3Copay?: number;
   rxTier4Copay?: number;
+  rxTier1Coinsurance?: number;
+  rxTier2Coinsurance?: number;
+  rxTier3Coinsurance?: number;
+  rxTier4Coinsurance?: number;
   rxRetailDaysSupply?: number;
   rxMailOrderDaysSupply?: number;
   rxDeductibleIndividual?: number;
@@ -281,6 +294,15 @@ function toResponse(
     copayXray: plan.copayXray ? toNumber(plan.copayXray) : undefined,
     copayAdvancedImaging: plan.copayAdvancedImaging ? toNumber(plan.copayAdvancedImaging) : undefined,
     coinsuranceRate: plan.coinsuranceRate ? toNumber(plan.coinsuranceRate) : undefined,
+    // Per-service coinsurance
+    coinsurancePrimaryCare: plan.coinsurancePrimaryCare ? toNumber(plan.coinsurancePrimaryCare) : undefined,
+    coinsuranceSpecialist: plan.coinsuranceSpecialist ? toNumber(plan.coinsuranceSpecialist) : undefined,
+    coinsuranceUrgentCare: plan.coinsuranceUrgentCare ? toNumber(plan.coinsuranceUrgentCare) : undefined,
+    coinsuranceEmergency: plan.coinsuranceEmergency ? toNumber(plan.coinsuranceEmergency) : undefined,
+    coinsuranceTelehealth: plan.coinsuranceTelehealth ? toNumber(plan.coinsuranceTelehealth) : undefined,
+    coinsuranceLabWork: plan.coinsuranceLabWork ? toNumber(plan.coinsuranceLabWork) : undefined,
+    coinsuranceXray: plan.coinsuranceXray ? toNumber(plan.coinsuranceXray) : undefined,
+    coinsuranceAdvancedImaging: plan.coinsuranceAdvancedImaging ? toNumber(plan.coinsuranceAdvancedImaging) : undefined,
 
     // Inpatient coverage
     inpatientHospitalCopay: plan.inpatientHospitalCopay ? toNumber(plan.inpatientHospitalCopay) : undefined,
@@ -320,6 +342,10 @@ function toResponse(
     rxTier2Copay: plan.rxTier2Copay ? toNumber(plan.rxTier2Copay) : undefined,
     rxTier3Copay: plan.rxTier3Copay ? toNumber(plan.rxTier3Copay) : undefined,
     rxTier4Copay: plan.rxTier4Copay ? toNumber(plan.rxTier4Copay) : undefined,
+    rxTier1Coinsurance: plan.rxTier1Coinsurance ? toNumber(plan.rxTier1Coinsurance) : undefined,
+    rxTier2Coinsurance: plan.rxTier2Coinsurance ? toNumber(plan.rxTier2Coinsurance) : undefined,
+    rxTier3Coinsurance: plan.rxTier3Coinsurance ? toNumber(plan.rxTier3Coinsurance) : undefined,
+    rxTier4Coinsurance: plan.rxTier4Coinsurance ? toNumber(plan.rxTier4Coinsurance) : undefined,
     rxRetailDaysSupply: plan.rxRetailDaysSupply ?? undefined,
     rxMailOrderDaysSupply: plan.rxMailOrderDaysSupply ?? undefined,
     rxDeductibleIndividual: plan.rxDeductibleIndividual ? toNumber(plan.rxDeductibleIndividual) : undefined,

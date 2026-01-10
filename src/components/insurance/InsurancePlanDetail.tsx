@@ -67,6 +67,23 @@ const formatCoinsurance = (value: number | undefined | null): string => {
   return `${value}% after deductible`;
 };
 
+// Helper to format copay OR coinsurance (displays whichever is available)
+const formatCopayOrCoinsurance = (
+  copay: number | undefined | null,
+  coinsurance: number | undefined | null
+): string => {
+  // If copay exists, show it
+  if (copay !== undefined && copay !== null) {
+    return formatCopay(copay);
+  }
+  // If coinsurance exists, show it
+  if (coinsurance !== undefined && coinsurance !== null) {
+    return formatCoinsurance(coinsurance);
+  }
+  // Neither exists
+  return '--';
+};
+
 // Helper to format visit limit
 const formatLimit = (limit: number | undefined | null, type: string = 'visits'): string => {
   if (limit === undefined || limit === null) return 'No limit';
@@ -295,12 +312,12 @@ export default function InsurancePlanDetail({ plan, onBack }: InsurancePlanDetai
         {/* Office Visits Section */}
         <Section title="Office Visits" icon={<Stethoscope className="w-4 h-4" />}>
           <div className="divide-y divide-slate-100 dark:divide-slate-700">
-            <CoverageRow label="Primary Care Visit" value={formatCopay(plan.copayPrimaryCare)} />
-            <CoverageRow label="Specialist Visit" value={formatCopay(plan.copaySpecialist)} />
-            <CoverageRow label="Telehealth/Virtual Visit" value={formatCopay(plan.copayTelehealth)} />
-            <CoverageRow label="Lab Work" value={formatCopay(plan.copayLabWork)} />
-            <CoverageRow label="X-ray" value={formatCopay(plan.copayXray)} />
-            <CoverageRow label="Advanced Imaging (MRI/CT)" value={formatCopay(plan.copayAdvancedImaging)} />
+            <CoverageRow label="Primary Care Visit" value={formatCopayOrCoinsurance(plan.copayPrimaryCare, plan.coinsurancePrimaryCare)} />
+            <CoverageRow label="Specialist Visit" value={formatCopayOrCoinsurance(plan.copaySpecialist, plan.coinsuranceSpecialist)} />
+            <CoverageRow label="Telehealth/Virtual Visit" value={formatCopayOrCoinsurance(plan.copayTelehealth, plan.coinsuranceTelehealth)} />
+            <CoverageRow label="Lab Work" value={formatCopayOrCoinsurance(plan.copayLabWork, plan.coinsuranceLabWork)} />
+            <CoverageRow label="X-ray" value={formatCopayOrCoinsurance(plan.copayXray, plan.coinsuranceXray)} />
+            <CoverageRow label="Advanced Imaging (MRI/CT)" value={formatCopayOrCoinsurance(plan.copayAdvancedImaging, plan.coinsuranceAdvancedImaging)} />
           </div>
         </Section>
 
@@ -383,17 +400,17 @@ export default function InsurancePlanDetail({ plan, onBack }: InsurancePlanDetai
           <div className="divide-y divide-slate-100 dark:divide-slate-700">
             <CoverageRow
               label="Emergency Room"
-              value={formatCopay(plan.copayEmergency)}
+              value={formatCopayOrCoinsurance(plan.copayEmergency, plan.coinsuranceEmergency)}
               sublabel="Waived if admitted"
             />
-            <CoverageRow label="Urgent Care" value={formatCopay(plan.copayUrgentCare)} />
+            <CoverageRow label="Urgent Care" value={formatCopayOrCoinsurance(plan.copayUrgentCare, plan.coinsuranceUrgentCare)} />
             <CoverageRow
               label="Ground Ambulance"
-              value={plan.ambulanceGroundCopay ? formatCopay(plan.ambulanceGroundCopay) : formatCoinsurance(plan.ambulanceGroundCoinsurance)}
+              value={formatCopayOrCoinsurance(plan.ambulanceGroundCopay, plan.ambulanceGroundCoinsurance)}
             />
             <CoverageRow
               label="Air Ambulance"
-              value={plan.ambulanceAirCopay ? formatCopay(plan.ambulanceAirCopay) : formatCoinsurance(plan.ambulanceAirCoinsurance)}
+              value={formatCopayOrCoinsurance(plan.ambulanceAirCopay, plan.ambulanceAirCoinsurance)}
             />
           </div>
         </Section>
@@ -470,26 +487,26 @@ export default function InsurancePlanDetail({ plan, onBack }: InsurancePlanDetai
         {/* Prescription Drugs Section */}
         <Section title="Prescription Drugs" icon={<Pill className="w-4 h-4" />}>
           <div className="mb-4">
-            <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Copays by Tier</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Cost by Tier</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tier 1</p>
-                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopay(plan.rxTier1Copay)}</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopayOrCoinsurance(plan.rxTier1Copay, plan.rxTier1Coinsurance)}</p>
                 <p className="text-xs text-slate-400">Generic</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tier 2</p>
-                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopay(plan.rxTier2Copay)}</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopayOrCoinsurance(plan.rxTier2Copay, plan.rxTier2Coinsurance)}</p>
                 <p className="text-xs text-slate-400">Preferred</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tier 3</p>
-                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopay(plan.rxTier3Copay)}</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopayOrCoinsurance(plan.rxTier3Copay, plan.rxTier3Coinsurance)}</p>
                 <p className="text-xs text-slate-400">Non-preferred</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 text-center">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Tier 4</p>
-                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopay(plan.rxTier4Copay)}</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCopayOrCoinsurance(plan.rxTier4Copay, plan.rxTier4Coinsurance)}</p>
                 <p className="text-xs text-slate-400">Specialty</p>
               </div>
             </div>
