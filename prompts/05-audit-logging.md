@@ -1,5 +1,8 @@
 ---
-tags: [security, hipaa, critical]
+tags:
+  - security
+  - hipaa
+  - critical
 type: prompt
 priority: 1
 ---
@@ -12,7 +15,6 @@ priority: 1
 - All controllers in `backend/src/controllers/` (verify audit calls)
 
 ## OwnMyHealth Audit Architecture
-
 - **Singleton Service**: `getAuditLogService(prisma)`
 - **Retention**: 7 years (~2555 days) per HIPAA
 - **Encryption**: PHI values encrypted with system salt before storage
@@ -28,80 +30,51 @@ priority: 1
   - `action` (enum: LOGIN, LOGOUT, READ, CREATE, UPDATE, DELETE, EXPORT, etc.)
   - `resourceType` (string)
   - `resourceId` (optional UUID)
-  - `ipAddress`, `userAgent`, `sessionId`
-  - `previousValueEncrypted`, `newValueEncrypted`
-  - `metadata` (JSON string)
-  - `success`, `errorMessage`
-  - `createdAt` (with index)
-- [ ] No UPDATE or DELETE cascades
+  - `ipAddress` (string)
+  - `userAgent` (string)
+  - `metadata` (JSON - encrypted if contains PHI)
+  - `createdAt` (timestamp)
+- [ ] No `updatedAt` field (immutable records)
 
-### 2. Event Types Logged
-- [ ] **Authentication**: LOGIN, LOGOUT, LOGIN_FAILED, PASSWORD_CHANGE, PASSWORD_RESET
-- [ ] **Data Access**: READ, VIEW
-- [ ] **Data Modification**: CREATE, UPDATE, DELETE
-- [ ] **PHI Specific**: PHI_ACCESS, PHI_EXPORT, PHI_DECRYPT
-- [ ] **Administrative**: PERMISSION_CHANGE, SETTINGS_CHANGE, KEY_ROTATION
+### 2. Actions Being Logged
+- [ ] Authentication events:
+  - Login success/failure
+  - Logout
+  - Token refresh
+  - Password reset
+- [ ] PHI access events:
+  - Biomarker read/create/update/delete
+  - File upload/download/delete
+  - DNA data import
+  - Insurance plan access
+- [ ] Administrative events:
+  - Account deletion
+  - Data export
+  - Settings changes
 
-### 3. Required Context Captured
-- [ ] `extractContext(req)` gets: ipAddress, userAgent, sessionId, userId
-- [ ] IP address handles proxies (`x-forwarded-for` header)
-- [ ] User agent truncated to 500 characters
+### 3. IP Address Handling
+- [ ] Using `req.ip` (not manual X-Forwarded-For parsing)
+- [ ] Trust proxy configured in Express app
+- [ ] IP not spoofable via headers
 
-### 4. PHI Value Handling
-- [ ] Values encrypted before storage with `encryptValue()`
-- [ ] System salt stored in `SystemConfig` table
-- [ ] `logCreate()` encrypts new values
-- [ ] `logUpdate()` encrypts both previous and new values
-- [ ] `logDelete()` encrypts previous values
+### 4. Sensitive Data in Logs
+- [ ] PHI values encrypted before logging
+- [ ] No plaintext passwords in logs
+- [ ] No full credit card numbers
+- [ ] API keys redacted
 
-### 5. Logging Methods
-Verify these methods exist and are used:
-- [ ] `logAccess(resourceType, resourceId, context, metadata)` - for READ operations
-- [ ] `logCreate(resourceType, resourceId, newValue, context)` - for CREATE
-- [ ] `logUpdate(resourceType, resourceId, previousValue, newValue, context)` - for UPDATE
-- [ ] `logDelete(resourceType, resourceId, previousValue, context)` - for DELETE
-- [ ] `logAuth(action, context, metadata)` - for auth events
-- [ ] `logExport(resourceType, resourceIds, format, context)` - for data exports
-- [ ] `logSystem(action, resourceType, details)` - for system events
+### 5. Log Integrity
+- [ ] No UPDATE operations on audit_logs table
+- [ ] No DELETE except retention policy
+- [ ] Timestamps are server-generated (not client-provided)
 
-### 6. Controller Integration
-Cross-reference controllers to ensure audit logging:
-- [ ] `authController.ts`: login, logout, register, password change
-- [ ] `biomarkerController.ts`: all CRUD operations
-- [ ] `insuranceController.ts`: all CRUD operations
-- [ ] `dnaController.ts`: upload, access
-- [ ] `healthNeedsController.ts`: all CRUD
-- [ ] `healthGoalsController.ts`: all CRUD
-- [ ] `uploadController.ts`: file uploads
-- [ ] `adminRoutes.ts`: user management actions
+### 6. Coverage Verification
+Run this to find controllers without audit logging:
+```bash
+grep -L "auditLog" backend/src/controllers/*.ts
+```
 
-### 7. Retention & Cleanup
-- [ ] `RETENTION_DAYS = 2555` (~7 years)
-- [ ] `cleanupOldLogs()` method exists
-- [ ] `startAuditCleanup()` runs daily
-- [ ] Cleanup itself is logged
-
-### 8. Query Capabilities
-- [ ] `queryLogs()` supports filtering by:
-  - userId, resourceType, resourceId, action
-  - startDate, endDate
-  - pagination (limit, offset)
-- [ ] Results sorted by createdAt DESC
-
-### 9. Error Handling
-- [ ] Audit logging failures are logged to console (never silent)
-- [ ] Audit failures don't crash the main operation
-- [ ] Critical: "CRITICAL: Failed to create audit log entry" message
-
-### 10. Initialization
-- [ ] `initialize()` called at startup
-- [ ] System salt created if not exists
-- [ ] Fatal error if salt is invalid
-
-## Red Flags
-- PHI values stored unencrypted in audit logs
-- Missing audit calls in PHI-accessing controllers
-- Audit logs can be deleted (except retention cleanup)
-- No IP address or session tracking
-- Silent failures in audit logging
-- Retention less than 7 years
+## Questions to Ask
+1. Are all PHI access events being logged?
+2. Is the IP address source secure (req.ip vs headers)?
+3. Are there any console.log statements bypassing the logger?

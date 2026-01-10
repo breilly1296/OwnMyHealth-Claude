@@ -1,134 +1,70 @@
 ---
-tags: [security, review]
+tags:
+  - security
+  - api
+  - high
 type: prompt
-priority: 1
+priority: 2
 ---
 
-# API Route Security Review
+# API Routes Security Review
 
 ## Files to Review
-- `backend/src/routes/index.ts` (route registry)
-- All route files in `backend/src/routes/`:
-  - `authRoutes.ts`
-  - `biomarkerRoutes.ts`
-  - `insuranceRoutes.ts`
-  - `healthRoutes.ts`
-  - `dnaRoutes.ts`
-  - `healthNeedsRoutes.ts`
-  - `healthGoalsRoutes.ts`
-  - `providerRoutes.ts`
-  - `patientRoutes.ts`
-  - `adminRoutes.ts`
-  - `uploadRoutes.ts`
-  - `marketplaceRoutes.ts`
-  - `cmsRoutes.ts`
+- `backend/src/routes/*.ts` (all route files)
+- `backend/src/app.ts` (route registration)
+- `backend/src/middleware/` (auth, validation middleware)
 
-## OwnMyHealth Route Patterns
-
-Standard middleware stack:
-```typescript
-router.post('/path',
-  authenticate,              // JWT verification
-  validate(schemas.*.create), // Zod validation
-  asyncHandler(controller)   // Async error handling
-);
-```
+## OwnMyHealth API Architecture
+- **Base Path**: `/api/v1`
+- **Auth**: JWT via HttpOnly cookies
+- **CSRF**: Required on POST/PUT/DELETE
+- **Rate Limiting**: Express-rate-limit
 
 ## Checklist
 
-### 1. Authentication Middleware
-For each route file, verify `authenticate` is applied to protected routes:
+### 1. Route Authentication
+For each route file, verify auth middleware applied:
+- [ ] `authRoutes.ts` - public routes (login, register, refresh)
+- [ ] `biomarkerRoutes.ts` - all protected
+- [ ] `fileRoutes.ts` - all protected
+- [ ] `uploadRoutes.ts` - all protected
+- [ ] `insuranceRoutes.ts` - all protected
+- [ ] `userRoutes.ts` - all protected
 
-**authRoutes.ts** - Public routes (no auth):
-- [ ] POST `/register` - public
-- [ ] POST `/login` - public
-- [ ] POST `/refresh` - public (uses refresh token)
-- [ ] POST `/demo` - public
-- [ ] GET `/verify-email` - public
-- [ ] POST `/resend-verification` - public
-- [ ] POST `/forgot-password` - public
-- [ ] POST `/reset-password` - public
+### 2. Authorization (Beyond Authentication)
+- [ ] Users can only access their own resources
+- [ ] `userId` from JWT used (not from request body)
+- [ ] No IDOR vulnerabilities (can't access other users' data by changing IDs)
 
-**authRoutes.ts** - Protected routes (require auth):
-- [ ] POST `/logout` - authenticated
-- [ ] POST `/logout-all` - authenticated
-- [ ] GET `/me` - authenticated
-- [ ] POST `/change-password` - authenticated
+### 3. Input Validation
+- [ ] Request body validated before processing
+- [ ] URL parameters validated (UUIDs, enums)
+- [ ] Query parameters sanitized
+- [ ] File uploads validated (type, size)
 
-**PHI Routes** - ALL must require authentication:
-- [ ] `biomarkerRoutes.ts` - all routes authenticated
-- [ ] `insuranceRoutes.ts` - all routes authenticated
-- [ ] `dnaRoutes.ts` - all routes authenticated
-- [ ] `healthNeedsRoutes.ts` - all routes authenticated
-- [ ] `healthGoalsRoutes.ts` - all routes authenticated
-- [ ] `healthRoutes.ts` - all routes authenticated
-- [ ] `uploadRoutes.ts` - all routes authenticated
+### 4. Error Responses
+- [ ] Generic error messages to client
+- [ ] Detailed errors logged server-side
+- [ ] No stack traces in production responses
+- [ ] No database error details leaked
 
-**Role-Restricted Routes**:
-- [ ] `adminRoutes.ts` - all routes require ADMIN role
-- [ ] `providerRoutes.ts` - all routes require PROVIDER or ADMIN role
-- [ ] `patientRoutes.ts` - routes for patient consent management
+### 5. HTTP Methods
+- [ ] Correct methods used (GET for read, POST for create, etc.)
+- [ ] No sensitive operations on GET endpoints
+- [ ] DELETE endpoints require confirmation or are idempotent
 
-### 2. Input Validation
-Verify `validate(schema)` middleware is applied:
-- [ ] All POST routes validate request body
-- [ ] All PUT/PATCH routes validate request body
-- [ ] Query parameters validated where needed
-- [ ] URL parameters (`:id`) validated as UUIDs
+### 6. Response Security
+- [ ] No sensitive data in responses (passwords, tokens, keys)
+- [ ] PHI decrypted only when needed
+- [ ] Pagination on list endpoints (prevent data dumps)
 
-### 3. Rate Limiting
-Check rate limiters are applied appropriately:
-- [ ] `authRoutes.ts`: `authLimiter` on all routes
-- [ ] Login: `strictAuthLimiter` (stricter than general)
-- [ ] Forgot password: `strictAuthLimiter`
-- [ ] Upload routes: `uploadLimiter`
-- [ ] Sensitive operations: `sensitiveLimiter`
+## Route Inventory
+Generate a complete route list:
+```bash
+grep -r "router\.\(get\|post\|put\|delete\|patch\)" backend/src/routes/ | sort
+```
 
-### 4. RBAC (Role-Based Access Control)
-Verify role checks for sensitive operations:
-- [ ] `requireRole('ADMIN')` on admin routes
-- [ ] `requireRole('PROVIDER', 'ADMIN')` on provider routes
-- [ ] `requireResourceAccess()` for PHI access
-- [ ] `requireOwnership()` for resource modification
-
-### 5. Resource Ownership
-For user-specific data, verify users can only access their own:
-- [ ] Biomarkers: user can only see/edit their own
-- [ ] Insurance plans: user can only see/edit their own
-- [ ] DNA data: user can only see/edit their own
-- [ ] Health needs/goals: user can only see/edit their own
-- [ ] Providers can access patients they have relationships with
-
-### 6. Dangerous Operations
-Extra scrutiny for:
-- [ ] DELETE routes - require ownership verification
-- [ ] Admin user management - require ADMIN role
-- [ ] Data export - logged and rate limited
-- [ ] Bulk operations - validated and limited
-
-### 7. Error Handling
-- [ ] All async handlers wrapped with `asyncHandler()`
-- [ ] No unhandled promise rejections
-- [ ] Errors don't leak sensitive information
-
-### 8. API Response Format
-- [ ] All responses use `ApiResponse<T>` type
-- [ ] Success: `{ success: true, data: T }`
-- [ ] Error: `{ success: false, error: { code, message } }`
-
-## Routes That Must NOT Be Public
-Verify these are NEVER publicly accessible:
-- [ ] Any route returning PHI data
-- [ ] Any route modifying user data
-- [ ] Admin routes
-- [ ] Provider patient data routes
-- [ ] File upload routes
-- [ ] Data export routes
-
-## Red Flags
-- PHI routes without `authenticate` middleware
-- Missing `validate()` on POST/PUT routes
-- DELETE without ownership check
-- Admin routes without role verification
-- Bulk data access without rate limiting
-- Raw SQL queries in controllers (SQL injection risk)
+## Questions to Ask
+1. Are there any routes missing authentication?
+2. Can users access other users' resources?
+3. Are all inputs validated before use?

@@ -1,87 +1,75 @@
 ---
-tags: [security, review]
+tags:
+  - security
+  - csrf
+  - critical
 type: prompt
-priority: 2
+priority: 1
 ---
 
 # CSRF Protection Review
 
 ## Files to Review
-- `backend/src/middleware/csrf.ts`
-- `backend/src/routes/authRoutes.ts` (to verify which routes skip CSRF)
+- `backend/src/middleware/csrf.ts` (CSRF middleware)
+- `backend/src/app.ts` (middleware registration)
+- `src/services/api.ts` or `src/services/api/*.ts` (frontend API client)
+- Any component making POST/PUT/DELETE requests
 
-## OwnMyHealth CSRF Implementation
-
-Uses **double-submit cookie pattern**:
-- CSRF token stored in non-httpOnly cookie (readable by JavaScript)
-- Client sends same token in `X-CSRF-Token` header
-- Server compares cookie and header values
+## OwnMyHealth CSRF Architecture
+- **Method**: Double-submit cookie pattern
+- **Token Location**: `csrf_token` cookie (readable by JS)
+- **Header**: `X-CSRF-Token` required on mutating requests
+- **Validation**: Cookie value must match header value
 
 ## Checklist
 
-### 1. Token Generation
-- [ ] Token generated with `crypto.randomBytes(32)` (256 bits)
-- [ ] `CSRF_TOKEN_LENGTH = 32` bytes
-- [ ] Token is cryptographically random
+### 1. Backend CSRF Middleware
+- [ ] CSRF middleware applied to all routes (or all mutating routes)
+- [ ] Validates `X-CSRF-Token` header against cookie
+- [ ] Returns 403 on CSRF validation failure
+- [ ] Token regenerated on login (prevent fixation)
 
-### 2. Cookie Configuration
-- [ ] Cookie name: `csrf_token`
-- [ ] `httpOnly: false` (must be readable by JavaScript)
-- [ ] `secure: true` in production
-- [ ] `sameSite: 'lax'` or `'strict'` (from config)
-- [ ] `maxAge: 24 hours`
-- [ ] `path: '/'`
+### 2. CSRF Token Generation
+- [ ] Cryptographically random token (crypto.randomBytes or similar)
+- [ ] Sufficient length (≥32 bytes)
+- [ ] New token generated per session
 
-### 3. Validation Logic
-- [ ] Skipped for safe methods: GET, HEAD, OPTIONS
-- [ ] Header name: `x-csrf-token` (lowercase)
-- [ ] `crypto.timingSafeEqual()` used for comparison (prevents timing attacks)
-- [ ] Length check before comparison
-- [ ] Throws `ForbiddenError` on mismatch
+### 3. Frontend Token Handling
+- [ ] API client reads `csrf_token` from cookies
+- [ ] `X-CSRF-Token` header included on all POST/PUT/DELETE
+- [ ] Token retrieved fresh for each request (not cached)
 
-### 4. Routes Exempt from CSRF
-Verify these public routes skip CSRF (they have no session to protect):
-- [ ] `/auth/login`
-- [ ] `/auth/register`
-- [ ] `/auth/demo`
-- [ ] `/auth/refresh`
-- [ ] `/auth/forgot-password`
-- [ ] `/auth/reset-password`
-- [ ] `/auth/verify-email`
-- [ ] `/auth/resend-verification`
-- [ ] `/marketplace/plans/search` (public API)
+### 4. Exempt Routes
+- [ ] Only safe routes exempted (if any):
+  - GET requests (safe by default)
+  - Public endpoints (login, register)
+  - Webhook endpoints (use different auth)
+- [ ] No sensitive operations exempted
 
-### 5. Development Bypass
-- [ ] CSRF can be disabled via `DISABLE_CSRF=true` only in development
-- [ ] NOT bypassed in production
+### 5. Component-Level Check
+Search for any components using raw `fetch()` without CSRF:
+- [ ] `BiomarkerAIGuidance.tsx` - uses CSRF?
+- [ ] `InsuranceHub.tsx` - delete uses CSRF?
+- [ ] Upload components - include CSRF header?
 
-### 6. Token Endpoint
-- [ ] `GET /api/v1/csrf-token` endpoint exists for SPAs
-- [ ] `csrfTokenHandler()` sets cookie and returns token in response
+## Common CSRF Issues Found
+```javascript
+// WRONG - missing CSRF token
+fetch('/api/v1/endpoint', { 
+  method: 'POST',
+  body: JSON.stringify(data)
+})
 
-### 7. Middleware Application
-- [ ] `ensureCsrfToken` applied to set token on GET requests
-- [ ] `validateCsrfToken` applied to state-changing requests
-- [ ] `csrfProtection` combines both
+// RIGHT - include CSRF token
+const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+fetch('/api/v1/endpoint', {
+  method: 'POST',
+  headers: { 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify(data)
+})
+```
 
-## Routes That MUST Have CSRF Protection
-Verify CSRF is enforced on these state-changing routes:
-- [ ] POST `/auth/logout`
-- [ ] POST `/auth/logout-all`
-- [ ] POST `/auth/change-password`
-- [ ] All POST/PUT/DELETE on `/biomarkers/*`
-- [ ] All POST/PUT/DELETE on `/insurance/*`
-- [ ] All POST/PUT/DELETE on `/dna/*`
-- [ ] All POST/PUT/DELETE on `/health-needs/*`
-- [ ] All POST/PUT/DELETE on `/health-goals/*`
-- [ ] All POST/PUT/DELETE on `/admin/*`
-- [ ] All POST/PUT/DELETE on `/provider/*`
-- [ ] All POST/PUT/DELETE on `/patient/*`
-- [ ] POST `/upload/*`
-
-## Red Flags
-- Token not cryptographically random
-- String comparison instead of `timingSafeEqual`
-- CSRF disabled in production
-- Protected routes missing CSRF validation
-- httpOnly cookie (defeats double-submit pattern)
+## Questions to Ask
+1. Are there any POST/PUT/DELETE requests missing CSRF tokens?
+2. Is debug logging removed from CSRF middleware?
+3. Are CSRF errors returning generic messages (not leaking info)?

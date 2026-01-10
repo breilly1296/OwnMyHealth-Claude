@@ -1,5 +1,8 @@
 ---
-tags: [security, review]
+tags:
+  - security
+  - validation
+  - high
 type: prompt
 priority: 2
 ---
@@ -7,123 +10,81 @@ priority: 2
 # Input Validation Review
 
 ## Files to Review
-- `backend/src/middleware/validation.ts` (Zod schemas)
-- `backend/src/middleware/errorHandler.ts` (ValidationError handling)
-- All route files to verify validation middleware usage
+- `backend/src/middleware/validation.ts` (if exists)
+- `backend/src/controllers/*.ts` (check input handling)
+- `backend/src/services/*.ts` (check parameter usage)
+- `backend/src/utils/validators.ts` (if exists)
 
-## OwnMyHealth Validation Architecture
-
-- **Library**: Zod for schema validation
-- **Pattern**: `validate(schema, source)` middleware
-- **Sanitization**: HTML entities escaped, strings trimmed
-- **Error Response**: `{ success: false, error: { code: 'VALIDATION_ERROR', details: [...] } }`
+## OwnMyHealth Validation Requirements
+- **UUIDs**: Must be validated before database queries
+- **Files**: Type, size, and magic bytes validation
+- **User Input**: Sanitized before storage/display
+- **API Parameters**: Type checking and bounds validation
 
 ## Checklist
 
-### 1. Validation Middleware
-- [ ] `validate()` function accepts schema and source ('body', 'query', 'params')
-- [ ] Zod errors converted to `ValidationError` with field details
-- [ ] Validated data replaces original request data
+### 1. UUID Validation
+- [ ] All `:id` route parameters validated as UUID format
+- [ ] Validation happens BEFORE database query
+- [ ] Invalid UUIDs return 400, not 500
+- [ ] No SQL injection via malformed UUIDs
 
-### 2. String Sanitization
-- [ ] `sanitizeString()` function:
-  - Trims whitespace
-  - Escapes HTML: `&`, `<`, `>`, `"`, `'`
-- [ ] `sanitizedString(min, max)` for required strings
-- [ ] `optionalSanitizedString(max)` for optional strings
-- [ ] Max length enforced on all string fields
+Example validation:
+```typescript
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+if (!UUID_REGEX.test(req.params.id)) {
+  return res.status(400).json({ error: 'Invalid ID format' });
+}
+```
 
-### 3. Custom Validators
-- [ ] `dnaRsid` - validates rsid format (`/^rs\d{1,12}$/`)
-- [ ] `email` - email format + lowercase + trim
-- [ ] `uuid` - UUID format validation
-- [ ] `strongPassword` - min 8 chars, uppercase, lowercase, number, special char
-- [ ] `dateString` - valid date format
+### 2. File Upload Validation
+- [ ] File size limits enforced (e.g., 10MB max)
+- [ ] File type validated by:
+  - Extension check
+  - MIME type check
+  - Magic bytes validation (header inspection)
+- [ ] Filename sanitized (no path traversal)
+- [ ] Virus scanning (optional but recommended)
 
-### 4. Schema Coverage
+### 3. String Input Validation
+- [ ] Maximum length limits on text fields
+- [ ] No null bytes in strings
+- [ ] HTML/script tags sanitized if displayed
+- [ ] SQL special characters handled by ORM
 
-**Auth Schemas** (`schemas.auth.*`):
-- [ ] `login` - email, password
-- [ ] `register` - email, strongPassword, optional firstName/lastName
-- [ ] `changePassword` - currentPassword, newPassword
-- [ ] `forgotPassword` - email
-- [ ] `resetPassword` - token, newPassword
-- [ ] `resendVerification` - email
-- [ ] `verifyEmailQuery` - token
+### 4. Numeric Input Validation
+- [ ] Type coercion handled safely
+- [ ] Range validation (min/max bounds)
+- [ ] Integer vs float distinction where needed
+- [ ] No NaN or Infinity accepted
 
-**Biomarker Schemas** (`schemas.biomarker.*`):
-- [ ] `create` - name, value (non-negative), unit, category, date, normalRange
-- [ ] `update` - all fields optional
-- [ ] `batchCreate` - array of biomarkers (max 100)
-- [ ] `listQuery` - category, page, limit
+### 5. Date Input Validation
+- [ ] ISO 8601 format enforced
+- [ ] Timezone handling consistent
+- [ ] Future/past date limits where appropriate
+- [ ] No date injection attacks
 
-**Insurance Schemas** (`schemas.insurancePlan.*`):
-- [ ] `create` - planName, insurerName, planType enum, dates, deductibles
-- [ ] `update` - all fields optional
+### 6. API Parameter Validation
+- [ ] Query parameters typed and bounded
+- [ ] Pagination limits enforced (max page size)
+- [ ] Sort/filter parameters from allowlist only
+- [ ] No arbitrary field access via parameters
 
-**DNA Schemas** (`schemas.dna.*`):
-- [ ] `upload` - filename, source enum, fileData
-- [ ] `variantQuery` - rsid, chromosome, pagination
-- [ ] `rsidParam` - rsid validation
-- [ ] `traitQuery` - category, riskLevel enum
+### 7. Path Traversal Prevention
+- [ ] File paths don't allow `../` sequences
+- [ ] User input not interpolated into file paths
+- [ ] Storage keys use UUIDs, not user-provided names
 
-**Health Needs/Goals** (`schemas.healthNeed.*`, `schemas.healthGoal.*`):
-- [ ] Create/update schemas with appropriate enums and ranges
+## Search for Unvalidated Input
+```bash
+# Find direct req.params usage without validation
+grep -r "req\.params\." backend/src/controllers/ | grep -v "validate"
 
-**Provider-Patient** (`schemas.providerPatient.*`):
-- [ ] `request` - patientEmail, relationshipType
-- [ ] `approve` - permission booleans, consentDurationDays (1-365)
-- [ ] `updatePermissions` - permission booleans
+# Find direct req.body usage
+grep -r "req\.body\." backend/src/controllers/ | head -20
+```
 
-**Admin Schemas** (`schemas.admin.*`):
-- [ ] `createUser` - email, strongPassword, role enum
-- [ ] `updateUser` - role, isActive, emailVerified, password
-- [ ] `listUsersQuery` - role, isActive, pagination, search
-- [ ] `auditLogQuery` - userId, action, resourceType, dates, pagination
-
-### 5. Pagination Safety
-- [ ] Page minimum: 1
-- [ ] Limit maximum: 100 (or 200 for admin)
-- [ ] Default values provided
-- [ ] `Math.max` and `Math.min` used for bounds
-
-### 6. Type Exports
-- [ ] Input types exported for controllers:
-  - `BiomarkerCreateInput`, `BiomarkerUpdateInput`
-  - `InsurancePlanCreateInput`, `InsurancePlanUpdateInput`
-  - `LoginInput`, `RegisterInput`
-  - etc.
-
-### 7. Injection Prevention
-- [ ] No raw user input in SQL queries (Prisma handles this)
-- [ ] Enum validation prevents arbitrary values
-- [ ] File paths validated/sanitized
-- [ ] rsid format prevents NoSQL injection
-
-### 8. Error Messages
-- [ ] Errors include field name and message
-- [ ] No sensitive data in error details
-- [ ] Validation errors return 422 status
-
-## Route Validation Coverage
-Verify ALL routes have validation:
-
-| Route File | POST | PUT | DELETE | Query |
-|------------|------|-----|--------|-------|
-| authRoutes | [ ] | N/A | N/A | [ ] verify-email |
-| biomarkerRoutes | [ ] | [ ] | N/A | [ ] list |
-| insuranceRoutes | [ ] | [ ] | N/A | N/A |
-| dnaRoutes | [ ] | N/A | N/A | [ ] variants |
-| healthNeedsRoutes | [ ] | [ ] | N/A | [ ] list |
-| healthGoalsRoutes | [ ] | [ ] | N/A | [ ] list |
-| adminRoutes | [ ] | [ ] | N/A | [ ] users, audit |
-| providerRoutes | [ ] | [ ] | N/A | N/A |
-| patientRoutes | [ ] | [ ] | N/A | N/A |
-
-## Red Flags
-- Routes without `validate()` middleware
-- Missing max length on string fields
-- No sanitization (XSS possible)
-- Negative numbers allowed where inappropriate
-- Unbounded pagination limits
-- Raw string concatenation in queries
+## Questions to Ask
+1. Are all route parameters validated before use?
+2. Are file uploads validated beyond just extension?
+3. Are there any places where user input goes directly to database?
