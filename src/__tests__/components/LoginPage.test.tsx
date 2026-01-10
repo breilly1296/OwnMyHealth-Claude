@@ -40,8 +40,10 @@ describe('LoginPage', () => {
     it('should render the OwnMyHealth branding', () => {
       render(<LoginPage {...defaultProps} />);
 
-      expect(screen.getByText(/ownmyhealth/i)).toBeInTheDocument();
-      expect(screen.getByText(/your personal health companion/i)).toBeInTheDocument();
+      // Multiple OwnMyHealth elements exist (desktop branding panel + mobile header)
+      const brandingElements = screen.getAllByText(/ownmyhealth/i);
+      expect(brandingElements.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/personal health platform/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it('should render the demo login button when onDemoLogin is provided', () => {
@@ -66,7 +68,7 @@ describe('LoginPage', () => {
     it('should render the security notice', () => {
       render(<LoginPage {...defaultProps} />);
 
-      expect(screen.getByText(/your health data is encrypted/i)).toBeInTheDocument();
+      expect(screen.getByText(/256-bit encrypted.*your health data stays private/i)).toBeInTheDocument();
     });
   });
 

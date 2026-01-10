@@ -286,8 +286,16 @@ export function useBiomarkerData({
       return;
     }
 
+    // If the plan already has an ID, it was already created by the SBC upload endpoint.
+    // Just add it to local state without calling createPlan again.
+    if (plan.id) {
+      dashboardLogger.info('Plan already saved to server, adding to local state', { planId: plan.id });
+      setInsurancePlans(prev => [...prev, plan]);
+      return;
+    }
+
     try {
-      // Extract costs from the plan's costs array
+      // Extract costs from the plan's costs array (for manually entered plans)
       const deductibleIndividual = plan.costs?.find(
         c => c.type === 'Deductible' && c.appliesTo === 'Individual'
       )?.amount || 0;
