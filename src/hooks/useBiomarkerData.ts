@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Biomarker, InsurancePlan } from '../types';
 import { biomarkersApi, insuranceApi } from '../services/api';
 import { dashboardLogger } from '../utils/logger';
+import { transformPlanForDisplay } from '../utils/insurance/insuranceUtils';
 
 // Demo mode flag - only enabled in development when explicitly set
 const DEMO_MODE = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === 'true';
@@ -156,7 +157,9 @@ export function useBiomarkerData({
       try {
         const plans = await insuranceApi.getPlans();
         if (!cancelled) {
-          setInsurancePlans(plans as unknown as InsurancePlan[]);
+          // Transform flat API fields to benefits/costs arrays for UI display
+          const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
+          setInsurancePlans(transformedPlans);
         }
       } catch (error) {
         if (!cancelled) {
@@ -315,8 +318,11 @@ export function useBiomarkerData({
 
   // Handle insurance plan extraction
   const handleInsurancePlanExtracted = useCallback(async (plan: InsurancePlan) => {
+    // Transform flat fields to arrays for UI display
+    const transformedPlan = transformPlanForDisplay(plan);
+
     if (DEMO_MODE) {
-      setInsurancePlans(prev => [...prev, plan]);
+      setInsurancePlans(prev => [...prev, transformedPlan]);
       return;
     }
 
@@ -324,7 +330,7 @@ export function useBiomarkerData({
     // Just add it to local state without calling createPlan again.
     if (plan.id) {
       dashboardLogger.info('Plan already saved to server, adding to local state', { planId: plan.id });
-      setInsurancePlans(prev => [...prev, plan]);
+      setInsurancePlans(prev => [...prev, transformedPlan]);
       return;
     }
 
@@ -354,12 +360,14 @@ export function useBiomarkerData({
         outOfPocketMax: oopMaxIndividual,
         outOfPocketMaxFamily: oopMaxFamily,
       });
-      setInsurancePlans(prev => [...prev, created as unknown as InsurancePlan]);
+      // Transform the created plan for UI display
+      const transformedCreated = transformPlanForDisplay(created as unknown as InsurancePlan);
+      setInsurancePlans(prev => [...prev, transformedCreated]);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to save insurance plan';
       dashboardLogger.error('Error saving insurance plan', { error: errorMsg });
       onErrorRef.current(`${errorMsg}. Plan added locally but not synced to server.`);
-      setInsurancePlans(prev => [...prev, plan]);
+      setInsurancePlans(prev => [...prev, transformedPlan]);
     }
   }, []);
 
