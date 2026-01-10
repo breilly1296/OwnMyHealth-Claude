@@ -216,11 +216,11 @@ exports.Prisma.BiomarkerScalarFieldEnum = {
   sourceFile: 'sourceFile',
   extractionConfidence: 'extractionConfidence',
   labName: 'labName',
-  userFileId: 'userFileId',
   isOutOfRange: 'isOutOfRange',
   isAcknowledged: 'isAcknowledged',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  userFileId: 'userFileId'
 };
 
 exports.Prisma.BiomarkerHistoryScalarFieldEnum = {
@@ -237,6 +237,7 @@ exports.Prisma.InsurancePlanScalarFieldEnum = {
   planName: 'planName',
   insurerName: 'insurerName',
   planType: 'planType',
+  planIdNumber: 'planIdNumber',
   memberIdEncrypted: 'memberIdEncrypted',
   groupIdEncrypted: 'groupIdEncrypted',
   effectiveDate: 'effectiveDate',
@@ -244,8 +245,19 @@ exports.Prisma.InsurancePlanScalarFieldEnum = {
   premiumMonthly: 'premiumMonthly',
   deductibleIndividual: 'deductibleIndividual',
   deductibleFamily: 'deductibleFamily',
+  deductibleMetIndividual: 'deductibleMetIndividual',
+  deductibleMetFamily: 'deductibleMetFamily',
   oopMaxIndividual: 'oopMaxIndividual',
   oopMaxFamily: 'oopMaxFamily',
+  oopMetIndividual: 'oopMetIndividual',
+  oopMetFamily: 'oopMetFamily',
+  copayPrimaryCare: 'copayPrimaryCare',
+  copaySpecialist: 'copaySpecialist',
+  copayUrgentCare: 'copayUrgentCare',
+  copayEmergency: 'copayEmergency',
+  coinsuranceRate: 'coinsuranceRate',
+  extractedFromSbc: 'extractedFromSbc',
+  sbcExtractionConfidence: 'sbcExtractionConfidence',
   isActive: 'isActive',
   isPrimary: 'isPrimary',
   createdAt: 'createdAt',

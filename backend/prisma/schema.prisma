@@ -179,26 +179,38 @@ model BiomarkerHistory {
 }
 
 model InsurancePlan {
-  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId               String             @map("user_id") @db.Uuid
-  planName             String             @map("plan_name") @db.VarChar(300)
-  insurerName          String             @map("insurer_name") @db.VarChar(200)
-  planType             PlanType           @map("plan_type")
-  memberIdEncrypted    String?            @map("member_id_encrypted")
-  groupIdEncrypted     String?            @map("group_id_encrypted")
-  effectiveDate        DateTime           @map("effective_date") @db.Date
-  terminationDate      DateTime?          @map("termination_date") @db.Date
-  premiumMonthly       Decimal?           @map("premium_monthly") @db.Decimal(10, 2)
-  deductibleIndividual Decimal            @map("deductible_individual") @db.Decimal(10, 2)
-  deductibleFamily     Decimal            @map("deductible_family") @db.Decimal(10, 2)
-  oopMaxIndividual     Decimal            @map("oop_max_individual") @db.Decimal(10, 2)
-  oopMaxFamily         Decimal            @map("oop_max_family") @db.Decimal(10, 2)
-  isActive             Boolean            @default(true) @map("is_active")
-  isPrimary            Boolean            @default(false) @map("is_primary")
-  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  benefits             InsuranceBenefit[]
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String             @map("user_id") @db.Uuid
+  planName                String             @map("plan_name") @db.VarChar(300)
+  insurerName             String             @map("insurer_name") @db.VarChar(200)
+  planType                PlanType           @map("plan_type")
+  planIdNumber            String?            @map("plan_id_number") @db.VarChar(100)
+  memberIdEncrypted       String?            @map("member_id_encrypted")
+  groupIdEncrypted        String?            @map("group_id_encrypted")
+  effectiveDate           DateTime           @map("effective_date") @db.Date
+  terminationDate         DateTime?          @map("termination_date") @db.Date
+  premiumMonthly          Decimal?           @map("premium_monthly") @db.Decimal(10, 2)
+  deductibleIndividual    Decimal            @map("deductible_individual") @db.Decimal(10, 2)
+  deductibleFamily        Decimal            @map("deductible_family") @db.Decimal(10, 2)
+  deductibleMetIndividual Decimal            @default(0) @map("deductible_met_individual") @db.Decimal(10, 2)
+  deductibleMetFamily     Decimal            @default(0) @map("deductible_met_family") @db.Decimal(10, 2)
+  oopMaxIndividual        Decimal            @map("oop_max_individual") @db.Decimal(10, 2)
+  oopMaxFamily            Decimal            @map("oop_max_family") @db.Decimal(10, 2)
+  oopMetIndividual        Decimal            @default(0) @map("oop_met_individual") @db.Decimal(10, 2)
+  oopMetFamily            Decimal            @default(0) @map("oop_met_family") @db.Decimal(10, 2)
+  copayPrimaryCare        Decimal?           @map("copay_primary_care") @db.Decimal(10, 2)
+  copaySpecialist         Decimal?           @map("copay_specialist") @db.Decimal(10, 2)
+  copayUrgentCare         Decimal?           @map("copay_urgent_care") @db.Decimal(10, 2)
+  copayEmergency          Decimal?           @map("copay_emergency") @db.Decimal(10, 2)
+  coinsuranceRate         Decimal?           @map("coinsurance_rate") @db.Decimal(5, 2)
+  extractedFromSbc        Boolean            @default(false) @map("extracted_from_sbc")
+  sbcExtractionConfidence Decimal?           @map("sbc_extraction_confidence") @db.Decimal(3, 2)
+  isActive                Boolean            @default(true) @map("is_active")
+  isPrimary               Boolean            @default(false) @map("is_primary")
+  createdAt               DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  benefits                InsuranceBenefit[]
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isActive])

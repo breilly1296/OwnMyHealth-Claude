@@ -22,7 +22,6 @@
 import React, { useState } from 'react';
 import {
   Shield,
-  Upload,
   CreditCard,
   BookOpen,
   Lightbulb,
@@ -73,7 +72,7 @@ const defaultGuide: PersonalizedInsuranceGuide = {
 export default function InsuranceHub({
   insurancePlans,
   guide = defaultGuide,
-  onUploadSBC,
+  onUploadSBC: _onUploadSBC,
   onSmartUpload,
   onViewPlanDetails,
   onRefresh,

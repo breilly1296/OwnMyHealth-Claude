@@ -346,7 +346,7 @@ export async function uploadSBC(
       };
     } catch (error) {
       logger.warn('Claude SBC extraction failed, falling back to regex parser', {
-        error: error instanceof Error ? error.message : 'Unknown',
+        data: { error: error instanceof Error ? error.message : 'Unknown' },
       });
       // Fall through to regex parser
       const parseResult = await parseSBC(file.buffer, file.originalname);

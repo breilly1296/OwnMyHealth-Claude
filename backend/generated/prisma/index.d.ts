@@ -2552,31 +2552,31 @@ export namespace Prisma {
    */
 
   export type UserCountOutputType = {
-    biomarkers: number
-    insurancePlans: number
-    dnaData: number
-    healthNeeds: number
-    healthGoals: number
     auditLogs: number
+    biomarkers: number
+    dnaData: number
+    healthGoals: number
+    healthNeeds: number
+    insurancePlans: number
+    patientRelationships: number
+    providerRelationships: number
     sessions: number
     encryptionKeys: number
     files: number
-    providerRelationships: number
-    patientRelationships: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    biomarkers?: boolean | UserCountOutputTypeCountBiomarkersArgs
-    insurancePlans?: boolean | UserCountOutputTypeCountInsurancePlansArgs
-    dnaData?: boolean | UserCountOutputTypeCountDnaDataArgs
-    healthNeeds?: boolean | UserCountOutputTypeCountHealthNeedsArgs
-    healthGoals?: boolean | UserCountOutputTypeCountHealthGoalsArgs
     auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
+    biomarkers?: boolean | UserCountOutputTypeCountBiomarkersArgs
+    dnaData?: boolean | UserCountOutputTypeCountDnaDataArgs
+    healthGoals?: boolean | UserCountOutputTypeCountHealthGoalsArgs
+    healthNeeds?: boolean | UserCountOutputTypeCountHealthNeedsArgs
+    insurancePlans?: boolean | UserCountOutputTypeCountInsurancePlansArgs
+    patientRelationships?: boolean | UserCountOutputTypeCountPatientRelationshipsArgs
+    providerRelationships?: boolean | UserCountOutputTypeCountProviderRelationshipsArgs
     sessions?: boolean | UserCountOutputTypeCountSessionsArgs
     encryptionKeys?: boolean | UserCountOutputTypeCountEncryptionKeysArgs
     files?: boolean | UserCountOutputTypeCountFilesArgs
-    providerRelationships?: boolean | UserCountOutputTypeCountProviderRelationshipsArgs
-    patientRelationships?: boolean | UserCountOutputTypeCountPatientRelationshipsArgs
   }
 
   // Custom InputTypes
@@ -2593,15 +2593,15 @@ export namespace Prisma {
   /**
    * UserCountOutputType without action
    */
-  export type UserCountOutputTypeCountBiomarkersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: BiomarkerWhereInput
+  export type UserCountOutputTypeCountAuditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AuditLogWhereInput
   }
 
   /**
    * UserCountOutputType without action
    */
-  export type UserCountOutputTypeCountInsurancePlansArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: InsurancePlanWhereInput
+  export type UserCountOutputTypeCountBiomarkersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: BiomarkerWhereInput
   }
 
   /**
@@ -2614,13 +2614,6 @@ export namespace Prisma {
   /**
    * UserCountOutputType without action
    */
-  export type UserCountOutputTypeCountHealthNeedsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: HealthNeedWhereInput
-  }
-
-  /**
-   * UserCountOutputType without action
-   */
   export type UserCountOutputTypeCountHealthGoalsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: HealthGoalWhereInput
   }
@@ -2628,8 +2621,29 @@ export namespace Prisma {
   /**
    * UserCountOutputType without action
    */
-  export type UserCountOutputTypeCountAuditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: AuditLogWhereInput
+  export type UserCountOutputTypeCountHealthNeedsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HealthNeedWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountInsurancePlansArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: InsurancePlanWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountPatientRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ProviderPatientWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountProviderRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ProviderPatientWhereInput
   }
 
   /**
@@ -2651,20 +2665,6 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountFilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: UserFileWhereInput
-  }
-
-  /**
-   * UserCountOutputType without action
-   */
-  export type UserCountOutputTypeCountProviderRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: ProviderPatientWhereInput
-  }
-
-  /**
-   * UserCountOutputType without action
-   */
-  export type UserCountOutputTypeCountPatientRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: ProviderPatientWhereInput
   }
 
 
@@ -3162,17 +3162,17 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
-    biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
-    insurancePlans?: boolean | User$insurancePlansArgs<ExtArgs>
-    dnaData?: boolean | User$dnaDataArgs<ExtArgs>
-    healthNeeds?: boolean | User$healthNeedsArgs<ExtArgs>
-    healthGoals?: boolean | User$healthGoalsArgs<ExtArgs>
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
+    biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
+    dnaData?: boolean | User$dnaDataArgs<ExtArgs>
+    healthGoals?: boolean | User$healthGoalsArgs<ExtArgs>
+    healthNeeds?: boolean | User$healthNeedsArgs<ExtArgs>
+    insurancePlans?: boolean | User$insurancePlansArgs<ExtArgs>
+    patientRelationships?: boolean | User$patientRelationshipsArgs<ExtArgs>
+    providerRelationships?: boolean | User$providerRelationshipsArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     encryptionKeys?: boolean | User$encryptionKeysArgs<ExtArgs>
     files?: boolean | User$filesArgs<ExtArgs>
-    providerRelationships?: boolean | User$providerRelationshipsArgs<ExtArgs>
-    patientRelationships?: boolean | User$patientRelationshipsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3250,17 +3250,17 @@ export namespace Prisma {
 
   export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
-    insurancePlans?: boolean | User$insurancePlansArgs<ExtArgs>
-    dnaData?: boolean | User$dnaDataArgs<ExtArgs>
-    healthNeeds?: boolean | User$healthNeedsArgs<ExtArgs>
-    healthGoals?: boolean | User$healthGoalsArgs<ExtArgs>
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
+    biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
+    dnaData?: boolean | User$dnaDataArgs<ExtArgs>
+    healthGoals?: boolean | User$healthGoalsArgs<ExtArgs>
+    healthNeeds?: boolean | User$healthNeedsArgs<ExtArgs>
+    insurancePlans?: boolean | User$insurancePlansArgs<ExtArgs>
+    patientRelationships?: boolean | User$patientRelationshipsArgs<ExtArgs>
+    providerRelationships?: boolean | User$providerRelationshipsArgs<ExtArgs>
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     encryptionKeys?: boolean | User$encryptionKeysArgs<ExtArgs>
     files?: boolean | User$filesArgs<ExtArgs>
-    providerRelationships?: boolean | User$providerRelationshipsArgs<ExtArgs>
-    patientRelationships?: boolean | User$patientRelationshipsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -3269,17 +3269,17 @@ export namespace Prisma {
   export type $UserPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "User"
     objects: {
-      biomarkers: Prisma.$BiomarkerPayload<ExtArgs>[]
-      insurancePlans: Prisma.$InsurancePlanPayload<ExtArgs>[]
-      dnaData: Prisma.$DNADataPayload<ExtArgs>[]
-      healthNeeds: Prisma.$HealthNeedPayload<ExtArgs>[]
-      healthGoals: Prisma.$HealthGoalPayload<ExtArgs>[]
       auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
+      biomarkers: Prisma.$BiomarkerPayload<ExtArgs>[]
+      dnaData: Prisma.$DNADataPayload<ExtArgs>[]
+      healthGoals: Prisma.$HealthGoalPayload<ExtArgs>[]
+      healthNeeds: Prisma.$HealthNeedPayload<ExtArgs>[]
+      insurancePlans: Prisma.$InsurancePlanPayload<ExtArgs>[]
+      patientRelationships: Prisma.$ProviderPatientPayload<ExtArgs>[]
+      providerRelationships: Prisma.$ProviderPatientPayload<ExtArgs>[]
       sessions: Prisma.$SessionPayload<ExtArgs>[]
       encryptionKeys: Prisma.$UserEncryptionKeyPayload<ExtArgs>[]
       files: Prisma.$UserFilePayload<ExtArgs>[]
-      providerRelationships: Prisma.$ProviderPatientPayload<ExtArgs>[]
-      patientRelationships: Prisma.$ProviderPatientPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3697,17 +3697,17 @@ export namespace Prisma {
    */
   export interface Prisma__UserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    biomarkers<T extends User$biomarkersArgs<ExtArgs> = {}>(args?: Subset<T, User$biomarkersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    insurancePlans<T extends User$insurancePlansArgs<ExtArgs> = {}>(args?: Subset<T, User$insurancePlansArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InsurancePlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    dnaData<T extends User$dnaDataArgs<ExtArgs> = {}>(args?: Subset<T, User$dnaDataArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    healthNeeds<T extends User$healthNeedsArgs<ExtArgs> = {}>(args?: Subset<T, User$healthNeedsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HealthNeedPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    healthGoals<T extends User$healthGoalsArgs<ExtArgs> = {}>(args?: Subset<T, User$healthGoalsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HealthGoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     auditLogs<T extends User$auditLogsArgs<ExtArgs> = {}>(args?: Subset<T, User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    biomarkers<T extends User$biomarkersArgs<ExtArgs> = {}>(args?: Subset<T, User$biomarkersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    dnaData<T extends User$dnaDataArgs<ExtArgs> = {}>(args?: Subset<T, User$dnaDataArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    healthGoals<T extends User$healthGoalsArgs<ExtArgs> = {}>(args?: Subset<T, User$healthGoalsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HealthGoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    healthNeeds<T extends User$healthNeedsArgs<ExtArgs> = {}>(args?: Subset<T, User$healthNeedsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HealthNeedPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    insurancePlans<T extends User$insurancePlansArgs<ExtArgs> = {}>(args?: Subset<T, User$insurancePlansArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InsurancePlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    patientRelationships<T extends User$patientRelationshipsArgs<ExtArgs> = {}>(args?: Subset<T, User$patientRelationshipsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderPatientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    providerRelationships<T extends User$providerRelationshipsArgs<ExtArgs> = {}>(args?: Subset<T, User$providerRelationshipsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderPatientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     encryptionKeys<T extends User$encryptionKeysArgs<ExtArgs> = {}>(args?: Subset<T, User$encryptionKeysArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserEncryptionKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     files<T extends User$filesArgs<ExtArgs> = {}>(args?: Subset<T, User$filesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    providerRelationships<T extends User$providerRelationshipsArgs<ExtArgs> = {}>(args?: Subset<T, User$providerRelationshipsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderPatientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    patientRelationships<T extends User$patientRelationshipsArgs<ExtArgs> = {}>(args?: Subset<T, User$patientRelationshipsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderPatientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4146,6 +4146,30 @@ export namespace Prisma {
   }
 
   /**
+   * User.auditLogs
+   */
+  export type User$auditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AuditLog
+     */
+    select?: AuditLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AuditLog
+     */
+    omit?: AuditLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AuditLogInclude<ExtArgs> | null
+    where?: AuditLogWhereInput
+    orderBy?: AuditLogOrderByWithRelationInput | AuditLogOrderByWithRelationInput[]
+    cursor?: AuditLogWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
+  }
+
+  /**
    * User.biomarkers
    */
   export type User$biomarkersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4167,30 +4191,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: BiomarkerScalarFieldEnum | BiomarkerScalarFieldEnum[]
-  }
-
-  /**
-   * User.insurancePlans
-   */
-  export type User$insurancePlansArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the InsurancePlan
-     */
-    select?: InsurancePlanSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the InsurancePlan
-     */
-    omit?: InsurancePlanOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: InsurancePlanInclude<ExtArgs> | null
-    where?: InsurancePlanWhereInput
-    orderBy?: InsurancePlanOrderByWithRelationInput | InsurancePlanOrderByWithRelationInput[]
-    cursor?: InsurancePlanWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: InsurancePlanScalarFieldEnum | InsurancePlanScalarFieldEnum[]
   }
 
   /**
@@ -4218,30 +4218,6 @@ export namespace Prisma {
   }
 
   /**
-   * User.healthNeeds
-   */
-  export type User$healthNeedsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the HealthNeed
-     */
-    select?: HealthNeedSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the HealthNeed
-     */
-    omit?: HealthNeedOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: HealthNeedInclude<ExtArgs> | null
-    where?: HealthNeedWhereInput
-    orderBy?: HealthNeedOrderByWithRelationInput | HealthNeedOrderByWithRelationInput[]
-    cursor?: HealthNeedWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: HealthNeedScalarFieldEnum | HealthNeedScalarFieldEnum[]
-  }
-
-  /**
    * User.healthGoals
    */
   export type User$healthGoalsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4266,27 +4242,99 @@ export namespace Prisma {
   }
 
   /**
-   * User.auditLogs
+   * User.healthNeeds
    */
-  export type User$auditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type User$healthNeedsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the AuditLog
+     * Select specific fields to fetch from the HealthNeed
      */
-    select?: AuditLogSelect<ExtArgs> | null
+    select?: HealthNeedSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the AuditLog
+     * Omit specific fields from the HealthNeed
      */
-    omit?: AuditLogOmit<ExtArgs> | null
+    omit?: HealthNeedOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: AuditLogInclude<ExtArgs> | null
-    where?: AuditLogWhereInput
-    orderBy?: AuditLogOrderByWithRelationInput | AuditLogOrderByWithRelationInput[]
-    cursor?: AuditLogWhereUniqueInput
+    include?: HealthNeedInclude<ExtArgs> | null
+    where?: HealthNeedWhereInput
+    orderBy?: HealthNeedOrderByWithRelationInput | HealthNeedOrderByWithRelationInput[]
+    cursor?: HealthNeedWhereUniqueInput
     take?: number
     skip?: number
-    distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
+    distinct?: HealthNeedScalarFieldEnum | HealthNeedScalarFieldEnum[]
+  }
+
+  /**
+   * User.insurancePlans
+   */
+  export type User$insurancePlansArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InsurancePlan
+     */
+    select?: InsurancePlanSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the InsurancePlan
+     */
+    omit?: InsurancePlanOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: InsurancePlanInclude<ExtArgs> | null
+    where?: InsurancePlanWhereInput
+    orderBy?: InsurancePlanOrderByWithRelationInput | InsurancePlanOrderByWithRelationInput[]
+    cursor?: InsurancePlanWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: InsurancePlanScalarFieldEnum | InsurancePlanScalarFieldEnum[]
+  }
+
+  /**
+   * User.patientRelationships
+   */
+  export type User$patientRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProviderPatient
+     */
+    select?: ProviderPatientSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProviderPatient
+     */
+    omit?: ProviderPatientOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProviderPatientInclude<ExtArgs> | null
+    where?: ProviderPatientWhereInput
+    orderBy?: ProviderPatientOrderByWithRelationInput | ProviderPatientOrderByWithRelationInput[]
+    cursor?: ProviderPatientWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ProviderPatientScalarFieldEnum | ProviderPatientScalarFieldEnum[]
+  }
+
+  /**
+   * User.providerRelationships
+   */
+  export type User$providerRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProviderPatient
+     */
+    select?: ProviderPatientSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProviderPatient
+     */
+    omit?: ProviderPatientOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProviderPatientInclude<ExtArgs> | null
+    where?: ProviderPatientWhereInput
+    orderBy?: ProviderPatientOrderByWithRelationInput | ProviderPatientOrderByWithRelationInput[]
+    cursor?: ProviderPatientWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ProviderPatientScalarFieldEnum | ProviderPatientScalarFieldEnum[]
   }
 
   /**
@@ -4359,54 +4407,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
-  }
-
-  /**
-   * User.providerRelationships
-   */
-  export type User$providerRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ProviderPatient
-     */
-    select?: ProviderPatientSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the ProviderPatient
-     */
-    omit?: ProviderPatientOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ProviderPatientInclude<ExtArgs> | null
-    where?: ProviderPatientWhereInput
-    orderBy?: ProviderPatientOrderByWithRelationInput | ProviderPatientOrderByWithRelationInput[]
-    cursor?: ProviderPatientWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: ProviderPatientScalarFieldEnum | ProviderPatientScalarFieldEnum[]
-  }
-
-  /**
-   * User.patientRelationships
-   */
-  export type User$patientRelationshipsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ProviderPatient
-     */
-    select?: ProviderPatientSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the ProviderPatient
-     */
-    omit?: ProviderPatientOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ProviderPatientInclude<ExtArgs> | null
-    where?: ProviderPatientWhereInput
-    orderBy?: ProviderPatientOrderByWithRelationInput | ProviderPatientOrderByWithRelationInput[]
-    cursor?: ProviderPatientWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: ProviderPatientScalarFieldEnum | ProviderPatientScalarFieldEnum[]
   }
 
   /**
@@ -6900,8 +6900,8 @@ export namespace Prisma {
     notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    provider?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | UserDefaultArgs<ExtArgs>
+    provider?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["providerPatient"]>
 
   export type ProviderPatientSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -6920,8 +6920,8 @@ export namespace Prisma {
     notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    provider?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | UserDefaultArgs<ExtArgs>
+    provider?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["providerPatient"]>
 
   export type ProviderPatientSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -6940,8 +6940,8 @@ export namespace Prisma {
     notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    provider?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | UserDefaultArgs<ExtArgs>
+    provider?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["providerPatient"]>
 
   export type ProviderPatientSelectScalar = {
@@ -6964,23 +6964,23 @@ export namespace Prisma {
 
   export type ProviderPatientOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "providerId" | "patientId" | "canViewBiomarkers" | "canViewInsurance" | "canViewDna" | "canViewHealthNeeds" | "canEditData" | "relationshipType" | "status" | "consentGrantedAt" | "consentExpiresAt" | "notesEncrypted" | "createdAt" | "updatedAt", ExtArgs["result"]["providerPatient"]>
   export type ProviderPatientInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    provider?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | UserDefaultArgs<ExtArgs>
+    provider?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type ProviderPatientIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    provider?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | UserDefaultArgs<ExtArgs>
+    provider?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type ProviderPatientIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    provider?: boolean | UserDefaultArgs<ExtArgs>
     patient?: boolean | UserDefaultArgs<ExtArgs>
+    provider?: boolean | UserDefaultArgs<ExtArgs>
   }
 
   export type $ProviderPatientPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "ProviderPatient"
     objects: {
-      provider: Prisma.$UserPayload<ExtArgs>
       patient: Prisma.$UserPayload<ExtArgs>
+      provider: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -7392,8 +7392,8 @@ export namespace Prisma {
    */
   export interface Prisma__ProviderPatientClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    provider<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     patient<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    provider<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -8122,8 +8122,8 @@ export namespace Prisma {
     extractionConfidence?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
     biomarkers?: boolean | UserFile$biomarkersArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | UserFileCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userFile"]>
 
@@ -8179,8 +8179,8 @@ export namespace Prisma {
 
   export type UserFileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "filename" | "originalFilename" | "fileType" | "fileSize" | "storageKey" | "labName" | "labDate" | "biomarkersExtracted" | "extractionConfidence" | "createdAt" | "updatedAt", ExtArgs["result"]["userFile"]>
   export type UserFileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
     biomarkers?: boolean | UserFile$biomarkersArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | UserFileCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserFileIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -8193,8 +8193,8 @@ export namespace Prisma {
   export type $UserFilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "UserFile"
     objects: {
-      user: Prisma.$UserPayload<ExtArgs>
       biomarkers: Prisma.$BiomarkerPayload<ExtArgs>[]
+      user: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -8604,8 +8604,8 @@ export namespace Prisma {
    */
   export interface Prisma__UserFileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     biomarkers<T extends UserFile$biomarkersArgs<ExtArgs> = {}>(args?: Subset<T, UserFile$biomarkersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -9126,11 +9126,11 @@ export namespace Prisma {
     sourceFile: string | null
     extractionConfidence: Decimal | null
     labName: string | null
-    userFileId: string | null
     isOutOfRange: boolean | null
     isAcknowledged: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
+    userFileId: string | null
   }
 
   export type BiomarkerMaxAggregateOutputType = {
@@ -9149,11 +9149,11 @@ export namespace Prisma {
     sourceFile: string | null
     extractionConfidence: Decimal | null
     labName: string | null
-    userFileId: string | null
     isOutOfRange: boolean | null
     isAcknowledged: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
+    userFileId: string | null
   }
 
   export type BiomarkerCountAggregateOutputType = {
@@ -9172,11 +9172,11 @@ export namespace Prisma {
     sourceFile: number
     extractionConfidence: number
     labName: number
-    userFileId: number
     isOutOfRange: number
     isAcknowledged: number
     createdAt: number
     updatedAt: number
+    userFileId: number
     _all: number
   }
 
@@ -9209,11 +9209,11 @@ export namespace Prisma {
     sourceFile?: true
     extractionConfidence?: true
     labName?: true
-    userFileId?: true
     isOutOfRange?: true
     isAcknowledged?: true
     createdAt?: true
     updatedAt?: true
+    userFileId?: true
   }
 
   export type BiomarkerMaxAggregateInputType = {
@@ -9232,11 +9232,11 @@ export namespace Prisma {
     sourceFile?: true
     extractionConfidence?: true
     labName?: true
-    userFileId?: true
     isOutOfRange?: true
     isAcknowledged?: true
     createdAt?: true
     updatedAt?: true
+    userFileId?: true
   }
 
   export type BiomarkerCountAggregateInputType = {
@@ -9255,11 +9255,11 @@ export namespace Prisma {
     sourceFile?: true
     extractionConfidence?: true
     labName?: true
-    userFileId?: true
     isOutOfRange?: true
     isAcknowledged?: true
     createdAt?: true
     updatedAt?: true
+    userFileId?: true
     _all?: true
   }
 
@@ -9365,11 +9365,11 @@ export namespace Prisma {
     sourceFile: string | null
     extractionConfidence: Decimal | null
     labName: string | null
-    userFileId: string | null
     isOutOfRange: boolean
     isAcknowledged: boolean
     createdAt: Date
     updatedAt: Date
+    userFileId: string | null
     _count: BiomarkerCountAggregateOutputType | null
     _avg: BiomarkerAvgAggregateOutputType | null
     _sum: BiomarkerSumAggregateOutputType | null
@@ -9407,14 +9407,14 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
-    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
-    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    userFileId?: boolean
     history?: boolean | Biomarker$historyArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | BiomarkerCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["biomarker"]>
 
@@ -9434,13 +9434,13 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
-    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
+    userFileId?: boolean
     userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["biomarker"]>
 
   export type BiomarkerSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -9459,13 +9459,13 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
-    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
+    userFileId?: boolean
     userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["biomarker"]>
 
   export type BiomarkerSelectScalar = {
@@ -9484,35 +9484,35 @@ export namespace Prisma {
     sourceFile?: boolean
     extractionConfidence?: boolean
     labName?: boolean
-    userFileId?: boolean
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    userFileId?: boolean
   }
 
-  export type BiomarkerOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "category" | "name" | "unit" | "valueEncrypted" | "notesEncrypted" | "normalRangeMin" | "normalRangeMax" | "normalRangeSource" | "measurementDate" | "sourceType" | "sourceFile" | "extractionConfidence" | "labName" | "userFileId" | "isOutOfRange" | "isAcknowledged" | "createdAt" | "updatedAt", ExtArgs["result"]["biomarker"]>
+  export type BiomarkerOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "category" | "name" | "unit" | "valueEncrypted" | "notesEncrypted" | "normalRangeMin" | "normalRangeMax" | "normalRangeSource" | "measurementDate" | "sourceType" | "sourceFile" | "extractionConfidence" | "labName" | "isOutOfRange" | "isAcknowledged" | "createdAt" | "updatedAt" | "userFileId", ExtArgs["result"]["biomarker"]>
   export type BiomarkerInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
-    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
     history?: boolean | Biomarker$historyArgs<ExtArgs>
+    userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | BiomarkerCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type BiomarkerIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
     userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type BiomarkerIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
     userFile?: boolean | Biomarker$userFileArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }
 
   export type $BiomarkerPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Biomarker"
     objects: {
-      user: Prisma.$UserPayload<ExtArgs>
-      userFile: Prisma.$UserFilePayload<ExtArgs> | null
       history: Prisma.$BiomarkerHistoryPayload<ExtArgs>[]
+      userFile: Prisma.$UserFilePayload<ExtArgs> | null
+      user: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -9530,11 +9530,11 @@ export namespace Prisma {
       sourceFile: string | null
       extractionConfidence: Prisma.Decimal | null
       labName: string | null
-      userFileId: string | null
       isOutOfRange: boolean
       isAcknowledged: boolean
       createdAt: Date
       updatedAt: Date
+      userFileId: string | null
     }, ExtArgs["result"]["biomarker"]>
     composites: {}
   }
@@ -9929,9 +9929,9 @@ export namespace Prisma {
    */
   export interface Prisma__BiomarkerClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    userFile<T extends Biomarker$userFileArgs<ExtArgs> = {}>(args?: Subset<T, Biomarker$userFileArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     history<T extends Biomarker$historyArgs<ExtArgs> = {}>(args?: Subset<T, Biomarker$historyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    userFile<T extends Biomarker$userFileArgs<ExtArgs> = {}>(args?: Subset<T, Biomarker$userFileArgs<ExtArgs>>): Prisma__UserFileClient<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -9976,11 +9976,11 @@ export namespace Prisma {
     readonly sourceFile: FieldRef<"Biomarker", 'String'>
     readonly extractionConfidence: FieldRef<"Biomarker", 'Decimal'>
     readonly labName: FieldRef<"Biomarker", 'String'>
-    readonly userFileId: FieldRef<"Biomarker", 'String'>
     readonly isOutOfRange: FieldRef<"Biomarker", 'Boolean'>
     readonly isAcknowledged: FieldRef<"Biomarker", 'Boolean'>
     readonly createdAt: FieldRef<"Biomarker", 'DateTime'>
     readonly updatedAt: FieldRef<"Biomarker", 'DateTime'>
+    readonly userFileId: FieldRef<"Biomarker", 'String'>
   }
     
 
@@ -10377,25 +10377,6 @@ export namespace Prisma {
   }
 
   /**
-   * Biomarker.userFile
-   */
-  export type Biomarker$userFileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the UserFile
-     */
-    select?: UserFileSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the UserFile
-     */
-    omit?: UserFileOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: UserFileInclude<ExtArgs> | null
-    where?: UserFileWhereInput
-  }
-
-  /**
    * Biomarker.history
    */
   export type Biomarker$historyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -10417,6 +10398,25 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: BiomarkerHistoryScalarFieldEnum | BiomarkerHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * Biomarker.userFile
+   */
+  export type Biomarker$userFileArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserFile
+     */
+    select?: UserFileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserFile
+     */
+    omit?: UserFileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserFileInclude<ExtArgs> | null
+    where?: UserFileWhereInput
   }
 
   /**
@@ -11512,16 +11512,36 @@ export namespace Prisma {
     premiumMonthly: Decimal | null
     deductibleIndividual: Decimal | null
     deductibleFamily: Decimal | null
+    deductibleMetIndividual: Decimal | null
+    deductibleMetFamily: Decimal | null
     oopMaxIndividual: Decimal | null
     oopMaxFamily: Decimal | null
+    oopMetIndividual: Decimal | null
+    oopMetFamily: Decimal | null
+    copayPrimaryCare: Decimal | null
+    copaySpecialist: Decimal | null
+    copayUrgentCare: Decimal | null
+    copayEmergency: Decimal | null
+    coinsuranceRate: Decimal | null
+    sbcExtractionConfidence: Decimal | null
   }
 
   export type InsurancePlanSumAggregateOutputType = {
     premiumMonthly: Decimal | null
     deductibleIndividual: Decimal | null
     deductibleFamily: Decimal | null
+    deductibleMetIndividual: Decimal | null
+    deductibleMetFamily: Decimal | null
     oopMaxIndividual: Decimal | null
     oopMaxFamily: Decimal | null
+    oopMetIndividual: Decimal | null
+    oopMetFamily: Decimal | null
+    copayPrimaryCare: Decimal | null
+    copaySpecialist: Decimal | null
+    copayUrgentCare: Decimal | null
+    copayEmergency: Decimal | null
+    coinsuranceRate: Decimal | null
+    sbcExtractionConfidence: Decimal | null
   }
 
   export type InsurancePlanMinAggregateOutputType = {
@@ -11530,6 +11550,7 @@ export namespace Prisma {
     planName: string | null
     insurerName: string | null
     planType: $Enums.PlanType | null
+    planIdNumber: string | null
     memberIdEncrypted: string | null
     groupIdEncrypted: string | null
     effectiveDate: Date | null
@@ -11537,8 +11558,19 @@ export namespace Prisma {
     premiumMonthly: Decimal | null
     deductibleIndividual: Decimal | null
     deductibleFamily: Decimal | null
+    deductibleMetIndividual: Decimal | null
+    deductibleMetFamily: Decimal | null
     oopMaxIndividual: Decimal | null
     oopMaxFamily: Decimal | null
+    oopMetIndividual: Decimal | null
+    oopMetFamily: Decimal | null
+    copayPrimaryCare: Decimal | null
+    copaySpecialist: Decimal | null
+    copayUrgentCare: Decimal | null
+    copayEmergency: Decimal | null
+    coinsuranceRate: Decimal | null
+    extractedFromSbc: boolean | null
+    sbcExtractionConfidence: Decimal | null
     isActive: boolean | null
     isPrimary: boolean | null
     createdAt: Date | null
@@ -11551,6 +11583,7 @@ export namespace Prisma {
     planName: string | null
     insurerName: string | null
     planType: $Enums.PlanType | null
+    planIdNumber: string | null
     memberIdEncrypted: string | null
     groupIdEncrypted: string | null
     effectiveDate: Date | null
@@ -11558,8 +11591,19 @@ export namespace Prisma {
     premiumMonthly: Decimal | null
     deductibleIndividual: Decimal | null
     deductibleFamily: Decimal | null
+    deductibleMetIndividual: Decimal | null
+    deductibleMetFamily: Decimal | null
     oopMaxIndividual: Decimal | null
     oopMaxFamily: Decimal | null
+    oopMetIndividual: Decimal | null
+    oopMetFamily: Decimal | null
+    copayPrimaryCare: Decimal | null
+    copaySpecialist: Decimal | null
+    copayUrgentCare: Decimal | null
+    copayEmergency: Decimal | null
+    coinsuranceRate: Decimal | null
+    extractedFromSbc: boolean | null
+    sbcExtractionConfidence: Decimal | null
     isActive: boolean | null
     isPrimary: boolean | null
     createdAt: Date | null
@@ -11572,6 +11616,7 @@ export namespace Prisma {
     planName: number
     insurerName: number
     planType: number
+    planIdNumber: number
     memberIdEncrypted: number
     groupIdEncrypted: number
     effectiveDate: number
@@ -11579,8 +11624,19 @@ export namespace Prisma {
     premiumMonthly: number
     deductibleIndividual: number
     deductibleFamily: number
+    deductibleMetIndividual: number
+    deductibleMetFamily: number
     oopMaxIndividual: number
     oopMaxFamily: number
+    oopMetIndividual: number
+    oopMetFamily: number
+    copayPrimaryCare: number
+    copaySpecialist: number
+    copayUrgentCare: number
+    copayEmergency: number
+    coinsuranceRate: number
+    extractedFromSbc: number
+    sbcExtractionConfidence: number
     isActive: number
     isPrimary: number
     createdAt: number
@@ -11593,16 +11649,36 @@ export namespace Prisma {
     premiumMonthly?: true
     deductibleIndividual?: true
     deductibleFamily?: true
+    deductibleMetIndividual?: true
+    deductibleMetFamily?: true
     oopMaxIndividual?: true
     oopMaxFamily?: true
+    oopMetIndividual?: true
+    oopMetFamily?: true
+    copayPrimaryCare?: true
+    copaySpecialist?: true
+    copayUrgentCare?: true
+    copayEmergency?: true
+    coinsuranceRate?: true
+    sbcExtractionConfidence?: true
   }
 
   export type InsurancePlanSumAggregateInputType = {
     premiumMonthly?: true
     deductibleIndividual?: true
     deductibleFamily?: true
+    deductibleMetIndividual?: true
+    deductibleMetFamily?: true
     oopMaxIndividual?: true
     oopMaxFamily?: true
+    oopMetIndividual?: true
+    oopMetFamily?: true
+    copayPrimaryCare?: true
+    copaySpecialist?: true
+    copayUrgentCare?: true
+    copayEmergency?: true
+    coinsuranceRate?: true
+    sbcExtractionConfidence?: true
   }
 
   export type InsurancePlanMinAggregateInputType = {
@@ -11611,6 +11687,7 @@ export namespace Prisma {
     planName?: true
     insurerName?: true
     planType?: true
+    planIdNumber?: true
     memberIdEncrypted?: true
     groupIdEncrypted?: true
     effectiveDate?: true
@@ -11618,8 +11695,19 @@ export namespace Prisma {
     premiumMonthly?: true
     deductibleIndividual?: true
     deductibleFamily?: true
+    deductibleMetIndividual?: true
+    deductibleMetFamily?: true
     oopMaxIndividual?: true
     oopMaxFamily?: true
+    oopMetIndividual?: true
+    oopMetFamily?: true
+    copayPrimaryCare?: true
+    copaySpecialist?: true
+    copayUrgentCare?: true
+    copayEmergency?: true
+    coinsuranceRate?: true
+    extractedFromSbc?: true
+    sbcExtractionConfidence?: true
     isActive?: true
     isPrimary?: true
     createdAt?: true
@@ -11632,6 +11720,7 @@ export namespace Prisma {
     planName?: true
     insurerName?: true
     planType?: true
+    planIdNumber?: true
     memberIdEncrypted?: true
     groupIdEncrypted?: true
     effectiveDate?: true
@@ -11639,8 +11728,19 @@ export namespace Prisma {
     premiumMonthly?: true
     deductibleIndividual?: true
     deductibleFamily?: true
+    deductibleMetIndividual?: true
+    deductibleMetFamily?: true
     oopMaxIndividual?: true
     oopMaxFamily?: true
+    oopMetIndividual?: true
+    oopMetFamily?: true
+    copayPrimaryCare?: true
+    copaySpecialist?: true
+    copayUrgentCare?: true
+    copayEmergency?: true
+    coinsuranceRate?: true
+    extractedFromSbc?: true
+    sbcExtractionConfidence?: true
     isActive?: true
     isPrimary?: true
     createdAt?: true
@@ -11653,6 +11753,7 @@ export namespace Prisma {
     planName?: true
     insurerName?: true
     planType?: true
+    planIdNumber?: true
     memberIdEncrypted?: true
     groupIdEncrypted?: true
     effectiveDate?: true
@@ -11660,8 +11761,19 @@ export namespace Prisma {
     premiumMonthly?: true
     deductibleIndividual?: true
     deductibleFamily?: true
+    deductibleMetIndividual?: true
+    deductibleMetFamily?: true
     oopMaxIndividual?: true
     oopMaxFamily?: true
+    oopMetIndividual?: true
+    oopMetFamily?: true
+    copayPrimaryCare?: true
+    copaySpecialist?: true
+    copayUrgentCare?: true
+    copayEmergency?: true
+    coinsuranceRate?: true
+    extractedFromSbc?: true
+    sbcExtractionConfidence?: true
     isActive?: true
     isPrimary?: true
     createdAt?: true
@@ -11761,6 +11873,7 @@ export namespace Prisma {
     planName: string
     insurerName: string
     planType: $Enums.PlanType
+    planIdNumber: string | null
     memberIdEncrypted: string | null
     groupIdEncrypted: string | null
     effectiveDate: Date
@@ -11768,8 +11881,19 @@ export namespace Prisma {
     premiumMonthly: Decimal | null
     deductibleIndividual: Decimal
     deductibleFamily: Decimal
+    deductibleMetIndividual: Decimal
+    deductibleMetFamily: Decimal
     oopMaxIndividual: Decimal
     oopMaxFamily: Decimal
+    oopMetIndividual: Decimal
+    oopMetFamily: Decimal
+    copayPrimaryCare: Decimal | null
+    copaySpecialist: Decimal | null
+    copayUrgentCare: Decimal | null
+    copayEmergency: Decimal | null
+    coinsuranceRate: Decimal | null
+    extractedFromSbc: boolean
+    sbcExtractionConfidence: Decimal | null
     isActive: boolean
     isPrimary: boolean
     createdAt: Date
@@ -11801,6 +11925,7 @@ export namespace Prisma {
     planName?: boolean
     insurerName?: boolean
     planType?: boolean
+    planIdNumber?: boolean
     memberIdEncrypted?: boolean
     groupIdEncrypted?: boolean
     effectiveDate?: boolean
@@ -11808,14 +11933,25 @@ export namespace Prisma {
     premiumMonthly?: boolean
     deductibleIndividual?: boolean
     deductibleFamily?: boolean
+    deductibleMetIndividual?: boolean
+    deductibleMetFamily?: boolean
     oopMaxIndividual?: boolean
     oopMaxFamily?: boolean
+    oopMetIndividual?: boolean
+    oopMetFamily?: boolean
+    copayPrimaryCare?: boolean
+    copaySpecialist?: boolean
+    copayUrgentCare?: boolean
+    copayEmergency?: boolean
+    coinsuranceRate?: boolean
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: boolean
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | InsurancePlanCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["insurancePlan"]>
 
@@ -11825,6 +11961,7 @@ export namespace Prisma {
     planName?: boolean
     insurerName?: boolean
     planType?: boolean
+    planIdNumber?: boolean
     memberIdEncrypted?: boolean
     groupIdEncrypted?: boolean
     effectiveDate?: boolean
@@ -11832,8 +11969,19 @@ export namespace Prisma {
     premiumMonthly?: boolean
     deductibleIndividual?: boolean
     deductibleFamily?: boolean
+    deductibleMetIndividual?: boolean
+    deductibleMetFamily?: boolean
     oopMaxIndividual?: boolean
     oopMaxFamily?: boolean
+    oopMetIndividual?: boolean
+    oopMetFamily?: boolean
+    copayPrimaryCare?: boolean
+    copaySpecialist?: boolean
+    copayUrgentCare?: boolean
+    copayEmergency?: boolean
+    coinsuranceRate?: boolean
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: boolean
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: boolean
@@ -11847,6 +11995,7 @@ export namespace Prisma {
     planName?: boolean
     insurerName?: boolean
     planType?: boolean
+    planIdNumber?: boolean
     memberIdEncrypted?: boolean
     groupIdEncrypted?: boolean
     effectiveDate?: boolean
@@ -11854,8 +12003,19 @@ export namespace Prisma {
     premiumMonthly?: boolean
     deductibleIndividual?: boolean
     deductibleFamily?: boolean
+    deductibleMetIndividual?: boolean
+    deductibleMetFamily?: boolean
     oopMaxIndividual?: boolean
     oopMaxFamily?: boolean
+    oopMetIndividual?: boolean
+    oopMetFamily?: boolean
+    copayPrimaryCare?: boolean
+    copaySpecialist?: boolean
+    copayUrgentCare?: boolean
+    copayEmergency?: boolean
+    coinsuranceRate?: boolean
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: boolean
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: boolean
@@ -11869,6 +12029,7 @@ export namespace Prisma {
     planName?: boolean
     insurerName?: boolean
     planType?: boolean
+    planIdNumber?: boolean
     memberIdEncrypted?: boolean
     groupIdEncrypted?: boolean
     effectiveDate?: boolean
@@ -11876,18 +12037,29 @@ export namespace Prisma {
     premiumMonthly?: boolean
     deductibleIndividual?: boolean
     deductibleFamily?: boolean
+    deductibleMetIndividual?: boolean
+    deductibleMetFamily?: boolean
     oopMaxIndividual?: boolean
     oopMaxFamily?: boolean
+    oopMetIndividual?: boolean
+    oopMetFamily?: boolean
+    copayPrimaryCare?: boolean
+    copaySpecialist?: boolean
+    copayUrgentCare?: boolean
+    copayEmergency?: boolean
+    coinsuranceRate?: boolean
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: boolean
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "oopMaxIndividual" | "oopMaxFamily" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
+  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "coinsuranceRate" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
   export type InsurancePlanInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | InsurancePlanCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type InsurancePlanIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -11900,8 +12072,8 @@ export namespace Prisma {
   export type $InsurancePlanPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "InsurancePlan"
     objects: {
-      user: Prisma.$UserPayload<ExtArgs>
       benefits: Prisma.$InsuranceBenefitPayload<ExtArgs>[]
+      user: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -11909,6 +12081,7 @@ export namespace Prisma {
       planName: string
       insurerName: string
       planType: $Enums.PlanType
+      planIdNumber: string | null
       memberIdEncrypted: string | null
       groupIdEncrypted: string | null
       effectiveDate: Date
@@ -11916,8 +12089,19 @@ export namespace Prisma {
       premiumMonthly: Prisma.Decimal | null
       deductibleIndividual: Prisma.Decimal
       deductibleFamily: Prisma.Decimal
+      deductibleMetIndividual: Prisma.Decimal
+      deductibleMetFamily: Prisma.Decimal
       oopMaxIndividual: Prisma.Decimal
       oopMaxFamily: Prisma.Decimal
+      oopMetIndividual: Prisma.Decimal
+      oopMetFamily: Prisma.Decimal
+      copayPrimaryCare: Prisma.Decimal | null
+      copaySpecialist: Prisma.Decimal | null
+      copayUrgentCare: Prisma.Decimal | null
+      copayEmergency: Prisma.Decimal | null
+      coinsuranceRate: Prisma.Decimal | null
+      extractedFromSbc: boolean
+      sbcExtractionConfidence: Prisma.Decimal | null
       isActive: boolean
       isPrimary: boolean
       createdAt: Date
@@ -12316,8 +12500,8 @@ export namespace Prisma {
    */
   export interface Prisma__InsurancePlanClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     benefits<T extends InsurancePlan$benefitsArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlan$benefitsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InsuranceBenefitPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -12352,6 +12536,7 @@ export namespace Prisma {
     readonly planName: FieldRef<"InsurancePlan", 'String'>
     readonly insurerName: FieldRef<"InsurancePlan", 'String'>
     readonly planType: FieldRef<"InsurancePlan", 'PlanType'>
+    readonly planIdNumber: FieldRef<"InsurancePlan", 'String'>
     readonly memberIdEncrypted: FieldRef<"InsurancePlan", 'String'>
     readonly groupIdEncrypted: FieldRef<"InsurancePlan", 'String'>
     readonly effectiveDate: FieldRef<"InsurancePlan", 'DateTime'>
@@ -12359,8 +12544,19 @@ export namespace Prisma {
     readonly premiumMonthly: FieldRef<"InsurancePlan", 'Decimal'>
     readonly deductibleIndividual: FieldRef<"InsurancePlan", 'Decimal'>
     readonly deductibleFamily: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly deductibleMetIndividual: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly deductibleMetFamily: FieldRef<"InsurancePlan", 'Decimal'>
     readonly oopMaxIndividual: FieldRef<"InsurancePlan", 'Decimal'>
     readonly oopMaxFamily: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly oopMetIndividual: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly oopMetFamily: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly copayPrimaryCare: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly copaySpecialist: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly copayUrgentCare: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly copayEmergency: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly coinsuranceRate: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly extractedFromSbc: FieldRef<"InsurancePlan", 'Boolean'>
+    readonly sbcExtractionConfidence: FieldRef<"InsurancePlan", 'Decimal'>
     readonly isActive: FieldRef<"InsurancePlan", 'Boolean'>
     readonly isPrimary: FieldRef<"InsurancePlan", 'Boolean'>
     readonly createdAt: FieldRef<"InsurancePlan", 'DateTime'>
@@ -19018,8 +19214,8 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     completedAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
     progressHistory?: boolean | HealthGoal$progressHistoryArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | HealthGoalCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["healthGoal"]>
 
@@ -19099,8 +19295,8 @@ export namespace Prisma {
 
   export type HealthGoalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "name" | "descriptionEncrypted" | "category" | "targetValue" | "currentValue" | "startValue" | "unit" | "direction" | "relatedBiomarkerId" | "startDate" | "targetDate" | "status" | "progress" | "milestones" | "reminderFrequency" | "lastReminderSent" | "createdAt" | "updatedAt" | "completedAt", ExtArgs["result"]["healthGoal"]>
   export type HealthGoalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
     progressHistory?: boolean | HealthGoal$progressHistoryArgs<ExtArgs>
+    user?: boolean | UserDefaultArgs<ExtArgs>
     _count?: boolean | HealthGoalCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type HealthGoalIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -19113,8 +19309,8 @@ export namespace Prisma {
   export type $HealthGoalPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "HealthGoal"
     objects: {
-      user: Prisma.$UserPayload<ExtArgs>
       progressHistory: Prisma.$GoalProgressHistoryPayload<ExtArgs>[]
+      user: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -19532,8 +19728,8 @@ export namespace Prisma {
    */
   export interface Prisma__HealthGoalClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     progressHistory<T extends HealthGoal$progressHistoryArgs<ExtArgs> = {}>(args?: Subset<T, HealthGoal$progressHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GoalProgressHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -23510,11 +23706,11 @@ export namespace Prisma {
     sourceFile: 'sourceFile',
     extractionConfidence: 'extractionConfidence',
     labName: 'labName',
-    userFileId: 'userFileId',
     isOutOfRange: 'isOutOfRange',
     isAcknowledged: 'isAcknowledged',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    updatedAt: 'updatedAt',
+    userFileId: 'userFileId'
   };
 
   export type BiomarkerScalarFieldEnum = (typeof BiomarkerScalarFieldEnum)[keyof typeof BiomarkerScalarFieldEnum]
@@ -23537,6 +23733,7 @@ export namespace Prisma {
     planName: 'planName',
     insurerName: 'insurerName',
     planType: 'planType',
+    planIdNumber: 'planIdNumber',
     memberIdEncrypted: 'memberIdEncrypted',
     groupIdEncrypted: 'groupIdEncrypted',
     effectiveDate: 'effectiveDate',
@@ -23544,8 +23741,19 @@ export namespace Prisma {
     premiumMonthly: 'premiumMonthly',
     deductibleIndividual: 'deductibleIndividual',
     deductibleFamily: 'deductibleFamily',
+    deductibleMetIndividual: 'deductibleMetIndividual',
+    deductibleMetFamily: 'deductibleMetFamily',
     oopMaxIndividual: 'oopMaxIndividual',
     oopMaxFamily: 'oopMaxFamily',
+    oopMetIndividual: 'oopMetIndividual',
+    oopMetFamily: 'oopMetFamily',
+    copayPrimaryCare: 'copayPrimaryCare',
+    copaySpecialist: 'copaySpecialist',
+    copayUrgentCare: 'copayUrgentCare',
+    copayEmergency: 'copayEmergency',
+    coinsuranceRate: 'coinsuranceRate',
+    extractedFromSbc: 'extractedFromSbc',
+    sbcExtractionConfidence: 'sbcExtractionConfidence',
     isActive: 'isActive',
     isPrimary: 'isPrimary',
     createdAt: 'createdAt',
@@ -24058,17 +24266,17 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
-    biomarkers?: BiomarkerListRelationFilter
-    insurancePlans?: InsurancePlanListRelationFilter
-    dnaData?: DNADataListRelationFilter
-    healthNeeds?: HealthNeedListRelationFilter
-    healthGoals?: HealthGoalListRelationFilter
     auditLogs?: AuditLogListRelationFilter
+    biomarkers?: BiomarkerListRelationFilter
+    dnaData?: DNADataListRelationFilter
+    healthGoals?: HealthGoalListRelationFilter
+    healthNeeds?: HealthNeedListRelationFilter
+    insurancePlans?: InsurancePlanListRelationFilter
+    patientRelationships?: ProviderPatientListRelationFilter
+    providerRelationships?: ProviderPatientListRelationFilter
     sessions?: SessionListRelationFilter
     encryptionKeys?: UserEncryptionKeyListRelationFilter
     files?: UserFileListRelationFilter
-    providerRelationships?: ProviderPatientListRelationFilter
-    patientRelationships?: ProviderPatientListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -24093,17 +24301,17 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
-    biomarkers?: BiomarkerOrderByRelationAggregateInput
-    insurancePlans?: InsurancePlanOrderByRelationAggregateInput
-    dnaData?: DNADataOrderByRelationAggregateInput
-    healthNeeds?: HealthNeedOrderByRelationAggregateInput
-    healthGoals?: HealthGoalOrderByRelationAggregateInput
     auditLogs?: AuditLogOrderByRelationAggregateInput
+    biomarkers?: BiomarkerOrderByRelationAggregateInput
+    dnaData?: DNADataOrderByRelationAggregateInput
+    healthGoals?: HealthGoalOrderByRelationAggregateInput
+    healthNeeds?: HealthNeedOrderByRelationAggregateInput
+    insurancePlans?: InsurancePlanOrderByRelationAggregateInput
+    patientRelationships?: ProviderPatientOrderByRelationAggregateInput
+    providerRelationships?: ProviderPatientOrderByRelationAggregateInput
     sessions?: SessionOrderByRelationAggregateInput
     encryptionKeys?: UserEncryptionKeyOrderByRelationAggregateInput
     files?: UserFileOrderByRelationAggregateInput
-    providerRelationships?: ProviderPatientOrderByRelationAggregateInput
-    patientRelationships?: ProviderPatientOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -24131,17 +24339,17 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
-    biomarkers?: BiomarkerListRelationFilter
-    insurancePlans?: InsurancePlanListRelationFilter
-    dnaData?: DNADataListRelationFilter
-    healthNeeds?: HealthNeedListRelationFilter
-    healthGoals?: HealthGoalListRelationFilter
     auditLogs?: AuditLogListRelationFilter
+    biomarkers?: BiomarkerListRelationFilter
+    dnaData?: DNADataListRelationFilter
+    healthGoals?: HealthGoalListRelationFilter
+    healthNeeds?: HealthNeedListRelationFilter
+    insurancePlans?: InsurancePlanListRelationFilter
+    patientRelationships?: ProviderPatientListRelationFilter
+    providerRelationships?: ProviderPatientListRelationFilter
     sessions?: SessionListRelationFilter
     encryptionKeys?: UserEncryptionKeyListRelationFilter
     files?: UserFileListRelationFilter
-    providerRelationships?: ProviderPatientListRelationFilter
-    patientRelationships?: ProviderPatientListRelationFilter
   }, "id" | "email" | "emailVerificationToken" | "passwordResetToken">
 
   export type UserOrderByWithAggregationInput = {
@@ -24362,8 +24570,8 @@ export namespace Prisma {
     notesEncrypted?: StringNullableFilter<"ProviderPatient"> | string | null
     createdAt?: DateTimeFilter<"ProviderPatient"> | Date | string
     updatedAt?: DateTimeFilter<"ProviderPatient"> | Date | string
-    provider?: XOR<UserScalarRelationFilter, UserWhereInput>
     patient?: XOR<UserScalarRelationFilter, UserWhereInput>
+    provider?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type ProviderPatientOrderByWithRelationInput = {
@@ -24382,8 +24590,8 @@ export namespace Prisma {
     notesEncrypted?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    provider?: UserOrderByWithRelationInput
     patient?: UserOrderByWithRelationInput
+    provider?: UserOrderByWithRelationInput
   }
 
   export type ProviderPatientWhereUniqueInput = Prisma.AtLeast<{
@@ -24406,8 +24614,8 @@ export namespace Prisma {
     notesEncrypted?: StringNullableFilter<"ProviderPatient"> | string | null
     createdAt?: DateTimeFilter<"ProviderPatient"> | Date | string
     updatedAt?: DateTimeFilter<"ProviderPatient"> | Date | string
-    provider?: XOR<UserScalarRelationFilter, UserWhereInput>
     patient?: XOR<UserScalarRelationFilter, UserWhereInput>
+    provider?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id" | "providerId_patientId">
 
   export type ProviderPatientOrderByWithAggregationInput = {
@@ -24469,8 +24677,8 @@ export namespace Prisma {
     extractionConfidence?: DecimalNullableFilter<"UserFile"> | Decimal | DecimalJsLike | number | string | null
     createdAt?: DateTimeFilter<"UserFile"> | Date | string
     updatedAt?: DateTimeFilter<"UserFile"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
     biomarkers?: BiomarkerListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type UserFileOrderByWithRelationInput = {
@@ -24487,8 +24695,8 @@ export namespace Prisma {
     extractionConfidence?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    user?: UserOrderByWithRelationInput
     biomarkers?: BiomarkerOrderByRelationAggregateInput
+    user?: UserOrderByWithRelationInput
   }
 
   export type UserFileWhereUniqueInput = Prisma.AtLeast<{
@@ -24508,8 +24716,8 @@ export namespace Prisma {
     extractionConfidence?: DecimalNullableFilter<"UserFile"> | Decimal | DecimalJsLike | number | string | null
     createdAt?: DateTimeFilter<"UserFile"> | Date | string
     updatedAt?: DateTimeFilter<"UserFile"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
     biomarkers?: BiomarkerListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id">
 
   export type UserFileOrderByWithAggregationInput = {
@@ -24571,14 +24779,14 @@ export namespace Prisma {
     sourceFile?: StringNullableFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableFilter<"Biomarker"> | string | null
-    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolFilter<"Biomarker"> | boolean
     createdAt?: DateTimeFilter<"Biomarker"> | Date | string
     updatedAt?: DateTimeFilter<"Biomarker"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
-    userFile?: XOR<UserFileNullableScalarRelationFilter, UserFileWhereInput> | null
+    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     history?: BiomarkerHistoryListRelationFilter
+    userFile?: XOR<UserFileNullableScalarRelationFilter, UserFileWhereInput> | null
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type BiomarkerOrderByWithRelationInput = {
@@ -24597,14 +24805,14 @@ export namespace Prisma {
     sourceFile?: SortOrderInput | SortOrder
     extractionConfidence?: SortOrderInput | SortOrder
     labName?: SortOrderInput | SortOrder
-    userFileId?: SortOrderInput | SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    user?: UserOrderByWithRelationInput
-    userFile?: UserFileOrderByWithRelationInput
+    userFileId?: SortOrderInput | SortOrder
     history?: BiomarkerHistoryOrderByRelationAggregateInput
+    userFile?: UserFileOrderByWithRelationInput
+    user?: UserOrderByWithRelationInput
   }
 
   export type BiomarkerWhereUniqueInput = Prisma.AtLeast<{
@@ -24626,14 +24834,14 @@ export namespace Prisma {
     sourceFile?: StringNullableFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableFilter<"Biomarker"> | string | null
-    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolFilter<"Biomarker"> | boolean
     createdAt?: DateTimeFilter<"Biomarker"> | Date | string
     updatedAt?: DateTimeFilter<"Biomarker"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
-    userFile?: XOR<UserFileNullableScalarRelationFilter, UserFileWhereInput> | null
+    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     history?: BiomarkerHistoryListRelationFilter
+    userFile?: XOR<UserFileNullableScalarRelationFilter, UserFileWhereInput> | null
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id">
 
   export type BiomarkerOrderByWithAggregationInput = {
@@ -24652,11 +24860,11 @@ export namespace Prisma {
     sourceFile?: SortOrderInput | SortOrder
     extractionConfidence?: SortOrderInput | SortOrder
     labName?: SortOrderInput | SortOrder
-    userFileId?: SortOrderInput | SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userFileId?: SortOrderInput | SortOrder
     _count?: BiomarkerCountOrderByAggregateInput
     _avg?: BiomarkerAvgOrderByAggregateInput
     _max?: BiomarkerMaxOrderByAggregateInput
@@ -24683,11 +24891,11 @@ export namespace Prisma {
     sourceFile?: StringNullableWithAggregatesFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableWithAggregatesFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableWithAggregatesFilter<"Biomarker"> | string | null
-    userFileId?: UuidNullableWithAggregatesFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolWithAggregatesFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolWithAggregatesFilter<"Biomarker"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"Biomarker"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Biomarker"> | Date | string
+    userFileId?: UuidNullableWithAggregatesFilter<"Biomarker"> | string | null
   }
 
   export type BiomarkerHistoryWhereInput = {
@@ -24754,6 +24962,7 @@ export namespace Prisma {
     planName?: StringFilter<"InsurancePlan"> | string
     insurerName?: StringFilter<"InsurancePlan"> | string
     planType?: EnumPlanTypeFilter<"InsurancePlan"> | $Enums.PlanType
+    planIdNumber?: StringNullableFilter<"InsurancePlan"> | string | null
     memberIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
     groupIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
     effectiveDate?: DateTimeFilter<"InsurancePlan"> | Date | string
@@ -24761,14 +24970,25 @@ export namespace Prisma {
     premiumMonthly?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFilter<"InsurancePlan"> | boolean
+    sbcExtractionConfidence?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFilter<"InsurancePlan"> | boolean
     isPrimary?: BoolFilter<"InsurancePlan"> | boolean
     createdAt?: DateTimeFilter<"InsurancePlan"> | Date | string
     updatedAt?: DateTimeFilter<"InsurancePlan"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
     benefits?: InsuranceBenefitListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type InsurancePlanOrderByWithRelationInput = {
@@ -24777,6 +24997,7 @@ export namespace Prisma {
     planName?: SortOrder
     insurerName?: SortOrder
     planType?: SortOrder
+    planIdNumber?: SortOrderInput | SortOrder
     memberIdEncrypted?: SortOrderInput | SortOrder
     groupIdEncrypted?: SortOrderInput | SortOrder
     effectiveDate?: SortOrder
@@ -24784,14 +25005,25 @@ export namespace Prisma {
     premiumMonthly?: SortOrderInput | SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrderInput | SortOrder
+    copaySpecialist?: SortOrderInput | SortOrder
+    copayUrgentCare?: SortOrderInput | SortOrder
+    copayEmergency?: SortOrderInput | SortOrder
+    coinsuranceRate?: SortOrderInput | SortOrder
+    extractedFromSbc?: SortOrder
+    sbcExtractionConfidence?: SortOrderInput | SortOrder
     isActive?: SortOrder
     isPrimary?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    user?: UserOrderByWithRelationInput
     benefits?: InsuranceBenefitOrderByRelationAggregateInput
+    user?: UserOrderByWithRelationInput
   }
 
   export type InsurancePlanWhereUniqueInput = Prisma.AtLeast<{
@@ -24803,6 +25035,7 @@ export namespace Prisma {
     planName?: StringFilter<"InsurancePlan"> | string
     insurerName?: StringFilter<"InsurancePlan"> | string
     planType?: EnumPlanTypeFilter<"InsurancePlan"> | $Enums.PlanType
+    planIdNumber?: StringNullableFilter<"InsurancePlan"> | string | null
     memberIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
     groupIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
     effectiveDate?: DateTimeFilter<"InsurancePlan"> | Date | string
@@ -24810,14 +25043,25 @@ export namespace Prisma {
     premiumMonthly?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFilter<"InsurancePlan"> | boolean
+    sbcExtractionConfidence?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFilter<"InsurancePlan"> | boolean
     isPrimary?: BoolFilter<"InsurancePlan"> | boolean
     createdAt?: DateTimeFilter<"InsurancePlan"> | Date | string
     updatedAt?: DateTimeFilter<"InsurancePlan"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
     benefits?: InsuranceBenefitListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id">
 
   export type InsurancePlanOrderByWithAggregationInput = {
@@ -24826,6 +25070,7 @@ export namespace Prisma {
     planName?: SortOrder
     insurerName?: SortOrder
     planType?: SortOrder
+    planIdNumber?: SortOrderInput | SortOrder
     memberIdEncrypted?: SortOrderInput | SortOrder
     groupIdEncrypted?: SortOrderInput | SortOrder
     effectiveDate?: SortOrder
@@ -24833,8 +25078,19 @@ export namespace Prisma {
     premiumMonthly?: SortOrderInput | SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrderInput | SortOrder
+    copaySpecialist?: SortOrderInput | SortOrder
+    copayUrgentCare?: SortOrderInput | SortOrder
+    copayEmergency?: SortOrderInput | SortOrder
+    coinsuranceRate?: SortOrderInput | SortOrder
+    extractedFromSbc?: SortOrder
+    sbcExtractionConfidence?: SortOrderInput | SortOrder
     isActive?: SortOrder
     isPrimary?: SortOrder
     createdAt?: SortOrder
@@ -24855,6 +25111,7 @@ export namespace Prisma {
     planName?: StringWithAggregatesFilter<"InsurancePlan"> | string
     insurerName?: StringWithAggregatesFilter<"InsurancePlan"> | string
     planType?: EnumPlanTypeWithAggregatesFilter<"InsurancePlan"> | $Enums.PlanType
+    planIdNumber?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
     memberIdEncrypted?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
     groupIdEncrypted?: StringNullableWithAggregatesFilter<"InsurancePlan"> | string | null
     effectiveDate?: DateTimeWithAggregatesFilter<"InsurancePlan"> | Date | string
@@ -24862,8 +25119,19 @@ export namespace Prisma {
     premiumMonthly?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolWithAggregatesFilter<"InsurancePlan"> | boolean
+    sbcExtractionConfidence?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolWithAggregatesFilter<"InsurancePlan"> | boolean
     isPrimary?: BoolWithAggregatesFilter<"InsurancePlan"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"InsurancePlan"> | Date | string
@@ -25329,8 +25597,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"HealthGoal"> | Date | string
     updatedAt?: DateTimeFilter<"HealthGoal"> | Date | string
     completedAt?: DateTimeNullableFilter<"HealthGoal"> | Date | string | null
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
     progressHistory?: GoalProgressHistoryListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type HealthGoalOrderByWithRelationInput = {
@@ -25355,8 +25623,8 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     completedAt?: SortOrderInput | SortOrder
-    user?: UserOrderByWithRelationInput
     progressHistory?: GoalProgressHistoryOrderByRelationAggregateInput
+    user?: UserOrderByWithRelationInput
   }
 
   export type HealthGoalWhereUniqueInput = Prisma.AtLeast<{
@@ -25384,8 +25652,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"HealthGoal"> | Date | string
     updatedAt?: DateTimeFilter<"HealthGoal"> | Date | string
     completedAt?: DateTimeNullableFilter<"HealthGoal"> | Date | string | null
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
     progressHistory?: GoalProgressHistoryListRelationFilter
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id">
 
   export type HealthGoalOrderByWithAggregationInput = {
@@ -25705,17 +25973,17 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -25740,17 +26008,17 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
   export type UserUpdateInput = {
@@ -25775,17 +26043,17 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -25810,17 +26078,17 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -26061,8 +26329,8 @@ export namespace Prisma {
     notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    provider: UserCreateNestedOneWithoutProviderRelationshipsInput
     patient: UserCreateNestedOneWithoutPatientRelationshipsInput
+    provider: UserCreateNestedOneWithoutProviderRelationshipsInput
   }
 
   export type ProviderPatientUncheckedCreateInput = {
@@ -26097,8 +26365,8 @@ export namespace Prisma {
     notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    provider?: UserUpdateOneRequiredWithoutProviderRelationshipsNestedInput
     patient?: UserUpdateOneRequiredWithoutPatientRelationshipsNestedInput
+    provider?: UserUpdateOneRequiredWithoutProviderRelationshipsNestedInput
   }
 
   export type ProviderPatientUncheckedUpdateInput = {
@@ -26184,8 +26452,8 @@ export namespace Prisma {
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    user: UserCreateNestedOneWithoutFilesInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserFileInput
+    user: UserCreateNestedOneWithoutFilesInput
   }
 
   export type UserFileUncheckedCreateInput = {
@@ -26218,8 +26486,8 @@ export namespace Prisma {
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutFilesNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserFileNestedInput
+    user?: UserUpdateOneRequiredWithoutFilesNestedInput
   }
 
   export type UserFileUncheckedUpdateInput = {
@@ -26305,9 +26573,9 @@ export namespace Prisma {
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
-    user: UserCreateNestedOneWithoutBiomarkersInput
-    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
     history?: BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput
+    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
+    user: UserCreateNestedOneWithoutBiomarkersInput
   }
 
   export type BiomarkerUncheckedCreateInput = {
@@ -26326,11 +26594,11 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
-    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    userFileId?: string | null
     history?: BiomarkerHistoryUncheckedCreateNestedManyWithoutBiomarkerInput
   }
 
@@ -26353,9 +26621,9 @@ export namespace Prisma {
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
-    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
     history?: BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput
+    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
+    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
   }
 
   export type BiomarkerUncheckedUpdateInput = {
@@ -26374,11 +26642,11 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
-    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     history?: BiomarkerHistoryUncheckedUpdateManyWithoutBiomarkerNestedInput
   }
 
@@ -26398,11 +26666,11 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
-    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    userFileId?: string | null
   }
 
   export type BiomarkerUpdateManyMutationInput = {
@@ -26442,11 +26710,11 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
-    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type BiomarkerHistoryCreateInput = {
@@ -26509,6 +26777,7 @@ export namespace Prisma {
     planName: string
     insurerName: string
     planType: $Enums.PlanType
+    planIdNumber?: string | null
     memberIdEncrypted?: string | null
     groupIdEncrypted?: string | null
     effectiveDate: Date | string
@@ -26516,14 +26785,25 @@ export namespace Prisma {
     premiumMonthly?: Decimal | DecimalJsLike | number | string | null
     deductibleIndividual: Decimal | DecimalJsLike | number | string
     deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
     oopMaxIndividual: Decimal | DecimalJsLike | number | string
     oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
-    user: UserCreateNestedOneWithoutInsurancePlansInput
     benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
+    user: UserCreateNestedOneWithoutInsurancePlansInput
   }
 
   export type InsurancePlanUncheckedCreateInput = {
@@ -26532,6 +26812,7 @@ export namespace Prisma {
     planName: string
     insurerName: string
     planType: $Enums.PlanType
+    planIdNumber?: string | null
     memberIdEncrypted?: string | null
     groupIdEncrypted?: string | null
     effectiveDate: Date | string
@@ -26539,8 +26820,19 @@ export namespace Prisma {
     premiumMonthly?: Decimal | DecimalJsLike | number | string | null
     deductibleIndividual: Decimal | DecimalJsLike | number | string
     deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
     oopMaxIndividual: Decimal | DecimalJsLike | number | string
     oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: Date | string
@@ -26553,6 +26845,7 @@ export namespace Prisma {
     planName?: StringFieldUpdateOperationsInput | string
     insurerName?: StringFieldUpdateOperationsInput | string
     planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
     memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26560,14 +26853,25 @@ export namespace Prisma {
     premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
     benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
+    user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
   }
 
   export type InsurancePlanUncheckedUpdateInput = {
@@ -26576,6 +26880,7 @@ export namespace Prisma {
     planName?: StringFieldUpdateOperationsInput | string
     insurerName?: StringFieldUpdateOperationsInput | string
     planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
     memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26583,8 +26888,19 @@ export namespace Prisma {
     premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26598,6 +26914,7 @@ export namespace Prisma {
     planName: string
     insurerName: string
     planType: $Enums.PlanType
+    planIdNumber?: string | null
     memberIdEncrypted?: string | null
     groupIdEncrypted?: string | null
     effectiveDate: Date | string
@@ -26605,8 +26922,19 @@ export namespace Prisma {
     premiumMonthly?: Decimal | DecimalJsLike | number | string | null
     deductibleIndividual: Decimal | DecimalJsLike | number | string
     deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
     oopMaxIndividual: Decimal | DecimalJsLike | number | string
     oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: Date | string
@@ -26618,6 +26946,7 @@ export namespace Prisma {
     planName?: StringFieldUpdateOperationsInput | string
     insurerName?: StringFieldUpdateOperationsInput | string
     planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
     memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26625,8 +26954,19 @@ export namespace Prisma {
     premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26639,6 +26979,7 @@ export namespace Prisma {
     planName?: StringFieldUpdateOperationsInput | string
     insurerName?: StringFieldUpdateOperationsInput | string
     planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
     memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -26646,8 +26987,19 @@ export namespace Prisma {
     premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -27161,8 +27513,8 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     completedAt?: Date | string | null
-    user: UserCreateNestedOneWithoutHealthGoalsInput
     progressHistory?: GoalProgressHistoryCreateNestedManyWithoutGoalInput
+    user: UserCreateNestedOneWithoutHealthGoalsInput
   }
 
   export type HealthGoalUncheckedCreateInput = {
@@ -27211,8 +27563,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    user?: UserUpdateOneRequiredWithoutHealthGoalsNestedInput
     progressHistory?: GoalProgressHistoryUpdateManyWithoutGoalNestedInput
+    user?: UserUpdateOneRequiredWithoutHealthGoalsNestedInput
   }
 
   export type HealthGoalUncheckedUpdateInput = {
@@ -27669,16 +28021,16 @@ export namespace Prisma {
     not?: NestedDateTimeFilter<$PrismaModel> | Date | string
   }
 
+  export type AuditLogListRelationFilter = {
+    every?: AuditLogWhereInput
+    some?: AuditLogWhereInput
+    none?: AuditLogWhereInput
+  }
+
   export type BiomarkerListRelationFilter = {
     every?: BiomarkerWhereInput
     some?: BiomarkerWhereInput
     none?: BiomarkerWhereInput
-  }
-
-  export type InsurancePlanListRelationFilter = {
-    every?: InsurancePlanWhereInput
-    some?: InsurancePlanWhereInput
-    none?: InsurancePlanWhereInput
   }
 
   export type DNADataListRelationFilter = {
@@ -27687,22 +28039,28 @@ export namespace Prisma {
     none?: DNADataWhereInput
   }
 
-  export type HealthNeedListRelationFilter = {
-    every?: HealthNeedWhereInput
-    some?: HealthNeedWhereInput
-    none?: HealthNeedWhereInput
-  }
-
   export type HealthGoalListRelationFilter = {
     every?: HealthGoalWhereInput
     some?: HealthGoalWhereInput
     none?: HealthGoalWhereInput
   }
 
-  export type AuditLogListRelationFilter = {
-    every?: AuditLogWhereInput
-    some?: AuditLogWhereInput
-    none?: AuditLogWhereInput
+  export type HealthNeedListRelationFilter = {
+    every?: HealthNeedWhereInput
+    some?: HealthNeedWhereInput
+    none?: HealthNeedWhereInput
+  }
+
+  export type InsurancePlanListRelationFilter = {
+    every?: InsurancePlanWhereInput
+    some?: InsurancePlanWhereInput
+    none?: InsurancePlanWhereInput
+  }
+
+  export type ProviderPatientListRelationFilter = {
+    every?: ProviderPatientWhereInput
+    some?: ProviderPatientWhereInput
+    none?: ProviderPatientWhereInput
   }
 
   export type SessionListRelationFilter = {
@@ -27723,22 +28081,16 @@ export namespace Prisma {
     none?: UserFileWhereInput
   }
 
-  export type ProviderPatientListRelationFilter = {
-    every?: ProviderPatientWhereInput
-    some?: ProviderPatientWhereInput
-    none?: ProviderPatientWhereInput
-  }
-
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
   }
 
-  export type BiomarkerOrderByRelationAggregateInput = {
+  export type AuditLogOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
-  export type InsurancePlanOrderByRelationAggregateInput = {
+  export type BiomarkerOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -27746,15 +28098,19 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
-  export type HealthNeedOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
   export type HealthGoalOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
-  export type AuditLogOrderByRelationAggregateInput = {
+  export type HealthNeedOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type InsurancePlanOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ProviderPatientOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -27767,10 +28123,6 @@ export namespace Prisma {
   }
 
   export type UserFileOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type ProviderPatientOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -28262,15 +28614,15 @@ export namespace Prisma {
     not?: NestedUuidNullableFilter<$PrismaModel> | string | null
   }
 
-  export type UserFileNullableScalarRelationFilter = {
-    is?: UserFileWhereInput | null
-    isNot?: UserFileWhereInput | null
-  }
-
   export type BiomarkerHistoryListRelationFilter = {
     every?: BiomarkerHistoryWhereInput
     some?: BiomarkerHistoryWhereInput
     none?: BiomarkerHistoryWhereInput
+  }
+
+  export type UserFileNullableScalarRelationFilter = {
+    is?: UserFileWhereInput | null
+    isNot?: UserFileWhereInput | null
   }
 
   export type BiomarkerHistoryOrderByRelationAggregateInput = {
@@ -28293,11 +28645,11 @@ export namespace Prisma {
     sourceFile?: SortOrder
     extractionConfidence?: SortOrder
     labName?: SortOrder
-    userFileId?: SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userFileId?: SortOrder
   }
 
   export type BiomarkerAvgOrderByAggregateInput = {
@@ -28322,11 +28674,11 @@ export namespace Prisma {
     sourceFile?: SortOrder
     extractionConfidence?: SortOrder
     labName?: SortOrder
-    userFileId?: SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userFileId?: SortOrder
   }
 
   export type BiomarkerMinOrderByAggregateInput = {
@@ -28345,11 +28697,11 @@ export namespace Prisma {
     sourceFile?: SortOrder
     extractionConfidence?: SortOrder
     labName?: SortOrder
-    userFileId?: SortOrder
     isOutOfRange?: SortOrder
     isAcknowledged?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    userFileId?: SortOrder
   }
 
   export type BiomarkerSumOrderByAggregateInput = {
@@ -28451,6 +28803,7 @@ export namespace Prisma {
     planName?: SortOrder
     insurerName?: SortOrder
     planType?: SortOrder
+    planIdNumber?: SortOrder
     memberIdEncrypted?: SortOrder
     groupIdEncrypted?: SortOrder
     effectiveDate?: SortOrder
@@ -28458,8 +28811,19 @@ export namespace Prisma {
     premiumMonthly?: SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrder
+    copaySpecialist?: SortOrder
+    copayUrgentCare?: SortOrder
+    copayEmergency?: SortOrder
+    coinsuranceRate?: SortOrder
+    extractedFromSbc?: SortOrder
+    sbcExtractionConfidence?: SortOrder
     isActive?: SortOrder
     isPrimary?: SortOrder
     createdAt?: SortOrder
@@ -28470,8 +28834,18 @@ export namespace Prisma {
     premiumMonthly?: SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrder
+    copaySpecialist?: SortOrder
+    copayUrgentCare?: SortOrder
+    copayEmergency?: SortOrder
+    coinsuranceRate?: SortOrder
+    sbcExtractionConfidence?: SortOrder
   }
 
   export type InsurancePlanMaxOrderByAggregateInput = {
@@ -28480,6 +28854,7 @@ export namespace Prisma {
     planName?: SortOrder
     insurerName?: SortOrder
     planType?: SortOrder
+    planIdNumber?: SortOrder
     memberIdEncrypted?: SortOrder
     groupIdEncrypted?: SortOrder
     effectiveDate?: SortOrder
@@ -28487,8 +28862,19 @@ export namespace Prisma {
     premiumMonthly?: SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrder
+    copaySpecialist?: SortOrder
+    copayUrgentCare?: SortOrder
+    copayEmergency?: SortOrder
+    coinsuranceRate?: SortOrder
+    extractedFromSbc?: SortOrder
+    sbcExtractionConfidence?: SortOrder
     isActive?: SortOrder
     isPrimary?: SortOrder
     createdAt?: SortOrder
@@ -28501,6 +28887,7 @@ export namespace Prisma {
     planName?: SortOrder
     insurerName?: SortOrder
     planType?: SortOrder
+    planIdNumber?: SortOrder
     memberIdEncrypted?: SortOrder
     groupIdEncrypted?: SortOrder
     effectiveDate?: SortOrder
@@ -28508,8 +28895,19 @@ export namespace Prisma {
     premiumMonthly?: SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrder
+    copaySpecialist?: SortOrder
+    copayUrgentCare?: SortOrder
+    copayEmergency?: SortOrder
+    coinsuranceRate?: SortOrder
+    extractedFromSbc?: SortOrder
+    sbcExtractionConfidence?: SortOrder
     isActive?: SortOrder
     isPrimary?: SortOrder
     createdAt?: SortOrder
@@ -28520,8 +28918,18 @@ export namespace Prisma {
     premiumMonthly?: SortOrder
     deductibleIndividual?: SortOrder
     deductibleFamily?: SortOrder
+    deductibleMetIndividual?: SortOrder
+    deductibleMetFamily?: SortOrder
     oopMaxIndividual?: SortOrder
     oopMaxFamily?: SortOrder
+    oopMetIndividual?: SortOrder
+    oopMetFamily?: SortOrder
+    copayPrimaryCare?: SortOrder
+    copaySpecialist?: SortOrder
+    copayUrgentCare?: SortOrder
+    copayEmergency?: SortOrder
+    coinsuranceRate?: SortOrder
+    sbcExtractionConfidence?: SortOrder
   }
 
   export type EnumPlanTypeWithAggregatesFilter<$PrismaModel = never> = {
@@ -29222,18 +29630,18 @@ export namespace Prisma {
     updatedBy?: SortOrder
   }
 
+  export type AuditLogCreateNestedManyWithoutUserInput = {
+    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
+    createMany?: AuditLogCreateManyUserInputEnvelope
+    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+  }
+
   export type BiomarkerCreateNestedManyWithoutUserInput = {
     create?: XOR<BiomarkerCreateWithoutUserInput, BiomarkerUncheckedCreateWithoutUserInput> | BiomarkerCreateWithoutUserInput[] | BiomarkerUncheckedCreateWithoutUserInput[]
     connectOrCreate?: BiomarkerCreateOrConnectWithoutUserInput | BiomarkerCreateOrConnectWithoutUserInput[]
     createMany?: BiomarkerCreateManyUserInputEnvelope
     connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
-  }
-
-  export type InsurancePlanCreateNestedManyWithoutUserInput = {
-    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
-    createMany?: InsurancePlanCreateManyUserInputEnvelope
-    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
   }
 
   export type DNADataCreateNestedManyWithoutUserInput = {
@@ -29243,13 +29651,6 @@ export namespace Prisma {
     connect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
   }
 
-  export type HealthNeedCreateNestedManyWithoutUserInput = {
-    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
-    createMany?: HealthNeedCreateManyUserInputEnvelope
-    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-  }
-
   export type HealthGoalCreateNestedManyWithoutUserInput = {
     create?: XOR<HealthGoalCreateWithoutUserInput, HealthGoalUncheckedCreateWithoutUserInput> | HealthGoalCreateWithoutUserInput[] | HealthGoalUncheckedCreateWithoutUserInput[]
     connectOrCreate?: HealthGoalCreateOrConnectWithoutUserInput | HealthGoalCreateOrConnectWithoutUserInput[]
@@ -29257,11 +29658,32 @@ export namespace Prisma {
     connect?: HealthGoalWhereUniqueInput | HealthGoalWhereUniqueInput[]
   }
 
-  export type AuditLogCreateNestedManyWithoutUserInput = {
-    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
-    createMany?: AuditLogCreateManyUserInputEnvelope
-    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+  export type HealthNeedCreateNestedManyWithoutUserInput = {
+    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
+    createMany?: HealthNeedCreateManyUserInputEnvelope
+    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+  }
+
+  export type InsurancePlanCreateNestedManyWithoutUserInput = {
+    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
+    createMany?: InsurancePlanCreateManyUserInputEnvelope
+    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+  }
+
+  export type ProviderPatientCreateNestedManyWithoutPatientInput = {
+    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
+    createMany?: ProviderPatientCreateManyPatientInputEnvelope
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+  }
+
+  export type ProviderPatientCreateNestedManyWithoutProviderInput = {
+    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
+    createMany?: ProviderPatientCreateManyProviderInputEnvelope
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
   }
 
   export type SessionCreateNestedManyWithoutUserInput = {
@@ -29285,18 +29707,11 @@ export namespace Prisma {
     connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
   }
 
-  export type ProviderPatientCreateNestedManyWithoutProviderInput = {
-    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
-    createMany?: ProviderPatientCreateManyProviderInputEnvelope
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-  }
-
-  export type ProviderPatientCreateNestedManyWithoutPatientInput = {
-    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
-    createMany?: ProviderPatientCreateManyPatientInputEnvelope
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+  export type AuditLogUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
+    createMany?: AuditLogCreateManyUserInputEnvelope
+    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
   }
 
   export type BiomarkerUncheckedCreateNestedManyWithoutUserInput = {
@@ -29306,25 +29721,11 @@ export namespace Prisma {
     connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
   }
 
-  export type InsurancePlanUncheckedCreateNestedManyWithoutUserInput = {
-    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
-    createMany?: InsurancePlanCreateManyUserInputEnvelope
-    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-  }
-
   export type DNADataUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput> | DNADataCreateWithoutUserInput[] | DNADataUncheckedCreateWithoutUserInput[]
     connectOrCreate?: DNADataCreateOrConnectWithoutUserInput | DNADataCreateOrConnectWithoutUserInput[]
     createMany?: DNADataCreateManyUserInputEnvelope
     connect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-  }
-
-  export type HealthNeedUncheckedCreateNestedManyWithoutUserInput = {
-    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
-    createMany?: HealthNeedCreateManyUserInputEnvelope
-    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
   }
 
   export type HealthGoalUncheckedCreateNestedManyWithoutUserInput = {
@@ -29334,11 +29735,32 @@ export namespace Prisma {
     connect?: HealthGoalWhereUniqueInput | HealthGoalWhereUniqueInput[]
   }
 
-  export type AuditLogUncheckedCreateNestedManyWithoutUserInput = {
-    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
-    createMany?: AuditLogCreateManyUserInputEnvelope
-    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+  export type HealthNeedUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
+    createMany?: HealthNeedCreateManyUserInputEnvelope
+    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+  }
+
+  export type InsurancePlanUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
+    createMany?: InsurancePlanCreateManyUserInputEnvelope
+    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+  }
+
+  export type ProviderPatientUncheckedCreateNestedManyWithoutPatientInput = {
+    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
+    createMany?: ProviderPatientCreateManyPatientInputEnvelope
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+  }
+
+  export type ProviderPatientUncheckedCreateNestedManyWithoutProviderInput = {
+    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
+    createMany?: ProviderPatientCreateManyProviderInputEnvelope
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
   }
 
   export type SessionUncheckedCreateNestedManyWithoutUserInput = {
@@ -29360,20 +29782,6 @@ export namespace Prisma {
     connectOrCreate?: UserFileCreateOrConnectWithoutUserInput | UserFileCreateOrConnectWithoutUserInput[]
     createMany?: UserFileCreateManyUserInputEnvelope
     connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
-  }
-
-  export type ProviderPatientUncheckedCreateNestedManyWithoutProviderInput = {
-    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
-    createMany?: ProviderPatientCreateManyProviderInputEnvelope
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-  }
-
-  export type ProviderPatientUncheckedCreateNestedManyWithoutPatientInput = {
-    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
-    createMany?: ProviderPatientCreateManyPatientInputEnvelope
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -29408,6 +29816,20 @@ export namespace Prisma {
     set?: Date | string
   }
 
+  export type AuditLogUpdateManyWithoutUserNestedInput = {
+    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
+    upsert?: AuditLogUpsertWithWhereUniqueWithoutUserInput | AuditLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: AuditLogCreateManyUserInputEnvelope
+    set?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    disconnect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    delete?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    update?: AuditLogUpdateWithWhereUniqueWithoutUserInput | AuditLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: AuditLogUpdateManyWithWhereWithoutUserInput | AuditLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
+  }
+
   export type BiomarkerUpdateManyWithoutUserNestedInput = {
     create?: XOR<BiomarkerCreateWithoutUserInput, BiomarkerUncheckedCreateWithoutUserInput> | BiomarkerCreateWithoutUserInput[] | BiomarkerUncheckedCreateWithoutUserInput[]
     connectOrCreate?: BiomarkerCreateOrConnectWithoutUserInput | BiomarkerCreateOrConnectWithoutUserInput[]
@@ -29420,20 +29842,6 @@ export namespace Prisma {
     update?: BiomarkerUpdateWithWhereUniqueWithoutUserInput | BiomarkerUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: BiomarkerUpdateManyWithWhereWithoutUserInput | BiomarkerUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
-  }
-
-  export type InsurancePlanUpdateManyWithoutUserNestedInput = {
-    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
-    upsert?: InsurancePlanUpsertWithWhereUniqueWithoutUserInput | InsurancePlanUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: InsurancePlanCreateManyUserInputEnvelope
-    set?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    disconnect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    delete?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    update?: InsurancePlanUpdateWithWhereUniqueWithoutUserInput | InsurancePlanUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: InsurancePlanUpdateManyWithWhereWithoutUserInput | InsurancePlanUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
   }
 
   export type DNADataUpdateManyWithoutUserNestedInput = {
@@ -29450,20 +29858,6 @@ export namespace Prisma {
     deleteMany?: DNADataScalarWhereInput | DNADataScalarWhereInput[]
   }
 
-  export type HealthNeedUpdateManyWithoutUserNestedInput = {
-    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
-    upsert?: HealthNeedUpsertWithWhereUniqueWithoutUserInput | HealthNeedUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: HealthNeedCreateManyUserInputEnvelope
-    set?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    disconnect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    delete?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    update?: HealthNeedUpdateWithWhereUniqueWithoutUserInput | HealthNeedUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: HealthNeedUpdateManyWithWhereWithoutUserInput | HealthNeedUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
-  }
-
   export type HealthGoalUpdateManyWithoutUserNestedInput = {
     create?: XOR<HealthGoalCreateWithoutUserInput, HealthGoalUncheckedCreateWithoutUserInput> | HealthGoalCreateWithoutUserInput[] | HealthGoalUncheckedCreateWithoutUserInput[]
     connectOrCreate?: HealthGoalCreateOrConnectWithoutUserInput | HealthGoalCreateOrConnectWithoutUserInput[]
@@ -29478,18 +29872,60 @@ export namespace Prisma {
     deleteMany?: HealthGoalScalarWhereInput | HealthGoalScalarWhereInput[]
   }
 
-  export type AuditLogUpdateManyWithoutUserNestedInput = {
-    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
-    upsert?: AuditLogUpsertWithWhereUniqueWithoutUserInput | AuditLogUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: AuditLogCreateManyUserInputEnvelope
-    set?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    disconnect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    delete?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    update?: AuditLogUpdateWithWhereUniqueWithoutUserInput | AuditLogUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: AuditLogUpdateManyWithWhereWithoutUserInput | AuditLogUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
+  export type HealthNeedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
+    upsert?: HealthNeedUpsertWithWhereUniqueWithoutUserInput | HealthNeedUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: HealthNeedCreateManyUserInputEnvelope
+    set?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    disconnect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    delete?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    update?: HealthNeedUpdateWithWhereUniqueWithoutUserInput | HealthNeedUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: HealthNeedUpdateManyWithWhereWithoutUserInput | HealthNeedUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
+  }
+
+  export type InsurancePlanUpdateManyWithoutUserNestedInput = {
+    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
+    upsert?: InsurancePlanUpsertWithWhereUniqueWithoutUserInput | InsurancePlanUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: InsurancePlanCreateManyUserInputEnvelope
+    set?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    disconnect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    delete?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    update?: InsurancePlanUpdateWithWhereUniqueWithoutUserInput | InsurancePlanUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: InsurancePlanUpdateManyWithWhereWithoutUserInput | InsurancePlanUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
+  }
+
+  export type ProviderPatientUpdateManyWithoutPatientNestedInput = {
+    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
+    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutPatientInput | ProviderPatientUpsertWithWhereUniqueWithoutPatientInput[]
+    createMany?: ProviderPatientCreateManyPatientInputEnvelope
+    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    update?: ProviderPatientUpdateWithWhereUniqueWithoutPatientInput | ProviderPatientUpdateWithWhereUniqueWithoutPatientInput[]
+    updateMany?: ProviderPatientUpdateManyWithWhereWithoutPatientInput | ProviderPatientUpdateManyWithWhereWithoutPatientInput[]
+    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
+  }
+
+  export type ProviderPatientUpdateManyWithoutProviderNestedInput = {
+    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
+    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutProviderInput | ProviderPatientUpsertWithWhereUniqueWithoutProviderInput[]
+    createMany?: ProviderPatientCreateManyProviderInputEnvelope
+    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    update?: ProviderPatientUpdateWithWhereUniqueWithoutProviderInput | ProviderPatientUpdateWithWhereUniqueWithoutProviderInput[]
+    updateMany?: ProviderPatientUpdateManyWithWhereWithoutProviderInput | ProviderPatientUpdateManyWithWhereWithoutProviderInput[]
+    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
   }
 
   export type SessionUpdateManyWithoutUserNestedInput = {
@@ -29534,32 +29970,18 @@ export namespace Prisma {
     deleteMany?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
   }
 
-  export type ProviderPatientUpdateManyWithoutProviderNestedInput = {
-    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
-    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutProviderInput | ProviderPatientUpsertWithWhereUniqueWithoutProviderInput[]
-    createMany?: ProviderPatientCreateManyProviderInputEnvelope
-    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    update?: ProviderPatientUpdateWithWhereUniqueWithoutProviderInput | ProviderPatientUpdateWithWhereUniqueWithoutProviderInput[]
-    updateMany?: ProviderPatientUpdateManyWithWhereWithoutProviderInput | ProviderPatientUpdateManyWithWhereWithoutProviderInput[]
-    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
-  }
-
-  export type ProviderPatientUpdateManyWithoutPatientNestedInput = {
-    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
-    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutPatientInput | ProviderPatientUpsertWithWhereUniqueWithoutPatientInput[]
-    createMany?: ProviderPatientCreateManyPatientInputEnvelope
-    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    update?: ProviderPatientUpdateWithWhereUniqueWithoutPatientInput | ProviderPatientUpdateWithWhereUniqueWithoutPatientInput[]
-    updateMany?: ProviderPatientUpdateManyWithWhereWithoutPatientInput | ProviderPatientUpdateManyWithWhereWithoutPatientInput[]
-    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
+  export type AuditLogUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
+    upsert?: AuditLogUpsertWithWhereUniqueWithoutUserInput | AuditLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: AuditLogCreateManyUserInputEnvelope
+    set?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    disconnect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    delete?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+    update?: AuditLogUpdateWithWhereUniqueWithoutUserInput | AuditLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: AuditLogUpdateManyWithWhereWithoutUserInput | AuditLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
   }
 
   export type BiomarkerUncheckedUpdateManyWithoutUserNestedInput = {
@@ -29576,20 +29998,6 @@ export namespace Prisma {
     deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
   }
 
-  export type InsurancePlanUncheckedUpdateManyWithoutUserNestedInput = {
-    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
-    upsert?: InsurancePlanUpsertWithWhereUniqueWithoutUserInput | InsurancePlanUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: InsurancePlanCreateManyUserInputEnvelope
-    set?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    disconnect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    delete?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
-    update?: InsurancePlanUpdateWithWhereUniqueWithoutUserInput | InsurancePlanUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: InsurancePlanUpdateManyWithWhereWithoutUserInput | InsurancePlanUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
-  }
-
   export type DNADataUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput> | DNADataCreateWithoutUserInput[] | DNADataUncheckedCreateWithoutUserInput[]
     connectOrCreate?: DNADataCreateOrConnectWithoutUserInput | DNADataCreateOrConnectWithoutUserInput[]
@@ -29602,20 +30010,6 @@ export namespace Prisma {
     update?: DNADataUpdateWithWhereUniqueWithoutUserInput | DNADataUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: DNADataUpdateManyWithWhereWithoutUserInput | DNADataUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: DNADataScalarWhereInput | DNADataScalarWhereInput[]
-  }
-
-  export type HealthNeedUncheckedUpdateManyWithoutUserNestedInput = {
-    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
-    upsert?: HealthNeedUpsertWithWhereUniqueWithoutUserInput | HealthNeedUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: HealthNeedCreateManyUserInputEnvelope
-    set?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    disconnect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    delete?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
-    update?: HealthNeedUpdateWithWhereUniqueWithoutUserInput | HealthNeedUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: HealthNeedUpdateManyWithWhereWithoutUserInput | HealthNeedUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
   }
 
   export type HealthGoalUncheckedUpdateManyWithoutUserNestedInput = {
@@ -29632,18 +30026,60 @@ export namespace Prisma {
     deleteMany?: HealthGoalScalarWhereInput | HealthGoalScalarWhereInput[]
   }
 
-  export type AuditLogUncheckedUpdateManyWithoutUserNestedInput = {
-    create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
-    upsert?: AuditLogUpsertWithWhereUniqueWithoutUserInput | AuditLogUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: AuditLogCreateManyUserInputEnvelope
-    set?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    disconnect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    delete?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
-    update?: AuditLogUpdateWithWhereUniqueWithoutUserInput | AuditLogUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: AuditLogUpdateManyWithWhereWithoutUserInput | AuditLogUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
+  export type HealthNeedUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput> | HealthNeedCreateWithoutUserInput[] | HealthNeedUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: HealthNeedCreateOrConnectWithoutUserInput | HealthNeedCreateOrConnectWithoutUserInput[]
+    upsert?: HealthNeedUpsertWithWhereUniqueWithoutUserInput | HealthNeedUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: HealthNeedCreateManyUserInputEnvelope
+    set?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    disconnect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    delete?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    connect?: HealthNeedWhereUniqueInput | HealthNeedWhereUniqueInput[]
+    update?: HealthNeedUpdateWithWhereUniqueWithoutUserInput | HealthNeedUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: HealthNeedUpdateManyWithWhereWithoutUserInput | HealthNeedUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
+  }
+
+  export type InsurancePlanUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput> | InsurancePlanCreateWithoutUserInput[] | InsurancePlanUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutUserInput | InsurancePlanCreateOrConnectWithoutUserInput[]
+    upsert?: InsurancePlanUpsertWithWhereUniqueWithoutUserInput | InsurancePlanUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: InsurancePlanCreateManyUserInputEnvelope
+    set?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    disconnect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    delete?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    connect?: InsurancePlanWhereUniqueInput | InsurancePlanWhereUniqueInput[]
+    update?: InsurancePlanUpdateWithWhereUniqueWithoutUserInput | InsurancePlanUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: InsurancePlanUpdateManyWithWhereWithoutUserInput | InsurancePlanUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
+  }
+
+  export type ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput = {
+    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
+    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutPatientInput | ProviderPatientUpsertWithWhereUniqueWithoutPatientInput[]
+    createMany?: ProviderPatientCreateManyPatientInputEnvelope
+    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    update?: ProviderPatientUpdateWithWhereUniqueWithoutPatientInput | ProviderPatientUpdateWithWhereUniqueWithoutPatientInput[]
+    updateMany?: ProviderPatientUpdateManyWithWhereWithoutPatientInput | ProviderPatientUpdateManyWithWhereWithoutPatientInput[]
+    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
+  }
+
+  export type ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput = {
+    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
+    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
+    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutProviderInput | ProviderPatientUpsertWithWhereUniqueWithoutProviderInput[]
+    createMany?: ProviderPatientCreateManyProviderInputEnvelope
+    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
+    update?: ProviderPatientUpdateWithWhereUniqueWithoutProviderInput | ProviderPatientUpdateWithWhereUniqueWithoutProviderInput[]
+    updateMany?: ProviderPatientUpdateManyWithWhereWithoutProviderInput | ProviderPatientUpdateManyWithWhereWithoutProviderInput[]
+    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
   }
 
   export type SessionUncheckedUpdateManyWithoutUserNestedInput = {
@@ -29688,34 +30124,6 @@ export namespace Prisma {
     deleteMany?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
   }
 
-  export type ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput = {
-    create?: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput> | ProviderPatientCreateWithoutProviderInput[] | ProviderPatientUncheckedCreateWithoutProviderInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutProviderInput | ProviderPatientCreateOrConnectWithoutProviderInput[]
-    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutProviderInput | ProviderPatientUpsertWithWhereUniqueWithoutProviderInput[]
-    createMany?: ProviderPatientCreateManyProviderInputEnvelope
-    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    update?: ProviderPatientUpdateWithWhereUniqueWithoutProviderInput | ProviderPatientUpdateWithWhereUniqueWithoutProviderInput[]
-    updateMany?: ProviderPatientUpdateManyWithWhereWithoutProviderInput | ProviderPatientUpdateManyWithWhereWithoutProviderInput[]
-    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
-  }
-
-  export type ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput = {
-    create?: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput> | ProviderPatientCreateWithoutPatientInput[] | ProviderPatientUncheckedCreateWithoutPatientInput[]
-    connectOrCreate?: ProviderPatientCreateOrConnectWithoutPatientInput | ProviderPatientCreateOrConnectWithoutPatientInput[]
-    upsert?: ProviderPatientUpsertWithWhereUniqueWithoutPatientInput | ProviderPatientUpsertWithWhereUniqueWithoutPatientInput[]
-    createMany?: ProviderPatientCreateManyPatientInputEnvelope
-    set?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    disconnect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    delete?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    connect?: ProviderPatientWhereUniqueInput | ProviderPatientWhereUniqueInput[]
-    update?: ProviderPatientUpdateWithWhereUniqueWithoutPatientInput | ProviderPatientUpdateWithWhereUniqueWithoutPatientInput[]
-    updateMany?: ProviderPatientUpdateManyWithWhereWithoutPatientInput | ProviderPatientUpdateManyWithWhereWithoutPatientInput[]
-    deleteMany?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
-  }
-
   export type UserCreateNestedOneWithoutSessionsInput = {
     create?: XOR<UserCreateWithoutSessionsInput, UserUncheckedCreateWithoutSessionsInput>
     connectOrCreate?: UserCreateOrConnectWithoutSessionsInput
@@ -29744,15 +30152,15 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutEncryptionKeysInput, UserUpdateWithoutEncryptionKeysInput>, UserUncheckedUpdateWithoutEncryptionKeysInput>
   }
 
-  export type UserCreateNestedOneWithoutProviderRelationshipsInput = {
-    create?: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
-    connectOrCreate?: UserCreateOrConnectWithoutProviderRelationshipsInput
-    connect?: UserWhereUniqueInput
-  }
-
   export type UserCreateNestedOneWithoutPatientRelationshipsInput = {
     create?: XOR<UserCreateWithoutPatientRelationshipsInput, UserUncheckedCreateWithoutPatientRelationshipsInput>
     connectOrCreate?: UserCreateOrConnectWithoutPatientRelationshipsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserCreateNestedOneWithoutProviderRelationshipsInput = {
+    create?: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutProviderRelationshipsInput
     connect?: UserWhereUniqueInput
   }
 
@@ -29764,14 +30172,6 @@ export namespace Prisma {
     set?: $Enums.ProviderPatientStatus
   }
 
-  export type UserUpdateOneRequiredWithoutProviderRelationshipsNestedInput = {
-    create?: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
-    connectOrCreate?: UserCreateOrConnectWithoutProviderRelationshipsInput
-    upsert?: UserUpsertWithoutProviderRelationshipsInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutProviderRelationshipsInput, UserUpdateWithoutProviderRelationshipsInput>, UserUncheckedUpdateWithoutProviderRelationshipsInput>
-  }
-
   export type UserUpdateOneRequiredWithoutPatientRelationshipsNestedInput = {
     create?: XOR<UserCreateWithoutPatientRelationshipsInput, UserUncheckedCreateWithoutPatientRelationshipsInput>
     connectOrCreate?: UserCreateOrConnectWithoutPatientRelationshipsInput
@@ -29780,10 +30180,12 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutPatientRelationshipsInput, UserUpdateWithoutPatientRelationshipsInput>, UserUncheckedUpdateWithoutPatientRelationshipsInput>
   }
 
-  export type UserCreateNestedOneWithoutFilesInput = {
-    create?: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
-    connectOrCreate?: UserCreateOrConnectWithoutFilesInput
+  export type UserUpdateOneRequiredWithoutProviderRelationshipsNestedInput = {
+    create?: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutProviderRelationshipsInput
+    upsert?: UserUpsertWithoutProviderRelationshipsInput
     connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutProviderRelationshipsInput, UserUpdateWithoutProviderRelationshipsInput>, UserUncheckedUpdateWithoutProviderRelationshipsInput>
   }
 
   export type BiomarkerCreateNestedManyWithoutUserFileInput = {
@@ -29791,6 +30193,12 @@ export namespace Prisma {
     connectOrCreate?: BiomarkerCreateOrConnectWithoutUserFileInput | BiomarkerCreateOrConnectWithoutUserFileInput[]
     createMany?: BiomarkerCreateManyUserFileInputEnvelope
     connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
+  }
+
+  export type UserCreateNestedOneWithoutFilesInput = {
+    create?: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFilesInput
+    connect?: UserWhereUniqueInput
   }
 
   export type BiomarkerUncheckedCreateNestedManyWithoutUserFileInput = {
@@ -29808,14 +30216,6 @@ export namespace Prisma {
     divide?: Decimal | DecimalJsLike | number | string
   }
 
-  export type UserUpdateOneRequiredWithoutFilesNestedInput = {
-    create?: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
-    connectOrCreate?: UserCreateOrConnectWithoutFilesInput
-    upsert?: UserUpsertWithoutFilesInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFilesInput, UserUpdateWithoutFilesInput>, UserUncheckedUpdateWithoutFilesInput>
-  }
-
   export type BiomarkerUpdateManyWithoutUserFileNestedInput = {
     create?: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput> | BiomarkerCreateWithoutUserFileInput[] | BiomarkerUncheckedCreateWithoutUserFileInput[]
     connectOrCreate?: BiomarkerCreateOrConnectWithoutUserFileInput | BiomarkerCreateOrConnectWithoutUserFileInput[]
@@ -29828,6 +30228,14 @@ export namespace Prisma {
     update?: BiomarkerUpdateWithWhereUniqueWithoutUserFileInput | BiomarkerUpdateWithWhereUniqueWithoutUserFileInput[]
     updateMany?: BiomarkerUpdateManyWithWhereWithoutUserFileInput | BiomarkerUpdateManyWithWhereWithoutUserFileInput[]
     deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
+  }
+
+  export type UserUpdateOneRequiredWithoutFilesNestedInput = {
+    create?: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutFilesInput
+    upsert?: UserUpsertWithoutFilesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutFilesInput, UserUpdateWithoutFilesInput>, UserUncheckedUpdateWithoutFilesInput>
   }
 
   export type BiomarkerUncheckedUpdateManyWithoutUserFileNestedInput = {
@@ -29844,10 +30252,11 @@ export namespace Prisma {
     deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
   }
 
-  export type UserCreateNestedOneWithoutBiomarkersInput = {
-    create?: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
-    connectOrCreate?: UserCreateOrConnectWithoutBiomarkersInput
-    connect?: UserWhereUniqueInput
+  export type BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput = {
+    create?: XOR<BiomarkerHistoryCreateWithoutBiomarkerInput, BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput> | BiomarkerHistoryCreateWithoutBiomarkerInput[] | BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput[]
+    connectOrCreate?: BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput | BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput[]
+    createMany?: BiomarkerHistoryCreateManyBiomarkerInputEnvelope
+    connect?: BiomarkerHistoryWhereUniqueInput | BiomarkerHistoryWhereUniqueInput[]
   }
 
   export type UserFileCreateNestedOneWithoutBiomarkersInput = {
@@ -29856,11 +30265,10 @@ export namespace Prisma {
     connect?: UserFileWhereUniqueInput
   }
 
-  export type BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput = {
-    create?: XOR<BiomarkerHistoryCreateWithoutBiomarkerInput, BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput> | BiomarkerHistoryCreateWithoutBiomarkerInput[] | BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput[]
-    connectOrCreate?: BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput | BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput[]
-    createMany?: BiomarkerHistoryCreateManyBiomarkerInputEnvelope
-    connect?: BiomarkerHistoryWhereUniqueInput | BiomarkerHistoryWhereUniqueInput[]
+  export type UserCreateNestedOneWithoutBiomarkersInput = {
+    create?: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
+    connectOrCreate?: UserCreateOrConnectWithoutBiomarkersInput
+    connect?: UserWhereUniqueInput
   }
 
   export type BiomarkerHistoryUncheckedCreateNestedManyWithoutBiomarkerInput = {
@@ -29882,24 +30290,6 @@ export namespace Prisma {
     set?: $Enums.DataSourceType
   }
 
-  export type UserUpdateOneRequiredWithoutBiomarkersNestedInput = {
-    create?: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
-    connectOrCreate?: UserCreateOrConnectWithoutBiomarkersInput
-    upsert?: UserUpsertWithoutBiomarkersInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutBiomarkersInput, UserUpdateWithoutBiomarkersInput>, UserUncheckedUpdateWithoutBiomarkersInput>
-  }
-
-  export type UserFileUpdateOneWithoutBiomarkersNestedInput = {
-    create?: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
-    connectOrCreate?: UserFileCreateOrConnectWithoutBiomarkersInput
-    upsert?: UserFileUpsertWithoutBiomarkersInput
-    disconnect?: UserFileWhereInput | boolean
-    delete?: UserFileWhereInput | boolean
-    connect?: UserFileWhereUniqueInput
-    update?: XOR<XOR<UserFileUpdateToOneWithWhereWithoutBiomarkersInput, UserFileUpdateWithoutBiomarkersInput>, UserFileUncheckedUpdateWithoutBiomarkersInput>
-  }
-
   export type BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput = {
     create?: XOR<BiomarkerHistoryCreateWithoutBiomarkerInput, BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput> | BiomarkerHistoryCreateWithoutBiomarkerInput[] | BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput[]
     connectOrCreate?: BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput | BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput[]
@@ -29912,6 +30302,24 @@ export namespace Prisma {
     update?: BiomarkerHistoryUpdateWithWhereUniqueWithoutBiomarkerInput | BiomarkerHistoryUpdateWithWhereUniqueWithoutBiomarkerInput[]
     updateMany?: BiomarkerHistoryUpdateManyWithWhereWithoutBiomarkerInput | BiomarkerHistoryUpdateManyWithWhereWithoutBiomarkerInput[]
     deleteMany?: BiomarkerHistoryScalarWhereInput | BiomarkerHistoryScalarWhereInput[]
+  }
+
+  export type UserFileUpdateOneWithoutBiomarkersNestedInput = {
+    create?: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
+    connectOrCreate?: UserFileCreateOrConnectWithoutBiomarkersInput
+    upsert?: UserFileUpsertWithoutBiomarkersInput
+    disconnect?: UserFileWhereInput | boolean
+    delete?: UserFileWhereInput | boolean
+    connect?: UserFileWhereUniqueInput
+    update?: XOR<XOR<UserFileUpdateToOneWithWhereWithoutBiomarkersInput, UserFileUpdateWithoutBiomarkersInput>, UserFileUncheckedUpdateWithoutBiomarkersInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutBiomarkersNestedInput = {
+    create?: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
+    connectOrCreate?: UserCreateOrConnectWithoutBiomarkersInput
+    upsert?: UserUpsertWithoutBiomarkersInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutBiomarkersInput, UserUpdateWithoutBiomarkersInput>, UserUncheckedUpdateWithoutBiomarkersInput>
   }
 
   export type BiomarkerHistoryUncheckedUpdateManyWithoutBiomarkerNestedInput = {
@@ -29942,17 +30350,17 @@ export namespace Prisma {
     update?: XOR<XOR<BiomarkerUpdateToOneWithWhereWithoutHistoryInput, BiomarkerUpdateWithoutHistoryInput>, BiomarkerUncheckedUpdateWithoutHistoryInput>
   }
 
-  export type UserCreateNestedOneWithoutInsurancePlansInput = {
-    create?: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
-    connectOrCreate?: UserCreateOrConnectWithoutInsurancePlansInput
-    connect?: UserWhereUniqueInput
-  }
-
   export type InsuranceBenefitCreateNestedManyWithoutPlanInput = {
     create?: XOR<InsuranceBenefitCreateWithoutPlanInput, InsuranceBenefitUncheckedCreateWithoutPlanInput> | InsuranceBenefitCreateWithoutPlanInput[] | InsuranceBenefitUncheckedCreateWithoutPlanInput[]
     connectOrCreate?: InsuranceBenefitCreateOrConnectWithoutPlanInput | InsuranceBenefitCreateOrConnectWithoutPlanInput[]
     createMany?: InsuranceBenefitCreateManyPlanInputEnvelope
     connect?: InsuranceBenefitWhereUniqueInput | InsuranceBenefitWhereUniqueInput[]
+  }
+
+  export type UserCreateNestedOneWithoutInsurancePlansInput = {
+    create?: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
+    connectOrCreate?: UserCreateOrConnectWithoutInsurancePlansInput
+    connect?: UserWhereUniqueInput
   }
 
   export type InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput = {
@@ -29964,14 +30372,6 @@ export namespace Prisma {
 
   export type EnumPlanTypeFieldUpdateOperationsInput = {
     set?: $Enums.PlanType
-  }
-
-  export type UserUpdateOneRequiredWithoutInsurancePlansNestedInput = {
-    create?: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
-    connectOrCreate?: UserCreateOrConnectWithoutInsurancePlansInput
-    upsert?: UserUpsertWithoutInsurancePlansInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutInsurancePlansInput, UserUpdateWithoutInsurancePlansInput>, UserUncheckedUpdateWithoutInsurancePlansInput>
   }
 
   export type InsuranceBenefitUpdateManyWithoutPlanNestedInput = {
@@ -29986,6 +30386,14 @@ export namespace Prisma {
     update?: InsuranceBenefitUpdateWithWhereUniqueWithoutPlanInput | InsuranceBenefitUpdateWithWhereUniqueWithoutPlanInput[]
     updateMany?: InsuranceBenefitUpdateManyWithWhereWithoutPlanInput | InsuranceBenefitUpdateManyWithWhereWithoutPlanInput[]
     deleteMany?: InsuranceBenefitScalarWhereInput | InsuranceBenefitScalarWhereInput[]
+  }
+
+  export type UserUpdateOneRequiredWithoutInsurancePlansNestedInput = {
+    create?: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
+    connectOrCreate?: UserCreateOrConnectWithoutInsurancePlansInput
+    upsert?: UserUpsertWithoutInsurancePlansInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutInsurancePlansInput, UserUpdateWithoutInsurancePlansInput>, UserUncheckedUpdateWithoutInsurancePlansInput>
   }
 
   export type InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput = {
@@ -30185,17 +30593,17 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutHealthNeedsInput, UserUpdateWithoutHealthNeedsInput>, UserUncheckedUpdateWithoutHealthNeedsInput>
   }
 
-  export type UserCreateNestedOneWithoutHealthGoalsInput = {
-    create?: XOR<UserCreateWithoutHealthGoalsInput, UserUncheckedCreateWithoutHealthGoalsInput>
-    connectOrCreate?: UserCreateOrConnectWithoutHealthGoalsInput
-    connect?: UserWhereUniqueInput
-  }
-
   export type GoalProgressHistoryCreateNestedManyWithoutGoalInput = {
     create?: XOR<GoalProgressHistoryCreateWithoutGoalInput, GoalProgressHistoryUncheckedCreateWithoutGoalInput> | GoalProgressHistoryCreateWithoutGoalInput[] | GoalProgressHistoryUncheckedCreateWithoutGoalInput[]
     connectOrCreate?: GoalProgressHistoryCreateOrConnectWithoutGoalInput | GoalProgressHistoryCreateOrConnectWithoutGoalInput[]
     createMany?: GoalProgressHistoryCreateManyGoalInputEnvelope
     connect?: GoalProgressHistoryWhereUniqueInput | GoalProgressHistoryWhereUniqueInput[]
+  }
+
+  export type UserCreateNestedOneWithoutHealthGoalsInput = {
+    create?: XOR<UserCreateWithoutHealthGoalsInput, UserUncheckedCreateWithoutHealthGoalsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutHealthGoalsInput
+    connect?: UserWhereUniqueInput
   }
 
   export type GoalProgressHistoryUncheckedCreateNestedManyWithoutGoalInput = {
@@ -30217,14 +30625,6 @@ export namespace Prisma {
     set?: $Enums.ReminderFrequency | null
   }
 
-  export type UserUpdateOneRequiredWithoutHealthGoalsNestedInput = {
-    create?: XOR<UserCreateWithoutHealthGoalsInput, UserUncheckedCreateWithoutHealthGoalsInput>
-    connectOrCreate?: UserCreateOrConnectWithoutHealthGoalsInput
-    upsert?: UserUpsertWithoutHealthGoalsInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutHealthGoalsInput, UserUpdateWithoutHealthGoalsInput>, UserUncheckedUpdateWithoutHealthGoalsInput>
-  }
-
   export type GoalProgressHistoryUpdateManyWithoutGoalNestedInput = {
     create?: XOR<GoalProgressHistoryCreateWithoutGoalInput, GoalProgressHistoryUncheckedCreateWithoutGoalInput> | GoalProgressHistoryCreateWithoutGoalInput[] | GoalProgressHistoryUncheckedCreateWithoutGoalInput[]
     connectOrCreate?: GoalProgressHistoryCreateOrConnectWithoutGoalInput | GoalProgressHistoryCreateOrConnectWithoutGoalInput[]
@@ -30237,6 +30637,14 @@ export namespace Prisma {
     update?: GoalProgressHistoryUpdateWithWhereUniqueWithoutGoalInput | GoalProgressHistoryUpdateWithWhereUniqueWithoutGoalInput[]
     updateMany?: GoalProgressHistoryUpdateManyWithWhereWithoutGoalInput | GoalProgressHistoryUpdateManyWithWhereWithoutGoalInput[]
     deleteMany?: GoalProgressHistoryScalarWhereInput | GoalProgressHistoryScalarWhereInput[]
+  }
+
+  export type UserUpdateOneRequiredWithoutHealthGoalsNestedInput = {
+    create?: XOR<UserCreateWithoutHealthGoalsInput, UserUncheckedCreateWithoutHealthGoalsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutHealthGoalsInput
+    upsert?: UserUpsertWithoutHealthGoalsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutHealthGoalsInput, UserUpdateWithoutHealthGoalsInput>, UserUncheckedUpdateWithoutHealthGoalsInput>
   }
 
   export type GoalProgressHistoryUncheckedUpdateManyWithoutGoalNestedInput = {
@@ -30824,6 +31232,50 @@ export namespace Prisma {
     _max?: NestedEnumAuditActionFilter<$PrismaModel>
   }
 
+  export type AuditLogCreateWithoutUserInput = {
+    id?: string
+    actorType: $Enums.ActorType
+    ipAddress?: string | null
+    userAgent?: string | null
+    sessionId?: string | null
+    action: $Enums.AuditAction
+    resourceType: string
+    resourceId?: string | null
+    previousValueEncrypted?: string | null
+    newValueEncrypted?: string | null
+    metadata?: string | null
+    success?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type AuditLogUncheckedCreateWithoutUserInput = {
+    id?: string
+    actorType: $Enums.ActorType
+    ipAddress?: string | null
+    userAgent?: string | null
+    sessionId?: string | null
+    action: $Enums.AuditAction
+    resourceType: string
+    resourceId?: string | null
+    previousValueEncrypted?: string | null
+    newValueEncrypted?: string | null
+    metadata?: string | null
+    success?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
+  }
+
+  export type AuditLogCreateOrConnectWithoutUserInput = {
+    where: AuditLogWhereUniqueInput
+    create: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput>
+  }
+
+  export type AuditLogCreateManyUserInputEnvelope = {
+    data: AuditLogCreateManyUserInput | AuditLogCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type BiomarkerCreateWithoutUserInput = {
     id?: string
     category: string
@@ -30843,8 +31295,8 @@ export namespace Prisma {
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
-    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
     history?: BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput
+    userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
   }
 
   export type BiomarkerUncheckedCreateWithoutUserInput = {
@@ -30862,11 +31314,11 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
-    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    userFileId?: string | null
     history?: BiomarkerHistoryUncheckedCreateNestedManyWithoutBiomarkerInput
   }
 
@@ -30877,58 +31329,6 @@ export namespace Prisma {
 
   export type BiomarkerCreateManyUserInputEnvelope = {
     data: BiomarkerCreateManyUserInput | BiomarkerCreateManyUserInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type InsurancePlanCreateWithoutUserInput = {
-    id?: string
-    planName: string
-    insurerName: string
-    planType: $Enums.PlanType
-    memberIdEncrypted?: string | null
-    groupIdEncrypted?: string | null
-    effectiveDate: Date | string
-    terminationDate?: Date | string | null
-    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual: Decimal | DecimalJsLike | number | string
-    deductibleFamily: Decimal | DecimalJsLike | number | string
-    oopMaxIndividual: Decimal | DecimalJsLike | number | string
-    oopMaxFamily: Decimal | DecimalJsLike | number | string
-    isActive?: boolean
-    isPrimary?: boolean
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
-  }
-
-  export type InsurancePlanUncheckedCreateWithoutUserInput = {
-    id?: string
-    planName: string
-    insurerName: string
-    planType: $Enums.PlanType
-    memberIdEncrypted?: string | null
-    groupIdEncrypted?: string | null
-    effectiveDate: Date | string
-    terminationDate?: Date | string | null
-    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual: Decimal | DecimalJsLike | number | string
-    deductibleFamily: Decimal | DecimalJsLike | number | string
-    oopMaxIndividual: Decimal | DecimalJsLike | number | string
-    oopMaxFamily: Decimal | DecimalJsLike | number | string
-    isActive?: boolean
-    isPrimary?: boolean
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
-  }
-
-  export type InsurancePlanCreateOrConnectWithoutUserInput = {
-    where: InsurancePlanWhereUniqueInput
-    create: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput>
-  }
-
-  export type InsurancePlanCreateManyUserInputEnvelope = {
-    data: InsurancePlanCreateManyUserInput | InsurancePlanCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -30967,42 +31367,6 @@ export namespace Prisma {
 
   export type DNADataCreateManyUserInputEnvelope = {
     data: DNADataCreateManyUserInput | DNADataCreateManyUserInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type HealthNeedCreateWithoutUserInput = {
-    id?: string
-    needType: $Enums.HealthNeedType
-    name: string
-    descriptionEncrypted: string
-    urgency: $Enums.Urgency
-    status?: $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: HealthNeedCreaterelatedBiomarkerIdsInput | string[]
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    resolvedAt?: Date | string | null
-  }
-
-  export type HealthNeedUncheckedCreateWithoutUserInput = {
-    id?: string
-    needType: $Enums.HealthNeedType
-    name: string
-    descriptionEncrypted: string
-    urgency: $Enums.Urgency
-    status?: $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: HealthNeedCreaterelatedBiomarkerIdsInput | string[]
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    resolvedAt?: Date | string | null
-  }
-
-  export type HealthNeedCreateOrConnectWithoutUserInput = {
-    where: HealthNeedWhereUniqueInput
-    create: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput>
-  }
-
-  export type HealthNeedCreateManyUserInputEnvelope = {
-    data: HealthNeedCreateManyUserInput | HealthNeedCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -31064,47 +31428,203 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type AuditLogCreateWithoutUserInput = {
+  export type HealthNeedCreateWithoutUserInput = {
     id?: string
-    actorType: $Enums.ActorType
-    ipAddress?: string | null
-    userAgent?: string | null
-    sessionId?: string | null
-    action: $Enums.AuditAction
-    resourceType: string
-    resourceId?: string | null
-    previousValueEncrypted?: string | null
-    newValueEncrypted?: string | null
-    metadata?: string | null
-    success?: boolean
-    errorMessage?: string | null
+    needType: $Enums.HealthNeedType
+    name: string
+    descriptionEncrypted: string
+    urgency: $Enums.Urgency
+    status?: $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: HealthNeedCreaterelatedBiomarkerIdsInput | string[]
     createdAt?: Date | string
+    updatedAt?: Date | string
+    resolvedAt?: Date | string | null
   }
 
-  export type AuditLogUncheckedCreateWithoutUserInput = {
+  export type HealthNeedUncheckedCreateWithoutUserInput = {
     id?: string
-    actorType: $Enums.ActorType
-    ipAddress?: string | null
-    userAgent?: string | null
-    sessionId?: string | null
-    action: $Enums.AuditAction
-    resourceType: string
-    resourceId?: string | null
-    previousValueEncrypted?: string | null
-    newValueEncrypted?: string | null
-    metadata?: string | null
-    success?: boolean
-    errorMessage?: string | null
+    needType: $Enums.HealthNeedType
+    name: string
+    descriptionEncrypted: string
+    urgency: $Enums.Urgency
+    status?: $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: HealthNeedCreaterelatedBiomarkerIdsInput | string[]
     createdAt?: Date | string
+    updatedAt?: Date | string
+    resolvedAt?: Date | string | null
   }
 
-  export type AuditLogCreateOrConnectWithoutUserInput = {
-    where: AuditLogWhereUniqueInput
-    create: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput>
+  export type HealthNeedCreateOrConnectWithoutUserInput = {
+    where: HealthNeedWhereUniqueInput
+    create: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput>
   }
 
-  export type AuditLogCreateManyUserInputEnvelope = {
-    data: AuditLogCreateManyUserInput | AuditLogCreateManyUserInput[]
+  export type HealthNeedCreateManyUserInputEnvelope = {
+    data: HealthNeedCreateManyUserInput | HealthNeedCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type InsurancePlanCreateWithoutUserInput = {
+    id?: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanUncheckedCreateWithoutUserInput = {
+    id?: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanCreateOrConnectWithoutUserInput = {
+    where: InsurancePlanWhereUniqueInput
+    create: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput>
+  }
+
+  export type InsurancePlanCreateManyUserInputEnvelope = {
+    data: InsurancePlanCreateManyUserInput | InsurancePlanCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ProviderPatientCreateWithoutPatientInput = {
+    id?: string
+    canViewBiomarkers?: boolean
+    canViewInsurance?: boolean
+    canViewDna?: boolean
+    canViewHealthNeeds?: boolean
+    canEditData?: boolean
+    relationshipType?: $Enums.ProviderRelationType
+    status?: $Enums.ProviderPatientStatus
+    consentGrantedAt?: Date | string | null
+    consentExpiresAt?: Date | string | null
+    notesEncrypted?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    provider: UserCreateNestedOneWithoutProviderRelationshipsInput
+  }
+
+  export type ProviderPatientUncheckedCreateWithoutPatientInput = {
+    id?: string
+    providerId: string
+    canViewBiomarkers?: boolean
+    canViewInsurance?: boolean
+    canViewDna?: boolean
+    canViewHealthNeeds?: boolean
+    canEditData?: boolean
+    relationshipType?: $Enums.ProviderRelationType
+    status?: $Enums.ProviderPatientStatus
+    consentGrantedAt?: Date | string | null
+    consentExpiresAt?: Date | string | null
+    notesEncrypted?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ProviderPatientCreateOrConnectWithoutPatientInput = {
+    where: ProviderPatientWhereUniqueInput
+    create: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput>
+  }
+
+  export type ProviderPatientCreateManyPatientInputEnvelope = {
+    data: ProviderPatientCreateManyPatientInput | ProviderPatientCreateManyPatientInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ProviderPatientCreateWithoutProviderInput = {
+    id?: string
+    canViewBiomarkers?: boolean
+    canViewInsurance?: boolean
+    canViewDna?: boolean
+    canViewHealthNeeds?: boolean
+    canEditData?: boolean
+    relationshipType?: $Enums.ProviderRelationType
+    status?: $Enums.ProviderPatientStatus
+    consentGrantedAt?: Date | string | null
+    consentExpiresAt?: Date | string | null
+    notesEncrypted?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    patient: UserCreateNestedOneWithoutPatientRelationshipsInput
+  }
+
+  export type ProviderPatientUncheckedCreateWithoutProviderInput = {
+    id?: string
+    patientId: string
+    canViewBiomarkers?: boolean
+    canViewInsurance?: boolean
+    canViewDna?: boolean
+    canViewHealthNeeds?: boolean
+    canEditData?: boolean
+    relationshipType?: $Enums.ProviderRelationType
+    status?: $Enums.ProviderPatientStatus
+    consentGrantedAt?: Date | string | null
+    consentExpiresAt?: Date | string | null
+    notesEncrypted?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ProviderPatientCreateOrConnectWithoutProviderInput = {
+    where: ProviderPatientWhereUniqueInput
+    create: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput>
+  }
+
+  export type ProviderPatientCreateManyProviderInputEnvelope = {
+    data: ProviderPatientCreateManyProviderInput | ProviderPatientCreateManyProviderInput[]
     skipDuplicates?: boolean
   }
 
@@ -31210,92 +31730,41 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type ProviderPatientCreateWithoutProviderInput = {
-    id?: string
-    canViewBiomarkers?: boolean
-    canViewInsurance?: boolean
-    canViewDna?: boolean
-    canViewHealthNeeds?: boolean
-    canEditData?: boolean
-    relationshipType?: $Enums.ProviderRelationType
-    status?: $Enums.ProviderPatientStatus
-    consentGrantedAt?: Date | string | null
-    consentExpiresAt?: Date | string | null
-    notesEncrypted?: string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    patient: UserCreateNestedOneWithoutPatientRelationshipsInput
+  export type AuditLogUpsertWithWhereUniqueWithoutUserInput = {
+    where: AuditLogWhereUniqueInput
+    update: XOR<AuditLogUpdateWithoutUserInput, AuditLogUncheckedUpdateWithoutUserInput>
+    create: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput>
   }
 
-  export type ProviderPatientUncheckedCreateWithoutProviderInput = {
-    id?: string
-    patientId: string
-    canViewBiomarkers?: boolean
-    canViewInsurance?: boolean
-    canViewDna?: boolean
-    canViewHealthNeeds?: boolean
-    canEditData?: boolean
-    relationshipType?: $Enums.ProviderRelationType
-    status?: $Enums.ProviderPatientStatus
-    consentGrantedAt?: Date | string | null
-    consentExpiresAt?: Date | string | null
-    notesEncrypted?: string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
+  export type AuditLogUpdateWithWhereUniqueWithoutUserInput = {
+    where: AuditLogWhereUniqueInput
+    data: XOR<AuditLogUpdateWithoutUserInput, AuditLogUncheckedUpdateWithoutUserInput>
   }
 
-  export type ProviderPatientCreateOrConnectWithoutProviderInput = {
-    where: ProviderPatientWhereUniqueInput
-    create: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput>
+  export type AuditLogUpdateManyWithWhereWithoutUserInput = {
+    where: AuditLogScalarWhereInput
+    data: XOR<AuditLogUpdateManyMutationInput, AuditLogUncheckedUpdateManyWithoutUserInput>
   }
 
-  export type ProviderPatientCreateManyProviderInputEnvelope = {
-    data: ProviderPatientCreateManyProviderInput | ProviderPatientCreateManyProviderInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type ProviderPatientCreateWithoutPatientInput = {
-    id?: string
-    canViewBiomarkers?: boolean
-    canViewInsurance?: boolean
-    canViewDna?: boolean
-    canViewHealthNeeds?: boolean
-    canEditData?: boolean
-    relationshipType?: $Enums.ProviderRelationType
-    status?: $Enums.ProviderPatientStatus
-    consentGrantedAt?: Date | string | null
-    consentExpiresAt?: Date | string | null
-    notesEncrypted?: string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    provider: UserCreateNestedOneWithoutProviderRelationshipsInput
-  }
-
-  export type ProviderPatientUncheckedCreateWithoutPatientInput = {
-    id?: string
-    providerId: string
-    canViewBiomarkers?: boolean
-    canViewInsurance?: boolean
-    canViewDna?: boolean
-    canViewHealthNeeds?: boolean
-    canEditData?: boolean
-    relationshipType?: $Enums.ProviderRelationType
-    status?: $Enums.ProviderPatientStatus
-    consentGrantedAt?: Date | string | null
-    consentExpiresAt?: Date | string | null
-    notesEncrypted?: string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-  }
-
-  export type ProviderPatientCreateOrConnectWithoutPatientInput = {
-    where: ProviderPatientWhereUniqueInput
-    create: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput>
-  }
-
-  export type ProviderPatientCreateManyPatientInputEnvelope = {
-    data: ProviderPatientCreateManyPatientInput | ProviderPatientCreateManyPatientInput[]
-    skipDuplicates?: boolean
+  export type AuditLogScalarWhereInput = {
+    AND?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
+    OR?: AuditLogScalarWhereInput[]
+    NOT?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
+    id?: UuidFilter<"AuditLog"> | string
+    userId?: UuidNullableFilter<"AuditLog"> | string | null
+    actorType?: EnumActorTypeFilter<"AuditLog"> | $Enums.ActorType
+    ipAddress?: StringNullableFilter<"AuditLog"> | string | null
+    userAgent?: StringNullableFilter<"AuditLog"> | string | null
+    sessionId?: StringNullableFilter<"AuditLog"> | string | null
+    action?: EnumAuditActionFilter<"AuditLog"> | $Enums.AuditAction
+    resourceType?: StringFilter<"AuditLog"> | string
+    resourceId?: UuidNullableFilter<"AuditLog"> | string | null
+    previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
+    newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
+    metadata?: StringNullableFilter<"AuditLog"> | string | null
+    success?: BoolFilter<"AuditLog"> | boolean
+    errorMessage?: StringNullableFilter<"AuditLog"> | string | null
+    createdAt?: DateTimeFilter<"AuditLog"> | Date | string
   }
 
   export type BiomarkerUpsertWithWhereUniqueWithoutUserInput = {
@@ -31333,51 +31802,11 @@ export namespace Prisma {
     sourceFile?: StringNullableFilter<"Biomarker"> | string | null
     extractionConfidence?: DecimalNullableFilter<"Biomarker"> | Decimal | DecimalJsLike | number | string | null
     labName?: StringNullableFilter<"Biomarker"> | string | null
-    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
     isOutOfRange?: BoolFilter<"Biomarker"> | boolean
     isAcknowledged?: BoolFilter<"Biomarker"> | boolean
     createdAt?: DateTimeFilter<"Biomarker"> | Date | string
     updatedAt?: DateTimeFilter<"Biomarker"> | Date | string
-  }
-
-  export type InsurancePlanUpsertWithWhereUniqueWithoutUserInput = {
-    where: InsurancePlanWhereUniqueInput
-    update: XOR<InsurancePlanUpdateWithoutUserInput, InsurancePlanUncheckedUpdateWithoutUserInput>
-    create: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput>
-  }
-
-  export type InsurancePlanUpdateWithWhereUniqueWithoutUserInput = {
-    where: InsurancePlanWhereUniqueInput
-    data: XOR<InsurancePlanUpdateWithoutUserInput, InsurancePlanUncheckedUpdateWithoutUserInput>
-  }
-
-  export type InsurancePlanUpdateManyWithWhereWithoutUserInput = {
-    where: InsurancePlanScalarWhereInput
-    data: XOR<InsurancePlanUpdateManyMutationInput, InsurancePlanUncheckedUpdateManyWithoutUserInput>
-  }
-
-  export type InsurancePlanScalarWhereInput = {
-    AND?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
-    OR?: InsurancePlanScalarWhereInput[]
-    NOT?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
-    id?: UuidFilter<"InsurancePlan"> | string
-    userId?: UuidFilter<"InsurancePlan"> | string
-    planName?: StringFilter<"InsurancePlan"> | string
-    insurerName?: StringFilter<"InsurancePlan"> | string
-    planType?: EnumPlanTypeFilter<"InsurancePlan"> | $Enums.PlanType
-    memberIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
-    groupIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
-    effectiveDate?: DateTimeFilter<"InsurancePlan"> | Date | string
-    terminationDate?: DateTimeNullableFilter<"InsurancePlan"> | Date | string | null
-    premiumMonthly?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
-    deductibleFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
-    oopMaxIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
-    oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
-    isActive?: BoolFilter<"InsurancePlan"> | boolean
-    isPrimary?: BoolFilter<"InsurancePlan"> | boolean
-    createdAt?: DateTimeFilter<"InsurancePlan"> | Date | string
-    updatedAt?: DateTimeFilter<"InsurancePlan"> | Date | string
+    userFileId?: UuidNullableFilter<"Biomarker"> | string | null
   }
 
   export type DNADataUpsertWithWhereUniqueWithoutUserInput = {
@@ -31410,39 +31839,6 @@ export namespace Prisma {
     processingStatus?: EnumProcessingStatusFilter<"DNAData"> | $Enums.ProcessingStatus
     processedAt?: DateTimeNullableFilter<"DNAData"> | Date | string | null
     createdAt?: DateTimeFilter<"DNAData"> | Date | string
-  }
-
-  export type HealthNeedUpsertWithWhereUniqueWithoutUserInput = {
-    where: HealthNeedWhereUniqueInput
-    update: XOR<HealthNeedUpdateWithoutUserInput, HealthNeedUncheckedUpdateWithoutUserInput>
-    create: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput>
-  }
-
-  export type HealthNeedUpdateWithWhereUniqueWithoutUserInput = {
-    where: HealthNeedWhereUniqueInput
-    data: XOR<HealthNeedUpdateWithoutUserInput, HealthNeedUncheckedUpdateWithoutUserInput>
-  }
-
-  export type HealthNeedUpdateManyWithWhereWithoutUserInput = {
-    where: HealthNeedScalarWhereInput
-    data: XOR<HealthNeedUpdateManyMutationInput, HealthNeedUncheckedUpdateManyWithoutUserInput>
-  }
-
-  export type HealthNeedScalarWhereInput = {
-    AND?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
-    OR?: HealthNeedScalarWhereInput[]
-    NOT?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
-    id?: UuidFilter<"HealthNeed"> | string
-    userId?: UuidFilter<"HealthNeed"> | string
-    needType?: EnumHealthNeedTypeFilter<"HealthNeed"> | $Enums.HealthNeedType
-    name?: StringFilter<"HealthNeed"> | string
-    descriptionEncrypted?: StringFilter<"HealthNeed"> | string
-    urgency?: EnumUrgencyFilter<"HealthNeed"> | $Enums.Urgency
-    status?: EnumHealthNeedStatusFilter<"HealthNeed"> | $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: StringNullableListFilter<"HealthNeed">
-    createdAt?: DateTimeFilter<"HealthNeed"> | Date | string
-    updatedAt?: DateTimeFilter<"HealthNeed"> | Date | string
-    resolvedAt?: DateTimeNullableFilter<"HealthNeed"> | Date | string | null
   }
 
   export type HealthGoalUpsertWithWhereUniqueWithoutUserInput = {
@@ -31488,41 +31884,142 @@ export namespace Prisma {
     completedAt?: DateTimeNullableFilter<"HealthGoal"> | Date | string | null
   }
 
-  export type AuditLogUpsertWithWhereUniqueWithoutUserInput = {
-    where: AuditLogWhereUniqueInput
-    update: XOR<AuditLogUpdateWithoutUserInput, AuditLogUncheckedUpdateWithoutUserInput>
-    create: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput>
+  export type HealthNeedUpsertWithWhereUniqueWithoutUserInput = {
+    where: HealthNeedWhereUniqueInput
+    update: XOR<HealthNeedUpdateWithoutUserInput, HealthNeedUncheckedUpdateWithoutUserInput>
+    create: XOR<HealthNeedCreateWithoutUserInput, HealthNeedUncheckedCreateWithoutUserInput>
   }
 
-  export type AuditLogUpdateWithWhereUniqueWithoutUserInput = {
-    where: AuditLogWhereUniqueInput
-    data: XOR<AuditLogUpdateWithoutUserInput, AuditLogUncheckedUpdateWithoutUserInput>
+  export type HealthNeedUpdateWithWhereUniqueWithoutUserInput = {
+    where: HealthNeedWhereUniqueInput
+    data: XOR<HealthNeedUpdateWithoutUserInput, HealthNeedUncheckedUpdateWithoutUserInput>
   }
 
-  export type AuditLogUpdateManyWithWhereWithoutUserInput = {
-    where: AuditLogScalarWhereInput
-    data: XOR<AuditLogUpdateManyMutationInput, AuditLogUncheckedUpdateManyWithoutUserInput>
+  export type HealthNeedUpdateManyWithWhereWithoutUserInput = {
+    where: HealthNeedScalarWhereInput
+    data: XOR<HealthNeedUpdateManyMutationInput, HealthNeedUncheckedUpdateManyWithoutUserInput>
   }
 
-  export type AuditLogScalarWhereInput = {
-    AND?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
-    OR?: AuditLogScalarWhereInput[]
-    NOT?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
-    id?: UuidFilter<"AuditLog"> | string
-    userId?: UuidNullableFilter<"AuditLog"> | string | null
-    actorType?: EnumActorTypeFilter<"AuditLog"> | $Enums.ActorType
-    ipAddress?: StringNullableFilter<"AuditLog"> | string | null
-    userAgent?: StringNullableFilter<"AuditLog"> | string | null
-    sessionId?: StringNullableFilter<"AuditLog"> | string | null
-    action?: EnumAuditActionFilter<"AuditLog"> | $Enums.AuditAction
-    resourceType?: StringFilter<"AuditLog"> | string
-    resourceId?: UuidNullableFilter<"AuditLog"> | string | null
-    previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
-    newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
-    metadata?: StringNullableFilter<"AuditLog"> | string | null
-    success?: BoolFilter<"AuditLog"> | boolean
-    errorMessage?: StringNullableFilter<"AuditLog"> | string | null
-    createdAt?: DateTimeFilter<"AuditLog"> | Date | string
+  export type HealthNeedScalarWhereInput = {
+    AND?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
+    OR?: HealthNeedScalarWhereInput[]
+    NOT?: HealthNeedScalarWhereInput | HealthNeedScalarWhereInput[]
+    id?: UuidFilter<"HealthNeed"> | string
+    userId?: UuidFilter<"HealthNeed"> | string
+    needType?: EnumHealthNeedTypeFilter<"HealthNeed"> | $Enums.HealthNeedType
+    name?: StringFilter<"HealthNeed"> | string
+    descriptionEncrypted?: StringFilter<"HealthNeed"> | string
+    urgency?: EnumUrgencyFilter<"HealthNeed"> | $Enums.Urgency
+    status?: EnumHealthNeedStatusFilter<"HealthNeed"> | $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: StringNullableListFilter<"HealthNeed">
+    createdAt?: DateTimeFilter<"HealthNeed"> | Date | string
+    updatedAt?: DateTimeFilter<"HealthNeed"> | Date | string
+    resolvedAt?: DateTimeNullableFilter<"HealthNeed"> | Date | string | null
+  }
+
+  export type InsurancePlanUpsertWithWhereUniqueWithoutUserInput = {
+    where: InsurancePlanWhereUniqueInput
+    update: XOR<InsurancePlanUpdateWithoutUserInput, InsurancePlanUncheckedUpdateWithoutUserInput>
+    create: XOR<InsurancePlanCreateWithoutUserInput, InsurancePlanUncheckedCreateWithoutUserInput>
+  }
+
+  export type InsurancePlanUpdateWithWhereUniqueWithoutUserInput = {
+    where: InsurancePlanWhereUniqueInput
+    data: XOR<InsurancePlanUpdateWithoutUserInput, InsurancePlanUncheckedUpdateWithoutUserInput>
+  }
+
+  export type InsurancePlanUpdateManyWithWhereWithoutUserInput = {
+    where: InsurancePlanScalarWhereInput
+    data: XOR<InsurancePlanUpdateManyMutationInput, InsurancePlanUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type InsurancePlanScalarWhereInput = {
+    AND?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
+    OR?: InsurancePlanScalarWhereInput[]
+    NOT?: InsurancePlanScalarWhereInput | InsurancePlanScalarWhereInput[]
+    id?: UuidFilter<"InsurancePlan"> | string
+    userId?: UuidFilter<"InsurancePlan"> | string
+    planName?: StringFilter<"InsurancePlan"> | string
+    insurerName?: StringFilter<"InsurancePlan"> | string
+    planType?: EnumPlanTypeFilter<"InsurancePlan"> | $Enums.PlanType
+    planIdNumber?: StringNullableFilter<"InsurancePlan"> | string | null
+    memberIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
+    groupIdEncrypted?: StringNullableFilter<"InsurancePlan"> | string | null
+    effectiveDate?: DateTimeFilter<"InsurancePlan"> | Date | string
+    terminationDate?: DateTimeNullableFilter<"InsurancePlan"> | Date | string | null
+    premiumMonthly?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFilter<"InsurancePlan"> | boolean
+    sbcExtractionConfidence?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFilter<"InsurancePlan"> | boolean
+    isPrimary?: BoolFilter<"InsurancePlan"> | boolean
+    createdAt?: DateTimeFilter<"InsurancePlan"> | Date | string
+    updatedAt?: DateTimeFilter<"InsurancePlan"> | Date | string
+  }
+
+  export type ProviderPatientUpsertWithWhereUniqueWithoutPatientInput = {
+    where: ProviderPatientWhereUniqueInput
+    update: XOR<ProviderPatientUpdateWithoutPatientInput, ProviderPatientUncheckedUpdateWithoutPatientInput>
+    create: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput>
+  }
+
+  export type ProviderPatientUpdateWithWhereUniqueWithoutPatientInput = {
+    where: ProviderPatientWhereUniqueInput
+    data: XOR<ProviderPatientUpdateWithoutPatientInput, ProviderPatientUncheckedUpdateWithoutPatientInput>
+  }
+
+  export type ProviderPatientUpdateManyWithWhereWithoutPatientInput = {
+    where: ProviderPatientScalarWhereInput
+    data: XOR<ProviderPatientUpdateManyMutationInput, ProviderPatientUncheckedUpdateManyWithoutPatientInput>
+  }
+
+  export type ProviderPatientScalarWhereInput = {
+    AND?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
+    OR?: ProviderPatientScalarWhereInput[]
+    NOT?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
+    id?: UuidFilter<"ProviderPatient"> | string
+    providerId?: UuidFilter<"ProviderPatient"> | string
+    patientId?: UuidFilter<"ProviderPatient"> | string
+    canViewBiomarkers?: BoolFilter<"ProviderPatient"> | boolean
+    canViewInsurance?: BoolFilter<"ProviderPatient"> | boolean
+    canViewDna?: BoolFilter<"ProviderPatient"> | boolean
+    canViewHealthNeeds?: BoolFilter<"ProviderPatient"> | boolean
+    canEditData?: BoolFilter<"ProviderPatient"> | boolean
+    relationshipType?: EnumProviderRelationTypeFilter<"ProviderPatient"> | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFilter<"ProviderPatient"> | $Enums.ProviderPatientStatus
+    consentGrantedAt?: DateTimeNullableFilter<"ProviderPatient"> | Date | string | null
+    consentExpiresAt?: DateTimeNullableFilter<"ProviderPatient"> | Date | string | null
+    notesEncrypted?: StringNullableFilter<"ProviderPatient"> | string | null
+    createdAt?: DateTimeFilter<"ProviderPatient"> | Date | string
+    updatedAt?: DateTimeFilter<"ProviderPatient"> | Date | string
+  }
+
+  export type ProviderPatientUpsertWithWhereUniqueWithoutProviderInput = {
+    where: ProviderPatientWhereUniqueInput
+    update: XOR<ProviderPatientUpdateWithoutProviderInput, ProviderPatientUncheckedUpdateWithoutProviderInput>
+    create: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput>
+  }
+
+  export type ProviderPatientUpdateWithWhereUniqueWithoutProviderInput = {
+    where: ProviderPatientWhereUniqueInput
+    data: XOR<ProviderPatientUpdateWithoutProviderInput, ProviderPatientUncheckedUpdateWithoutProviderInput>
+  }
+
+  export type ProviderPatientUpdateManyWithWhereWithoutProviderInput = {
+    where: ProviderPatientScalarWhereInput
+    data: XOR<ProviderPatientUpdateManyMutationInput, ProviderPatientUncheckedUpdateManyWithoutProviderInput>
   }
 
   export type SessionUpsertWithWhereUniqueWithoutUserInput = {
@@ -31620,59 +32117,6 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"UserFile"> | Date | string
   }
 
-  export type ProviderPatientUpsertWithWhereUniqueWithoutProviderInput = {
-    where: ProviderPatientWhereUniqueInput
-    update: XOR<ProviderPatientUpdateWithoutProviderInput, ProviderPatientUncheckedUpdateWithoutProviderInput>
-    create: XOR<ProviderPatientCreateWithoutProviderInput, ProviderPatientUncheckedCreateWithoutProviderInput>
-  }
-
-  export type ProviderPatientUpdateWithWhereUniqueWithoutProviderInput = {
-    where: ProviderPatientWhereUniqueInput
-    data: XOR<ProviderPatientUpdateWithoutProviderInput, ProviderPatientUncheckedUpdateWithoutProviderInput>
-  }
-
-  export type ProviderPatientUpdateManyWithWhereWithoutProviderInput = {
-    where: ProviderPatientScalarWhereInput
-    data: XOR<ProviderPatientUpdateManyMutationInput, ProviderPatientUncheckedUpdateManyWithoutProviderInput>
-  }
-
-  export type ProviderPatientScalarWhereInput = {
-    AND?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
-    OR?: ProviderPatientScalarWhereInput[]
-    NOT?: ProviderPatientScalarWhereInput | ProviderPatientScalarWhereInput[]
-    id?: UuidFilter<"ProviderPatient"> | string
-    providerId?: UuidFilter<"ProviderPatient"> | string
-    patientId?: UuidFilter<"ProviderPatient"> | string
-    canViewBiomarkers?: BoolFilter<"ProviderPatient"> | boolean
-    canViewInsurance?: BoolFilter<"ProviderPatient"> | boolean
-    canViewDna?: BoolFilter<"ProviderPatient"> | boolean
-    canViewHealthNeeds?: BoolFilter<"ProviderPatient"> | boolean
-    canEditData?: BoolFilter<"ProviderPatient"> | boolean
-    relationshipType?: EnumProviderRelationTypeFilter<"ProviderPatient"> | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFilter<"ProviderPatient"> | $Enums.ProviderPatientStatus
-    consentGrantedAt?: DateTimeNullableFilter<"ProviderPatient"> | Date | string | null
-    consentExpiresAt?: DateTimeNullableFilter<"ProviderPatient"> | Date | string | null
-    notesEncrypted?: StringNullableFilter<"ProviderPatient"> | string | null
-    createdAt?: DateTimeFilter<"ProviderPatient"> | Date | string
-    updatedAt?: DateTimeFilter<"ProviderPatient"> | Date | string
-  }
-
-  export type ProviderPatientUpsertWithWhereUniqueWithoutPatientInput = {
-    where: ProviderPatientWhereUniqueInput
-    update: XOR<ProviderPatientUpdateWithoutPatientInput, ProviderPatientUncheckedUpdateWithoutPatientInput>
-    create: XOR<ProviderPatientCreateWithoutPatientInput, ProviderPatientUncheckedCreateWithoutPatientInput>
-  }
-
-  export type ProviderPatientUpdateWithWhereUniqueWithoutPatientInput = {
-    where: ProviderPatientWhereUniqueInput
-    data: XOR<ProviderPatientUpdateWithoutPatientInput, ProviderPatientUncheckedUpdateWithoutPatientInput>
-  }
-
-  export type ProviderPatientUpdateManyWithWhereWithoutPatientInput = {
-    where: ProviderPatientScalarWhereInput
-    data: XOR<ProviderPatientUpdateManyMutationInput, ProviderPatientUncheckedUpdateManyWithoutPatientInput>
-  }
-
   export type UserCreateWithoutSessionsInput = {
     id?: string
     email: string
@@ -31695,16 +32139,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -31729,16 +32173,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -31779,16 +32223,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -31813,16 +32257,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
   export type UserCreateWithoutEncryptionKeysInput = {
@@ -31847,16 +32291,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
   export type UserUncheckedCreateWithoutEncryptionKeysInput = {
@@ -31881,16 +32325,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
   export type UserCreateOrConnectWithoutEncryptionKeysInput = {
@@ -31931,16 +32375,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutEncryptionKeysInput = {
@@ -31965,89 +32409,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
-  }
-
-  export type UserCreateWithoutProviderRelationshipsInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    sessions?: SessionCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
-    files?: UserFileCreateNestedManyWithoutUserInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
-  }
-
-  export type UserUncheckedCreateWithoutProviderRelationshipsInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
-    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
-  }
-
-  export type UserCreateOrConnectWithoutProviderRelationshipsInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
   }
 
   export type UserCreateWithoutPatientRelationshipsInput = {
@@ -32072,16 +32443,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
   }
 
   export type UserUncheckedCreateWithoutPatientRelationshipsInput = {
@@ -32106,16 +32477,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
   }
 
   export type UserCreateOrConnectWithoutPatientRelationshipsInput = {
@@ -32123,83 +32494,77 @@ export namespace Prisma {
     create: XOR<UserCreateWithoutPatientRelationshipsInput, UserUncheckedCreateWithoutPatientRelationshipsInput>
   }
 
-  export type UserUpsertWithoutProviderRelationshipsInput = {
-    update: XOR<UserUpdateWithoutProviderRelationshipsInput, UserUncheckedUpdateWithoutProviderRelationshipsInput>
+  export type UserCreateWithoutProviderRelationshipsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutProviderRelationshipsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutProviderRelationshipsInput = {
+    where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
-    where?: UserWhereInput
-  }
-
-  export type UserUpdateToOneWithWhereWithoutProviderRelationshipsInput = {
-    where?: UserWhereInput
-    data: XOR<UserUpdateWithoutProviderRelationshipsInput, UserUncheckedUpdateWithoutProviderRelationshipsInput>
-  }
-
-  export type UserUpdateWithoutProviderRelationshipsInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
-    sessions?: SessionUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
-    files?: UserFileUpdateManyWithoutUserNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
-  }
-
-  export type UserUncheckedUpdateWithoutProviderRelationshipsInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
-    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
-    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUpsertWithoutPatientRelationshipsInput = {
@@ -32235,16 +32600,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
   }
 
   export type UserUncheckedUpdateWithoutPatientRelationshipsInput = {
@@ -32269,89 +32634,95 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
   }
 
-  export type UserCreateWithoutFilesInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    sessions?: SessionCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+  export type UserUpsertWithoutProviderRelationshipsInput = {
+    update: XOR<UserUpdateWithoutProviderRelationshipsInput, UserUncheckedUpdateWithoutProviderRelationshipsInput>
+    create: XOR<UserCreateWithoutProviderRelationshipsInput, UserUncheckedCreateWithoutProviderRelationshipsInput>
+    where?: UserWhereInput
   }
 
-  export type UserUncheckedCreateWithoutFilesInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+  export type UserUpdateToOneWithWhereWithoutProviderRelationshipsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutProviderRelationshipsInput, UserUncheckedUpdateWithoutProviderRelationshipsInput>
   }
 
-  export type UserCreateOrConnectWithoutFilesInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+  export type UserUpdateWithoutProviderRelationshipsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutProviderRelationshipsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerCreateWithoutUserFileInput = {
@@ -32373,8 +32744,8 @@ export namespace Prisma {
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
-    user: UserCreateNestedOneWithoutBiomarkersInput
     history?: BiomarkerHistoryCreateNestedManyWithoutBiomarkerInput
+    user: UserCreateNestedOneWithoutBiomarkersInput
   }
 
   export type BiomarkerUncheckedCreateWithoutUserFileInput = {
@@ -32410,6 +32781,95 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type UserCreateWithoutFilesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutFilesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutFilesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
+  }
+
+  export type BiomarkerUpsertWithWhereUniqueWithoutUserFileInput = {
+    where: BiomarkerWhereUniqueInput
+    update: XOR<BiomarkerUpdateWithoutUserFileInput, BiomarkerUncheckedUpdateWithoutUserFileInput>
+    create: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput>
+  }
+
+  export type BiomarkerUpdateWithWhereUniqueWithoutUserFileInput = {
+    where: BiomarkerWhereUniqueInput
+    data: XOR<BiomarkerUpdateWithoutUserFileInput, BiomarkerUncheckedUpdateWithoutUserFileInput>
+  }
+
+  export type BiomarkerUpdateManyWithWhereWithoutUserFileInput = {
+    where: BiomarkerScalarWhereInput
+    data: XOR<BiomarkerUpdateManyMutationInput, BiomarkerUncheckedUpdateManyWithoutUserFileInput>
+  }
+
   export type UserUpsertWithoutFilesInput = {
     update: XOR<UserUpdateWithoutFilesInput, UserUncheckedUpdateWithoutFilesInput>
     create: XOR<UserCreateWithoutFilesInput, UserUncheckedCreateWithoutFilesInput>
@@ -32443,16 +32903,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutFilesInput = {
@@ -32477,105 +32937,40 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
-  export type BiomarkerUpsertWithWhereUniqueWithoutUserFileInput = {
-    where: BiomarkerWhereUniqueInput
-    update: XOR<BiomarkerUpdateWithoutUserFileInput, BiomarkerUncheckedUpdateWithoutUserFileInput>
-    create: XOR<BiomarkerCreateWithoutUserFileInput, BiomarkerUncheckedCreateWithoutUserFileInput>
-  }
-
-  export type BiomarkerUpdateWithWhereUniqueWithoutUserFileInput = {
-    where: BiomarkerWhereUniqueInput
-    data: XOR<BiomarkerUpdateWithoutUserFileInput, BiomarkerUncheckedUpdateWithoutUserFileInput>
-  }
-
-  export type BiomarkerUpdateManyWithWhereWithoutUserFileInput = {
-    where: BiomarkerScalarWhereInput
-    data: XOR<BiomarkerUpdateManyMutationInput, BiomarkerUncheckedUpdateManyWithoutUserFileInput>
-  }
-
-  export type UserCreateWithoutBiomarkersInput = {
+  export type BiomarkerHistoryCreateWithoutBiomarkerInput = {
     id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
+    valueEncrypted: string
+    measurementDate: Date | string
     createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    sessions?: SessionCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
-    files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
-  export type UserUncheckedCreateWithoutBiomarkersInput = {
+  export type BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput = {
     id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
+    valueEncrypted: string
+    measurementDate: Date | string
     createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
-    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
-  export type UserCreateOrConnectWithoutBiomarkersInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
+  export type BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput = {
+    where: BiomarkerHistoryWhereUniqueInput
+    create: XOR<BiomarkerHistoryCreateWithoutBiomarkerInput, BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput>
+  }
+
+  export type BiomarkerHistoryCreateManyBiomarkerInputEnvelope = {
+    data: BiomarkerHistoryCreateManyBiomarkerInput | BiomarkerHistoryCreateManyBiomarkerInput[]
+    skipDuplicates?: boolean
   }
 
   export type UserFileCreateWithoutBiomarkersInput = {
@@ -32615,107 +33010,104 @@ export namespace Prisma {
     create: XOR<UserFileCreateWithoutBiomarkersInput, UserFileUncheckedCreateWithoutBiomarkersInput>
   }
 
-  export type BiomarkerHistoryCreateWithoutBiomarkerInput = {
+  export type UserCreateWithoutBiomarkersInput = {
     id?: string
-    valueEncrypted: string
-    measurementDate: Date | string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
   }
 
-  export type BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput = {
+  export type UserUncheckedCreateWithoutBiomarkersInput = {
     id?: string
-    valueEncrypted: string
-    measurementDate: Date | string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
   }
 
-  export type BiomarkerHistoryCreateOrConnectWithoutBiomarkerInput = {
+  export type UserCreateOrConnectWithoutBiomarkersInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
+  }
+
+  export type BiomarkerHistoryUpsertWithWhereUniqueWithoutBiomarkerInput = {
     where: BiomarkerHistoryWhereUniqueInput
+    update: XOR<BiomarkerHistoryUpdateWithoutBiomarkerInput, BiomarkerHistoryUncheckedUpdateWithoutBiomarkerInput>
     create: XOR<BiomarkerHistoryCreateWithoutBiomarkerInput, BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput>
   }
 
-  export type BiomarkerHistoryCreateManyBiomarkerInputEnvelope = {
-    data: BiomarkerHistoryCreateManyBiomarkerInput | BiomarkerHistoryCreateManyBiomarkerInput[]
-    skipDuplicates?: boolean
+  export type BiomarkerHistoryUpdateWithWhereUniqueWithoutBiomarkerInput = {
+    where: BiomarkerHistoryWhereUniqueInput
+    data: XOR<BiomarkerHistoryUpdateWithoutBiomarkerInput, BiomarkerHistoryUncheckedUpdateWithoutBiomarkerInput>
   }
 
-  export type UserUpsertWithoutBiomarkersInput = {
-    update: XOR<UserUpdateWithoutBiomarkersInput, UserUncheckedUpdateWithoutBiomarkersInput>
-    create: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
-    where?: UserWhereInput
+  export type BiomarkerHistoryUpdateManyWithWhereWithoutBiomarkerInput = {
+    where: BiomarkerHistoryScalarWhereInput
+    data: XOR<BiomarkerHistoryUpdateManyMutationInput, BiomarkerHistoryUncheckedUpdateManyWithoutBiomarkerInput>
   }
 
-  export type UserUpdateToOneWithWhereWithoutBiomarkersInput = {
-    where?: UserWhereInput
-    data: XOR<UserUpdateWithoutBiomarkersInput, UserUncheckedUpdateWithoutBiomarkersInput>
-  }
-
-  export type UserUpdateWithoutBiomarkersInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
-    sessions?: SessionUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
-    files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
-  }
-
-  export type UserUncheckedUpdateWithoutBiomarkersInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
-    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
-    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+  export type BiomarkerHistoryScalarWhereInput = {
+    AND?: BiomarkerHistoryScalarWhereInput | BiomarkerHistoryScalarWhereInput[]
+    OR?: BiomarkerHistoryScalarWhereInput[]
+    NOT?: BiomarkerHistoryScalarWhereInput | BiomarkerHistoryScalarWhereInput[]
+    id?: UuidFilter<"BiomarkerHistory"> | string
+    biomarkerId?: UuidFilter<"BiomarkerHistory"> | string
+    valueEncrypted?: StringFilter<"BiomarkerHistory"> | string
+    measurementDate?: DateTimeFilter<"BiomarkerHistory"> | Date | string
+    createdAt?: DateTimeFilter<"BiomarkerHistory"> | Date | string
   }
 
   export type UserFileUpsertWithoutBiomarkersInput = {
@@ -32761,31 +33153,83 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type BiomarkerHistoryUpsertWithWhereUniqueWithoutBiomarkerInput = {
-    where: BiomarkerHistoryWhereUniqueInput
-    update: XOR<BiomarkerHistoryUpdateWithoutBiomarkerInput, BiomarkerHistoryUncheckedUpdateWithoutBiomarkerInput>
-    create: XOR<BiomarkerHistoryCreateWithoutBiomarkerInput, BiomarkerHistoryUncheckedCreateWithoutBiomarkerInput>
+  export type UserUpsertWithoutBiomarkersInput = {
+    update: XOR<UserUpdateWithoutBiomarkersInput, UserUncheckedUpdateWithoutBiomarkersInput>
+    create: XOR<UserCreateWithoutBiomarkersInput, UserUncheckedCreateWithoutBiomarkersInput>
+    where?: UserWhereInput
   }
 
-  export type BiomarkerHistoryUpdateWithWhereUniqueWithoutBiomarkerInput = {
-    where: BiomarkerHistoryWhereUniqueInput
-    data: XOR<BiomarkerHistoryUpdateWithoutBiomarkerInput, BiomarkerHistoryUncheckedUpdateWithoutBiomarkerInput>
+  export type UserUpdateToOneWithWhereWithoutBiomarkersInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutBiomarkersInput, UserUncheckedUpdateWithoutBiomarkersInput>
   }
 
-  export type BiomarkerHistoryUpdateManyWithWhereWithoutBiomarkerInput = {
-    where: BiomarkerHistoryScalarWhereInput
-    data: XOR<BiomarkerHistoryUpdateManyMutationInput, BiomarkerHistoryUncheckedUpdateManyWithoutBiomarkerInput>
+  export type UserUpdateWithoutBiomarkersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
   }
 
-  export type BiomarkerHistoryScalarWhereInput = {
-    AND?: BiomarkerHistoryScalarWhereInput | BiomarkerHistoryScalarWhereInput[]
-    OR?: BiomarkerHistoryScalarWhereInput[]
-    NOT?: BiomarkerHistoryScalarWhereInput | BiomarkerHistoryScalarWhereInput[]
-    id?: UuidFilter<"BiomarkerHistory"> | string
-    biomarkerId?: UuidFilter<"BiomarkerHistory"> | string
-    valueEncrypted?: StringFilter<"BiomarkerHistory"> | string
-    measurementDate?: DateTimeFilter<"BiomarkerHistory"> | Date | string
-    createdAt?: DateTimeFilter<"BiomarkerHistory"> | Date | string
+  export type UserUncheckedUpdateWithoutBiomarkersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerCreateWithoutHistoryInput = {
@@ -32807,8 +33251,8 @@ export namespace Prisma {
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
-    user: UserCreateNestedOneWithoutBiomarkersInput
     userFile?: UserFileCreateNestedOneWithoutBiomarkersInput
+    user: UserCreateNestedOneWithoutBiomarkersInput
   }
 
   export type BiomarkerUncheckedCreateWithoutHistoryInput = {
@@ -32827,11 +33271,11 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
-    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    userFileId?: string | null
   }
 
   export type BiomarkerCreateOrConnectWithoutHistoryInput = {
@@ -32869,8 +33313,8 @@ export namespace Prisma {
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
     userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
+    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
   }
 
   export type BiomarkerUncheckedUpdateWithoutHistoryInput = {
@@ -32889,84 +33333,11 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
-    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type UserCreateWithoutInsurancePlansInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    sessions?: SessionCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
-    files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
-  }
-
-  export type UserUncheckedCreateWithoutInsurancePlansInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
-    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
-  }
-
-  export type UserCreateOrConnectWithoutInsurancePlansInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type InsuranceBenefitCreateWithoutPlanInput = {
@@ -33013,83 +33384,77 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type UserUpsertWithoutInsurancePlansInput = {
-    update: XOR<UserUpdateWithoutInsurancePlansInput, UserUncheckedUpdateWithoutInsurancePlansInput>
+  export type UserCreateWithoutInsurancePlansInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutInsurancePlansInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutInsurancePlansInput = {
+    where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
-    where?: UserWhereInput
-  }
-
-  export type UserUpdateToOneWithWhereWithoutInsurancePlansInput = {
-    where?: UserWhereInput
-    data: XOR<UserUpdateWithoutInsurancePlansInput, UserUncheckedUpdateWithoutInsurancePlansInput>
-  }
-
-  export type UserUpdateWithoutInsurancePlansInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
-    sessions?: SessionUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
-    files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
-  }
-
-  export type UserUncheckedUpdateWithoutInsurancePlansInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
-    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
-    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
   export type InsuranceBenefitUpsertWithWhereUniqueWithoutPlanInput = {
@@ -33129,11 +33494,91 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"InsuranceBenefit"> | Date | string
   }
 
+  export type UserUpsertWithoutInsurancePlansInput = {
+    update: XOR<UserUpdateWithoutInsurancePlansInput, UserUncheckedUpdateWithoutInsurancePlansInput>
+    create: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutInsurancePlansInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutInsurancePlansInput, UserUncheckedUpdateWithoutInsurancePlansInput>
+  }
+
+  export type UserUpdateWithoutInsurancePlansInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutInsurancePlansInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+  }
+
   export type InsurancePlanCreateWithoutBenefitsInput = {
     id?: string
     planName: string
     insurerName: string
     planType: $Enums.PlanType
+    planIdNumber?: string | null
     memberIdEncrypted?: string | null
     groupIdEncrypted?: string | null
     effectiveDate: Date | string
@@ -33141,8 +33586,19 @@ export namespace Prisma {
     premiumMonthly?: Decimal | DecimalJsLike | number | string | null
     deductibleIndividual: Decimal | DecimalJsLike | number | string
     deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
     oopMaxIndividual: Decimal | DecimalJsLike | number | string
     oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: Date | string
@@ -33156,6 +33612,7 @@ export namespace Prisma {
     planName: string
     insurerName: string
     planType: $Enums.PlanType
+    planIdNumber?: string | null
     memberIdEncrypted?: string | null
     groupIdEncrypted?: string | null
     effectiveDate: Date | string
@@ -33163,8 +33620,19 @@ export namespace Prisma {
     premiumMonthly?: Decimal | DecimalJsLike | number | string | null
     deductibleIndividual: Decimal | DecimalJsLike | number | string
     deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
     oopMaxIndividual: Decimal | DecimalJsLike | number | string
     oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
     isActive?: boolean
     isPrimary?: boolean
     createdAt?: Date | string
@@ -33192,6 +33660,7 @@ export namespace Prisma {
     planName?: StringFieldUpdateOperationsInput | string
     insurerName?: StringFieldUpdateOperationsInput | string
     planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
     memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33199,8 +33668,19 @@ export namespace Prisma {
     premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33214,6 +33694,7 @@ export namespace Prisma {
     planName?: StringFieldUpdateOperationsInput | string
     insurerName?: StringFieldUpdateOperationsInput | string
     planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
     memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33221,8 +33702,19 @@ export namespace Prisma {
     premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33251,16 +33743,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
   export type UserUncheckedCreateWithoutDnaDataInput = {
@@ -33285,16 +33777,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
   export type UserCreateOrConnectWithoutDnaDataInput = {
@@ -33399,16 +33891,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDnaDataInput = {
@@ -33433,16 +33925,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
   }
 
   export type DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput = {
@@ -33673,16 +34165,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
     dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
   export type UserUncheckedCreateWithoutHealthNeedsInput = {
@@ -33707,16 +34199,16 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
     dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
   export type UserCreateOrConnectWithoutHealthNeedsInput = {
@@ -33757,16 +34249,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
     dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutHealthNeedsInput = {
@@ -33791,89 +34283,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
     dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
-  }
-
-  export type UserCreateWithoutHealthGoalsInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    sessions?: SessionCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
-    files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
-  }
-
-  export type UserUncheckedCreateWithoutHealthGoalsInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
-    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
-  }
-
-  export type UserCreateOrConnectWithoutHealthGoalsInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutHealthGoalsInput, UserUncheckedCreateWithoutHealthGoalsInput>
   }
 
   export type GoalProgressHistoryCreateWithoutGoalInput = {
@@ -33900,6 +34319,107 @@ export namespace Prisma {
   export type GoalProgressHistoryCreateManyGoalInputEnvelope = {
     data: GoalProgressHistoryCreateManyGoalInput | GoalProgressHistoryCreateManyGoalInput[]
     skipDuplicates?: boolean
+  }
+
+  export type UserCreateWithoutHealthGoalsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutHealthGoalsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutHealthGoalsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutHealthGoalsInput, UserUncheckedCreateWithoutHealthGoalsInput>
+  }
+
+  export type GoalProgressHistoryUpsertWithWhereUniqueWithoutGoalInput = {
+    where: GoalProgressHistoryWhereUniqueInput
+    update: XOR<GoalProgressHistoryUpdateWithoutGoalInput, GoalProgressHistoryUncheckedUpdateWithoutGoalInput>
+    create: XOR<GoalProgressHistoryCreateWithoutGoalInput, GoalProgressHistoryUncheckedCreateWithoutGoalInput>
+  }
+
+  export type GoalProgressHistoryUpdateWithWhereUniqueWithoutGoalInput = {
+    where: GoalProgressHistoryWhereUniqueInput
+    data: XOR<GoalProgressHistoryUpdateWithoutGoalInput, GoalProgressHistoryUncheckedUpdateWithoutGoalInput>
+  }
+
+  export type GoalProgressHistoryUpdateManyWithWhereWithoutGoalInput = {
+    where: GoalProgressHistoryScalarWhereInput
+    data: XOR<GoalProgressHistoryUpdateManyMutationInput, GoalProgressHistoryUncheckedUpdateManyWithoutGoalInput>
+  }
+
+  export type GoalProgressHistoryScalarWhereInput = {
+    AND?: GoalProgressHistoryScalarWhereInput | GoalProgressHistoryScalarWhereInput[]
+    OR?: GoalProgressHistoryScalarWhereInput[]
+    NOT?: GoalProgressHistoryScalarWhereInput | GoalProgressHistoryScalarWhereInput[]
+    id?: UuidFilter<"GoalProgressHistory"> | string
+    goalId?: UuidFilter<"GoalProgressHistory"> | string
+    value?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
+    progress?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
+    noteEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
+    recordedAt?: DateTimeFilter<"GoalProgressHistory"> | Date | string
   }
 
   export type UserUpsertWithoutHealthGoalsInput = {
@@ -33935,16 +34455,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
     dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutHealthGoalsInput = {
@@ -33969,44 +34489,16 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
     dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
-  }
-
-  export type GoalProgressHistoryUpsertWithWhereUniqueWithoutGoalInput = {
-    where: GoalProgressHistoryWhereUniqueInput
-    update: XOR<GoalProgressHistoryUpdateWithoutGoalInput, GoalProgressHistoryUncheckedUpdateWithoutGoalInput>
-    create: XOR<GoalProgressHistoryCreateWithoutGoalInput, GoalProgressHistoryUncheckedCreateWithoutGoalInput>
-  }
-
-  export type GoalProgressHistoryUpdateWithWhereUniqueWithoutGoalInput = {
-    where: GoalProgressHistoryWhereUniqueInput
-    data: XOR<GoalProgressHistoryUpdateWithoutGoalInput, GoalProgressHistoryUncheckedUpdateWithoutGoalInput>
-  }
-
-  export type GoalProgressHistoryUpdateManyWithWhereWithoutGoalInput = {
-    where: GoalProgressHistoryScalarWhereInput
-    data: XOR<GoalProgressHistoryUpdateManyMutationInput, GoalProgressHistoryUncheckedUpdateManyWithoutGoalInput>
-  }
-
-  export type GoalProgressHistoryScalarWhereInput = {
-    AND?: GoalProgressHistoryScalarWhereInput | GoalProgressHistoryScalarWhereInput[]
-    OR?: GoalProgressHistoryScalarWhereInput[]
-    NOT?: GoalProgressHistoryScalarWhereInput | GoalProgressHistoryScalarWhereInput[]
-    id?: UuidFilter<"GoalProgressHistory"> | string
-    goalId?: UuidFilter<"GoalProgressHistory"> | string
-    value?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
-    progress?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
-    noteEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
-    recordedAt?: DateTimeFilter<"GoalProgressHistory"> | Date | string
   }
 
   export type HealthGoalCreateWithoutProgressHistoryInput = {
@@ -34144,15 +34636,15 @@ export namespace Prisma {
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
     dnaData?: DNADataCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
   }
 
   export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -34178,15 +34670,15 @@ export namespace Prisma {
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
     dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
   }
 
   export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -34228,15 +34720,15 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
     dnaData?: DNADataUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -34262,15 +34754,32 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
     dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+  }
+
+  export type AuditLogCreateManyUserInput = {
+    id?: string
+    actorType: $Enums.ActorType
+    ipAddress?: string | null
+    userAgent?: string | null
+    sessionId?: string | null
+    action: $Enums.AuditAction
+    resourceType: string
+    resourceId?: string | null
+    previousValueEncrypted?: string | null
+    newValueEncrypted?: string | null
+    metadata?: string | null
+    success?: boolean
+    errorMessage?: string | null
+    createdAt?: Date | string
   }
 
   export type BiomarkerCreateManyUserInput = {
@@ -34288,31 +34797,11 @@ export namespace Prisma {
     sourceFile?: string | null
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     labName?: string | null
-    userFileId?: string | null
     isOutOfRange?: boolean
     isAcknowledged?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
-  }
-
-  export type InsurancePlanCreateManyUserInput = {
-    id?: string
-    planName: string
-    insurerName: string
-    planType: $Enums.PlanType
-    memberIdEncrypted?: string | null
-    groupIdEncrypted?: string | null
-    effectiveDate: Date | string
-    terminationDate?: Date | string | null
-    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual: Decimal | DecimalJsLike | number | string
-    deductibleFamily: Decimal | DecimalJsLike | number | string
-    oopMaxIndividual: Decimal | DecimalJsLike | number | string
-    oopMaxFamily: Decimal | DecimalJsLike | number | string
-    isActive?: boolean
-    isPrimary?: boolean
-    createdAt?: Date | string
-    updatedAt?: Date | string
+    userFileId?: string | null
   }
 
   export type DNADataCreateManyUserInput = {
@@ -34325,19 +34814,6 @@ export namespace Prisma {
     processingStatus?: $Enums.ProcessingStatus
     processedAt?: Date | string | null
     createdAt?: Date | string
-  }
-
-  export type HealthNeedCreateManyUserInput = {
-    id?: string
-    needType: $Enums.HealthNeedType
-    name: string
-    descriptionEncrypted: string
-    urgency: $Enums.Urgency
-    status?: $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: HealthNeedCreaterelatedBiomarkerIdsInput | string[]
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    resolvedAt?: Date | string | null
   }
 
   export type HealthGoalCreateManyUserInput = {
@@ -34363,21 +34839,83 @@ export namespace Prisma {
     completedAt?: Date | string | null
   }
 
-  export type AuditLogCreateManyUserInput = {
+  export type HealthNeedCreateManyUserInput = {
     id?: string
-    actorType: $Enums.ActorType
-    ipAddress?: string | null
-    userAgent?: string | null
-    sessionId?: string | null
-    action: $Enums.AuditAction
-    resourceType: string
-    resourceId?: string | null
-    previousValueEncrypted?: string | null
-    newValueEncrypted?: string | null
-    metadata?: string | null
-    success?: boolean
-    errorMessage?: string | null
+    needType: $Enums.HealthNeedType
+    name: string
+    descriptionEncrypted: string
+    urgency: $Enums.Urgency
+    status?: $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: HealthNeedCreaterelatedBiomarkerIdsInput | string[]
     createdAt?: Date | string
+    updatedAt?: Date | string
+    resolvedAt?: Date | string | null
+  }
+
+  export type InsurancePlanCreateManyUserInput = {
+    id?: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ProviderPatientCreateManyPatientInput = {
+    id?: string
+    providerId: string
+    canViewBiomarkers?: boolean
+    canViewInsurance?: boolean
+    canViewDna?: boolean
+    canViewHealthNeeds?: boolean
+    canEditData?: boolean
+    relationshipType?: $Enums.ProviderRelationType
+    status?: $Enums.ProviderPatientStatus
+    consentGrantedAt?: Date | string | null
+    consentExpiresAt?: Date | string | null
+    notesEncrypted?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ProviderPatientCreateManyProviderInput = {
+    id?: string
+    patientId: string
+    canViewBiomarkers?: boolean
+    canViewInsurance?: boolean
+    canViewDna?: boolean
+    canViewHealthNeeds?: boolean
+    canEditData?: boolean
+    relationshipType?: $Enums.ProviderRelationType
+    status?: $Enums.ProviderPatientStatus
+    consentGrantedAt?: Date | string | null
+    consentExpiresAt?: Date | string | null
+    notesEncrypted?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type SessionCreateManyUserInput = {
@@ -34415,38 +34953,55 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
-  export type ProviderPatientCreateManyProviderInput = {
-    id?: string
-    patientId: string
-    canViewBiomarkers?: boolean
-    canViewInsurance?: boolean
-    canViewDna?: boolean
-    canViewHealthNeeds?: boolean
-    canEditData?: boolean
-    relationshipType?: $Enums.ProviderRelationType
-    status?: $Enums.ProviderPatientStatus
-    consentGrantedAt?: Date | string | null
-    consentExpiresAt?: Date | string | null
-    notesEncrypted?: string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
+  export type AuditLogUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
+    ipAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    userAgent?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    action?: EnumAuditActionFieldUpdateOperationsInput | $Enums.AuditAction
+    resourceType?: StringFieldUpdateOperationsInput | string
+    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    success?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type ProviderPatientCreateManyPatientInput = {
-    id?: string
-    providerId: string
-    canViewBiomarkers?: boolean
-    canViewInsurance?: boolean
-    canViewDna?: boolean
-    canViewHealthNeeds?: boolean
-    canEditData?: boolean
-    relationshipType?: $Enums.ProviderRelationType
-    status?: $Enums.ProviderPatientStatus
-    consentGrantedAt?: Date | string | null
-    consentExpiresAt?: Date | string | null
-    notesEncrypted?: string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
+  export type AuditLogUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
+    ipAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    userAgent?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    action?: EnumAuditActionFieldUpdateOperationsInput | $Enums.AuditAction
+    resourceType?: StringFieldUpdateOperationsInput | string
+    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    success?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AuditLogUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
+    ipAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    userAgent?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    action?: EnumAuditActionFieldUpdateOperationsInput | $Enums.AuditAction
+    resourceType?: StringFieldUpdateOperationsInput | string
+    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    success?: BoolFieldUpdateOperationsInput | boolean
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type BiomarkerUpdateWithoutUserInput = {
@@ -34468,8 +35023,8 @@ export namespace Prisma {
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
     history?: BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput
+    userFile?: UserFileUpdateOneWithoutBiomarkersNestedInput
   }
 
   export type BiomarkerUncheckedUpdateWithoutUserInput = {
@@ -34487,11 +35042,11 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
-    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     history?: BiomarkerHistoryUncheckedUpdateManyWithoutBiomarkerNestedInput
   }
 
@@ -34510,73 +35065,11 @@ export namespace Prisma {
     sourceFile?: NullableStringFieldUpdateOperationsInput | string | null
     extractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     labName?: NullableStringFieldUpdateOperationsInput | string | null
-    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
     isOutOfRange?: BoolFieldUpdateOperationsInput | boolean
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type InsurancePlanUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    planName?: StringFieldUpdateOperationsInput | string
-    insurerName?: StringFieldUpdateOperationsInput | string
-    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
-    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    isPrimary?: BoolFieldUpdateOperationsInput | boolean
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
-  }
-
-  export type InsurancePlanUncheckedUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    planName?: StringFieldUpdateOperationsInput | string
-    insurerName?: StringFieldUpdateOperationsInput | string
-    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
-    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    isPrimary?: BoolFieldUpdateOperationsInput | boolean
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
-  }
-
-  export type InsurancePlanUncheckedUpdateManyWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    planName?: StringFieldUpdateOperationsInput | string
-    insurerName?: StringFieldUpdateOperationsInput | string
-    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
-    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    isPrimary?: BoolFieldUpdateOperationsInput | boolean
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    userFileId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type DNADataUpdateWithoutUserInput = {
@@ -34617,45 +35110,6 @@ export namespace Prisma {
     processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
     processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type HealthNeedUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    needType?: EnumHealthNeedTypeFieldUpdateOperationsInput | $Enums.HealthNeedType
-    name?: StringFieldUpdateOperationsInput | string
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    urgency?: EnumUrgencyFieldUpdateOperationsInput | $Enums.Urgency
-    status?: EnumHealthNeedStatusFieldUpdateOperationsInput | $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: HealthNeedUpdaterelatedBiomarkerIdsInput | string[]
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  }
-
-  export type HealthNeedUncheckedUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    needType?: EnumHealthNeedTypeFieldUpdateOperationsInput | $Enums.HealthNeedType
-    name?: StringFieldUpdateOperationsInput | string
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    urgency?: EnumUrgencyFieldUpdateOperationsInput | $Enums.Urgency
-    status?: EnumHealthNeedStatusFieldUpdateOperationsInput | $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: HealthNeedUpdaterelatedBiomarkerIdsInput | string[]
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  }
-
-  export type HealthNeedUncheckedUpdateManyWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    needType?: EnumHealthNeedTypeFieldUpdateOperationsInput | $Enums.HealthNeedType
-    name?: StringFieldUpdateOperationsInput | string
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    urgency?: EnumUrgencyFieldUpdateOperationsInput | $Enums.Urgency
-    status?: EnumHealthNeedStatusFieldUpdateOperationsInput | $Enums.HealthNeedStatus
-    relatedBiomarkerIds?: HealthNeedUpdaterelatedBiomarkerIdsInput | string[]
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type HealthGoalUpdateWithoutUserInput = {
@@ -34729,55 +35183,243 @@ export namespace Prisma {
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
-  export type AuditLogUpdateWithoutUserInput = {
+  export type HealthNeedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
-    ipAddress?: NullableStringFieldUpdateOperationsInput | string | null
-    userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    sessionId?: NullableStringFieldUpdateOperationsInput | string | null
-    action?: EnumAuditActionFieldUpdateOperationsInput | $Enums.AuditAction
-    resourceType?: StringFieldUpdateOperationsInput | string
-    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
-    previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
-    success?: BoolFieldUpdateOperationsInput | boolean
-    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    needType?: EnumHealthNeedTypeFieldUpdateOperationsInput | $Enums.HealthNeedType
+    name?: StringFieldUpdateOperationsInput | string
+    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
+    urgency?: EnumUrgencyFieldUpdateOperationsInput | $Enums.Urgency
+    status?: EnumHealthNeedStatusFieldUpdateOperationsInput | $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: HealthNeedUpdaterelatedBiomarkerIdsInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
-  export type AuditLogUncheckedUpdateWithoutUserInput = {
+  export type HealthNeedUncheckedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
-    ipAddress?: NullableStringFieldUpdateOperationsInput | string | null
-    userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    sessionId?: NullableStringFieldUpdateOperationsInput | string | null
-    action?: EnumAuditActionFieldUpdateOperationsInput | $Enums.AuditAction
-    resourceType?: StringFieldUpdateOperationsInput | string
-    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
-    previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
-    success?: BoolFieldUpdateOperationsInput | boolean
-    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    needType?: EnumHealthNeedTypeFieldUpdateOperationsInput | $Enums.HealthNeedType
+    name?: StringFieldUpdateOperationsInput | string
+    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
+    urgency?: EnumUrgencyFieldUpdateOperationsInput | $Enums.Urgency
+    status?: EnumHealthNeedStatusFieldUpdateOperationsInput | $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: HealthNeedUpdaterelatedBiomarkerIdsInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
-  export type AuditLogUncheckedUpdateManyWithoutUserInput = {
+  export type HealthNeedUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
-    ipAddress?: NullableStringFieldUpdateOperationsInput | string | null
-    userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    sessionId?: NullableStringFieldUpdateOperationsInput | string | null
-    action?: EnumAuditActionFieldUpdateOperationsInput | $Enums.AuditAction
-    resourceType?: StringFieldUpdateOperationsInput | string
-    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
-    previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
-    success?: BoolFieldUpdateOperationsInput | boolean
-    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    needType?: EnumHealthNeedTypeFieldUpdateOperationsInput | $Enums.HealthNeedType
+    name?: StringFieldUpdateOperationsInput | string
+    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
+    urgency?: EnumUrgencyFieldUpdateOperationsInput | $Enums.Urgency
+    status?: EnumHealthNeedStatusFieldUpdateOperationsInput | $Enums.HealthNeedStatus
+    relatedBiomarkerIds?: HealthNeedUpdaterelatedBiomarkerIdsInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type InsurancePlanUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
+  }
+
+  export type InsurancePlanUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
+  }
+
+  export type InsurancePlanUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProviderPatientUpdateWithoutPatientInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
+    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
+    canViewDna?: BoolFieldUpdateOperationsInput | boolean
+    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
+    canEditData?: BoolFieldUpdateOperationsInput | boolean
+    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
+    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    provider?: UserUpdateOneRequiredWithoutProviderRelationshipsNestedInput
+  }
+
+  export type ProviderPatientUncheckedUpdateWithoutPatientInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    providerId?: StringFieldUpdateOperationsInput | string
+    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
+    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
+    canViewDna?: BoolFieldUpdateOperationsInput | boolean
+    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
+    canEditData?: BoolFieldUpdateOperationsInput | boolean
+    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
+    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProviderPatientUncheckedUpdateManyWithoutPatientInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    providerId?: StringFieldUpdateOperationsInput | string
+    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
+    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
+    canViewDna?: BoolFieldUpdateOperationsInput | boolean
+    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
+    canEditData?: BoolFieldUpdateOperationsInput | boolean
+    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
+    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProviderPatientUpdateWithoutProviderInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
+    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
+    canViewDna?: BoolFieldUpdateOperationsInput | boolean
+    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
+    canEditData?: BoolFieldUpdateOperationsInput | boolean
+    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
+    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    patient?: UserUpdateOneRequiredWithoutPatientRelationshipsNestedInput
+  }
+
+  export type ProviderPatientUncheckedUpdateWithoutProviderInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    patientId?: StringFieldUpdateOperationsInput | string
+    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
+    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
+    canViewDna?: BoolFieldUpdateOperationsInput | boolean
+    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
+    canEditData?: BoolFieldUpdateOperationsInput | boolean
+    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
+    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ProviderPatientUncheckedUpdateManyWithoutProviderInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    patientId?: StringFieldUpdateOperationsInput | string
+    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
+    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
+    canViewDna?: BoolFieldUpdateOperationsInput | boolean
+    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
+    canEditData?: BoolFieldUpdateOperationsInput | boolean
+    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
+    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
+    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SessionUpdateWithoutUserInput = {
@@ -34887,108 +35529,6 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type ProviderPatientUpdateWithoutProviderInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
-    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
-    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
-    canEditData?: BoolFieldUpdateOperationsInput | boolean
-    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
-    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    patient?: UserUpdateOneRequiredWithoutPatientRelationshipsNestedInput
-  }
-
-  export type ProviderPatientUncheckedUpdateWithoutProviderInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    patientId?: StringFieldUpdateOperationsInput | string
-    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
-    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
-    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
-    canEditData?: BoolFieldUpdateOperationsInput | boolean
-    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
-    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type ProviderPatientUncheckedUpdateManyWithoutProviderInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    patientId?: StringFieldUpdateOperationsInput | string
-    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
-    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
-    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
-    canEditData?: BoolFieldUpdateOperationsInput | boolean
-    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
-    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type ProviderPatientUpdateWithoutPatientInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
-    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
-    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
-    canEditData?: BoolFieldUpdateOperationsInput | boolean
-    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
-    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    provider?: UserUpdateOneRequiredWithoutProviderRelationshipsNestedInput
-  }
-
-  export type ProviderPatientUncheckedUpdateWithoutPatientInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    providerId?: StringFieldUpdateOperationsInput | string
-    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
-    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
-    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
-    canEditData?: BoolFieldUpdateOperationsInput | boolean
-    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
-    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type ProviderPatientUncheckedUpdateManyWithoutPatientInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    providerId?: StringFieldUpdateOperationsInput | string
-    canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
-    canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
-    canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
-    canEditData?: BoolFieldUpdateOperationsInput | boolean
-    relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
-    status?: EnumProviderPatientStatusFieldUpdateOperationsInput | $Enums.ProviderPatientStatus
-    consentGrantedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    consentExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
   export type BiomarkerCreateManyUserFileInput = {
     id?: string
     userId: string
@@ -35030,8 +35570,8 @@ export namespace Prisma {
     isAcknowledged?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
     history?: BiomarkerHistoryUpdateManyWithoutBiomarkerNestedInput
+    user?: UserUpdateOneRequiredWithoutBiomarkersNestedInput
   }
 
   export type BiomarkerUncheckedUpdateWithoutUserFileInput = {
