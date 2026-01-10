@@ -150,18 +150,26 @@ export function useBiomarkerData({
     let cancelled = false;
 
     const fetchInsurancePlans = async () => {
+      console.log('[useBiomarkerData] fetchInsurancePlans called', { DEMO_MODE, user: user?.id });
+
       if (DEMO_MODE || !user) {
+        console.log('[useBiomarkerData] Skipping insurance fetch - DEMO_MODE or no user');
         return;
       }
 
       try {
+        console.log('[useBiomarkerData] Calling insuranceApi.getPlans()...');
         const plans = await insuranceApi.getPlans();
+        console.log('[useBiomarkerData] Got plans from API:', plans);
+
         if (!cancelled) {
           // Transform flat API fields to benefits/costs arrays for UI display
           const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
+          console.log('[useBiomarkerData] Transformed plans:', transformedPlans);
           setInsurancePlans(transformedPlans);
         }
       } catch (error) {
+        console.error('[useBiomarkerData] Error fetching insurance plans:', error);
         if (!cancelled) {
           const errorMsg = error instanceof Error ? error.message : 'Failed to load insurance plans';
           dashboardLogger.error('Error fetching insurance plans', { error: errorMsg });
