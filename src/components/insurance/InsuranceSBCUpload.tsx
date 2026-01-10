@@ -300,6 +300,11 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                                 {Math.round(result.confidence * 100)}% confidence
                               </span>
                             )}
+                            {result && result.success && plan && (
+                              <span className={plan.usedClaudeExtraction ? 'text-purple-600' : 'text-orange-600'}>
+                                {plan.usedClaudeExtraction ? 'AI extracted' : 'Regex fallback'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

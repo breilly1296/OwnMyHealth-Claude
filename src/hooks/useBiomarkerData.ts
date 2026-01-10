@@ -141,6 +141,40 @@ export function useBiomarkerData({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only depend on user?.id (primitive) to prevent infinite loops
   }, [user?.id]);
 
+  // ============================================================
+  // Fetch insurance plans - ONLY depends on user?.id (primitive)
+  // Similar pattern to biomarkers fetch above.
+  // ============================================================
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchInsurancePlans = async () => {
+      if (DEMO_MODE || !user) {
+        return;
+      }
+
+      try {
+        const plans = await insuranceApi.getPlans();
+        if (!cancelled) {
+          setInsurancePlans(plans as unknown as InsurancePlan[]);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const errorMsg = error instanceof Error ? error.message : 'Failed to load insurance plans';
+          dashboardLogger.error('Error fetching insurance plans', { error: errorMsg });
+          // Don't show error toast - insurance is optional, silent fail is OK
+        }
+      }
+    };
+
+    fetchInsurancePlans();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only depend on user?.id (primitive) to prevent infinite loops
+  }, [user?.id]);
+
   // Cleanup PHI data on unmount (separate effect to avoid re-running fetch)
   useEffect(() => {
     return () => {

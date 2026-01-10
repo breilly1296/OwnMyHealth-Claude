@@ -204,6 +204,7 @@ interface SBCUploadResponse {
   // Source tracking
   extractedFromSbc?: boolean;
   sbcExtractionConfidence?: number;
+  usedClaudeExtraction?: boolean;
 }
 
 interface LabResultOCRResponse {
@@ -762,6 +763,7 @@ export async function uploadSBC(
       // Source tracking
       extractedFromSbc: createdPlan.extractedFromSbc,
       sbcExtractionConfidence: createdPlan.sbcExtractionConfidence ? Number(createdPlan.sbcExtractionConfidence) : undefined,
+      usedClaudeExtraction: extractedData.usedClaudeExtraction,
     },
   };
 

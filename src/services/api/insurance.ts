@@ -136,6 +136,7 @@ export interface InsurancePlanData {
   // Source tracking
   extractedFromSbc?: boolean;
   sbcExtractionConfidence?: number;
+  usedClaudeExtraction?: boolean;
 }
 
 export interface InsuranceBenefitData {
