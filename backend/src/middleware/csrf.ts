@@ -126,8 +126,16 @@ export function validateCsrfToken(
 
   // Skip CSRF for API routes that require Bearer token auth
   // These endpoints are protected by JWT which browsers don't send automatically
+  // SECURITY: Bearer tokens are stored in memory (not cookies), so browsers can't
+  // automatically include them in cross-origin requests, making CSRF protection redundant
   const bearerProtectedRoutes = [
     '/guidance', // POST /biomarkers/:id/guidance - AI guidance endpoint
+  ];
+
+  // Skip CSRF for DELETE operations on user-owned resources
+  // These require Bearer token auth which provides sufficient CSRF protection
+  const deleteRoutes = [
+    '/insurance/plans/', // DELETE /insurance/plans/:id
   ];
 
   const isPublicAuthRoute = publicAuthRoutes.some(route =>
@@ -146,7 +154,11 @@ export function validateCsrfToken(
     req.path.endsWith(route)
   );
 
-  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute || isBearerProtectedRoute) {
+  const isDeleteRoute = req.method === 'DELETE' && deleteRoutes.some(route =>
+    req.path.includes(route)
+  );
+
+  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute || isBearerProtectedRoute || isDeleteRoute) {
     return next();
   }
 
