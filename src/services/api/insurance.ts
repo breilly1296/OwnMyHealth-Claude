@@ -224,4 +224,18 @@ export const insuranceApi = {
       timeoutMessage: 'SBC file upload timed out. Please try again with a smaller file.',
     });
   },
+
+  /**
+   * Re-analyze an existing insurance plan by re-processing an uploaded SBC PDF.
+   * Uses the latest extraction prompt/logic to update the plan data.
+   * Preserves user-entered data (memberId, groupId, tracking fields).
+   */
+  async reanalyzePlan(planId: string, file: File): Promise<InsurancePlanData> {
+    const { uploadFile } = await import('../uploadUtils');
+    return uploadFile<InsurancePlanData>(`/insurance/plans/${planId}/reanalyze`, file, {
+      timeoutMs: 60000,
+      timeoutMessage: 'Plan re-analysis timed out. Please try again with a smaller file.',
+      method: 'PUT',
+    });
+  },
 };

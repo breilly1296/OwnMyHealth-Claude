@@ -84,6 +84,8 @@ export interface UploadOptions {
   additionalData?: Record<string, string>;
   /** Custom timeout error message */
   timeoutMessage?: string;
+  /** HTTP method (default: POST) */
+  method?: 'POST' | 'PUT';
 }
 
 /**
@@ -104,6 +106,7 @@ export async function uploadFile<T>(
     timeoutMs = 60000,
     additionalData = {},
     timeoutMessage = 'File upload timed out. Please try again with a smaller file.',
+    method = 'POST',
   } = options;
 
   const authToken = getAuthToken();
@@ -133,7 +136,7 @@ export async function uploadFile<T>(
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
+      method,
       headers,
       body: formData,
       credentials: 'include',

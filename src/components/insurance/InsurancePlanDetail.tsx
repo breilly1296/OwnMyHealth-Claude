@@ -7,7 +7,7 @@
  * @module components/insurance/InsurancePlanDetail
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   Shield,
@@ -28,12 +28,16 @@ import {
   ChevronUp,
   Home,
   HeartPulse,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import type { InsurancePlan } from '../../types';
+import { insuranceApi } from '../../services/api/insurance';
 
 interface InsurancePlanDetailProps {
   plan: InsurancePlan;
   onBack: () => void;
+  onPlanUpdated?: (updatedPlan: InsurancePlan) => void;
 }
 
 // Helper to format currency
@@ -233,13 +237,65 @@ function CostGrid({ label, individual, family, metIndividual, metFamily, showPro
   );
 }
 
-export default function InsurancePlanDetail({ plan, onBack }: InsurancePlanDetailProps) {
+export default function InsurancePlanDetail({ plan, onBack, onPlanUpdated }: InsurancePlanDetailProps) {
   // Check which sections have data
   const hasVision = plan.visionExamCopay !== undefined || plan.visionLensesAllowance !== undefined;
   const hasDental = plan.dentalPreventiveCoinsurance !== undefined || plan.dentalAnnualMax !== undefined;
   const hasPreventive = plan.preventiveServicesList && plan.preventiveServicesList.length > 0;
   const hasExclusions = plan.exclusionsList && plan.exclusionsList.length > 0;
   const hasPriorAuth = plan.priorAuthRequirements && plan.priorAuthRequirements.length > 0;
+
+  // Re-analyze state
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [reanalyzeError, setReanalyzeError] = useState<string | null>(null);
+  const [reanalyzeSuccess, setReanalyzeSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReanalyzeClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset file input so the same file can be selected again
+    event.target.value = '';
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setReanalyzeError('Please select a PDF file');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setReanalyzeError('File size must be less than 10MB');
+      return;
+    }
+
+    setIsReanalyzing(true);
+    setReanalyzeError(null);
+    setReanalyzeSuccess(false);
+
+    try {
+      const updatedPlan = await insuranceApi.reanalyzePlan(plan.id, file);
+      setReanalyzeSuccess(true);
+      // Notify parent component of the update
+      if (onPlanUpdated) {
+        // Convert API response to InsurancePlan type
+        onPlanUpdated(updatedPlan as unknown as InsurancePlan);
+      }
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setReanalyzeSuccess(false), 5000);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message :
+        (error as { message?: string })?.message || 'Failed to re-analyze plan';
+      setReanalyzeError(errorMessage);
+    } finally {
+      setIsReanalyzing(false);
+    }
+  }, [plan.id, onPlanUpdated]);
 
   return (
     <div className="animate-fade-in max-w-4xl mx-auto">
@@ -252,6 +308,15 @@ export default function InsurancePlanDetail({ plan, onBack }: InsurancePlanDetai
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">Back to Plans</span>
         </button>
+
+        {/* Hidden file input for re-analyze */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
 
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
@@ -276,15 +341,54 @@ export default function InsurancePlanDetail({ plan, onBack }: InsurancePlanDetai
               </div>
             </div>
           </div>
-          {plan.sbcExtractionConfidence && (
-            <div className="text-right">
-              <p className="text-xs text-slate-400 dark:text-slate-500">Extraction confidence</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-white">
-                {Math.round(plan.sbcExtractionConfidence * 100)}%
-              </p>
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-2">
+            {plan.sbcExtractionConfidence && (
+              <div className="text-right">
+                <p className="text-xs text-slate-400 dark:text-slate-500">Extraction confidence</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {Math.round(plan.sbcExtractionConfidence * 100)}%
+                </p>
+              </div>
+            )}
+            <button
+              onClick={handleReanalyzeClick}
+              disabled={isReanalyzing}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Re-analyze this plan using the latest extraction"
+            >
+              {isReanalyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {isReanalyzing ? 'Analyzing...' : 'Re-analyze'}
+            </button>
+          </div>
         </div>
+
+        {/* Success/Error messages */}
+        {reanalyzeSuccess && (
+          <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
+            <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Plan re-analyzed with latest extraction. The page will refresh with updated data.
+            </p>
+          </div>
+        )}
+        {reanalyzeError && (
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              {reanalyzeError}
+            </p>
+            <button
+              onClick={() => setReanalyzeError(null)}
+              className="mt-2 text-xs text-red-600 dark:text-red-400 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Coverage Sections */}

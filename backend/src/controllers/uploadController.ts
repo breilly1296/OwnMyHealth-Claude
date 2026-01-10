@@ -8,7 +8,7 @@
 
 import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
-import { ValidationError } from '../middleware/errorHandler.js';
+import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseSBC } from '../services/pdfParser.js';
@@ -800,6 +800,508 @@ export async function uploadSBC(
   };
 
   res.status(201).json(response);
+}
+
+/**
+ * Re-analyze an existing insurance plan by re-processing an uploaded SBC PDF
+ * Uses Claude Sonnet for intelligent extraction with fallback to regex parser
+ * PUT /api/v1/insurance/plans/:id/reanalyze
+ *
+ * Preserves user-entered data (memberId, groupId, tracking fields) while updating
+ * all extracted coverage data with the latest extraction results.
+ */
+export async function reanalyzePlan(
+  req: UploadRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+  const planId = req.params.id;
+  const file = req.file;
+
+  validateUploadFile(file, 'pdf');
+
+  const prisma = getPrismaClient();
+  const auditService = getAuditLogService(prisma);
+
+  // Verify the plan exists and belongs to this user
+  const existingPlan = await prisma.insurancePlan.findFirst({
+    where: { id: planId, userId },
+    include: { benefits: true },
+  });
+
+  if (!existingPlan) {
+    throw new NotFoundError('Insurance plan not found');
+  }
+
+  // Type for extracted data - same as uploadSBC
+  let extractedData: {
+    planName?: string;
+    insurerName?: string;
+    planType?: 'HMO' | 'PPO' | 'EPO' | 'POS' | 'HDHP';
+    planIdNumber?: string;
+    deductibleIndividual?: number;
+    deductibleFamily?: number;
+    oopMaxIndividual?: number;
+    oopMaxFamily?: number;
+    premiumMonthly?: number;
+    copayPrimaryCare?: number;
+    copaySpecialist?: number;
+    copayPreventive?: number;
+    copayUrgentCare?: number;
+    copayEmergency?: number;
+    copayTelehealth?: number;
+    copayLabWork?: number;
+    copayXray?: number;
+    copayAdvancedImaging?: number;
+    coinsuranceRate?: number;
+    coinsurancePrimaryCare?: number;
+    coinsuranceSpecialist?: number;
+    coinsuranceUrgentCare?: number;
+    coinsuranceEmergency?: number;
+    coinsuranceTelehealth?: number;
+    coinsuranceLabWork?: number;
+    coinsuranceXray?: number;
+    coinsuranceAdvancedImaging?: number;
+    inpatientCoverage?: ExtractedInpatientCoverage;
+    outpatientCoverage?: ExtractedOutpatientCoverage;
+    therapyCoverage?: ExtractedTherapyCoverage;
+    emergencyCoverage?: ExtractedEmergencyCoverage;
+    rxBenefits?: ExtractedRxBenefits;
+    visionCoverage?: ExtractedVisionCoverage;
+    dentalCoverage?: ExtractedDentalCoverage;
+    dmeCoverage?: ExtractedDMECoverage;
+    homeHealthCoverage?: ExtractedHomeHealthCoverage;
+    hospiceCoverage?: ExtractedHospiceCoverage;
+    preventiveServices?: string[];
+    exclusions?: string[];
+    priorAuthRequirements?: string[];
+    servicesWithLimits?: Array<{
+      service: string;
+      limit: number;
+      limitType: 'visits' | 'days' | 'dollars' | 'lifetime';
+      period: 'per year' | 'per admission' | 'lifetime' | 'per occurrence';
+    }>;
+    effectiveDate?: string;
+    pagesProcessed?: number;
+    benefits: Array<{
+      serviceName: string;
+      serviceCategory: string;
+      inNetworkCovered: boolean;
+      inNetworkCopay?: number;
+      inNetworkCoinsurance?: number;
+      inNetworkDeductibleApplies: boolean;
+      outNetworkCovered: boolean;
+      outNetworkCopay?: number;
+      outNetworkCoinsurance?: number;
+      outNetworkDeductibleApplies: boolean;
+      preAuthRequired: boolean;
+      visitLimit?: number;
+      dayLimit?: number;
+      limitations?: string;
+    }>;
+    extractionConfidence: number;
+    usedClaudeExtraction: boolean;
+  };
+
+  // Try Claude Sonnet extraction first, fall back to regex parser
+  if (isSBCExtractionConfigured()) {
+    try {
+      logger.info('Re-analyzing plan with Claude Sonnet SBC extraction', { data: { planId } });
+      const claudeResult = await extractInsuranceFromSBC(file.buffer);
+
+      extractedData = {
+        planName: claudeResult.planName,
+        insurerName: claudeResult.insurerName,
+        planType: claudeResult.planType,
+        planIdNumber: claudeResult.planIdNumber,
+        deductibleIndividual: claudeResult.deductibleIndividual,
+        deductibleFamily: claudeResult.deductibleFamily,
+        oopMaxIndividual: claudeResult.oopMaxIndividual,
+        oopMaxFamily: claudeResult.oopMaxFamily,
+        premiumMonthly: claudeResult.premiumMonthly,
+        coinsuranceRate: claudeResult.coinsuranceRate,
+        copayPrimaryCare: claudeResult.copayPrimaryCare,
+        copaySpecialist: claudeResult.copaySpecialist,
+        copayPreventive: claudeResult.copayPreventive,
+        copayUrgentCare: claudeResult.copayUrgentCare,
+        copayEmergency: claudeResult.copayEmergency,
+        copayTelehealth: claudeResult.copayTelehealth,
+        copayLabWork: claudeResult.copayLabWork,
+        copayXray: claudeResult.copayXray,
+        copayAdvancedImaging: claudeResult.copayAdvancedImaging,
+        coinsurancePrimaryCare: claudeResult.coinsurancePrimaryCare,
+        coinsuranceSpecialist: claudeResult.coinsuranceSpecialist,
+        coinsuranceUrgentCare: claudeResult.coinsuranceUrgentCare,
+        coinsuranceEmergency: claudeResult.coinsuranceEmergency,
+        coinsuranceTelehealth: claudeResult.coinsuranceTelehealth,
+        coinsuranceLabWork: claudeResult.coinsuranceLabWork,
+        coinsuranceXray: claudeResult.coinsuranceXray,
+        coinsuranceAdvancedImaging: claudeResult.coinsuranceAdvancedImaging,
+        inpatientCoverage: claudeResult.inpatientCoverage,
+        outpatientCoverage: claudeResult.outpatientCoverage,
+        therapyCoverage: claudeResult.therapyCoverage,
+        emergencyCoverage: claudeResult.emergencyCoverage,
+        rxBenefits: claudeResult.rxBenefits,
+        visionCoverage: claudeResult.visionCoverage,
+        dentalCoverage: claudeResult.dentalCoverage,
+        dmeCoverage: claudeResult.dmeCoverage,
+        homeHealthCoverage: claudeResult.homeHealthCoverage,
+        hospiceCoverage: claudeResult.hospiceCoverage,
+        preventiveServices: claudeResult.preventiveServices,
+        exclusions: claudeResult.exclusions,
+        priorAuthRequirements: claudeResult.priorAuthRequirements,
+        servicesWithLimits: claudeResult.servicesWithLimits,
+        effectiveDate: claudeResult.effectiveDate,
+        pagesProcessed: claudeResult.pagesProcessed,
+        extractionConfidence: claudeResult.extractionConfidence,
+        benefits: claudeResult.benefits.map((b) => ({
+          serviceName: b.serviceName,
+          serviceCategory: b.serviceCategory,
+          inNetworkCovered: b.inNetworkCovered,
+          inNetworkCopay: b.inNetworkCopay,
+          inNetworkCoinsurance: b.inNetworkCoinsurance,
+          inNetworkDeductibleApplies: b.inNetworkDeductibleApplies,
+          outNetworkCovered: b.outNetworkCovered,
+          outNetworkCopay: b.outNetworkCopay,
+          outNetworkCoinsurance: b.outNetworkCoinsurance,
+          outNetworkDeductibleApplies: b.outNetworkDeductibleApplies,
+          preAuthRequired: b.preAuthRequired,
+          visitLimit: b.visitLimit,
+          dayLimit: b.dayLimit,
+          limitations: b.limitations,
+        })),
+        usedClaudeExtraction: true,
+      };
+    } catch (error) {
+      logger.warn('Claude SBC extraction failed during re-analysis, falling back to regex parser', {
+        data: { planId, error: error instanceof Error ? error.message : 'Unknown' },
+      });
+      const parseResult = await parseSBC(file.buffer, file.originalname);
+      const { plan: parsedPlan } = parseResult;
+
+      extractedData = {
+        planName: parsedPlan.planName,
+        insurerName: parsedPlan.insurerName,
+        planType: parsedPlan.planType,
+        deductibleIndividual: parsedPlan.deductible,
+        deductibleFamily: parsedPlan.deductibleFamily,
+        oopMaxIndividual: parsedPlan.outOfPocketMax,
+        oopMaxFamily: parsedPlan.outOfPocketMaxFamily,
+        benefits: parsedPlan.benefits.map((b) => ({
+          serviceName: b.serviceName,
+          serviceCategory: b.serviceCategory,
+          inNetworkCovered: b.inNetworkCoverage.covered,
+          inNetworkCopay: b.inNetworkCoverage.copay,
+          inNetworkCoinsurance: b.inNetworkCoverage.coinsurance,
+          inNetworkDeductibleApplies: b.inNetworkCoverage.deductibleApplies ?? true,
+          outNetworkCovered: b.outNetworkCoverage?.covered ?? false,
+          outNetworkCopay: b.outNetworkCoverage?.copay,
+          outNetworkCoinsurance: b.outNetworkCoverage?.coinsurance,
+          outNetworkDeductibleApplies: b.outNetworkCoverage?.deductibleApplies ?? true,
+          preAuthRequired: b.preAuthRequired ?? false,
+          limitations: undefined,
+        })),
+        extractionConfidence: parsedPlan.extractionConfidence,
+        usedClaudeExtraction: false,
+      };
+    }
+  } else {
+    logger.info('Claude not configured for re-analysis, using regex SBC parser', { data: { planId } });
+    const parseResult = await parseSBC(file.buffer, file.originalname);
+    const { plan: parsedPlan } = parseResult;
+
+    extractedData = {
+      planName: parsedPlan.planName,
+      insurerName: parsedPlan.insurerName,
+      planType: parsedPlan.planType,
+      deductibleIndividual: parsedPlan.deductible,
+      deductibleFamily: parsedPlan.deductibleFamily,
+      oopMaxIndividual: parsedPlan.outOfPocketMax,
+      oopMaxFamily: parsedPlan.outOfPocketMaxFamily,
+      benefits: parsedPlan.benefits.map((b) => ({
+        serviceName: b.serviceName,
+        serviceCategory: b.serviceCategory,
+        inNetworkCovered: b.inNetworkCoverage.covered,
+        inNetworkCopay: b.inNetworkCoverage.copay,
+        inNetworkCoinsurance: b.inNetworkCoverage.coinsurance,
+        inNetworkDeductibleApplies: b.inNetworkCoverage.deductibleApplies ?? true,
+        outNetworkCovered: b.outNetworkCoverage?.covered ?? false,
+        outNetworkCopay: b.outNetworkCoverage?.copay,
+        outNetworkCoinsurance: b.outNetworkCoverage?.coinsurance,
+        outNetworkDeductibleApplies: b.outNetworkCoverage?.deductibleApplies ?? true,
+        preAuthRequired: b.preAuthRequired ?? false,
+        limitations: undefined,
+      })),
+      extractionConfidence: parsedPlan.extractionConfidence,
+      usedClaudeExtraction: false,
+    };
+  }
+
+  // Check if we got any useful data
+  if (
+    !extractedData.planName &&
+    !extractedData.insurerName &&
+    extractedData.benefits.length === 0
+  ) {
+    await auditService.logAccess(SBC_RESOURCE, planId, { req, userId }, {
+      operation: 'REANALYZE_FAILED',
+      filename: file.originalname,
+      fileSize: file.size,
+      reason: 'Could not extract plan information',
+      usedClaudeExtraction: extractedData.usedClaudeExtraction,
+    });
+
+    throw new ValidationError(
+      'Could not extract insurance plan information from the PDF. Please ensure it is a valid SBC document.'
+    );
+  }
+
+  // Extract nested coverage objects with defaults
+  const inpatient = extractedData.inpatientCoverage || {};
+  const outpatient = extractedData.outpatientCoverage || {};
+  const therapy = extractedData.therapyCoverage || {};
+  const rx = extractedData.rxBenefits || {};
+  const emergency = extractedData.emergencyCoverage || {};
+
+  // Update the plan with new extracted data
+  // Preserve user-entered data: memberId, groupId, tracking fields (deductibleMet, oopMet)
+  // Preserve user preferences: isActive, isPrimary
+  const updatedPlan = await prisma.$transaction(async (tx) => {
+    // Delete existing benefits
+    await tx.insuranceBenefit.deleteMany({
+      where: { planId },
+    });
+
+    // Update plan with new extraction data
+    return tx.insurancePlan.update({
+      where: { id: planId },
+      data: {
+        // Update extracted fields
+        planName: extractedData.planName || existingPlan.planName,
+        insurerName: extractedData.insurerName || existingPlan.insurerName,
+        planType: extractedData.planType || existingPlan.planType,
+        planIdNumber: extractedData.planIdNumber ?? existingPlan.planIdNumber,
+        effectiveDate: extractedData.effectiveDate
+          ? new Date(extractedData.effectiveDate)
+          : existingPlan.effectiveDate,
+        premiumMonthly: extractedData.premiumMonthly ?? existingPlan.premiumMonthly,
+        deductibleIndividual: extractedData.deductibleIndividual ?? Number(existingPlan.deductibleIndividual),
+        deductibleFamily:
+          extractedData.deductibleFamily ??
+          (extractedData.deductibleIndividual ? extractedData.deductibleIndividual * 2 : Number(existingPlan.deductibleFamily)),
+        oopMaxIndividual: extractedData.oopMaxIndividual ?? Number(existingPlan.oopMaxIndividual),
+        oopMaxFamily:
+          extractedData.oopMaxFamily ??
+          (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : Number(existingPlan.oopMaxFamily)),
+
+        // Core copay fields
+        copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
+        copaySpecialist: extractedData.copaySpecialist ?? null,
+        copayUrgentCare: extractedData.copayUrgentCare ?? emergency.urgentCareCopay ?? null,
+        copayEmergency: extractedData.copayEmergency ?? emergency.emergencyRoomCopay ?? null,
+        copayTelehealth: extractedData.copayTelehealth ?? null,
+        copayLabWork: extractedData.copayLabWork ?? outpatient.labWorkCopay ?? null,
+        copayXray: extractedData.copayXray ?? outpatient.xrayCopay ?? null,
+        copayAdvancedImaging: extractedData.copayAdvancedImaging ?? outpatient.advancedImagingCopay ?? null,
+        coinsuranceRate: extractedData.coinsuranceRate ?? null,
+
+        // Per-service coinsurance
+        coinsurancePrimaryCare: extractedData.coinsurancePrimaryCare ?? null,
+        coinsuranceSpecialist: extractedData.coinsuranceSpecialist ?? null,
+        coinsuranceUrgentCare: extractedData.coinsuranceUrgentCare ?? emergency.urgentCareCoinsurance ?? null,
+        coinsuranceEmergency: extractedData.coinsuranceEmergency ?? emergency.emergencyRoomCoinsurance ?? null,
+        coinsuranceTelehealth: extractedData.coinsuranceTelehealth ?? null,
+        coinsuranceLabWork: extractedData.coinsuranceLabWork ?? outpatient.labWorkCoinsurance ?? null,
+        coinsuranceXray: extractedData.coinsuranceXray ?? outpatient.xrayCoinsurance ?? null,
+        coinsuranceAdvancedImaging: extractedData.coinsuranceAdvancedImaging ?? outpatient.advancedImagingCoinsurance ?? null,
+
+        // Inpatient coverage
+        inpatientHospitalCopay: inpatient.hospitalCopayPerDay ?? inpatient.hospitalCopayPerAdmission ?? null,
+        inpatientHospitalCoinsurance: inpatient.hospitalCoinsurance ?? null,
+        inpatientMentalHealthCopay: inpatient.mentalHealthCopay ?? null,
+        inpatientMentalCoinsurance: inpatient.mentalHealthCoinsurance ?? null,
+        maternityCopay: inpatient.maternityCopay ?? null,
+        maternityCoinsurance: inpatient.maternityCoinsurance ?? null,
+        skilledNursingCopay: inpatient.skilledNursingCopay ?? null,
+        skilledNursingCoinsurance: inpatient.skilledNursingCoinsurance ?? null,
+        skilledNursingDaysLimit: inpatient.skilledNursingDaysLimit ?? null,
+
+        // Outpatient coverage
+        outpatientSurgeryCopay: outpatient.surgeryCopay ?? null,
+        outpatientSurgeryCoinsurance: outpatient.surgeryCoinsurance ?? null,
+        outpatientMentalHealthCopay: outpatient.mentalHealthIndividualCopay ?? outpatient.mentalHealthGroupCopay ?? null,
+        outpatientMentalCoinsurance: outpatient.mentalHealthCoinsurance ?? null,
+
+        // Therapy/Rehab coverage
+        physicalTherapyCopay: therapy.physicalTherapyCopay ?? null,
+        physicalTherapyVisitsLimit: therapy.physicalTherapyVisitsLimit ?? null,
+        occupationalTherapyCopay: therapy.occupationalTherapyCopay ?? null,
+        occupationalTherapyVisitsLimit: therapy.occupationalTherapyVisitsLimit ?? null,
+        speechTherapyCopay: therapy.speechTherapyCopay ?? null,
+        speechTherapyVisitsLimit: therapy.speechTherapyVisitsLimit ?? null,
+
+        // Prescription (Rx) benefits
+        rxTier1Copay: rx.tier1Copay ?? null,
+        rxTier2Copay: rx.tier2Copay ?? null,
+        rxTier3Copay: rx.tier3Copay ?? null,
+        rxTier4Copay: rx.tier4Copay ?? null,
+        rxTier1Coinsurance: rx.tier1CoinsurancePercent ?? null,
+        rxTier2Coinsurance: rx.tier2CoinsurancePercent ?? null,
+        rxTier3Coinsurance: rx.tier3CoinsurancePercent ?? null,
+        rxTier4Coinsurance: rx.tier4CoinsurancePercent ?? null,
+        rxRetailDaysSupply: rx.retailDaysSupply ?? null,
+        rxMailOrderDaysSupply: rx.mailOrderDaysSupply ?? null,
+        rxDeductibleIndividual: rx.deductibleIndividual ?? null,
+        rxDeductibleFamily: rx.deductibleFamily ?? null,
+        rxOopMaxIndividual: rx.oopMaxIndividual ?? null,
+        rxOopMaxFamily: rx.oopMaxFamily ?? null,
+
+        // Emergency/Ambulance coverage
+        ambulanceGroundCopay: emergency.ambulanceGroundCopay ?? null,
+        ambulanceGroundCoinsurance: emergency.ambulanceGroundCoinsurance ?? null,
+        ambulanceAirCopay: emergency.ambulanceAirCopay ?? null,
+        ambulanceAirCoinsurance: emergency.ambulanceAirCoinsurance ?? null,
+
+        // Vision coverage
+        visionExamCopay: extractedData.visionCoverage?.examCopay ?? null,
+        visionExamFrequency: extractedData.visionCoverage?.examFrequency ?? null,
+        visionLensesAllowance: extractedData.visionCoverage?.lensesAllowance ?? null,
+        visionFramesAllowance: extractedData.visionCoverage?.framesAllowance ?? null,
+        visionContactsAllowance: extractedData.visionCoverage?.contactsAllowance ?? null,
+
+        // Dental coverage
+        dentalPreventiveCoinsurance: extractedData.dentalCoverage?.preventiveCoinsurance ?? null,
+        dentalBasicCoinsurance: extractedData.dentalCoverage?.basicCoinsurance ?? null,
+        dentalMajorCoinsurance: extractedData.dentalCoverage?.majorCoinsurance ?? null,
+        dentalAnnualMax: extractedData.dentalCoverage?.annualMaximum ?? null,
+        dentalDeductible: extractedData.dentalCoverage?.deductible ?? null,
+        dentalOrthodontiaCoinsurance: extractedData.dentalCoverage?.orthodontiaCoinsurance ?? null,
+        dentalOrthodontiaLifetimeMax: extractedData.dentalCoverage?.orthodontiaLifetimeMax ?? null,
+
+        // DME coverage
+        dmeCopay: extractedData.dmeCoverage?.copay ?? null,
+        dmeCoinsurance: extractedData.dmeCoverage?.coinsurance ?? null,
+
+        // Home Health coverage
+        homeHealthVisitCopay: extractedData.homeHealthCoverage?.visitCopay ?? null,
+        homeHealthVisitCoinsurance: extractedData.homeHealthCoverage?.visitCoinsurance ?? null,
+        homeHealthVisitLimit: extractedData.homeHealthCoverage?.visitLimit ?? null,
+
+        // Hospice coverage
+        hospiceInpatientCopay: extractedData.hospiceCoverage?.inpatientCopay ?? null,
+        hospiceInpatientCoinsurance: extractedData.hospiceCoverage?.inpatientCoinsurance ?? null,
+        hospiceRespiteCopay: extractedData.hospiceCoverage?.respiteCopay ?? null,
+        hospiceRespiteCoinsurance: extractedData.hospiceCoverage?.respiteCoinsurance ?? null,
+        hospiceRespiteDayLimit: extractedData.hospiceCoverage?.respiteDayLimit ?? null,
+
+        // Additional therapy types
+        chiropracticCopay: therapy.chiropracticCopay ?? null,
+        chiropracticVisitsLimit: therapy.chiropracticVisitsLimit ?? null,
+        acupunctureCopay: therapy.acupunctureCopay ?? null,
+        acupunctureVisitsLimit: therapy.acupunctureVisitsLimit ?? null,
+        cardiacRehabCopay: therapy.cardiacRehabCopay ?? null,
+        cardiacRehabVisitsLimit: therapy.cardiacRehabVisitsLimit ?? null,
+        pulmonaryRehabCopay: therapy.pulmonaryRehabCopay ?? null,
+        pulmonaryRehabVisitsLimit: therapy.pulmonaryRehabVisitsLimit ?? null,
+
+        // JSON lists
+        preventiveServicesList: extractedData.preventiveServices?.length
+          ? JSON.stringify(extractedData.preventiveServices)
+          : null,
+        exclusionsList: extractedData.exclusions?.length
+          ? JSON.stringify(extractedData.exclusions)
+          : null,
+        priorAuthRequirements: extractedData.priorAuthRequirements?.length
+          ? JSON.stringify(extractedData.priorAuthRequirements)
+          : null,
+        servicesWithLimits: extractedData.servicesWithLimits?.length
+          ? JSON.stringify(extractedData.servicesWithLimits)
+          : null,
+
+        // Source tracking - update confidence
+        extractedFromSbc: true,
+        sbcExtractionConfidence: extractedData.extractionConfidence,
+
+        // Create new benefits
+        benefits: {
+          create: extractedData.benefits.map((benefit) => ({
+            serviceName: benefit.serviceName,
+            serviceCategory: benefit.serviceCategory,
+            inNetworkCovered: benefit.inNetworkCovered,
+            inNetworkCopay: benefit.inNetworkCopay ?? null,
+            inNetworkCoinsurance: benefit.inNetworkCoinsurance ?? null,
+            inNetworkDeductible: benefit.inNetworkDeductibleApplies,
+            outNetworkCovered: benefit.outNetworkCovered,
+            outNetworkCopay: benefit.outNetworkCopay ?? null,
+            outNetworkCoinsurance: benefit.outNetworkCoinsurance ?? null,
+            outNetworkDeductible: benefit.outNetworkDeductibleApplies,
+            limitations: benefit.limitations ?? null,
+            preAuthRequired: benefit.preAuthRequired,
+          })),
+        },
+      },
+      include: { benefits: true },
+    });
+  });
+
+  // Audit log: successful re-analysis
+  await auditService.logUpdate(
+    SBC_RESOURCE,
+    planId,
+    {
+      // Previous state
+      previousBenefitsCount: existingPlan.benefits.length,
+      previousConfidence: existingPlan.sbcExtractionConfidence ? Number(existingPlan.sbcExtractionConfidence) : null,
+    },
+    {
+      // New state
+      benefitsExtracted: updatedPlan.benefits.length,
+      extractionConfidence: extractedData.extractionConfidence,
+      usedClaudeExtraction: extractedData.usedClaudeExtraction,
+    },
+    { req, userId },
+    {
+      operation: 'REANALYZE',
+      filename: file.originalname,
+      fileSize: file.size,
+      planName: updatedPlan.planName,
+      insurerName: updatedPlan.insurerName,
+    }
+  );
+
+  const response: ApiResponse<SBCUploadResponse> = {
+    success: true,
+    data: {
+      id: updatedPlan.id,
+      planName: updatedPlan.planName,
+      insurerName: updatedPlan.insurerName,
+      planType: updatedPlan.planType,
+      planIdNumber: updatedPlan.planIdNumber || undefined,
+      effectiveDate: updatedPlan.effectiveDate.toISOString(),
+      terminationDate: updatedPlan.terminationDate?.toISOString() || undefined,
+      isActive: updatedPlan.isActive,
+      isPrimary: updatedPlan.isPrimary,
+      deductibleIndividual: Number(updatedPlan.deductibleIndividual),
+      deductibleFamily: Number(updatedPlan.deductibleFamily),
+      oopMaxIndividual: Number(updatedPlan.oopMaxIndividual),
+      oopMaxFamily: Number(updatedPlan.oopMaxFamily),
+      premiumMonthly: updatedPlan.premiumMonthly ? Number(updatedPlan.premiumMonthly) : undefined,
+      deductibleMetIndividual: updatedPlan.deductibleMetIndividual ? Number(updatedPlan.deductibleMetIndividual) : undefined,
+      deductibleMetFamily: updatedPlan.deductibleMetFamily ? Number(updatedPlan.deductibleMetFamily) : undefined,
+      oopMetIndividual: updatedPlan.oopMetIndividual ? Number(updatedPlan.oopMetIndividual) : undefined,
+      oopMetFamily: updatedPlan.oopMetFamily ? Number(updatedPlan.oopMetFamily) : undefined,
+      copayPrimaryCare: updatedPlan.copayPrimaryCare ? Number(updatedPlan.copayPrimaryCare) : undefined,
+      copaySpecialist: updatedPlan.copaySpecialist ? Number(updatedPlan.copaySpecialist) : undefined,
+      copayUrgentCare: updatedPlan.copayUrgentCare ? Number(updatedPlan.copayUrgentCare) : undefined,
+      copayEmergency: updatedPlan.copayEmergency ? Number(updatedPlan.copayEmergency) : undefined,
+      coinsuranceRate: updatedPlan.coinsuranceRate ? Number(updatedPlan.coinsuranceRate) : undefined,
+      extractedFromSbc: updatedPlan.extractedFromSbc,
+      sbcExtractionConfidence: updatedPlan.sbcExtractionConfidence ? Number(updatedPlan.sbcExtractionConfidence) : undefined,
+      usedClaudeExtraction: extractedData.usedClaudeExtraction,
+    },
+  };
+
+  res.status(200).json(response);
 }
 
 /**

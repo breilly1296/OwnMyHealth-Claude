@@ -26,7 +26,7 @@ import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 import * as insuranceController from '../controllers/insuranceController.js';
-import { uploadSBC } from '../controllers/uploadController.js';
+import { uploadSBC, reanalyzePlan } from '../controllers/uploadController.js';
 
 const router = Router();
 
@@ -106,6 +106,16 @@ router.get(
   '/benefits/search',
   validate(benefitSearchSchema, 'query'),
   asyncHandler(insuranceController.searchBenefits)
+);
+
+// PUT /api/v1/insurance/plans/:id/reanalyze - Re-analyze existing plan with new PDF
+// Rate limited to prevent abuse
+router.put(
+  '/plans/:id/reanalyze',
+  validate(schemas.uuidParam, 'params'),
+  uploadLimiter,
+  upload.single('file'),
+  asyncHandler(reanalyzePlan)
 );
 
 // POST /api/v1/insurance/upload-sbc - Upload and parse SBC PDF
