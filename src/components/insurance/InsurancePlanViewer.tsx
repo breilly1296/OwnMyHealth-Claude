@@ -23,7 +23,7 @@
 import React, { useState } from 'react';
 import { Shield, DollarSign, FileText, AlertCircle, CheckCircle, X, Eye, Search, Filter } from 'lucide-react';
 import type { InsurancePlan, InsuranceBenefit } from '../../types';
-import { getKeyPlanFeatures, formatCoverageDisplay } from '../../utils/insurance/sbcParser';
+import { getKeyPlanFeatures, formatCoverageDisplay } from '../../utils/insurance/insuranceUtils';
 
 interface InsurancePlanViewerProps {
   plans: InsurancePlan[];
