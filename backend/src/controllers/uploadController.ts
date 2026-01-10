@@ -12,6 +12,7 @@ import { ValidationError } from '../middleware/errorHandler.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseSBC } from '../services/pdfParser.js';
+import { extractInsuranceFromSBC, isSBCExtractionConfigured } from '../services/sbcExtraction.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { processDocument, extractDateFromText, extractLabNameFromText } from '../services/ocrService.js';
@@ -270,6 +271,7 @@ export async function uploadLabReport(
 
 /**
  * Upload and process an insurance SBC (Summary of Benefits and Coverage) PDF
+ * Uses Claude Sonnet for intelligent extraction with fallback to regex parser
  * POST /api/v1/insurance/upload-sbc
  */
 export async function uploadSBC(
@@ -284,57 +286,207 @@ export async function uploadSBC(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
-  // Parse the PDF
-  const parseResult = await parseSBC(file.buffer, file.originalname);
-  const { plan: parsedPlan } = parseResult;
+  let extractedData: {
+    planName?: string;
+    insurerName?: string;
+    planType?: 'HMO' | 'PPO' | 'EPO' | 'POS' | 'HDHP';
+    planIdNumber?: string;
+    deductibleIndividual?: number;
+    deductibleFamily?: number;
+    oopMaxIndividual?: number;
+    oopMaxFamily?: number;
+    premiumMonthly?: number;
+    copayPrimaryCare?: number;
+    copaySpecialist?: number;
+    copayUrgentCare?: number;
+    copayEmergency?: number;
+    coinsuranceRate?: number;
+    effectiveDate?: string;
+    benefits: Array<{
+      serviceName: string;
+      serviceCategory: string;
+      inNetworkCovered: boolean;
+      inNetworkCopay?: number;
+      inNetworkCoinsurance?: number;
+      inNetworkDeductibleApplies: boolean;
+      outNetworkCovered: boolean;
+      outNetworkCopay?: number;
+      outNetworkCoinsurance?: number;
+      outNetworkDeductibleApplies: boolean;
+      preAuthRequired: boolean;
+      limitations?: string;
+    }>;
+    extractionConfidence: number;
+    usedClaudeExtraction: boolean;
+  };
 
-  if (!parsedPlan.planName && !parsedPlan.insurerName && parsedPlan.benefits.length === 0) {
-    // Audit log: failed extraction
+  // Try Claude Sonnet extraction first, fall back to regex parser
+  if (isSBCExtractionConfigured()) {
+    try {
+      logger.info('Attempting Claude Sonnet SBC extraction');
+      const claudeResult = await extractInsuranceFromSBC(file.buffer);
+
+      extractedData = {
+        ...claudeResult,
+        benefits: claudeResult.benefits.map((b) => ({
+          serviceName: b.serviceName,
+          serviceCategory: b.serviceCategory,
+          inNetworkCovered: b.inNetworkCovered,
+          inNetworkCopay: b.inNetworkCopay,
+          inNetworkCoinsurance: b.inNetworkCoinsurance,
+          inNetworkDeductibleApplies: b.inNetworkDeductibleApplies,
+          outNetworkCovered: b.outNetworkCovered,
+          outNetworkCopay: b.outNetworkCopay,
+          outNetworkCoinsurance: b.outNetworkCoinsurance,
+          outNetworkDeductibleApplies: b.outNetworkDeductibleApplies,
+          preAuthRequired: b.preAuthRequired,
+          limitations: b.limitations,
+        })),
+        usedClaudeExtraction: true,
+      };
+    } catch (error) {
+      logger.warn('Claude SBC extraction failed, falling back to regex parser', {
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
+      // Fall through to regex parser
+      const parseResult = await parseSBC(file.buffer, file.originalname);
+      const { plan: parsedPlan } = parseResult;
+
+      extractedData = {
+        planName: parsedPlan.planName,
+        insurerName: parsedPlan.insurerName,
+        planType: parsedPlan.planType,
+        deductibleIndividual: parsedPlan.deductible,
+        deductibleFamily: parsedPlan.deductibleFamily,
+        oopMaxIndividual: parsedPlan.outOfPocketMax,
+        oopMaxFamily: parsedPlan.outOfPocketMaxFamily,
+        benefits: parsedPlan.benefits.map((b) => ({
+          serviceName: b.serviceName,
+          serviceCategory: b.serviceCategory,
+          inNetworkCovered: b.inNetworkCoverage.covered,
+          inNetworkCopay: b.inNetworkCoverage.copay,
+          inNetworkCoinsurance: b.inNetworkCoverage.coinsurance,
+          inNetworkDeductibleApplies: b.inNetworkCoverage.deductibleApplies ?? true,
+          outNetworkCovered: b.outNetworkCoverage?.covered ?? false,
+          outNetworkCopay: b.outNetworkCoverage?.copay,
+          outNetworkCoinsurance: b.outNetworkCoverage?.coinsurance,
+          outNetworkDeductibleApplies: b.outNetworkCoverage?.deductibleApplies ?? true,
+          preAuthRequired: b.preAuthRequired ?? false,
+          limitations: undefined,
+        })),
+        extractionConfidence: parsedPlan.extractionConfidence,
+        usedClaudeExtraction: false,
+      };
+    }
+  } else {
+    // Claude not configured, use regex parser
+    logger.info('Claude not configured, using regex SBC parser');
+    const parseResult = await parseSBC(file.buffer, file.originalname);
+    const { plan: parsedPlan } = parseResult;
+
+    extractedData = {
+      planName: parsedPlan.planName,
+      insurerName: parsedPlan.insurerName,
+      planType: parsedPlan.planType,
+      deductibleIndividual: parsedPlan.deductible,
+      deductibleFamily: parsedPlan.deductibleFamily,
+      oopMaxIndividual: parsedPlan.outOfPocketMax,
+      oopMaxFamily: parsedPlan.outOfPocketMaxFamily,
+      benefits: parsedPlan.benefits.map((b) => ({
+        serviceName: b.serviceName,
+        serviceCategory: b.serviceCategory,
+        inNetworkCovered: b.inNetworkCoverage.covered,
+        inNetworkCopay: b.inNetworkCoverage.copay,
+        inNetworkCoinsurance: b.inNetworkCoverage.coinsurance,
+        inNetworkDeductibleApplies: b.inNetworkCoverage.deductibleApplies ?? true,
+        outNetworkCovered: b.outNetworkCoverage?.covered ?? false,
+        outNetworkCopay: b.outNetworkCoverage?.copay,
+        outNetworkCoinsurance: b.outNetworkCoverage?.coinsurance,
+        outNetworkDeductibleApplies: b.outNetworkCoverage?.deductibleApplies ?? true,
+        preAuthRequired: b.preAuthRequired ?? false,
+        limitations: undefined,
+      })),
+      extractionConfidence: parsedPlan.extractionConfidence,
+      usedClaudeExtraction: false,
+    };
+  }
+
+  // Check if we got any useful data
+  if (
+    !extractedData.planName &&
+    !extractedData.insurerName &&
+    extractedData.benefits.length === 0
+  ) {
     await auditService.logAccess(SBC_RESOURCE, undefined, { req, userId }, {
       operation: 'PARSE_FAILED',
       filename: file.originalname,
       fileSize: file.size,
       reason: 'Could not extract plan information',
+      usedClaudeExtraction: extractedData.usedClaudeExtraction,
     });
 
-    throw new ValidationError('Could not extract insurance plan information from the PDF. Please ensure it is a valid SBC document.');
+    throw new ValidationError(
+      'Could not extract insurance plan information from the PDF. Please ensure it is a valid SBC document.'
+    );
   }
 
-  // Create insurance plan in database
-  const planName = parsedPlan.planName || `Uploaded Plan ${new Date().toLocaleDateString()}`;
-  const insurerName = parsedPlan.insurerName || 'Unknown Insurer';
+  // Create insurance plan in database with all extracted fields
+  const planName = extractedData.planName || `Uploaded Plan ${new Date().toLocaleDateString()}`;
+  const insurerName = extractedData.insurerName || 'Unknown Insurer';
+  const effectiveDate = extractedData.effectiveDate
+    ? new Date(extractedData.effectiveDate)
+    : new Date();
 
   const createdPlan = await prisma.insurancePlan.create({
     data: {
       userId,
       planName,
       insurerName,
-      planType: parsedPlan.planType || 'PPO',
+      planType: extractedData.planType || 'PPO',
+      planIdNumber: extractedData.planIdNumber || null,
       memberIdEncrypted: null, // User can add this later
       groupIdEncrypted: null,
-      effectiveDate: new Date(),
+      effectiveDate,
       terminationDate: null,
-      premiumMonthly: null,
-      deductibleIndividual: parsedPlan.deductible || 0,
-      deductibleFamily: parsedPlan.deductibleFamily || (parsedPlan.deductible ? parsedPlan.deductible * 2 : 0),
-      oopMaxIndividual: parsedPlan.outOfPocketMax || 0,
-      oopMaxFamily: parsedPlan.outOfPocketMaxFamily || (parsedPlan.outOfPocketMax ? parsedPlan.outOfPocketMax * 2 : 0),
+      premiumMonthly: extractedData.premiumMonthly ?? null,
+      deductibleIndividual: extractedData.deductibleIndividual ?? 0,
+      deductibleFamily:
+        extractedData.deductibleFamily ??
+        (extractedData.deductibleIndividual ? extractedData.deductibleIndividual * 2 : 0),
+      oopMaxIndividual: extractedData.oopMaxIndividual ?? 0,
+      oopMaxFamily:
+        extractedData.oopMaxFamily ??
+        (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : 0),
+      // Tracking fields start at 0
+      deductibleMetIndividual: 0,
+      deductibleMetFamily: 0,
+      oopMetIndividual: 0,
+      oopMetFamily: 0,
+      // Copay fields from extraction
+      copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
+      copaySpecialist: extractedData.copaySpecialist ?? null,
+      copayUrgentCare: extractedData.copayUrgentCare ?? null,
+      copayEmergency: extractedData.copayEmergency ?? null,
+      coinsuranceRate: extractedData.coinsuranceRate ?? null,
+      // Source tracking
+      extractedFromSbc: true,
+      sbcExtractionConfidence: extractedData.extractionConfidence,
       isActive: true,
       isPrimary: false,
       benefits: {
-        create: parsedPlan.benefits.map((benefit) => ({
+        create: extractedData.benefits.map((benefit) => ({
           serviceName: benefit.serviceName,
           serviceCategory: benefit.serviceCategory,
-          inNetworkCovered: benefit.inNetworkCoverage.covered,
-          inNetworkCopay: benefit.inNetworkCoverage.copay,
-          inNetworkCoinsurance: benefit.inNetworkCoverage.coinsurance,
-          inNetworkDeductible: benefit.inNetworkCoverage.deductibleApplies ?? true,
-          outNetworkCovered: benefit.outNetworkCoverage?.covered ?? false,
-          outNetworkCopay: benefit.outNetworkCoverage?.copay,
-          outNetworkCoinsurance: benefit.outNetworkCoverage?.coinsurance,
-          outNetworkDeductible: benefit.outNetworkCoverage?.deductibleApplies ?? true,
-          limitations: null,
-          preAuthRequired: benefit.preAuthRequired ?? false,
+          inNetworkCovered: benefit.inNetworkCovered,
+          inNetworkCopay: benefit.inNetworkCopay ?? null,
+          inNetworkCoinsurance: benefit.inNetworkCoinsurance ?? null,
+          inNetworkDeductible: benefit.inNetworkDeductibleApplies,
+          outNetworkCovered: benefit.outNetworkCovered,
+          outNetworkCopay: benefit.outNetworkCopay ?? null,
+          outNetworkCoinsurance: benefit.outNetworkCoinsurance ?? null,
+          outNetworkDeductible: benefit.outNetworkDeductibleApplies,
+          limitations: benefit.limitations ?? null,
+          preAuthRequired: benefit.preAuthRequired,
         })),
       },
     },
@@ -342,14 +494,20 @@ export async function uploadSBC(
   });
 
   // Audit log: successful upload and extraction
-  await auditService.logCreate(SBC_RESOURCE, createdPlan.id, {
-    filename: file.originalname,
-    fileSize: file.size,
-    planName: createdPlan.planName,
-    insurerName: createdPlan.insurerName,
-    benefitsExtracted: createdPlan.benefits.length,
-    extractionConfidence: parsedPlan.extractionConfidence,
-  }, { req, userId });
+  await auditService.logCreate(
+    SBC_RESOURCE,
+    createdPlan.id,
+    {
+      filename: file.originalname,
+      fileSize: file.size,
+      planName: createdPlan.planName,
+      insurerName: createdPlan.insurerName,
+      benefitsExtracted: createdPlan.benefits.length,
+      extractionConfidence: extractedData.extractionConfidence,
+      usedClaudeExtraction: extractedData.usedClaudeExtraction,
+    },
+    { req, userId }
+  );
 
   const response: ApiResponse<SBCUploadResponse> = {
     success: true,
@@ -364,7 +522,7 @@ export async function uploadSBC(
         outOfPocketMax: Number(createdPlan.oopMaxIndividual),
         benefitsCount: createdPlan.benefits.length,
       },
-      extractionConfidence: parsedPlan.extractionConfidence,
+      extractionConfidence: extractedData.extractionConfidence,
     },
   };
 

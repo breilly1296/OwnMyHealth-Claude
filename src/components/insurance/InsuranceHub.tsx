@@ -36,8 +36,14 @@ import {
   Sparkles,
   Info,
   AlertCircle,
+  Stethoscope,
+  UserCheck,
+  Ambulance,
+  Pill,
+  AlertTriangle,
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
+import AddInsurancePlanModal from './AddInsurancePlanModal';
 
 interface InsuranceHubProps {
   insurancePlans: InsurancePlan[];
@@ -45,6 +51,7 @@ interface InsuranceHubProps {
   onUploadSBC: () => void;
   onSmartUpload: () => void;
   onViewPlanDetails: () => void;
+  onRefresh?: () => void;
 }
 
 type TabType = 'plans' | 'costs' | 'learn';
@@ -68,10 +75,17 @@ export default function InsuranceHub({
   guide = defaultGuide,
   onUploadSBC,
   onSmartUpload,
-  onViewPlanDetails
+  onViewPlanDetails,
+  onRefresh,
 }: InsuranceHubProps) {
   const [activeTab, setActiveTab] = useState<TabType>('plans');
   const [expandedTerm, setExpandedTerm] = useState<string | null>(null);
+  const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
+
+  const handlePlanAdded = () => {
+    setIsAddPlanModalOpen(false);
+    onRefresh?.();
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -180,20 +194,20 @@ export default function InsuranceHub({
                 <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
                   Upload your Summary of Benefits and Coverage (SBC) document to get personalized insights.
                 </p>
-                <div className="flex justify-center gap-3">
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => setIsAddPlanModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25 transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Plan
+                  </button>
                   <button
                     onClick={onSmartUpload}
-                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl hover:from-purple-600 hover:to-indigo-700 shadow-lg shadow-purple-500/25 transition-all"
+                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                   >
                     <Sparkles className="w-4 h-4" />
                     Smart Upload
-                  </button>
-                  <button
-                    onClick={onUploadSBC}
-                    className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload SBC
                   </button>
                 </div>
               </div>
@@ -226,36 +240,90 @@ export default function InsuranceHub({
                       <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
                     </div>
 
-                    <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 grid grid-cols-3 gap-4">
+                    {/* Deductible & OOP Progress */}
+                    <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Benefits</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">{plan.benefits.length} services</p>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <p className="text-xs text-slate-400 dark:text-slate-500">Deductible</p>
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                            {formatCurrency(plan.deductibleMetIndividual || 0)} / {formatCurrency(plan.costs.find(c => c.type === 'Deductible')?.amount || 0)}
+                          </p>
+                        </div>
+                        <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, ((plan.deductibleMetIndividual || 0) / (plan.costs.find(c => c.type === 'Deductible')?.amount || 1)) * 100)}%`
+                            }}
+                          />
+                        </div>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Cost Categories</p>
-                        <p className="font-semibold text-slate-900 dark:text-white">{plan.costs.length} types</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Accuracy</p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 rounded-full"
-                              style={{ width: `${Math.round(plan.extractionConfidence * 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                            {Math.round(plan.extractionConfidence * 100)}%
-                          </span>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <p className="text-xs text-slate-400 dark:text-slate-500">Out-of-Pocket</p>
+                          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                            {formatCurrency(plan.oopMetIndividual || 0)} / {formatCurrency(plan.costs.find(c => c.type === 'Out-of-Pocket Maximum')?.amount || 0)}
+                          </p>
+                        </div>
+                        <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, ((plan.oopMetIndividual || 0) / (plan.costs.find(c => c.type === 'Out-of-Pocket Maximum')?.amount || 1)) * 100)}%`
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
+
+                    {/* Coverage Quick View */}
+                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Quick Coverage</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="text-center p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                          <Stethoscope className="w-4 h-4 mx-auto text-blue-500 mb-1" />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Primary</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {plan.copayPrimaryCare ? `$${plan.copayPrimaryCare}` : '--'}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                          <UserCheck className="w-4 h-4 mx-auto text-purple-500 mb-1" />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Specialist</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {plan.copaySpecialist ? `$${plan.copaySpecialist}` : '--'}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                          <Ambulance className="w-4 h-4 mx-auto text-red-500 mb-1" />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Emergency</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {plan.copayEmergency ? `$${plan.copayEmergency}` : '--'}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                          <Pill className="w-4 h-4 mx-auto text-green-500 mb-1" />
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Coinsurance</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {plan.coinsuranceRate ? `${plan.coinsuranceRate}%` : '--'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prior Auth Warning */}
+                    {plan.benefits.some(b => b.priorAuthRequired) && (
+                      <div className="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>{plan.benefits.filter(b => b.priorAuthRequired).length} services require prior authorization</span>
+                      </div>
+                    )}
                   </div>
                 ))}
 
                 {/* Add another plan */}
                 <button
-                  onClick={onSmartUpload}
+                  onClick={() => setIsAddPlanModalOpen(true)}
                   className="w-full p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all flex items-center justify-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
@@ -265,6 +333,13 @@ export default function InsuranceHub({
             )}
           </div>
         )}
+
+        {/* Add Insurance Plan Modal */}
+        <AddInsurancePlanModal
+          isOpen={isAddPlanModalOpen}
+          onClose={() => setIsAddPlanModalOpen(false)}
+          onPlanAdded={handlePlanAdded}
+        />
 
         {/* Costs Tab */}
         {activeTab === 'costs' && (

@@ -133,10 +133,26 @@ export interface InsurancePlan {
   planName: string;
   insurerName: string;
   planType: 'HMO' | 'PPO' | 'EPO' | 'POS' | 'HDHP' | 'Other';
+  planIdNumber?: string;
   effectiveDate: string;
+  terminationDate?: string;
   uploadDate: string;
   sourceFile: string;
   extractionConfidence: number;
+  // Tracking fields (how much has been paid toward limits)
+  deductibleMetIndividual?: number;
+  deductibleMetFamily?: number;
+  oopMetIndividual?: number;
+  oopMetFamily?: number;
+  // Copay amounts
+  copayPrimaryCare?: number;
+  copaySpecialist?: number;
+  copayUrgentCare?: number;
+  copayEmergency?: number;
+  coinsuranceRate?: number;
+  // Source tracking
+  extractedFromSbc?: boolean;
+  sbcExtractionConfidence?: number;
   benefits: InsuranceBenefit[];
   costs: InsuranceCost[];
   limitations: InsuranceLimitation[];

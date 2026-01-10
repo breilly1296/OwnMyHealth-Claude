@@ -27,6 +27,7 @@ interface InsurancePlanResponse {
   planName: string;
   insurerName: string;
   planType: string;
+  planIdNumber?: string;
   memberId?: string;
   groupNumber?: string;
   effectiveDate: string;
@@ -36,6 +37,20 @@ interface InsurancePlanResponse {
   deductibleFamily: number;
   outOfPocketMax: number;
   outOfPocketMaxFamily: number;
+  // Tracking fields (how much has been paid toward limits)
+  deductibleMetIndividual?: number;
+  deductibleMetFamily?: number;
+  oopMetIndividual?: number;
+  oopMetFamily?: number;
+  // Copay amounts
+  copayPrimaryCare?: number;
+  copaySpecialist?: number;
+  copayUrgentCare?: number;
+  copayEmergency?: number;
+  coinsuranceRate?: number;
+  // Source tracking
+  extractedFromSbc: boolean;
+  sbcExtractionConfidence?: number;
   isActive: boolean;
   isPrimary: boolean;
   benefits: InsuranceBenefitResponse[];
@@ -107,6 +122,7 @@ function toResponse(
     planName: plan.planName,
     insurerName: plan.insurerName,
     planType: plan.planType,
+    planIdNumber: plan.planIdNumber ?? undefined,
     memberId,
     groupNumber,
     effectiveDate: plan.effectiveDate.toISOString().split('T')[0],
@@ -118,6 +134,20 @@ function toResponse(
     deductibleFamily: toNumber(plan.deductibleFamily),
     outOfPocketMax: toNumber(plan.oopMaxIndividual),
     outOfPocketMaxFamily: toNumber(plan.oopMaxFamily),
+    // Tracking fields
+    deductibleMetIndividual: plan.deductibleMetIndividual ? toNumber(plan.deductibleMetIndividual) : undefined,
+    deductibleMetFamily: plan.deductibleMetFamily ? toNumber(plan.deductibleMetFamily) : undefined,
+    oopMetIndividual: plan.oopMetIndividual ? toNumber(plan.oopMetIndividual) : undefined,
+    oopMetFamily: plan.oopMetFamily ? toNumber(plan.oopMetFamily) : undefined,
+    // Copay amounts
+    copayPrimaryCare: plan.copayPrimaryCare ? toNumber(plan.copayPrimaryCare) : undefined,
+    copaySpecialist: plan.copaySpecialist ? toNumber(plan.copaySpecialist) : undefined,
+    copayUrgentCare: plan.copayUrgentCare ? toNumber(plan.copayUrgentCare) : undefined,
+    copayEmergency: plan.copayEmergency ? toNumber(plan.copayEmergency) : undefined,
+    coinsuranceRate: plan.coinsuranceRate ? toNumber(plan.coinsuranceRate) : undefined,
+    // Source tracking
+    extractedFromSbc: plan.extractedFromSbc,
+    sbcExtractionConfidence: plan.sbcExtractionConfidence ? toNumber(plan.sbcExtractionConfidence) : undefined,
     isActive: plan.isActive,
     isPrimary: plan.isPrimary,
     benefits,
@@ -244,6 +274,7 @@ export async function createInsurancePlan(
       planName: input.planName,
       insurerName: input.insurerName,
       planType: input.planType,
+      planIdNumber: input.planIdNumber ?? null,
       memberIdEncrypted,
       groupIdEncrypted,
       effectiveDate: new Date(input.effectiveDate),
@@ -253,6 +284,20 @@ export async function createInsurancePlan(
       deductibleFamily: input.deductibleFamily ?? input.deductible * 2,
       oopMaxIndividual: input.outOfPocketMax,
       oopMaxFamily: input.outOfPocketMaxFamily ?? input.outOfPocketMax * 2,
+      // Tracking fields
+      deductibleMetIndividual: input.deductibleMetIndividual ?? 0,
+      deductibleMetFamily: input.deductibleMetFamily ?? 0,
+      oopMetIndividual: input.oopMetIndividual ?? 0,
+      oopMetFamily: input.oopMetFamily ?? 0,
+      // Copay amounts
+      copayPrimaryCare: input.copayPrimaryCare ?? null,
+      copaySpecialist: input.copaySpecialist ?? null,
+      copayUrgentCare: input.copayUrgentCare ?? null,
+      copayEmergency: input.copayEmergency ?? null,
+      coinsuranceRate: input.coinsuranceRate ?? null,
+      // Source tracking (manual entry)
+      extractedFromSbc: false,
+      sbcExtractionConfidence: null,
       isActive: input.isActive ?? true,
       isPrimary: input.isPrimary ?? false,
       benefits: input.benefits
@@ -320,6 +365,7 @@ export async function updateInsurancePlan(
   if (input.planName !== undefined) updateData.planName = input.planName;
   if (input.insurerName !== undefined) updateData.insurerName = input.insurerName;
   if (input.planType !== undefined) updateData.planType = input.planType;
+  if (input.planIdNumber !== undefined) updateData.planIdNumber = input.planIdNumber || null;
   if (input.memberId !== undefined) {
     updateData.memberIdEncrypted = input.memberId
       ? encryptionService.encrypt(input.memberId, userSalt)
@@ -339,6 +385,17 @@ export async function updateInsurancePlan(
   if (input.deductibleFamily !== undefined) updateData.deductibleFamily = input.deductibleFamily;
   if (input.outOfPocketMax !== undefined) updateData.oopMaxIndividual = input.outOfPocketMax;
   if (input.outOfPocketMaxFamily !== undefined) updateData.oopMaxFamily = input.outOfPocketMaxFamily;
+  // Tracking fields
+  if (input.deductibleMetIndividual !== undefined) updateData.deductibleMetIndividual = input.deductibleMetIndividual;
+  if (input.deductibleMetFamily !== undefined) updateData.deductibleMetFamily = input.deductibleMetFamily;
+  if (input.oopMetIndividual !== undefined) updateData.oopMetIndividual = input.oopMetIndividual;
+  if (input.oopMetFamily !== undefined) updateData.oopMetFamily = input.oopMetFamily;
+  // Copay amounts
+  if (input.copayPrimaryCare !== undefined) updateData.copayPrimaryCare = input.copayPrimaryCare;
+  if (input.copaySpecialist !== undefined) updateData.copaySpecialist = input.copaySpecialist;
+  if (input.copayUrgentCare !== undefined) updateData.copayUrgentCare = input.copayUrgentCare;
+  if (input.copayEmergency !== undefined) updateData.copayEmergency = input.copayEmergency;
+  if (input.coinsuranceRate !== undefined) updateData.coinsuranceRate = input.coinsuranceRate;
   if (input.isActive !== undefined) updateData.isActive = input.isActive;
 
   // Handle primary flag
