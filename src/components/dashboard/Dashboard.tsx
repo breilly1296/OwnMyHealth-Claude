@@ -98,6 +98,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
     handleClinicalFileExtract,
     handleLabOCRSuccess,
     handleInsurancePlanExtracted,
+    refreshBiomarkers,
   } = useBiomarkerData({
     user,
     initialBiomarkers: isDemoMode ? sampleBiomarkers : [],
@@ -145,10 +146,11 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
         return (
           <Suspense fallback={<PageLoadSpinner />}>
             <InsuranceHub
-              plans={insurancePlans}
-              onOpenSBCUpload={() => modals.open('sbcUpload')}
-              onOpenPlanViewer={() => modals.open('insuranceViewer')}
-              onOpenEnhancedUpload={() => modals.open('enhancedUpload')}
+              insurancePlans={insurancePlans}
+              onUploadSBC={() => modals.open('sbcUpload')}
+              onSmartUpload={() => modals.open('enhancedUpload')}
+              onViewPlanDetails={() => modals.open('insuranceViewer')}
+              onRefresh={refreshBiomarkers}
             />
           </Suspense>
         );
