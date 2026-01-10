@@ -180,8 +180,48 @@ export default function LoginPage({
           </div>
         </header>
 
+        {/* Mobile Value Proposition */}
+        <div className="lg:hidden px-6 py-6 border-b border-slate-800 bg-slate-900/50">
+          <h1 className="text-xl font-bold text-white mb-4 text-center">
+            Take control of your
+            <span className="bg-gradient-to-r from-brand-400 to-wellness-400 bg-clip-text text-transparent"> health data</span>
+          </h1>
+
+          {/* Condensed Feature Pills */}
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-full px-3 py-1.5 border border-slate-700/50">
+              <Activity className="w-3.5 h-3.5 text-brand-400" />
+              <span className="text-xs text-slate-300">Biomarkers</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-full px-3 py-1.5 border border-slate-700/50">
+              <TrendingUp className="w-3.5 h-3.5 text-wellness-400" />
+              <span className="text-xs text-slate-300">Trends</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-full px-3 py-1.5 border border-slate-700/50">
+              <FileText className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-xs text-slate-300">Lab Reports</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-full px-3 py-1.5 border border-slate-700/50">
+              <Shield className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-xs text-slate-300">Insurance</span>
+            </div>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              <span>256-bit encrypted</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Shield className="w-3 h-3" />
+              <span>HIPAA-compliant</span>
+            </div>
+          </div>
+        </div>
+
         {/* Login Form Container */}
-        <main className="flex-1 flex items-center justify-center px-6 py-12 lg:px-12">
+        <main className="flex-1 flex items-center justify-center px-6 py-8 lg:py-12 lg:px-12">
           <div className="w-full max-w-md">
             {/* Welcome Text */}
             <div className="text-center mb-8">
