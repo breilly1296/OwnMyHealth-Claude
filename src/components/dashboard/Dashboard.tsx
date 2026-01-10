@@ -142,7 +142,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   // Render special pages (non-biomarker categories)
   const renderSpecialPage = () => {
     switch (selectedCategory) {
-      case 'Insurance Hub':
+      case 'Insurance':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
             <InsuranceHub
@@ -184,7 +184,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   };
 
   // Determine if showing a special page or biomarker content
-  const specialPages = ['Insurance Hub', 'Knowledge Base', 'Files', 'Trends', 'Account Settings'];
+  const specialPages = ['Insurance', 'Knowledge Base', 'Files', 'Trends', 'Account Settings'];
   const isSpecialPage = specialPages.includes(selectedCategory);
 
   // Loading state
