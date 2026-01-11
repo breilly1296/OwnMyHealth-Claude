@@ -364,25 +364,25 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                               {plan.copayPrimaryCare !== undefined && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Primary Care:</span>
-                                  <span className="font-medium">${plan.copayPrimaryCare} copay</span>
+                                  <span className="font-medium">{plan.copayPrimaryCare ? `$${plan.copayPrimaryCare} copay` : '--'}</span>
                                 </div>
                               )}
                               {plan.copaySpecialist !== undefined && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Specialist:</span>
-                                  <span className="font-medium">${plan.copaySpecialist} copay</span>
+                                  <span className="font-medium">{plan.copaySpecialist ? `$${plan.copaySpecialist} copay` : '--'}</span>
                                 </div>
                               )}
                               {plan.copayUrgentCare !== undefined && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Urgent Care:</span>
-                                  <span className="font-medium">${plan.copayUrgentCare} copay</span>
+                                  <span className="font-medium">{plan.copayUrgentCare ? `$${plan.copayUrgentCare} copay` : '--'}</span>
                                 </div>
                               )}
                               {plan.copayEmergency !== undefined && (
                                 <div className="flex justify-between">
                                   <span className="text-gray-600">Emergency Room:</span>
-                                  <span className="font-medium">${plan.copayEmergency} copay</span>
+                                  <span className="font-medium">{plan.copayEmergency ? `$${plan.copayEmergency} copay` : '--'}</span>
                                 </div>
                               )}
                               {plan.coinsuranceRate !== undefined && (

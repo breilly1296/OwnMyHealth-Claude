@@ -374,10 +374,10 @@ export default function InsuranceKnowledgeBase({ plans }: InsuranceKnowledgeBase
                                   <CheckCircle className="w-4 h-4" /> Covered
                                 </span>
                                 {benefit.inNetworkCoverage.costStructure.type === 'copay' && (
-                                  <span className="text-slate-600">${benefit.inNetworkCoverage.costStructure.amount} copay</span>
+                                  <span className="text-slate-600">{benefit.inNetworkCoverage.costStructure.amount ? `$${benefit.inNetworkCoverage.costStructure.amount} copay` : '--'}</span>
                                 )}
                                 {benefit.inNetworkCoverage.costStructure.type === 'coinsurance' && (
-                                  <span className="text-slate-600">{benefit.inNetworkCoverage.costStructure.percentage}% coinsurance</span>
+                                  <span className="text-slate-600">{benefit.inNetworkCoverage.costStructure.percentage ? `${benefit.inNetworkCoverage.costStructure.percentage}% coinsurance` : '--'}</span>
                                 )}
                               </>
                             ) : (

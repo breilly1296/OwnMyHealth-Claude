@@ -617,10 +617,10 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                             <div>
                               <span className="text-gray-600">Cost Structure:</span>
                               <div className="font-medium">
-                                {coverage.coverage.costStructure.type === 'copay' && 
-                                  `$${coverage.coverage.costStructure.amount} copay`}
-                                {coverage.coverage.costStructure.type === 'coinsurance' && 
-                                  `${coverage.coverage.costStructure.percentage}% coinsurance`}
+                                {coverage.coverage.costStructure.type === 'copay' &&
+                                  (coverage.coverage.costStructure.amount ? `$${coverage.coverage.costStructure.amount} copay` : '--')}
+                                {coverage.coverage.costStructure.type === 'coinsurance' &&
+                                  (coverage.coverage.costStructure.percentage ? `${coverage.coverage.costStructure.percentage}% coinsurance` : '--')}
                                 {coverage.coverage.costStructure.type === 'deductible' && 
                                   'Subject to deductible'}
                                 {coverage.coverage.costStructure.type === 'not_covered' && 

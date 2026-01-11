@@ -227,9 +227,9 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
             ],
             benefits: [],
             extractedTerms: [
-              ...(planData.copayPrimaryCare !== undefined ? [{ term: 'Primary Care Copay', value: `$${planData.copayPrimaryCare}`, importance: 'high' as const, category: 'Copays' }] : []),
-              ...(planData.copaySpecialist !== undefined ? [{ term: 'Specialist Copay', value: `$${planData.copaySpecialist}`, importance: 'high' as const, category: 'Copays' }] : []),
-              ...(planData.copayEmergency !== undefined ? [{ term: 'Emergency Copay', value: `$${planData.copayEmergency}`, importance: 'high' as const, category: 'Copays' }] : []),
+              ...(planData.copayPrimaryCare !== undefined ? [{ term: 'Primary Care Copay', value: planData.copayPrimaryCare ? `$${planData.copayPrimaryCare}` : '--', importance: 'high' as const, category: 'Copays' }] : []),
+              ...(planData.copaySpecialist !== undefined ? [{ term: 'Specialist Copay', value: planData.copaySpecialist ? `$${planData.copaySpecialist}` : '--', importance: 'high' as const, category: 'Copays' }] : []),
+              ...(planData.copayEmergency !== undefined ? [{ term: 'Emergency Copay', value: planData.copayEmergency ? `$${planData.copayEmergency}` : '--', importance: 'high' as const, category: 'Copays' }] : []),
               ...(planData.coinsuranceRate !== undefined ? [{ term: 'Coinsurance Rate', value: `${planData.coinsuranceRate}%`, importance: 'medium' as const, category: 'Coverage' }] : []),
             ],
           },
@@ -638,8 +638,8 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                                       <div className="flex items-center text-green-600">
                                         <CheckCircle className="w-3 h-3 mr-1" />
                                         Covered
-                                        {benefit.inNetworkCoverage.copay && ` - $${benefit.inNetworkCoverage.copay} copay`}
-                                        {benefit.inNetworkCoverage.coinsurance && ` - ${benefit.inNetworkCoverage.coinsurance}% coinsurance`}
+                                        {benefit.inNetworkCoverage.copay !== undefined && (benefit.inNetworkCoverage.copay ? ` - $${benefit.inNetworkCoverage.copay} copay` : ' - --')}
+                                        {benefit.inNetworkCoverage.coinsurance !== undefined && (benefit.inNetworkCoverage.coinsurance ? ` - ${benefit.inNetworkCoverage.coinsurance}% coinsurance` : ' - --')}
                                       </div>
                                     ) : (
                                       <div className="flex items-center text-red-600">

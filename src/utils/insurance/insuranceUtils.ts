@@ -117,14 +117,14 @@ export function transformPlanForDisplay(plan: InsurancePlan): InsurancePlan {
   addBenefit('Emergency Care', 'Ground Ambulance', plan.ambulanceGroundCopay, plan.ambulanceGroundCoinsurance);
   addBenefit('Emergency Care', 'Air Ambulance', plan.ambulanceAirCopay, plan.ambulanceAirCoinsurance);
 
-  // Preventive Care (typically $0 copay, fully covered)
+  // Preventive Care (fully covered, copay shown as "--" until cost calculator is built)
   if (plan.preventiveServicesList && plan.preventiveServicesList.length > 0) {
     benefits.push({
       id: `${plan.id}-preventive`,
       category: 'Preventive Care',
       serviceName: 'Preventive Services',
       description: plan.preventiveServicesList.slice(0, 3).join(', '),
-      inNetworkCoverage: { covered: true, copay: 0 },
+      inNetworkCoverage: { covered: true },
     });
   }
 
