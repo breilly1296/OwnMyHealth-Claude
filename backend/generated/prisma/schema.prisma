@@ -199,6 +199,12 @@ model InsurancePlan {
   oopMetIndividual        Decimal   @default(0) @map("oop_met_individual") @db.Decimal(10, 2)
   oopMetFamily            Decimal   @default(0) @map("oop_met_family") @db.Decimal(10, 2)
 
+  // Out-of-network financial limits
+  deductibleIndividualOutOfNetwork Decimal? @map("deductible_individual_oon") @db.Decimal(10, 2)
+  deductibleFamilyOutOfNetwork     Decimal? @map("deductible_family_oon") @db.Decimal(10, 2)
+  oopMaxIndividualOutOfNetwork     Decimal? @map("oop_max_individual_oon") @db.Decimal(10, 2)
+  oopMaxFamilyOutOfNetwork         Decimal? @map("oop_max_family_oon") @db.Decimal(10, 2)
+
   // Copays
   copayPrimaryCare     Decimal? @map("copay_primary_care") @db.Decimal(10, 2)
   copaySpecialist      Decimal? @map("copay_specialist") @db.Decimal(10, 2)

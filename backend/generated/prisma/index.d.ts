@@ -11518,6 +11518,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | null
     oopMetIndividual: Decimal | null
     oopMetFamily: Decimal | null
+    deductibleIndividualOutOfNetwork: Decimal | null
+    deductibleFamilyOutOfNetwork: Decimal | null
+    oopMaxIndividualOutOfNetwork: Decimal | null
+    oopMaxFamilyOutOfNetwork: Decimal | null
     copayPrimaryCare: Decimal | null
     copaySpecialist: Decimal | null
     copayUrgentCare: Decimal | null
@@ -11614,6 +11618,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | null
     oopMetIndividual: Decimal | null
     oopMetFamily: Decimal | null
+    deductibleIndividualOutOfNetwork: Decimal | null
+    deductibleFamilyOutOfNetwork: Decimal | null
+    oopMaxIndividualOutOfNetwork: Decimal | null
+    oopMaxFamilyOutOfNetwork: Decimal | null
     copayPrimaryCare: Decimal | null
     copaySpecialist: Decimal | null
     copayUrgentCare: Decimal | null
@@ -11720,6 +11728,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | null
     oopMetIndividual: Decimal | null
     oopMetFamily: Decimal | null
+    deductibleIndividualOutOfNetwork: Decimal | null
+    deductibleFamilyOutOfNetwork: Decimal | null
+    oopMaxIndividualOutOfNetwork: Decimal | null
+    oopMaxFamilyOutOfNetwork: Decimal | null
     copayPrimaryCare: Decimal | null
     copaySpecialist: Decimal | null
     copayUrgentCare: Decimal | null
@@ -11836,6 +11848,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | null
     oopMetIndividual: Decimal | null
     oopMetFamily: Decimal | null
+    deductibleIndividualOutOfNetwork: Decimal | null
+    deductibleFamilyOutOfNetwork: Decimal | null
+    oopMaxIndividualOutOfNetwork: Decimal | null
+    oopMaxFamilyOutOfNetwork: Decimal | null
     copayPrimaryCare: Decimal | null
     copaySpecialist: Decimal | null
     copayUrgentCare: Decimal | null
@@ -11952,6 +11968,10 @@ export namespace Prisma {
     oopMaxFamily: number
     oopMetIndividual: number
     oopMetFamily: number
+    deductibleIndividualOutOfNetwork: number
+    deductibleFamilyOutOfNetwork: number
+    oopMaxIndividualOutOfNetwork: number
+    oopMaxFamilyOutOfNetwork: number
     copayPrimaryCare: number
     copaySpecialist: number
     copayUrgentCare: number
@@ -12060,6 +12080,10 @@ export namespace Prisma {
     oopMaxFamily?: true
     oopMetIndividual?: true
     oopMetFamily?: true
+    deductibleIndividualOutOfNetwork?: true
+    deductibleFamilyOutOfNetwork?: true
+    oopMaxIndividualOutOfNetwork?: true
+    oopMaxFamilyOutOfNetwork?: true
     copayPrimaryCare?: true
     copaySpecialist?: true
     copayUrgentCare?: true
@@ -12156,6 +12180,10 @@ export namespace Prisma {
     oopMaxFamily?: true
     oopMetIndividual?: true
     oopMetFamily?: true
+    deductibleIndividualOutOfNetwork?: true
+    deductibleFamilyOutOfNetwork?: true
+    oopMaxIndividualOutOfNetwork?: true
+    oopMaxFamilyOutOfNetwork?: true
     copayPrimaryCare?: true
     copaySpecialist?: true
     copayUrgentCare?: true
@@ -12262,6 +12290,10 @@ export namespace Prisma {
     oopMaxFamily?: true
     oopMetIndividual?: true
     oopMetFamily?: true
+    deductibleIndividualOutOfNetwork?: true
+    deductibleFamilyOutOfNetwork?: true
+    oopMaxIndividualOutOfNetwork?: true
+    oopMaxFamilyOutOfNetwork?: true
     copayPrimaryCare?: true
     copaySpecialist?: true
     copayUrgentCare?: true
@@ -12378,6 +12410,10 @@ export namespace Prisma {
     oopMaxFamily?: true
     oopMetIndividual?: true
     oopMetFamily?: true
+    deductibleIndividualOutOfNetwork?: true
+    deductibleFamilyOutOfNetwork?: true
+    oopMaxIndividualOutOfNetwork?: true
+    oopMaxFamilyOutOfNetwork?: true
     copayPrimaryCare?: true
     copaySpecialist?: true
     copayUrgentCare?: true
@@ -12494,6 +12530,10 @@ export namespace Prisma {
     oopMaxFamily?: true
     oopMetIndividual?: true
     oopMetFamily?: true
+    deductibleIndividualOutOfNetwork?: true
+    deductibleFamilyOutOfNetwork?: true
+    oopMaxIndividualOutOfNetwork?: true
+    oopMaxFamilyOutOfNetwork?: true
     copayPrimaryCare?: true
     copaySpecialist?: true
     copayUrgentCare?: true
@@ -12697,6 +12737,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal
     oopMetIndividual: Decimal
     oopMetFamily: Decimal
+    deductibleIndividualOutOfNetwork: Decimal | null
+    deductibleFamilyOutOfNetwork: Decimal | null
+    oopMaxIndividualOutOfNetwork: Decimal | null
+    oopMaxFamilyOutOfNetwork: Decimal | null
     copayPrimaryCare: Decimal | null
     copaySpecialist: Decimal | null
     copayUrgentCare: Decimal | null
@@ -12832,6 +12876,10 @@ export namespace Prisma {
     oopMaxFamily?: boolean
     oopMetIndividual?: boolean
     oopMetFamily?: boolean
+    deductibleIndividualOutOfNetwork?: boolean
+    deductibleFamilyOutOfNetwork?: boolean
+    oopMaxIndividualOutOfNetwork?: boolean
+    oopMaxFamilyOutOfNetwork?: boolean
     copayPrimaryCare?: boolean
     copaySpecialist?: boolean
     copayUrgentCare?: boolean
@@ -12951,6 +12999,10 @@ export namespace Prisma {
     oopMaxFamily?: boolean
     oopMetIndividual?: boolean
     oopMetFamily?: boolean
+    deductibleIndividualOutOfNetwork?: boolean
+    deductibleFamilyOutOfNetwork?: boolean
+    oopMaxIndividualOutOfNetwork?: boolean
+    oopMaxFamilyOutOfNetwork?: boolean
     copayPrimaryCare?: boolean
     copaySpecialist?: boolean
     copayUrgentCare?: boolean
@@ -13068,6 +13120,10 @@ export namespace Prisma {
     oopMaxFamily?: boolean
     oopMetIndividual?: boolean
     oopMetFamily?: boolean
+    deductibleIndividualOutOfNetwork?: boolean
+    deductibleFamilyOutOfNetwork?: boolean
+    oopMaxIndividualOutOfNetwork?: boolean
+    oopMaxFamilyOutOfNetwork?: boolean
     copayPrimaryCare?: boolean
     copaySpecialist?: boolean
     copayUrgentCare?: boolean
@@ -13185,6 +13241,10 @@ export namespace Prisma {
     oopMaxFamily?: boolean
     oopMetIndividual?: boolean
     oopMetFamily?: boolean
+    deductibleIndividualOutOfNetwork?: boolean
+    deductibleFamilyOutOfNetwork?: boolean
+    oopMaxIndividualOutOfNetwork?: boolean
+    oopMaxFamilyOutOfNetwork?: boolean
     copayPrimaryCare?: boolean
     copaySpecialist?: boolean
     copayUrgentCare?: boolean
@@ -13281,7 +13341,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "copayTelehealth" | "copayLabWork" | "copayXray" | "copayAdvancedImaging" | "coinsuranceRate" | "coinsurancePrimaryCare" | "coinsuranceSpecialist" | "coinsuranceUrgentCare" | "coinsuranceEmergency" | "coinsuranceTelehealth" | "coinsuranceLabWork" | "coinsuranceXray" | "coinsuranceAdvancedImaging" | "inpatientHospitalCopay" | "inpatientHospitalCoinsurance" | "inpatientMentalHealthCopay" | "inpatientMentalCoinsurance" | "maternityCopay" | "maternityCoinsurance" | "skilledNursingCopay" | "skilledNursingCoinsurance" | "skilledNursingDaysLimit" | "outpatientSurgeryCopay" | "outpatientSurgeryCoinsurance" | "outpatientMentalHealthCopay" | "outpatientMentalCoinsurance" | "physicalTherapyVisitsLimit" | "occupationalTherapyVisitsLimit" | "speechTherapyVisitsLimit" | "physicalTherapyCopay" | "occupationalTherapyCopay" | "speechTherapyCopay" | "rxTier1Copay" | "rxTier2Copay" | "rxTier3Copay" | "rxTier4Copay" | "rxTier1Coinsurance" | "rxTier2Coinsurance" | "rxTier3Coinsurance" | "rxTier4Coinsurance" | "rxRetailDaysSupply" | "rxMailOrderDaysSupply" | "rxDeductibleIndividual" | "rxDeductibleFamily" | "rxOopMaxIndividual" | "rxOopMaxFamily" | "ambulanceGroundCopay" | "ambulanceGroundCoinsurance" | "ambulanceAirCopay" | "ambulanceAirCoinsurance" | "visionExamCopay" | "visionExamFrequency" | "visionLensesAllowance" | "visionFramesAllowance" | "visionContactsAllowance" | "dentalPreventiveCoinsurance" | "dentalBasicCoinsurance" | "dentalMajorCoinsurance" | "dentalAnnualMax" | "dentalDeductible" | "dentalOrthodontiaCoinsurance" | "dentalOrthodontiaLifetimeMax" | "dmeCopay" | "dmeCoinsurance" | "homeHealthVisitCopay" | "homeHealthVisitCoinsurance" | "homeHealthVisitLimit" | "hospiceInpatientCopay" | "hospiceInpatientCoinsurance" | "hospiceRespiteCopay" | "hospiceRespiteCoinsurance" | "hospiceRespiteDayLimit" | "chiropracticCopay" | "chiropracticVisitsLimit" | "acupunctureCopay" | "acupunctureVisitsLimit" | "cardiacRehabCopay" | "cardiacRehabVisitsLimit" | "pulmonaryRehabCopay" | "pulmonaryRehabVisitsLimit" | "preventiveServicesList" | "exclusionsList" | "priorAuthRequirements" | "servicesWithLimits" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
+  export type InsurancePlanOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planName" | "insurerName" | "planType" | "planIdNumber" | "memberIdEncrypted" | "groupIdEncrypted" | "effectiveDate" | "terminationDate" | "premiumMonthly" | "deductibleIndividual" | "deductibleFamily" | "deductibleMetIndividual" | "deductibleMetFamily" | "oopMaxIndividual" | "oopMaxFamily" | "oopMetIndividual" | "oopMetFamily" | "deductibleIndividualOutOfNetwork" | "deductibleFamilyOutOfNetwork" | "oopMaxIndividualOutOfNetwork" | "oopMaxFamilyOutOfNetwork" | "copayPrimaryCare" | "copaySpecialist" | "copayUrgentCare" | "copayEmergency" | "copayTelehealth" | "copayLabWork" | "copayXray" | "copayAdvancedImaging" | "coinsuranceRate" | "coinsurancePrimaryCare" | "coinsuranceSpecialist" | "coinsuranceUrgentCare" | "coinsuranceEmergency" | "coinsuranceTelehealth" | "coinsuranceLabWork" | "coinsuranceXray" | "coinsuranceAdvancedImaging" | "inpatientHospitalCopay" | "inpatientHospitalCoinsurance" | "inpatientMentalHealthCopay" | "inpatientMentalCoinsurance" | "maternityCopay" | "maternityCoinsurance" | "skilledNursingCopay" | "skilledNursingCoinsurance" | "skilledNursingDaysLimit" | "outpatientSurgeryCopay" | "outpatientSurgeryCoinsurance" | "outpatientMentalHealthCopay" | "outpatientMentalCoinsurance" | "physicalTherapyVisitsLimit" | "occupationalTherapyVisitsLimit" | "speechTherapyVisitsLimit" | "physicalTherapyCopay" | "occupationalTherapyCopay" | "speechTherapyCopay" | "rxTier1Copay" | "rxTier2Copay" | "rxTier3Copay" | "rxTier4Copay" | "rxTier1Coinsurance" | "rxTier2Coinsurance" | "rxTier3Coinsurance" | "rxTier4Coinsurance" | "rxRetailDaysSupply" | "rxMailOrderDaysSupply" | "rxDeductibleIndividual" | "rxDeductibleFamily" | "rxOopMaxIndividual" | "rxOopMaxFamily" | "ambulanceGroundCopay" | "ambulanceGroundCoinsurance" | "ambulanceAirCopay" | "ambulanceAirCoinsurance" | "visionExamCopay" | "visionExamFrequency" | "visionLensesAllowance" | "visionFramesAllowance" | "visionContactsAllowance" | "dentalPreventiveCoinsurance" | "dentalBasicCoinsurance" | "dentalMajorCoinsurance" | "dentalAnnualMax" | "dentalDeductible" | "dentalOrthodontiaCoinsurance" | "dentalOrthodontiaLifetimeMax" | "dmeCopay" | "dmeCoinsurance" | "homeHealthVisitCopay" | "homeHealthVisitCoinsurance" | "homeHealthVisitLimit" | "hospiceInpatientCopay" | "hospiceInpatientCoinsurance" | "hospiceRespiteCopay" | "hospiceRespiteCoinsurance" | "hospiceRespiteDayLimit" | "chiropracticCopay" | "chiropracticVisitsLimit" | "acupunctureCopay" | "acupunctureVisitsLimit" | "cardiacRehabCopay" | "cardiacRehabVisitsLimit" | "pulmonaryRehabCopay" | "pulmonaryRehabVisitsLimit" | "preventiveServicesList" | "exclusionsList" | "priorAuthRequirements" | "servicesWithLimits" | "extractedFromSbc" | "sbcExtractionConfidence" | "isActive" | "isPrimary" | "createdAt" | "updatedAt", ExtArgs["result"]["insurancePlan"]>
   export type InsurancePlanInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -13320,6 +13380,10 @@ export namespace Prisma {
       oopMaxFamily: Prisma.Decimal
       oopMetIndividual: Prisma.Decimal
       oopMetFamily: Prisma.Decimal
+      deductibleIndividualOutOfNetwork: Prisma.Decimal | null
+      deductibleFamilyOutOfNetwork: Prisma.Decimal | null
+      oopMaxIndividualOutOfNetwork: Prisma.Decimal | null
+      oopMaxFamilyOutOfNetwork: Prisma.Decimal | null
       copayPrimaryCare: Prisma.Decimal | null
       copaySpecialist: Prisma.Decimal | null
       copayUrgentCare: Prisma.Decimal | null
@@ -13858,6 +13922,10 @@ export namespace Prisma {
     readonly oopMaxFamily: FieldRef<"InsurancePlan", 'Decimal'>
     readonly oopMetIndividual: FieldRef<"InsurancePlan", 'Decimal'>
     readonly oopMetFamily: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly deductibleIndividualOutOfNetwork: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly deductibleFamilyOutOfNetwork: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly oopMaxIndividualOutOfNetwork: FieldRef<"InsurancePlan", 'Decimal'>
+    readonly oopMaxFamilyOutOfNetwork: FieldRef<"InsurancePlan", 'Decimal'>
     readonly copayPrimaryCare: FieldRef<"InsurancePlan", 'Decimal'>
     readonly copaySpecialist: FieldRef<"InsurancePlan", 'Decimal'>
     readonly copayUrgentCare: FieldRef<"InsurancePlan", 'Decimal'>
@@ -25138,6 +25206,10 @@ export namespace Prisma {
     oopMaxFamily: 'oopMaxFamily',
     oopMetIndividual: 'oopMetIndividual',
     oopMetFamily: 'oopMetFamily',
+    deductibleIndividualOutOfNetwork: 'deductibleIndividualOutOfNetwork',
+    deductibleFamilyOutOfNetwork: 'deductibleFamilyOutOfNetwork',
+    oopMaxIndividualOutOfNetwork: 'oopMaxIndividualOutOfNetwork',
+    oopMaxFamilyOutOfNetwork: 'oopMaxFamilyOutOfNetwork',
     copayPrimaryCare: 'copayPrimaryCare',
     copaySpecialist: 'copaySpecialist',
     copayUrgentCare: 'copayUrgentCare',
@@ -26450,6 +26522,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26568,6 +26644,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrderInput | SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrderInput | SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrderInput | SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrderInput | SortOrder
     copayPrimaryCare?: SortOrderInput | SortOrder
     copaySpecialist?: SortOrderInput | SortOrder
     copayUrgentCare?: SortOrderInput | SortOrder
@@ -26689,6 +26769,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -26807,6 +26891,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrderInput | SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrderInput | SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrderInput | SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrderInput | SortOrder
     copayPrimaryCare?: SortOrderInput | SortOrder
     copaySpecialist?: SortOrderInput | SortOrder
     copayUrgentCare?: SortOrderInput | SortOrder
@@ -26931,6 +27019,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: DecimalNullableWithAggregatesFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -28680,6 +28772,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -28798,6 +28894,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -28914,6 +29014,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -29032,6 +29136,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -29149,6 +29257,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -29264,6 +29376,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -29380,6 +29496,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -31298,6 +31418,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrder
     copayPrimaryCare?: SortOrder
     copaySpecialist?: SortOrder
     copayUrgentCare?: SortOrder
@@ -31404,6 +31528,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrder
     copayPrimaryCare?: SortOrder
     copaySpecialist?: SortOrder
     copayUrgentCare?: SortOrder
@@ -31510,6 +31638,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrder
     copayPrimaryCare?: SortOrder
     copaySpecialist?: SortOrder
     copayUrgentCare?: SortOrder
@@ -31626,6 +31758,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrder
     copayPrimaryCare?: SortOrder
     copaySpecialist?: SortOrder
     copayUrgentCare?: SortOrder
@@ -31732,6 +31868,10 @@ export namespace Prisma {
     oopMaxFamily?: SortOrder
     oopMetIndividual?: SortOrder
     oopMetFamily?: SortOrder
+    deductibleIndividualOutOfNetwork?: SortOrder
+    deductibleFamilyOutOfNetwork?: SortOrder
+    oopMaxIndividualOutOfNetwork?: SortOrder
+    oopMaxFamilyOutOfNetwork?: SortOrder
     copayPrimaryCare?: SortOrder
     copaySpecialist?: SortOrder
     copayUrgentCare?: SortOrder
@@ -34420,6 +34560,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -34536,6 +34680,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -35059,6 +35207,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: DecimalNullableFilter<"InsurancePlan"> | Decimal | DecimalJsLike | number | string | null
@@ -36778,6 +36930,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -36895,6 +37051,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -37026,6 +37186,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -37143,6 +37307,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38389,6 +38557,10 @@ export namespace Prisma {
     oopMaxFamily: Decimal | DecimalJsLike | number | string
     oopMetIndividual?: Decimal | DecimalJsLike | number | string
     oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
@@ -38842,6 +39014,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -38958,6 +39134,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -39074,6 +39254,10 @@ export namespace Prisma {
     oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null

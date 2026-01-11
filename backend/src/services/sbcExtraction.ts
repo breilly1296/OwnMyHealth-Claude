@@ -220,13 +220,19 @@ export interface ExtractedInsuranceData {
   groupNumber?: string;
   networkName?: string;
 
-  // Core financial details (individual AND family)
+  // Core financial details (individual AND family) - In-network
   deductibleIndividual?: number;
   deductibleFamily?: number;
   oopMaxIndividual?: number;
   oopMaxFamily?: number;
   premiumMonthly?: number;
   coinsuranceRate?: number;
+
+  // Out-of-network financial limits
+  deductibleIndividualOutOfNetwork?: number;
+  deductibleFamilyOutOfNetwork?: number;
+  oopMaxIndividualOutOfNetwork?: number;
+  oopMaxFamilyOutOfNetwork?: number;
 
   // Deductible details
   deductibleCrossAccumulation?: boolean;
@@ -344,6 +350,10 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation text):
   "deductibleFamily": 3000,
   "oopMaxIndividual": 6000,
   "oopMaxFamily": 12000,
+  "deductibleIndividualOutOfNetwork": 3000,
+  "deductibleFamilyOutOfNetwork": 6000,
+  "oopMaxIndividualOutOfNetwork": 12000,
+  "oopMaxFamilyOutOfNetwork": 24000,
   "premiumMonthly": null,
   "coinsuranceRate": 20,
   "deductibleCrossAccumulation": true,
@@ -622,6 +632,11 @@ EXTRACTION INSTRUCTIONS - READ CAREFULLY:
 
 1. DEDUCTIBLES & OUT-OF-POCKET MAXIMUMS:
    - Get BOTH individual AND family amounts
+   - Get BOTH in-network AND out-of-network amounts (look in "Cost Sharing Expenses" section)
+     - Example: "Deductible - Single: $2,500 (In Network) / $5,000 (Out of Network)"
+     - deductibleIndividual = 2500, deductibleIndividualOutOfNetwork = 5000
+   - Out-of-network limits are typically 2x the in-network amounts
+   - Use deductibleIndividualOutOfNetwork, deductibleFamilyOutOfNetwork, oopMaxIndividualOutOfNetwork, oopMaxFamilyOutOfNetwork
    - Check if Rx has separate deductible
    - Note if deductible cross-accumulates between family members
    - Check if OOP max includes deductible or is in addition

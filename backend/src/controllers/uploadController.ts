@@ -327,6 +327,11 @@ export async function uploadSBC(
     deductibleFamily?: number;
     oopMaxIndividual?: number;
     oopMaxFamily?: number;
+    // Out-of-network financial limits
+    deductibleIndividualOutOfNetwork?: number;
+    deductibleFamilyOutOfNetwork?: number;
+    oopMaxIndividualOutOfNetwork?: number;
+    oopMaxFamilyOutOfNetwork?: number;
     premiumMonthly?: number;
     // Core copays
     copayPrimaryCare?: number;
@@ -405,11 +410,16 @@ export async function uploadSBC(
         insurerName: claudeResult.insurerName,
         planType: claudeResult.planType,
         planIdNumber: claudeResult.planIdNumber,
-        // Core financial
+        // Core financial - In-network
         deductibleIndividual: claudeResult.deductibleIndividual,
         deductibleFamily: claudeResult.deductibleFamily,
         oopMaxIndividual: claudeResult.oopMaxIndividual,
         oopMaxFamily: claudeResult.oopMaxFamily,
+        // Out-of-network financial limits
+        deductibleIndividualOutOfNetwork: claudeResult.deductibleIndividualOutOfNetwork,
+        deductibleFamilyOutOfNetwork: claudeResult.deductibleFamilyOutOfNetwork,
+        oopMaxIndividualOutOfNetwork: claudeResult.oopMaxIndividualOutOfNetwork,
+        oopMaxFamilyOutOfNetwork: claudeResult.oopMaxFamilyOutOfNetwork,
         premiumMonthly: claudeResult.premiumMonthly,
         coinsuranceRate: claudeResult.coinsuranceRate,
         // Copays
@@ -591,6 +601,11 @@ export async function uploadSBC(
       oopMaxFamily:
         extractedData.oopMaxFamily ??
         (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : 0),
+      // Out-of-network financial limits
+      deductibleIndividualOutOfNetwork: extractedData.deductibleIndividualOutOfNetwork ?? null,
+      deductibleFamilyOutOfNetwork: extractedData.deductibleFamilyOutOfNetwork ?? null,
+      oopMaxIndividualOutOfNetwork: extractedData.oopMaxIndividualOutOfNetwork ?? null,
+      oopMaxFamilyOutOfNetwork: extractedData.oopMaxFamilyOutOfNetwork ?? null,
       // Tracking fields start at 0
       deductibleMetIndividual: 0,
       deductibleMetFamily: 0,
@@ -843,6 +858,11 @@ export async function reanalyzePlan(
     deductibleFamily?: number;
     oopMaxIndividual?: number;
     oopMaxFamily?: number;
+    // Out-of-network financial limits
+    deductibleIndividualOutOfNetwork?: number;
+    deductibleFamilyOutOfNetwork?: number;
+    oopMaxIndividualOutOfNetwork?: number;
+    oopMaxFamilyOutOfNetwork?: number;
     premiumMonthly?: number;
     copayPrimaryCare?: number;
     copaySpecialist?: number;
@@ -918,6 +938,11 @@ export async function reanalyzePlan(
         deductibleFamily: claudeResult.deductibleFamily,
         oopMaxIndividual: claudeResult.oopMaxIndividual,
         oopMaxFamily: claudeResult.oopMaxFamily,
+        // Out-of-network financial limits
+        deductibleIndividualOutOfNetwork: claudeResult.deductibleIndividualOutOfNetwork,
+        deductibleFamilyOutOfNetwork: claudeResult.deductibleFamilyOutOfNetwork,
+        oopMaxIndividualOutOfNetwork: claudeResult.oopMaxIndividualOutOfNetwork,
+        oopMaxFamilyOutOfNetwork: claudeResult.oopMaxFamilyOutOfNetwork,
         premiumMonthly: claudeResult.premiumMonthly,
         coinsuranceRate: claudeResult.coinsuranceRate,
         copayPrimaryCare: claudeResult.copayPrimaryCare,
@@ -1093,6 +1118,12 @@ export async function reanalyzePlan(
         oopMaxFamily:
           extractedData.oopMaxFamily ??
           (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : Number(existingPlan.oopMaxFamily)),
+
+        // Out-of-network financial limits
+        deductibleIndividualOutOfNetwork: extractedData.deductibleIndividualOutOfNetwork ?? null,
+        deductibleFamilyOutOfNetwork: extractedData.deductibleFamilyOutOfNetwork ?? null,
+        oopMaxIndividualOutOfNetwork: extractedData.oopMaxIndividualOutOfNetwork ?? null,
+        oopMaxFamilyOutOfNetwork: extractedData.oopMaxFamilyOutOfNetwork ?? null,
 
         // Core copay fields
         copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
