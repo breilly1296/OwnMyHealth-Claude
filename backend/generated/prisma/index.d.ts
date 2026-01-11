@@ -98,6 +98,21 @@ export type AuditLog = $Result.DefaultSelection<Prisma.$AuditLogPayload>
  * 
  */
 export type SystemConfig = $Result.DefaultSelection<Prisma.$SystemConfigPayload>
+/**
+ * Model ExpenseProjection
+ * 
+ */
+export type ExpenseProjection = $Result.DefaultSelection<Prisma.$ExpenseProjectionPayload>
+/**
+ * Model ExpenseActual
+ * 
+ */
+export type ExpenseActual = $Result.DefaultSelection<Prisma.$ExpenseActualPayload>
+/**
+ * Model CostAnalysis
+ * 
+ */
+export type CostAnalysis = $Result.DefaultSelection<Prisma.$CostAnalysisPayload>
 
 /**
  * Enums
@@ -619,6 +634,36 @@ export class PrismaClient<
     * ```
     */
   get systemConfig(): Prisma.SystemConfigDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.expenseProjection`: Exposes CRUD operations for the **ExpenseProjection** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ExpenseProjections
+    * const expenseProjections = await prisma.expenseProjection.findMany()
+    * ```
+    */
+  get expenseProjection(): Prisma.ExpenseProjectionDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.expenseActual`: Exposes CRUD operations for the **ExpenseActual** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ExpenseActuals
+    * const expenseActuals = await prisma.expenseActual.findMany()
+    * ```
+    */
+  get expenseActual(): Prisma.ExpenseActualDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.costAnalysis`: Exposes CRUD operations for the **CostAnalysis** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CostAnalyses
+    * const costAnalyses = await prisma.costAnalysis.findMany()
+    * ```
+    */
+  get costAnalysis(): Prisma.CostAnalysisDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -1069,7 +1114,10 @@ export namespace Prisma {
     HealthGoal: 'HealthGoal',
     GoalProgressHistory: 'GoalProgressHistory',
     AuditLog: 'AuditLog',
-    SystemConfig: 'SystemConfig'
+    SystemConfig: 'SystemConfig',
+    ExpenseProjection: 'ExpenseProjection',
+    ExpenseActual: 'ExpenseActual',
+    CostAnalysis: 'CostAnalysis'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1085,7 +1133,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig"
+      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig" | "expenseProjection" | "expenseActual" | "costAnalysis"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2347,6 +2395,228 @@ export namespace Prisma {
           }
         }
       }
+      ExpenseProjection: {
+        payload: Prisma.$ExpenseProjectionPayload<ExtArgs>
+        fields: Prisma.ExpenseProjectionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ExpenseProjectionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ExpenseProjectionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>
+          }
+          findFirst: {
+            args: Prisma.ExpenseProjectionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ExpenseProjectionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>
+          }
+          findMany: {
+            args: Prisma.ExpenseProjectionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>[]
+          }
+          create: {
+            args: Prisma.ExpenseProjectionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>
+          }
+          createMany: {
+            args: Prisma.ExpenseProjectionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ExpenseProjectionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>[]
+          }
+          delete: {
+            args: Prisma.ExpenseProjectionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>
+          }
+          update: {
+            args: Prisma.ExpenseProjectionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>
+          }
+          deleteMany: {
+            args: Prisma.ExpenseProjectionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ExpenseProjectionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ExpenseProjectionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>[]
+          }
+          upsert: {
+            args: Prisma.ExpenseProjectionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseProjectionPayload>
+          }
+          aggregate: {
+            args: Prisma.ExpenseProjectionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateExpenseProjection>
+          }
+          groupBy: {
+            args: Prisma.ExpenseProjectionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ExpenseProjectionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ExpenseProjectionCountArgs<ExtArgs>
+            result: $Utils.Optional<ExpenseProjectionCountAggregateOutputType> | number
+          }
+        }
+      }
+      ExpenseActual: {
+        payload: Prisma.$ExpenseActualPayload<ExtArgs>
+        fields: Prisma.ExpenseActualFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ExpenseActualFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ExpenseActualFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>
+          }
+          findFirst: {
+            args: Prisma.ExpenseActualFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ExpenseActualFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>
+          }
+          findMany: {
+            args: Prisma.ExpenseActualFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>[]
+          }
+          create: {
+            args: Prisma.ExpenseActualCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>
+          }
+          createMany: {
+            args: Prisma.ExpenseActualCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ExpenseActualCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>[]
+          }
+          delete: {
+            args: Prisma.ExpenseActualDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>
+          }
+          update: {
+            args: Prisma.ExpenseActualUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>
+          }
+          deleteMany: {
+            args: Prisma.ExpenseActualDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ExpenseActualUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ExpenseActualUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>[]
+          }
+          upsert: {
+            args: Prisma.ExpenseActualUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ExpenseActualPayload>
+          }
+          aggregate: {
+            args: Prisma.ExpenseActualAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateExpenseActual>
+          }
+          groupBy: {
+            args: Prisma.ExpenseActualGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ExpenseActualGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ExpenseActualCountArgs<ExtArgs>
+            result: $Utils.Optional<ExpenseActualCountAggregateOutputType> | number
+          }
+        }
+      }
+      CostAnalysis: {
+        payload: Prisma.$CostAnalysisPayload<ExtArgs>
+        fields: Prisma.CostAnalysisFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CostAnalysisFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CostAnalysisFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>
+          }
+          findFirst: {
+            args: Prisma.CostAnalysisFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CostAnalysisFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>
+          }
+          findMany: {
+            args: Prisma.CostAnalysisFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>[]
+          }
+          create: {
+            args: Prisma.CostAnalysisCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>
+          }
+          createMany: {
+            args: Prisma.CostAnalysisCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CostAnalysisCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>[]
+          }
+          delete: {
+            args: Prisma.CostAnalysisDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>
+          }
+          update: {
+            args: Prisma.CostAnalysisUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>
+          }
+          deleteMany: {
+            args: Prisma.CostAnalysisDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CostAnalysisUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.CostAnalysisUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>[]
+          }
+          upsert: {
+            args: Prisma.CostAnalysisUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CostAnalysisPayload>
+          }
+          aggregate: {
+            args: Prisma.CostAnalysisAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCostAnalysis>
+          }
+          groupBy: {
+            args: Prisma.CostAnalysisGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CostAnalysisGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CostAnalysisCountArgs<ExtArgs>
+            result: $Utils.Optional<CostAnalysisCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -2472,6 +2742,9 @@ export namespace Prisma {
     goalProgressHistory?: GoalProgressHistoryOmit
     auditLog?: AuditLogOmit
     systemConfig?: SystemConfigOmit
+    expenseProjection?: ExpenseProjectionOmit
+    expenseActual?: ExpenseActualOmit
+    costAnalysis?: CostAnalysisOmit
   }
 
   /* Types for Logging */
@@ -2563,6 +2836,9 @@ export namespace Prisma {
     sessions: number
     encryptionKeys: number
     files: number
+    expenseProjections: number
+    expenseActuals: number
+    costAnalyses: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2577,6 +2853,9 @@ export namespace Prisma {
     sessions?: boolean | UserCountOutputTypeCountSessionsArgs
     encryptionKeys?: boolean | UserCountOutputTypeCountEncryptionKeysArgs
     files?: boolean | UserCountOutputTypeCountFilesArgs
+    expenseProjections?: boolean | UserCountOutputTypeCountExpenseProjectionsArgs
+    expenseActuals?: boolean | UserCountOutputTypeCountExpenseActualsArgs
+    costAnalyses?: boolean | UserCountOutputTypeCountCostAnalysesArgs
   }
 
   // Custom InputTypes
@@ -2667,6 +2946,27 @@ export namespace Prisma {
     where?: UserFileWhereInput
   }
 
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountExpenseProjectionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseProjectionWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountExpenseActualsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseActualWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountCostAnalysesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CostAnalysisWhereInput
+  }
+
 
   /**
    * Count Type UserFileCountOutputType
@@ -2736,10 +3036,16 @@ export namespace Prisma {
 
   export type InsurancePlanCountOutputType = {
     benefits: number
+    expenseProjections: number
+    expenseActuals: number
+    costAnalyses: number
   }
 
   export type InsurancePlanCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     benefits?: boolean | InsurancePlanCountOutputTypeCountBenefitsArgs
+    expenseProjections?: boolean | InsurancePlanCountOutputTypeCountExpenseProjectionsArgs
+    expenseActuals?: boolean | InsurancePlanCountOutputTypeCountExpenseActualsArgs
+    costAnalyses?: boolean | InsurancePlanCountOutputTypeCountCostAnalysesArgs
   }
 
   // Custom InputTypes
@@ -2758,6 +3064,27 @@ export namespace Prisma {
    */
   export type InsurancePlanCountOutputTypeCountBenefitsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: InsuranceBenefitWhereInput
+  }
+
+  /**
+   * InsurancePlanCountOutputType without action
+   */
+  export type InsurancePlanCountOutputTypeCountExpenseProjectionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseProjectionWhereInput
+  }
+
+  /**
+   * InsurancePlanCountOutputType without action
+   */
+  export type InsurancePlanCountOutputTypeCountExpenseActualsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseActualWhereInput
+  }
+
+  /**
+   * InsurancePlanCountOutputType without action
+   */
+  export type InsurancePlanCountOutputTypeCountCostAnalysesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CostAnalysisWhereInput
   }
 
 
@@ -2829,6 +3156,37 @@ export namespace Prisma {
    */
   export type HealthGoalCountOutputTypeCountProgressHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: GoalProgressHistoryWhereInput
+  }
+
+
+  /**
+   * Count Type ExpenseProjectionCountOutputType
+   */
+
+  export type ExpenseProjectionCountOutputType = {
+    actuals: number
+  }
+
+  export type ExpenseProjectionCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    actuals?: boolean | ExpenseProjectionCountOutputTypeCountActualsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * ExpenseProjectionCountOutputType without action
+   */
+  export type ExpenseProjectionCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjectionCountOutputType
+     */
+    select?: ExpenseProjectionCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * ExpenseProjectionCountOutputType without action
+   */
+  export type ExpenseProjectionCountOutputTypeCountActualsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseActualWhereInput
   }
 
 
@@ -3173,6 +3531,9 @@ export namespace Prisma {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     encryptionKeys?: boolean | User$encryptionKeysArgs<ExtArgs>
     files?: boolean | User$filesArgs<ExtArgs>
+    expenseProjections?: boolean | User$expenseProjectionsArgs<ExtArgs>
+    expenseActuals?: boolean | User$expenseActualsArgs<ExtArgs>
+    costAnalyses?: boolean | User$costAnalysesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3261,6 +3622,9 @@ export namespace Prisma {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     encryptionKeys?: boolean | User$encryptionKeysArgs<ExtArgs>
     files?: boolean | User$filesArgs<ExtArgs>
+    expenseProjections?: boolean | User$expenseProjectionsArgs<ExtArgs>
+    expenseActuals?: boolean | User$expenseActualsArgs<ExtArgs>
+    costAnalyses?: boolean | User$costAnalysesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -3280,6 +3644,9 @@ export namespace Prisma {
       sessions: Prisma.$SessionPayload<ExtArgs>[]
       encryptionKeys: Prisma.$UserEncryptionKeyPayload<ExtArgs>[]
       files: Prisma.$UserFilePayload<ExtArgs>[]
+      expenseProjections: Prisma.$ExpenseProjectionPayload<ExtArgs>[]
+      expenseActuals: Prisma.$ExpenseActualPayload<ExtArgs>[]
+      costAnalyses: Prisma.$CostAnalysisPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3708,6 +4075,9 @@ export namespace Prisma {
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     encryptionKeys<T extends User$encryptionKeysArgs<ExtArgs> = {}>(args?: Subset<T, User$encryptionKeysArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserEncryptionKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     files<T extends User$filesArgs<ExtArgs> = {}>(args?: Subset<T, User$filesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserFilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    expenseProjections<T extends User$expenseProjectionsArgs<ExtArgs> = {}>(args?: Subset<T, User$expenseProjectionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    expenseActuals<T extends User$expenseActualsArgs<ExtArgs> = {}>(args?: Subset<T, User$expenseActualsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    costAnalyses<T extends User$costAnalysesArgs<ExtArgs> = {}>(args?: Subset<T, User$costAnalysesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4407,6 +4777,78 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
+  }
+
+  /**
+   * User.expenseProjections
+   */
+  export type User$expenseProjectionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    where?: ExpenseProjectionWhereInput
+    orderBy?: ExpenseProjectionOrderByWithRelationInput | ExpenseProjectionOrderByWithRelationInput[]
+    cursor?: ExpenseProjectionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ExpenseProjectionScalarFieldEnum | ExpenseProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * User.expenseActuals
+   */
+  export type User$expenseActualsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    where?: ExpenseActualWhereInput
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    cursor?: ExpenseActualWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
+  }
+
+  /**
+   * User.costAnalyses
+   */
+  export type User$costAnalysesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    where?: CostAnalysisWhereInput
+    orderBy?: CostAnalysisOrderByWithRelationInput | CostAnalysisOrderByWithRelationInput[]
+    cursor?: CostAnalysisWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
   }
 
   /**
@@ -12976,6 +13418,9 @@ export namespace Prisma {
     updatedAt?: boolean
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
+    expenseProjections?: boolean | InsurancePlan$expenseProjectionsArgs<ExtArgs>
+    expenseActuals?: boolean | InsurancePlan$expenseActualsArgs<ExtArgs>
+    costAnalyses?: boolean | InsurancePlan$costAnalysesArgs<ExtArgs>
     _count?: boolean | InsurancePlanCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["insurancePlan"]>
 
@@ -13345,6 +13790,9 @@ export namespace Prisma {
   export type InsurancePlanInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     benefits?: boolean | InsurancePlan$benefitsArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
+    expenseProjections?: boolean | InsurancePlan$expenseProjectionsArgs<ExtArgs>
+    expenseActuals?: boolean | InsurancePlan$expenseActualsArgs<ExtArgs>
+    costAnalyses?: boolean | InsurancePlan$costAnalysesArgs<ExtArgs>
     _count?: boolean | InsurancePlanCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type InsurancePlanIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -13359,6 +13807,9 @@ export namespace Prisma {
     objects: {
       benefits: Prisma.$InsuranceBenefitPayload<ExtArgs>[]
       user: Prisma.$UserPayload<ExtArgs>
+      expenseProjections: Prisma.$ExpenseProjectionPayload<ExtArgs>[]
+      expenseActuals: Prisma.$ExpenseActualPayload<ExtArgs>[]
+      costAnalyses: Prisma.$CostAnalysisPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -13874,6 +14325,9 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     benefits<T extends InsurancePlan$benefitsArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlan$benefitsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InsuranceBenefitPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    expenseProjections<T extends InsurancePlan$expenseProjectionsArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlan$expenseProjectionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    expenseActuals<T extends InsurancePlan$expenseActualsArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlan$expenseActualsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    costAnalyses<T extends InsurancePlan$costAnalysesArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlan$costAnalysesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -14437,6 +14891,78 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: InsuranceBenefitScalarFieldEnum | InsuranceBenefitScalarFieldEnum[]
+  }
+
+  /**
+   * InsurancePlan.expenseProjections
+   */
+  export type InsurancePlan$expenseProjectionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    where?: ExpenseProjectionWhereInput
+    orderBy?: ExpenseProjectionOrderByWithRelationInput | ExpenseProjectionOrderByWithRelationInput[]
+    cursor?: ExpenseProjectionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ExpenseProjectionScalarFieldEnum | ExpenseProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * InsurancePlan.expenseActuals
+   */
+  export type InsurancePlan$expenseActualsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    where?: ExpenseActualWhereInput
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    cursor?: ExpenseActualWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
+  }
+
+  /**
+   * InsurancePlan.costAnalyses
+   */
+  export type InsurancePlan$costAnalysesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    where?: CostAnalysisWhereInput
+    orderBy?: CostAnalysisOrderByWithRelationInput | CostAnalysisOrderByWithRelationInput[]
+    cursor?: CostAnalysisWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
   }
 
   /**
@@ -25041,6 +25567,3669 @@ export namespace Prisma {
 
 
   /**
+   * Model ExpenseProjection
+   */
+
+  export type AggregateExpenseProjection = {
+    _count: ExpenseProjectionCountAggregateOutputType | null
+    _avg: ExpenseProjectionAvgAggregateOutputType | null
+    _sum: ExpenseProjectionSumAggregateOutputType | null
+    _min: ExpenseProjectionMinAggregateOutputType | null
+    _max: ExpenseProjectionMaxAggregateOutputType | null
+  }
+
+  export type ExpenseProjectionAvgAggregateOutputType = {
+    estimatedCost: Decimal | null
+    frequencyPerYear: number | null
+  }
+
+  export type ExpenseProjectionSumAggregateOutputType = {
+    estimatedCost: Decimal | null
+    frequencyPerYear: number | null
+  }
+
+  export type ExpenseProjectionMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    planId: string | null
+    serviceType: string | null
+    estimatedCost: Decimal | null
+    frequencyPerYear: number | null
+    isInNetwork: boolean | null
+    notes: string | null
+    projectionDate: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ExpenseProjectionMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    planId: string | null
+    serviceType: string | null
+    estimatedCost: Decimal | null
+    frequencyPerYear: number | null
+    isInNetwork: boolean | null
+    notes: string | null
+    projectionDate: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ExpenseProjectionCountAggregateOutputType = {
+    id: number
+    userId: number
+    planId: number
+    serviceType: number
+    estimatedCost: number
+    frequencyPerYear: number
+    isInNetwork: number
+    notes: number
+    projectionDate: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type ExpenseProjectionAvgAggregateInputType = {
+    estimatedCost?: true
+    frequencyPerYear?: true
+  }
+
+  export type ExpenseProjectionSumAggregateInputType = {
+    estimatedCost?: true
+    frequencyPerYear?: true
+  }
+
+  export type ExpenseProjectionMinAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    serviceType?: true
+    estimatedCost?: true
+    frequencyPerYear?: true
+    isInNetwork?: true
+    notes?: true
+    projectionDate?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ExpenseProjectionMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    serviceType?: true
+    estimatedCost?: true
+    frequencyPerYear?: true
+    isInNetwork?: true
+    notes?: true
+    projectionDate?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ExpenseProjectionCountAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    serviceType?: true
+    estimatedCost?: true
+    frequencyPerYear?: true
+    isInNetwork?: true
+    notes?: true
+    projectionDate?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type ExpenseProjectionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ExpenseProjection to aggregate.
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseProjections to fetch.
+     */
+    orderBy?: ExpenseProjectionOrderByWithRelationInput | ExpenseProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ExpenseProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseProjections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ExpenseProjections
+    **/
+    _count?: true | ExpenseProjectionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ExpenseProjectionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ExpenseProjectionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ExpenseProjectionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ExpenseProjectionMaxAggregateInputType
+  }
+
+  export type GetExpenseProjectionAggregateType<T extends ExpenseProjectionAggregateArgs> = {
+        [P in keyof T & keyof AggregateExpenseProjection]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateExpenseProjection[P]>
+      : GetScalarType<T[P], AggregateExpenseProjection[P]>
+  }
+
+
+
+
+  export type ExpenseProjectionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseProjectionWhereInput
+    orderBy?: ExpenseProjectionOrderByWithAggregationInput | ExpenseProjectionOrderByWithAggregationInput[]
+    by: ExpenseProjectionScalarFieldEnum[] | ExpenseProjectionScalarFieldEnum
+    having?: ExpenseProjectionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ExpenseProjectionCountAggregateInputType | true
+    _avg?: ExpenseProjectionAvgAggregateInputType
+    _sum?: ExpenseProjectionSumAggregateInputType
+    _min?: ExpenseProjectionMinAggregateInputType
+    _max?: ExpenseProjectionMaxAggregateInputType
+  }
+
+  export type ExpenseProjectionGroupByOutputType = {
+    id: string
+    userId: string
+    planId: string
+    serviceType: string
+    estimatedCost: Decimal
+    frequencyPerYear: number
+    isInNetwork: boolean
+    notes: string | null
+    projectionDate: Date
+    createdAt: Date
+    updatedAt: Date
+    _count: ExpenseProjectionCountAggregateOutputType | null
+    _avg: ExpenseProjectionAvgAggregateOutputType | null
+    _sum: ExpenseProjectionSumAggregateOutputType | null
+    _min: ExpenseProjectionMinAggregateOutputType | null
+    _max: ExpenseProjectionMaxAggregateOutputType | null
+  }
+
+  type GetExpenseProjectionGroupByPayload<T extends ExpenseProjectionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ExpenseProjectionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ExpenseProjectionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ExpenseProjectionGroupByOutputType[P]>
+            : GetScalarType<T[P], ExpenseProjectionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ExpenseProjectionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    serviceType?: boolean
+    estimatedCost?: boolean
+    frequencyPerYear?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    projectionDate?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    actuals?: boolean | ExpenseProjection$actualsArgs<ExtArgs>
+    _count?: boolean | ExpenseProjectionCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["expenseProjection"]>
+
+  export type ExpenseProjectionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    serviceType?: boolean
+    estimatedCost?: boolean
+    frequencyPerYear?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    projectionDate?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["expenseProjection"]>
+
+  export type ExpenseProjectionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    serviceType?: boolean
+    estimatedCost?: boolean
+    frequencyPerYear?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    projectionDate?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["expenseProjection"]>
+
+  export type ExpenseProjectionSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    serviceType?: boolean
+    estimatedCost?: boolean
+    frequencyPerYear?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    projectionDate?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type ExpenseProjectionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "serviceType" | "estimatedCost" | "frequencyPerYear" | "isInNetwork" | "notes" | "projectionDate" | "createdAt" | "updatedAt", ExtArgs["result"]["expenseProjection"]>
+  export type ExpenseProjectionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    actuals?: boolean | ExpenseProjection$actualsArgs<ExtArgs>
+    _count?: boolean | ExpenseProjectionCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type ExpenseProjectionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }
+  export type ExpenseProjectionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }
+
+  export type $ExpenseProjectionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ExpenseProjection"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      plan: Prisma.$InsurancePlanPayload<ExtArgs>
+      actuals: Prisma.$ExpenseActualPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      planId: string
+      serviceType: string
+      estimatedCost: Prisma.Decimal
+      frequencyPerYear: number
+      isInNetwork: boolean
+      notes: string | null
+      projectionDate: Date
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["expenseProjection"]>
+    composites: {}
+  }
+
+  type ExpenseProjectionGetPayload<S extends boolean | null | undefined | ExpenseProjectionDefaultArgs> = $Result.GetResult<Prisma.$ExpenseProjectionPayload, S>
+
+  type ExpenseProjectionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ExpenseProjectionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ExpenseProjectionCountAggregateInputType | true
+    }
+
+  export interface ExpenseProjectionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ExpenseProjection'], meta: { name: 'ExpenseProjection' } }
+    /**
+     * Find zero or one ExpenseProjection that matches the filter.
+     * @param {ExpenseProjectionFindUniqueArgs} args - Arguments to find a ExpenseProjection
+     * @example
+     * // Get one ExpenseProjection
+     * const expenseProjection = await prisma.expenseProjection.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ExpenseProjectionFindUniqueArgs>(args: SelectSubset<T, ExpenseProjectionFindUniqueArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ExpenseProjection that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ExpenseProjectionFindUniqueOrThrowArgs} args - Arguments to find a ExpenseProjection
+     * @example
+     * // Get one ExpenseProjection
+     * const expenseProjection = await prisma.expenseProjection.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ExpenseProjectionFindUniqueOrThrowArgs>(args: SelectSubset<T, ExpenseProjectionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ExpenseProjection that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionFindFirstArgs} args - Arguments to find a ExpenseProjection
+     * @example
+     * // Get one ExpenseProjection
+     * const expenseProjection = await prisma.expenseProjection.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ExpenseProjectionFindFirstArgs>(args?: SelectSubset<T, ExpenseProjectionFindFirstArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ExpenseProjection that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionFindFirstOrThrowArgs} args - Arguments to find a ExpenseProjection
+     * @example
+     * // Get one ExpenseProjection
+     * const expenseProjection = await prisma.expenseProjection.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ExpenseProjectionFindFirstOrThrowArgs>(args?: SelectSubset<T, ExpenseProjectionFindFirstOrThrowArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ExpenseProjections that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ExpenseProjections
+     * const expenseProjections = await prisma.expenseProjection.findMany()
+     * 
+     * // Get first 10 ExpenseProjections
+     * const expenseProjections = await prisma.expenseProjection.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const expenseProjectionWithIdOnly = await prisma.expenseProjection.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ExpenseProjectionFindManyArgs>(args?: SelectSubset<T, ExpenseProjectionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ExpenseProjection.
+     * @param {ExpenseProjectionCreateArgs} args - Arguments to create a ExpenseProjection.
+     * @example
+     * // Create one ExpenseProjection
+     * const ExpenseProjection = await prisma.expenseProjection.create({
+     *   data: {
+     *     // ... data to create a ExpenseProjection
+     *   }
+     * })
+     * 
+     */
+    create<T extends ExpenseProjectionCreateArgs>(args: SelectSubset<T, ExpenseProjectionCreateArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ExpenseProjections.
+     * @param {ExpenseProjectionCreateManyArgs} args - Arguments to create many ExpenseProjections.
+     * @example
+     * // Create many ExpenseProjections
+     * const expenseProjection = await prisma.expenseProjection.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ExpenseProjectionCreateManyArgs>(args?: SelectSubset<T, ExpenseProjectionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ExpenseProjections and returns the data saved in the database.
+     * @param {ExpenseProjectionCreateManyAndReturnArgs} args - Arguments to create many ExpenseProjections.
+     * @example
+     * // Create many ExpenseProjections
+     * const expenseProjection = await prisma.expenseProjection.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ExpenseProjections and only return the `id`
+     * const expenseProjectionWithIdOnly = await prisma.expenseProjection.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ExpenseProjectionCreateManyAndReturnArgs>(args?: SelectSubset<T, ExpenseProjectionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ExpenseProjection.
+     * @param {ExpenseProjectionDeleteArgs} args - Arguments to delete one ExpenseProjection.
+     * @example
+     * // Delete one ExpenseProjection
+     * const ExpenseProjection = await prisma.expenseProjection.delete({
+     *   where: {
+     *     // ... filter to delete one ExpenseProjection
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ExpenseProjectionDeleteArgs>(args: SelectSubset<T, ExpenseProjectionDeleteArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ExpenseProjection.
+     * @param {ExpenseProjectionUpdateArgs} args - Arguments to update one ExpenseProjection.
+     * @example
+     * // Update one ExpenseProjection
+     * const expenseProjection = await prisma.expenseProjection.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ExpenseProjectionUpdateArgs>(args: SelectSubset<T, ExpenseProjectionUpdateArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ExpenseProjections.
+     * @param {ExpenseProjectionDeleteManyArgs} args - Arguments to filter ExpenseProjections to delete.
+     * @example
+     * // Delete a few ExpenseProjections
+     * const { count } = await prisma.expenseProjection.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ExpenseProjectionDeleteManyArgs>(args?: SelectSubset<T, ExpenseProjectionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ExpenseProjections.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ExpenseProjections
+     * const expenseProjection = await prisma.expenseProjection.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ExpenseProjectionUpdateManyArgs>(args: SelectSubset<T, ExpenseProjectionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ExpenseProjections and returns the data updated in the database.
+     * @param {ExpenseProjectionUpdateManyAndReturnArgs} args - Arguments to update many ExpenseProjections.
+     * @example
+     * // Update many ExpenseProjections
+     * const expenseProjection = await prisma.expenseProjection.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ExpenseProjections and only return the `id`
+     * const expenseProjectionWithIdOnly = await prisma.expenseProjection.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ExpenseProjectionUpdateManyAndReturnArgs>(args: SelectSubset<T, ExpenseProjectionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ExpenseProjection.
+     * @param {ExpenseProjectionUpsertArgs} args - Arguments to update or create a ExpenseProjection.
+     * @example
+     * // Update or create a ExpenseProjection
+     * const expenseProjection = await prisma.expenseProjection.upsert({
+     *   create: {
+     *     // ... data to create a ExpenseProjection
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ExpenseProjection we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ExpenseProjectionUpsertArgs>(args: SelectSubset<T, ExpenseProjectionUpsertArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ExpenseProjections.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionCountArgs} args - Arguments to filter ExpenseProjections to count.
+     * @example
+     * // Count the number of ExpenseProjections
+     * const count = await prisma.expenseProjection.count({
+     *   where: {
+     *     // ... the filter for the ExpenseProjections we want to count
+     *   }
+     * })
+    **/
+    count<T extends ExpenseProjectionCountArgs>(
+      args?: Subset<T, ExpenseProjectionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ExpenseProjectionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ExpenseProjection.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ExpenseProjectionAggregateArgs>(args: Subset<T, ExpenseProjectionAggregateArgs>): Prisma.PrismaPromise<GetExpenseProjectionAggregateType<T>>
+
+    /**
+     * Group by ExpenseProjection.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseProjectionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ExpenseProjectionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ExpenseProjectionGroupByArgs['orderBy'] }
+        : { orderBy?: ExpenseProjectionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ExpenseProjectionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetExpenseProjectionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ExpenseProjection model
+   */
+  readonly fields: ExpenseProjectionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ExpenseProjection.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ExpenseProjectionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    plan<T extends InsurancePlanDefaultArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlanDefaultArgs<ExtArgs>>): Prisma__InsurancePlanClient<$Result.GetResult<Prisma.$InsurancePlanPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    actuals<T extends ExpenseProjection$actualsArgs<ExtArgs> = {}>(args?: Subset<T, ExpenseProjection$actualsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ExpenseProjection model
+   */
+  interface ExpenseProjectionFieldRefs {
+    readonly id: FieldRef<"ExpenseProjection", 'String'>
+    readonly userId: FieldRef<"ExpenseProjection", 'String'>
+    readonly planId: FieldRef<"ExpenseProjection", 'String'>
+    readonly serviceType: FieldRef<"ExpenseProjection", 'String'>
+    readonly estimatedCost: FieldRef<"ExpenseProjection", 'Decimal'>
+    readonly frequencyPerYear: FieldRef<"ExpenseProjection", 'Int'>
+    readonly isInNetwork: FieldRef<"ExpenseProjection", 'Boolean'>
+    readonly notes: FieldRef<"ExpenseProjection", 'String'>
+    readonly projectionDate: FieldRef<"ExpenseProjection", 'DateTime'>
+    readonly createdAt: FieldRef<"ExpenseProjection", 'DateTime'>
+    readonly updatedAt: FieldRef<"ExpenseProjection", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ExpenseProjection findUnique
+   */
+  export type ExpenseProjectionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseProjection to fetch.
+     */
+    where: ExpenseProjectionWhereUniqueInput
+  }
+
+  /**
+   * ExpenseProjection findUniqueOrThrow
+   */
+  export type ExpenseProjectionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseProjection to fetch.
+     */
+    where: ExpenseProjectionWhereUniqueInput
+  }
+
+  /**
+   * ExpenseProjection findFirst
+   */
+  export type ExpenseProjectionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseProjection to fetch.
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseProjections to fetch.
+     */
+    orderBy?: ExpenseProjectionOrderByWithRelationInput | ExpenseProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ExpenseProjections.
+     */
+    cursor?: ExpenseProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseProjections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ExpenseProjections.
+     */
+    distinct?: ExpenseProjectionScalarFieldEnum | ExpenseProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseProjection findFirstOrThrow
+   */
+  export type ExpenseProjectionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseProjection to fetch.
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseProjections to fetch.
+     */
+    orderBy?: ExpenseProjectionOrderByWithRelationInput | ExpenseProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ExpenseProjections.
+     */
+    cursor?: ExpenseProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseProjections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ExpenseProjections.
+     */
+    distinct?: ExpenseProjectionScalarFieldEnum | ExpenseProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseProjection findMany
+   */
+  export type ExpenseProjectionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseProjections to fetch.
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseProjections to fetch.
+     */
+    orderBy?: ExpenseProjectionOrderByWithRelationInput | ExpenseProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ExpenseProjections.
+     */
+    cursor?: ExpenseProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseProjections.
+     */
+    skip?: number
+    distinct?: ExpenseProjectionScalarFieldEnum | ExpenseProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseProjection create
+   */
+  export type ExpenseProjectionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ExpenseProjection.
+     */
+    data: XOR<ExpenseProjectionCreateInput, ExpenseProjectionUncheckedCreateInput>
+  }
+
+  /**
+   * ExpenseProjection createMany
+   */
+  export type ExpenseProjectionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ExpenseProjections.
+     */
+    data: ExpenseProjectionCreateManyInput | ExpenseProjectionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ExpenseProjection createManyAndReturn
+   */
+  export type ExpenseProjectionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * The data used to create many ExpenseProjections.
+     */
+    data: ExpenseProjectionCreateManyInput | ExpenseProjectionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ExpenseProjection update
+   */
+  export type ExpenseProjectionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ExpenseProjection.
+     */
+    data: XOR<ExpenseProjectionUpdateInput, ExpenseProjectionUncheckedUpdateInput>
+    /**
+     * Choose, which ExpenseProjection to update.
+     */
+    where: ExpenseProjectionWhereUniqueInput
+  }
+
+  /**
+   * ExpenseProjection updateMany
+   */
+  export type ExpenseProjectionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ExpenseProjections.
+     */
+    data: XOR<ExpenseProjectionUpdateManyMutationInput, ExpenseProjectionUncheckedUpdateManyInput>
+    /**
+     * Filter which ExpenseProjections to update
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * Limit how many ExpenseProjections to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ExpenseProjection updateManyAndReturn
+   */
+  export type ExpenseProjectionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * The data used to update ExpenseProjections.
+     */
+    data: XOR<ExpenseProjectionUpdateManyMutationInput, ExpenseProjectionUncheckedUpdateManyInput>
+    /**
+     * Filter which ExpenseProjections to update
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * Limit how many ExpenseProjections to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ExpenseProjection upsert
+   */
+  export type ExpenseProjectionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ExpenseProjection to update in case it exists.
+     */
+    where: ExpenseProjectionWhereUniqueInput
+    /**
+     * In case the ExpenseProjection found by the `where` argument doesn't exist, create a new ExpenseProjection with this data.
+     */
+    create: XOR<ExpenseProjectionCreateInput, ExpenseProjectionUncheckedCreateInput>
+    /**
+     * In case the ExpenseProjection was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ExpenseProjectionUpdateInput, ExpenseProjectionUncheckedUpdateInput>
+  }
+
+  /**
+   * ExpenseProjection delete
+   */
+  export type ExpenseProjectionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    /**
+     * Filter which ExpenseProjection to delete.
+     */
+    where: ExpenseProjectionWhereUniqueInput
+  }
+
+  /**
+   * ExpenseProjection deleteMany
+   */
+  export type ExpenseProjectionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ExpenseProjections to delete
+     */
+    where?: ExpenseProjectionWhereInput
+    /**
+     * Limit how many ExpenseProjections to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ExpenseProjection.actuals
+   */
+  export type ExpenseProjection$actualsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    where?: ExpenseActualWhereInput
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    cursor?: ExpenseActualWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseProjection without action
+   */
+  export type ExpenseProjectionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model ExpenseActual
+   */
+
+  export type AggregateExpenseActual = {
+    _count: ExpenseActualCountAggregateOutputType | null
+    _avg: ExpenseActualAvgAggregateOutputType | null
+    _sum: ExpenseActualSumAggregateOutputType | null
+    _min: ExpenseActualMinAggregateOutputType | null
+    _max: ExpenseActualMaxAggregateOutputType | null
+  }
+
+  export type ExpenseActualAvgAggregateOutputType = {
+    billedAmount: Decimal | null
+    insurancePaid: Decimal | null
+    patientPaid: Decimal | null
+    appliedToDeductible: Decimal | null
+    appliedToOop: Decimal | null
+  }
+
+  export type ExpenseActualSumAggregateOutputType = {
+    billedAmount: Decimal | null
+    insurancePaid: Decimal | null
+    patientPaid: Decimal | null
+    appliedToDeductible: Decimal | null
+    appliedToOop: Decimal | null
+  }
+
+  export type ExpenseActualMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    planId: string | null
+    projectionId: string | null
+    serviceType: string | null
+    providerName: string | null
+    dateOfService: Date | null
+    billedAmount: Decimal | null
+    insurancePaid: Decimal | null
+    patientPaid: Decimal | null
+    appliedToDeductible: Decimal | null
+    appliedToOop: Decimal | null
+    claimStatus: string | null
+    isInNetwork: boolean | null
+    notes: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ExpenseActualMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    planId: string | null
+    projectionId: string | null
+    serviceType: string | null
+    providerName: string | null
+    dateOfService: Date | null
+    billedAmount: Decimal | null
+    insurancePaid: Decimal | null
+    patientPaid: Decimal | null
+    appliedToDeductible: Decimal | null
+    appliedToOop: Decimal | null
+    claimStatus: string | null
+    isInNetwork: boolean | null
+    notes: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ExpenseActualCountAggregateOutputType = {
+    id: number
+    userId: number
+    planId: number
+    projectionId: number
+    serviceType: number
+    providerName: number
+    dateOfService: number
+    billedAmount: number
+    insurancePaid: number
+    patientPaid: number
+    appliedToDeductible: number
+    appliedToOop: number
+    claimStatus: number
+    isInNetwork: number
+    notes: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type ExpenseActualAvgAggregateInputType = {
+    billedAmount?: true
+    insurancePaid?: true
+    patientPaid?: true
+    appliedToDeductible?: true
+    appliedToOop?: true
+  }
+
+  export type ExpenseActualSumAggregateInputType = {
+    billedAmount?: true
+    insurancePaid?: true
+    patientPaid?: true
+    appliedToDeductible?: true
+    appliedToOop?: true
+  }
+
+  export type ExpenseActualMinAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    projectionId?: true
+    serviceType?: true
+    providerName?: true
+    dateOfService?: true
+    billedAmount?: true
+    insurancePaid?: true
+    patientPaid?: true
+    appliedToDeductible?: true
+    appliedToOop?: true
+    claimStatus?: true
+    isInNetwork?: true
+    notes?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ExpenseActualMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    projectionId?: true
+    serviceType?: true
+    providerName?: true
+    dateOfService?: true
+    billedAmount?: true
+    insurancePaid?: true
+    patientPaid?: true
+    appliedToDeductible?: true
+    appliedToOop?: true
+    claimStatus?: true
+    isInNetwork?: true
+    notes?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ExpenseActualCountAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    projectionId?: true
+    serviceType?: true
+    providerName?: true
+    dateOfService?: true
+    billedAmount?: true
+    insurancePaid?: true
+    patientPaid?: true
+    appliedToDeductible?: true
+    appliedToOop?: true
+    claimStatus?: true
+    isInNetwork?: true
+    notes?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type ExpenseActualAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ExpenseActual to aggregate.
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseActuals to fetch.
+     */
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ExpenseActualWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseActuals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseActuals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ExpenseActuals
+    **/
+    _count?: true | ExpenseActualCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ExpenseActualAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ExpenseActualSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ExpenseActualMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ExpenseActualMaxAggregateInputType
+  }
+
+  export type GetExpenseActualAggregateType<T extends ExpenseActualAggregateArgs> = {
+        [P in keyof T & keyof AggregateExpenseActual]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateExpenseActual[P]>
+      : GetScalarType<T[P], AggregateExpenseActual[P]>
+  }
+
+
+
+
+  export type ExpenseActualGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ExpenseActualWhereInput
+    orderBy?: ExpenseActualOrderByWithAggregationInput | ExpenseActualOrderByWithAggregationInput[]
+    by: ExpenseActualScalarFieldEnum[] | ExpenseActualScalarFieldEnum
+    having?: ExpenseActualScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ExpenseActualCountAggregateInputType | true
+    _avg?: ExpenseActualAvgAggregateInputType
+    _sum?: ExpenseActualSumAggregateInputType
+    _min?: ExpenseActualMinAggregateInputType
+    _max?: ExpenseActualMaxAggregateInputType
+  }
+
+  export type ExpenseActualGroupByOutputType = {
+    id: string
+    userId: string
+    planId: string
+    projectionId: string | null
+    serviceType: string
+    providerName: string | null
+    dateOfService: Date | null
+    billedAmount: Decimal | null
+    insurancePaid: Decimal | null
+    patientPaid: Decimal | null
+    appliedToDeductible: Decimal | null
+    appliedToOop: Decimal | null
+    claimStatus: string
+    isInNetwork: boolean | null
+    notes: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: ExpenseActualCountAggregateOutputType | null
+    _avg: ExpenseActualAvgAggregateOutputType | null
+    _sum: ExpenseActualSumAggregateOutputType | null
+    _min: ExpenseActualMinAggregateOutputType | null
+    _max: ExpenseActualMaxAggregateOutputType | null
+  }
+
+  type GetExpenseActualGroupByPayload<T extends ExpenseActualGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ExpenseActualGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ExpenseActualGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ExpenseActualGroupByOutputType[P]>
+            : GetScalarType<T[P], ExpenseActualGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ExpenseActualSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    projectionId?: boolean
+    serviceType?: boolean
+    providerName?: boolean
+    dateOfService?: boolean
+    billedAmount?: boolean
+    insurancePaid?: boolean
+    patientPaid?: boolean
+    appliedToDeductible?: boolean
+    appliedToOop?: boolean
+    claimStatus?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    projection?: boolean | ExpenseActual$projectionArgs<ExtArgs>
+  }, ExtArgs["result"]["expenseActual"]>
+
+  export type ExpenseActualSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    projectionId?: boolean
+    serviceType?: boolean
+    providerName?: boolean
+    dateOfService?: boolean
+    billedAmount?: boolean
+    insurancePaid?: boolean
+    patientPaid?: boolean
+    appliedToDeductible?: boolean
+    appliedToOop?: boolean
+    claimStatus?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    projection?: boolean | ExpenseActual$projectionArgs<ExtArgs>
+  }, ExtArgs["result"]["expenseActual"]>
+
+  export type ExpenseActualSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    projectionId?: boolean
+    serviceType?: boolean
+    providerName?: boolean
+    dateOfService?: boolean
+    billedAmount?: boolean
+    insurancePaid?: boolean
+    patientPaid?: boolean
+    appliedToDeductible?: boolean
+    appliedToOop?: boolean
+    claimStatus?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    projection?: boolean | ExpenseActual$projectionArgs<ExtArgs>
+  }, ExtArgs["result"]["expenseActual"]>
+
+  export type ExpenseActualSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    projectionId?: boolean
+    serviceType?: boolean
+    providerName?: boolean
+    dateOfService?: boolean
+    billedAmount?: boolean
+    insurancePaid?: boolean
+    patientPaid?: boolean
+    appliedToDeductible?: boolean
+    appliedToOop?: boolean
+    claimStatus?: boolean
+    isInNetwork?: boolean
+    notes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type ExpenseActualOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "projectionId" | "serviceType" | "providerName" | "dateOfService" | "billedAmount" | "insurancePaid" | "patientPaid" | "appliedToDeductible" | "appliedToOop" | "claimStatus" | "isInNetwork" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["expenseActual"]>
+  export type ExpenseActualInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    projection?: boolean | ExpenseActual$projectionArgs<ExtArgs>
+  }
+  export type ExpenseActualIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    projection?: boolean | ExpenseActual$projectionArgs<ExtArgs>
+  }
+  export type ExpenseActualIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+    projection?: boolean | ExpenseActual$projectionArgs<ExtArgs>
+  }
+
+  export type $ExpenseActualPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ExpenseActual"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      plan: Prisma.$InsurancePlanPayload<ExtArgs>
+      projection: Prisma.$ExpenseProjectionPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      planId: string
+      projectionId: string | null
+      serviceType: string
+      providerName: string | null
+      dateOfService: Date | null
+      billedAmount: Prisma.Decimal | null
+      insurancePaid: Prisma.Decimal | null
+      patientPaid: Prisma.Decimal | null
+      appliedToDeductible: Prisma.Decimal | null
+      appliedToOop: Prisma.Decimal | null
+      claimStatus: string
+      isInNetwork: boolean | null
+      notes: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["expenseActual"]>
+    composites: {}
+  }
+
+  type ExpenseActualGetPayload<S extends boolean | null | undefined | ExpenseActualDefaultArgs> = $Result.GetResult<Prisma.$ExpenseActualPayload, S>
+
+  type ExpenseActualCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ExpenseActualFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ExpenseActualCountAggregateInputType | true
+    }
+
+  export interface ExpenseActualDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ExpenseActual'], meta: { name: 'ExpenseActual' } }
+    /**
+     * Find zero or one ExpenseActual that matches the filter.
+     * @param {ExpenseActualFindUniqueArgs} args - Arguments to find a ExpenseActual
+     * @example
+     * // Get one ExpenseActual
+     * const expenseActual = await prisma.expenseActual.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ExpenseActualFindUniqueArgs>(args: SelectSubset<T, ExpenseActualFindUniqueArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ExpenseActual that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ExpenseActualFindUniqueOrThrowArgs} args - Arguments to find a ExpenseActual
+     * @example
+     * // Get one ExpenseActual
+     * const expenseActual = await prisma.expenseActual.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ExpenseActualFindUniqueOrThrowArgs>(args: SelectSubset<T, ExpenseActualFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ExpenseActual that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualFindFirstArgs} args - Arguments to find a ExpenseActual
+     * @example
+     * // Get one ExpenseActual
+     * const expenseActual = await prisma.expenseActual.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ExpenseActualFindFirstArgs>(args?: SelectSubset<T, ExpenseActualFindFirstArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ExpenseActual that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualFindFirstOrThrowArgs} args - Arguments to find a ExpenseActual
+     * @example
+     * // Get one ExpenseActual
+     * const expenseActual = await prisma.expenseActual.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ExpenseActualFindFirstOrThrowArgs>(args?: SelectSubset<T, ExpenseActualFindFirstOrThrowArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ExpenseActuals that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ExpenseActuals
+     * const expenseActuals = await prisma.expenseActual.findMany()
+     * 
+     * // Get first 10 ExpenseActuals
+     * const expenseActuals = await prisma.expenseActual.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const expenseActualWithIdOnly = await prisma.expenseActual.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ExpenseActualFindManyArgs>(args?: SelectSubset<T, ExpenseActualFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ExpenseActual.
+     * @param {ExpenseActualCreateArgs} args - Arguments to create a ExpenseActual.
+     * @example
+     * // Create one ExpenseActual
+     * const ExpenseActual = await prisma.expenseActual.create({
+     *   data: {
+     *     // ... data to create a ExpenseActual
+     *   }
+     * })
+     * 
+     */
+    create<T extends ExpenseActualCreateArgs>(args: SelectSubset<T, ExpenseActualCreateArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ExpenseActuals.
+     * @param {ExpenseActualCreateManyArgs} args - Arguments to create many ExpenseActuals.
+     * @example
+     * // Create many ExpenseActuals
+     * const expenseActual = await prisma.expenseActual.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ExpenseActualCreateManyArgs>(args?: SelectSubset<T, ExpenseActualCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ExpenseActuals and returns the data saved in the database.
+     * @param {ExpenseActualCreateManyAndReturnArgs} args - Arguments to create many ExpenseActuals.
+     * @example
+     * // Create many ExpenseActuals
+     * const expenseActual = await prisma.expenseActual.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ExpenseActuals and only return the `id`
+     * const expenseActualWithIdOnly = await prisma.expenseActual.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ExpenseActualCreateManyAndReturnArgs>(args?: SelectSubset<T, ExpenseActualCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ExpenseActual.
+     * @param {ExpenseActualDeleteArgs} args - Arguments to delete one ExpenseActual.
+     * @example
+     * // Delete one ExpenseActual
+     * const ExpenseActual = await prisma.expenseActual.delete({
+     *   where: {
+     *     // ... filter to delete one ExpenseActual
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ExpenseActualDeleteArgs>(args: SelectSubset<T, ExpenseActualDeleteArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ExpenseActual.
+     * @param {ExpenseActualUpdateArgs} args - Arguments to update one ExpenseActual.
+     * @example
+     * // Update one ExpenseActual
+     * const expenseActual = await prisma.expenseActual.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ExpenseActualUpdateArgs>(args: SelectSubset<T, ExpenseActualUpdateArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ExpenseActuals.
+     * @param {ExpenseActualDeleteManyArgs} args - Arguments to filter ExpenseActuals to delete.
+     * @example
+     * // Delete a few ExpenseActuals
+     * const { count } = await prisma.expenseActual.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ExpenseActualDeleteManyArgs>(args?: SelectSubset<T, ExpenseActualDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ExpenseActuals.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ExpenseActuals
+     * const expenseActual = await prisma.expenseActual.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ExpenseActualUpdateManyArgs>(args: SelectSubset<T, ExpenseActualUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ExpenseActuals and returns the data updated in the database.
+     * @param {ExpenseActualUpdateManyAndReturnArgs} args - Arguments to update many ExpenseActuals.
+     * @example
+     * // Update many ExpenseActuals
+     * const expenseActual = await prisma.expenseActual.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ExpenseActuals and only return the `id`
+     * const expenseActualWithIdOnly = await prisma.expenseActual.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ExpenseActualUpdateManyAndReturnArgs>(args: SelectSubset<T, ExpenseActualUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ExpenseActual.
+     * @param {ExpenseActualUpsertArgs} args - Arguments to update or create a ExpenseActual.
+     * @example
+     * // Update or create a ExpenseActual
+     * const expenseActual = await prisma.expenseActual.upsert({
+     *   create: {
+     *     // ... data to create a ExpenseActual
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ExpenseActual we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ExpenseActualUpsertArgs>(args: SelectSubset<T, ExpenseActualUpsertArgs<ExtArgs>>): Prisma__ExpenseActualClient<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ExpenseActuals.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualCountArgs} args - Arguments to filter ExpenseActuals to count.
+     * @example
+     * // Count the number of ExpenseActuals
+     * const count = await prisma.expenseActual.count({
+     *   where: {
+     *     // ... the filter for the ExpenseActuals we want to count
+     *   }
+     * })
+    **/
+    count<T extends ExpenseActualCountArgs>(
+      args?: Subset<T, ExpenseActualCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ExpenseActualCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ExpenseActual.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ExpenseActualAggregateArgs>(args: Subset<T, ExpenseActualAggregateArgs>): Prisma.PrismaPromise<GetExpenseActualAggregateType<T>>
+
+    /**
+     * Group by ExpenseActual.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ExpenseActualGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ExpenseActualGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ExpenseActualGroupByArgs['orderBy'] }
+        : { orderBy?: ExpenseActualGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ExpenseActualGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetExpenseActualGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ExpenseActual model
+   */
+  readonly fields: ExpenseActualFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ExpenseActual.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ExpenseActualClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    plan<T extends InsurancePlanDefaultArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlanDefaultArgs<ExtArgs>>): Prisma__InsurancePlanClient<$Result.GetResult<Prisma.$InsurancePlanPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    projection<T extends ExpenseActual$projectionArgs<ExtArgs> = {}>(args?: Subset<T, ExpenseActual$projectionArgs<ExtArgs>>): Prisma__ExpenseProjectionClient<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ExpenseActual model
+   */
+  interface ExpenseActualFieldRefs {
+    readonly id: FieldRef<"ExpenseActual", 'String'>
+    readonly userId: FieldRef<"ExpenseActual", 'String'>
+    readonly planId: FieldRef<"ExpenseActual", 'String'>
+    readonly projectionId: FieldRef<"ExpenseActual", 'String'>
+    readonly serviceType: FieldRef<"ExpenseActual", 'String'>
+    readonly providerName: FieldRef<"ExpenseActual", 'String'>
+    readonly dateOfService: FieldRef<"ExpenseActual", 'DateTime'>
+    readonly billedAmount: FieldRef<"ExpenseActual", 'Decimal'>
+    readonly insurancePaid: FieldRef<"ExpenseActual", 'Decimal'>
+    readonly patientPaid: FieldRef<"ExpenseActual", 'Decimal'>
+    readonly appliedToDeductible: FieldRef<"ExpenseActual", 'Decimal'>
+    readonly appliedToOop: FieldRef<"ExpenseActual", 'Decimal'>
+    readonly claimStatus: FieldRef<"ExpenseActual", 'String'>
+    readonly isInNetwork: FieldRef<"ExpenseActual", 'Boolean'>
+    readonly notes: FieldRef<"ExpenseActual", 'String'>
+    readonly createdAt: FieldRef<"ExpenseActual", 'DateTime'>
+    readonly updatedAt: FieldRef<"ExpenseActual", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ExpenseActual findUnique
+   */
+  export type ExpenseActualFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseActual to fetch.
+     */
+    where: ExpenseActualWhereUniqueInput
+  }
+
+  /**
+   * ExpenseActual findUniqueOrThrow
+   */
+  export type ExpenseActualFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseActual to fetch.
+     */
+    where: ExpenseActualWhereUniqueInput
+  }
+
+  /**
+   * ExpenseActual findFirst
+   */
+  export type ExpenseActualFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseActual to fetch.
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseActuals to fetch.
+     */
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ExpenseActuals.
+     */
+    cursor?: ExpenseActualWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseActuals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseActuals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ExpenseActuals.
+     */
+    distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseActual findFirstOrThrow
+   */
+  export type ExpenseActualFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseActual to fetch.
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseActuals to fetch.
+     */
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ExpenseActuals.
+     */
+    cursor?: ExpenseActualWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseActuals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseActuals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ExpenseActuals.
+     */
+    distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseActual findMany
+   */
+  export type ExpenseActualFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * Filter, which ExpenseActuals to fetch.
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ExpenseActuals to fetch.
+     */
+    orderBy?: ExpenseActualOrderByWithRelationInput | ExpenseActualOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ExpenseActuals.
+     */
+    cursor?: ExpenseActualWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ExpenseActuals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ExpenseActuals.
+     */
+    skip?: number
+    distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
+  }
+
+  /**
+   * ExpenseActual create
+   */
+  export type ExpenseActualCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ExpenseActual.
+     */
+    data: XOR<ExpenseActualCreateInput, ExpenseActualUncheckedCreateInput>
+  }
+
+  /**
+   * ExpenseActual createMany
+   */
+  export type ExpenseActualCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ExpenseActuals.
+     */
+    data: ExpenseActualCreateManyInput | ExpenseActualCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ExpenseActual createManyAndReturn
+   */
+  export type ExpenseActualCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * The data used to create many ExpenseActuals.
+     */
+    data: ExpenseActualCreateManyInput | ExpenseActualCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ExpenseActual update
+   */
+  export type ExpenseActualUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ExpenseActual.
+     */
+    data: XOR<ExpenseActualUpdateInput, ExpenseActualUncheckedUpdateInput>
+    /**
+     * Choose, which ExpenseActual to update.
+     */
+    where: ExpenseActualWhereUniqueInput
+  }
+
+  /**
+   * ExpenseActual updateMany
+   */
+  export type ExpenseActualUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ExpenseActuals.
+     */
+    data: XOR<ExpenseActualUpdateManyMutationInput, ExpenseActualUncheckedUpdateManyInput>
+    /**
+     * Filter which ExpenseActuals to update
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * Limit how many ExpenseActuals to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ExpenseActual updateManyAndReturn
+   */
+  export type ExpenseActualUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * The data used to update ExpenseActuals.
+     */
+    data: XOR<ExpenseActualUpdateManyMutationInput, ExpenseActualUncheckedUpdateManyInput>
+    /**
+     * Filter which ExpenseActuals to update
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * Limit how many ExpenseActuals to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ExpenseActual upsert
+   */
+  export type ExpenseActualUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ExpenseActual to update in case it exists.
+     */
+    where: ExpenseActualWhereUniqueInput
+    /**
+     * In case the ExpenseActual found by the `where` argument doesn't exist, create a new ExpenseActual with this data.
+     */
+    create: XOR<ExpenseActualCreateInput, ExpenseActualUncheckedCreateInput>
+    /**
+     * In case the ExpenseActual was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ExpenseActualUpdateInput, ExpenseActualUncheckedUpdateInput>
+  }
+
+  /**
+   * ExpenseActual delete
+   */
+  export type ExpenseActualDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+    /**
+     * Filter which ExpenseActual to delete.
+     */
+    where: ExpenseActualWhereUniqueInput
+  }
+
+  /**
+   * ExpenseActual deleteMany
+   */
+  export type ExpenseActualDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ExpenseActuals to delete
+     */
+    where?: ExpenseActualWhereInput
+    /**
+     * Limit how many ExpenseActuals to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ExpenseActual.projection
+   */
+  export type ExpenseActual$projectionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseProjection
+     */
+    select?: ExpenseProjectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseProjection
+     */
+    omit?: ExpenseProjectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseProjectionInclude<ExtArgs> | null
+    where?: ExpenseProjectionWhereInput
+  }
+
+  /**
+   * ExpenseActual without action
+   */
+  export type ExpenseActualDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ExpenseActual
+     */
+    select?: ExpenseActualSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ExpenseActual
+     */
+    omit?: ExpenseActualOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ExpenseActualInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model CostAnalysis
+   */
+
+  export type AggregateCostAnalysis = {
+    _count: CostAnalysisCountAggregateOutputType | null
+    _avg: CostAnalysisAvgAggregateOutputType | null
+    _sum: CostAnalysisSumAggregateOutputType | null
+    _min: CostAnalysisMinAggregateOutputType | null
+    _max: CostAnalysisMaxAggregateOutputType | null
+  }
+
+  export type CostAnalysisAvgAggregateOutputType = {
+    totalProjectedOop: Decimal | null
+    deductibleMetMonth: number | null
+  }
+
+  export type CostAnalysisSumAggregateOutputType = {
+    totalProjectedOop: Decimal | null
+    deductibleMetMonth: number | null
+  }
+
+  export type CostAnalysisMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    planId: string | null
+    analysisDate: Date | null
+    claudeResponse: string | null
+    totalProjectedOop: Decimal | null
+    deductibleMetMonth: number | null
+    createdAt: Date | null
+  }
+
+  export type CostAnalysisMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    planId: string | null
+    analysisDate: Date | null
+    claudeResponse: string | null
+    totalProjectedOop: Decimal | null
+    deductibleMetMonth: number | null
+    createdAt: Date | null
+  }
+
+  export type CostAnalysisCountAggregateOutputType = {
+    id: number
+    userId: number
+    planId: number
+    analysisDate: number
+    claudeResponse: number
+    totalProjectedOop: number
+    deductibleMetMonth: number
+    projectedExpensesSnapshot: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type CostAnalysisAvgAggregateInputType = {
+    totalProjectedOop?: true
+    deductibleMetMonth?: true
+  }
+
+  export type CostAnalysisSumAggregateInputType = {
+    totalProjectedOop?: true
+    deductibleMetMonth?: true
+  }
+
+  export type CostAnalysisMinAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    analysisDate?: true
+    claudeResponse?: true
+    totalProjectedOop?: true
+    deductibleMetMonth?: true
+    createdAt?: true
+  }
+
+  export type CostAnalysisMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    analysisDate?: true
+    claudeResponse?: true
+    totalProjectedOop?: true
+    deductibleMetMonth?: true
+    createdAt?: true
+  }
+
+  export type CostAnalysisCountAggregateInputType = {
+    id?: true
+    userId?: true
+    planId?: true
+    analysisDate?: true
+    claudeResponse?: true
+    totalProjectedOop?: true
+    deductibleMetMonth?: true
+    projectedExpensesSnapshot?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type CostAnalysisAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CostAnalysis to aggregate.
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CostAnalyses to fetch.
+     */
+    orderBy?: CostAnalysisOrderByWithRelationInput | CostAnalysisOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CostAnalysisWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CostAnalyses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CostAnalyses.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CostAnalyses
+    **/
+    _count?: true | CostAnalysisCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CostAnalysisAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CostAnalysisSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CostAnalysisMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CostAnalysisMaxAggregateInputType
+  }
+
+  export type GetCostAnalysisAggregateType<T extends CostAnalysisAggregateArgs> = {
+        [P in keyof T & keyof AggregateCostAnalysis]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCostAnalysis[P]>
+      : GetScalarType<T[P], AggregateCostAnalysis[P]>
+  }
+
+
+
+
+  export type CostAnalysisGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CostAnalysisWhereInput
+    orderBy?: CostAnalysisOrderByWithAggregationInput | CostAnalysisOrderByWithAggregationInput[]
+    by: CostAnalysisScalarFieldEnum[] | CostAnalysisScalarFieldEnum
+    having?: CostAnalysisScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CostAnalysisCountAggregateInputType | true
+    _avg?: CostAnalysisAvgAggregateInputType
+    _sum?: CostAnalysisSumAggregateInputType
+    _min?: CostAnalysisMinAggregateInputType
+    _max?: CostAnalysisMaxAggregateInputType
+  }
+
+  export type CostAnalysisGroupByOutputType = {
+    id: string
+    userId: string
+    planId: string
+    analysisDate: Date
+    claudeResponse: string
+    totalProjectedOop: Decimal | null
+    deductibleMetMonth: number | null
+    projectedExpensesSnapshot: JsonValue | null
+    createdAt: Date
+    _count: CostAnalysisCountAggregateOutputType | null
+    _avg: CostAnalysisAvgAggregateOutputType | null
+    _sum: CostAnalysisSumAggregateOutputType | null
+    _min: CostAnalysisMinAggregateOutputType | null
+    _max: CostAnalysisMaxAggregateOutputType | null
+  }
+
+  type GetCostAnalysisGroupByPayload<T extends CostAnalysisGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CostAnalysisGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CostAnalysisGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CostAnalysisGroupByOutputType[P]>
+            : GetScalarType<T[P], CostAnalysisGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CostAnalysisSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    analysisDate?: boolean
+    claudeResponse?: boolean
+    totalProjectedOop?: boolean
+    deductibleMetMonth?: boolean
+    projectedExpensesSnapshot?: boolean
+    createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["costAnalysis"]>
+
+  export type CostAnalysisSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    analysisDate?: boolean
+    claudeResponse?: boolean
+    totalProjectedOop?: boolean
+    deductibleMetMonth?: boolean
+    projectedExpensesSnapshot?: boolean
+    createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["costAnalysis"]>
+
+  export type CostAnalysisSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    analysisDate?: boolean
+    claudeResponse?: boolean
+    totalProjectedOop?: boolean
+    deductibleMetMonth?: boolean
+    projectedExpensesSnapshot?: boolean
+    createdAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["costAnalysis"]>
+
+  export type CostAnalysisSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    planId?: boolean
+    analysisDate?: boolean
+    claudeResponse?: boolean
+    totalProjectedOop?: boolean
+    deductibleMetMonth?: boolean
+    projectedExpensesSnapshot?: boolean
+    createdAt?: boolean
+  }
+
+  export type CostAnalysisOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "analysisDate" | "claudeResponse" | "totalProjectedOop" | "deductibleMetMonth" | "projectedExpensesSnapshot" | "createdAt", ExtArgs["result"]["costAnalysis"]>
+  export type CostAnalysisInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }
+  export type CostAnalysisIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }
+  export type CostAnalysisIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
+  }
+
+  export type $CostAnalysisPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CostAnalysis"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      plan: Prisma.$InsurancePlanPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      planId: string
+      analysisDate: Date
+      claudeResponse: string
+      totalProjectedOop: Prisma.Decimal | null
+      deductibleMetMonth: number | null
+      projectedExpensesSnapshot: Prisma.JsonValue | null
+      createdAt: Date
+    }, ExtArgs["result"]["costAnalysis"]>
+    composites: {}
+  }
+
+  type CostAnalysisGetPayload<S extends boolean | null | undefined | CostAnalysisDefaultArgs> = $Result.GetResult<Prisma.$CostAnalysisPayload, S>
+
+  type CostAnalysisCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<CostAnalysisFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: CostAnalysisCountAggregateInputType | true
+    }
+
+  export interface CostAnalysisDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CostAnalysis'], meta: { name: 'CostAnalysis' } }
+    /**
+     * Find zero or one CostAnalysis that matches the filter.
+     * @param {CostAnalysisFindUniqueArgs} args - Arguments to find a CostAnalysis
+     * @example
+     * // Get one CostAnalysis
+     * const costAnalysis = await prisma.costAnalysis.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CostAnalysisFindUniqueArgs>(args: SelectSubset<T, CostAnalysisFindUniqueArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one CostAnalysis that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {CostAnalysisFindUniqueOrThrowArgs} args - Arguments to find a CostAnalysis
+     * @example
+     * // Get one CostAnalysis
+     * const costAnalysis = await prisma.costAnalysis.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CostAnalysisFindUniqueOrThrowArgs>(args: SelectSubset<T, CostAnalysisFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first CostAnalysis that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisFindFirstArgs} args - Arguments to find a CostAnalysis
+     * @example
+     * // Get one CostAnalysis
+     * const costAnalysis = await prisma.costAnalysis.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CostAnalysisFindFirstArgs>(args?: SelectSubset<T, CostAnalysisFindFirstArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first CostAnalysis that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisFindFirstOrThrowArgs} args - Arguments to find a CostAnalysis
+     * @example
+     * // Get one CostAnalysis
+     * const costAnalysis = await prisma.costAnalysis.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CostAnalysisFindFirstOrThrowArgs>(args?: SelectSubset<T, CostAnalysisFindFirstOrThrowArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more CostAnalyses that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CostAnalyses
+     * const costAnalyses = await prisma.costAnalysis.findMany()
+     * 
+     * // Get first 10 CostAnalyses
+     * const costAnalyses = await prisma.costAnalysis.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const costAnalysisWithIdOnly = await prisma.costAnalysis.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CostAnalysisFindManyArgs>(args?: SelectSubset<T, CostAnalysisFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a CostAnalysis.
+     * @param {CostAnalysisCreateArgs} args - Arguments to create a CostAnalysis.
+     * @example
+     * // Create one CostAnalysis
+     * const CostAnalysis = await prisma.costAnalysis.create({
+     *   data: {
+     *     // ... data to create a CostAnalysis
+     *   }
+     * })
+     * 
+     */
+    create<T extends CostAnalysisCreateArgs>(args: SelectSubset<T, CostAnalysisCreateArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many CostAnalyses.
+     * @param {CostAnalysisCreateManyArgs} args - Arguments to create many CostAnalyses.
+     * @example
+     * // Create many CostAnalyses
+     * const costAnalysis = await prisma.costAnalysis.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CostAnalysisCreateManyArgs>(args?: SelectSubset<T, CostAnalysisCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CostAnalyses and returns the data saved in the database.
+     * @param {CostAnalysisCreateManyAndReturnArgs} args - Arguments to create many CostAnalyses.
+     * @example
+     * // Create many CostAnalyses
+     * const costAnalysis = await prisma.costAnalysis.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CostAnalyses and only return the `id`
+     * const costAnalysisWithIdOnly = await prisma.costAnalysis.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CostAnalysisCreateManyAndReturnArgs>(args?: SelectSubset<T, CostAnalysisCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a CostAnalysis.
+     * @param {CostAnalysisDeleteArgs} args - Arguments to delete one CostAnalysis.
+     * @example
+     * // Delete one CostAnalysis
+     * const CostAnalysis = await prisma.costAnalysis.delete({
+     *   where: {
+     *     // ... filter to delete one CostAnalysis
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CostAnalysisDeleteArgs>(args: SelectSubset<T, CostAnalysisDeleteArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one CostAnalysis.
+     * @param {CostAnalysisUpdateArgs} args - Arguments to update one CostAnalysis.
+     * @example
+     * // Update one CostAnalysis
+     * const costAnalysis = await prisma.costAnalysis.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CostAnalysisUpdateArgs>(args: SelectSubset<T, CostAnalysisUpdateArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more CostAnalyses.
+     * @param {CostAnalysisDeleteManyArgs} args - Arguments to filter CostAnalyses to delete.
+     * @example
+     * // Delete a few CostAnalyses
+     * const { count } = await prisma.costAnalysis.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CostAnalysisDeleteManyArgs>(args?: SelectSubset<T, CostAnalysisDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CostAnalyses.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CostAnalyses
+     * const costAnalysis = await prisma.costAnalysis.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CostAnalysisUpdateManyArgs>(args: SelectSubset<T, CostAnalysisUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CostAnalyses and returns the data updated in the database.
+     * @param {CostAnalysisUpdateManyAndReturnArgs} args - Arguments to update many CostAnalyses.
+     * @example
+     * // Update many CostAnalyses
+     * const costAnalysis = await prisma.costAnalysis.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more CostAnalyses and only return the `id`
+     * const costAnalysisWithIdOnly = await prisma.costAnalysis.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends CostAnalysisUpdateManyAndReturnArgs>(args: SelectSubset<T, CostAnalysisUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one CostAnalysis.
+     * @param {CostAnalysisUpsertArgs} args - Arguments to update or create a CostAnalysis.
+     * @example
+     * // Update or create a CostAnalysis
+     * const costAnalysis = await prisma.costAnalysis.upsert({
+     *   create: {
+     *     // ... data to create a CostAnalysis
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CostAnalysis we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CostAnalysisUpsertArgs>(args: SelectSubset<T, CostAnalysisUpsertArgs<ExtArgs>>): Prisma__CostAnalysisClient<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of CostAnalyses.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisCountArgs} args - Arguments to filter CostAnalyses to count.
+     * @example
+     * // Count the number of CostAnalyses
+     * const count = await prisma.costAnalysis.count({
+     *   where: {
+     *     // ... the filter for the CostAnalyses we want to count
+     *   }
+     * })
+    **/
+    count<T extends CostAnalysisCountArgs>(
+      args?: Subset<T, CostAnalysisCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CostAnalysisCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CostAnalysis.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CostAnalysisAggregateArgs>(args: Subset<T, CostAnalysisAggregateArgs>): Prisma.PrismaPromise<GetCostAnalysisAggregateType<T>>
+
+    /**
+     * Group by CostAnalysis.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CostAnalysisGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CostAnalysisGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CostAnalysisGroupByArgs['orderBy'] }
+        : { orderBy?: CostAnalysisGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CostAnalysisGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCostAnalysisGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CostAnalysis model
+   */
+  readonly fields: CostAnalysisFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CostAnalysis.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CostAnalysisClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    plan<T extends InsurancePlanDefaultArgs<ExtArgs> = {}>(args?: Subset<T, InsurancePlanDefaultArgs<ExtArgs>>): Prisma__InsurancePlanClient<$Result.GetResult<Prisma.$InsurancePlanPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CostAnalysis model
+   */
+  interface CostAnalysisFieldRefs {
+    readonly id: FieldRef<"CostAnalysis", 'String'>
+    readonly userId: FieldRef<"CostAnalysis", 'String'>
+    readonly planId: FieldRef<"CostAnalysis", 'String'>
+    readonly analysisDate: FieldRef<"CostAnalysis", 'DateTime'>
+    readonly claudeResponse: FieldRef<"CostAnalysis", 'String'>
+    readonly totalProjectedOop: FieldRef<"CostAnalysis", 'Decimal'>
+    readonly deductibleMetMonth: FieldRef<"CostAnalysis", 'Int'>
+    readonly projectedExpensesSnapshot: FieldRef<"CostAnalysis", 'Json'>
+    readonly createdAt: FieldRef<"CostAnalysis", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CostAnalysis findUnique
+   */
+  export type CostAnalysisFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * Filter, which CostAnalysis to fetch.
+     */
+    where: CostAnalysisWhereUniqueInput
+  }
+
+  /**
+   * CostAnalysis findUniqueOrThrow
+   */
+  export type CostAnalysisFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * Filter, which CostAnalysis to fetch.
+     */
+    where: CostAnalysisWhereUniqueInput
+  }
+
+  /**
+   * CostAnalysis findFirst
+   */
+  export type CostAnalysisFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * Filter, which CostAnalysis to fetch.
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CostAnalyses to fetch.
+     */
+    orderBy?: CostAnalysisOrderByWithRelationInput | CostAnalysisOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CostAnalyses.
+     */
+    cursor?: CostAnalysisWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CostAnalyses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CostAnalyses.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CostAnalyses.
+     */
+    distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
+  }
+
+  /**
+   * CostAnalysis findFirstOrThrow
+   */
+  export type CostAnalysisFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * Filter, which CostAnalysis to fetch.
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CostAnalyses to fetch.
+     */
+    orderBy?: CostAnalysisOrderByWithRelationInput | CostAnalysisOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CostAnalyses.
+     */
+    cursor?: CostAnalysisWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CostAnalyses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CostAnalyses.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CostAnalyses.
+     */
+    distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
+  }
+
+  /**
+   * CostAnalysis findMany
+   */
+  export type CostAnalysisFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * Filter, which CostAnalyses to fetch.
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CostAnalyses to fetch.
+     */
+    orderBy?: CostAnalysisOrderByWithRelationInput | CostAnalysisOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CostAnalyses.
+     */
+    cursor?: CostAnalysisWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CostAnalyses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CostAnalyses.
+     */
+    skip?: number
+    distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
+  }
+
+  /**
+   * CostAnalysis create
+   */
+  export type CostAnalysisCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CostAnalysis.
+     */
+    data: XOR<CostAnalysisCreateInput, CostAnalysisUncheckedCreateInput>
+  }
+
+  /**
+   * CostAnalysis createMany
+   */
+  export type CostAnalysisCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CostAnalyses.
+     */
+    data: CostAnalysisCreateManyInput | CostAnalysisCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * CostAnalysis createManyAndReturn
+   */
+  export type CostAnalysisCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * The data used to create many CostAnalyses.
+     */
+    data: CostAnalysisCreateManyInput | CostAnalysisCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CostAnalysis update
+   */
+  export type CostAnalysisUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CostAnalysis.
+     */
+    data: XOR<CostAnalysisUpdateInput, CostAnalysisUncheckedUpdateInput>
+    /**
+     * Choose, which CostAnalysis to update.
+     */
+    where: CostAnalysisWhereUniqueInput
+  }
+
+  /**
+   * CostAnalysis updateMany
+   */
+  export type CostAnalysisUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CostAnalyses.
+     */
+    data: XOR<CostAnalysisUpdateManyMutationInput, CostAnalysisUncheckedUpdateManyInput>
+    /**
+     * Filter which CostAnalyses to update
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * Limit how many CostAnalyses to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * CostAnalysis updateManyAndReturn
+   */
+  export type CostAnalysisUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * The data used to update CostAnalyses.
+     */
+    data: XOR<CostAnalysisUpdateManyMutationInput, CostAnalysisUncheckedUpdateManyInput>
+    /**
+     * Filter which CostAnalyses to update
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * Limit how many CostAnalyses to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CostAnalysis upsert
+   */
+  export type CostAnalysisUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CostAnalysis to update in case it exists.
+     */
+    where: CostAnalysisWhereUniqueInput
+    /**
+     * In case the CostAnalysis found by the `where` argument doesn't exist, create a new CostAnalysis with this data.
+     */
+    create: XOR<CostAnalysisCreateInput, CostAnalysisUncheckedCreateInput>
+    /**
+     * In case the CostAnalysis was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CostAnalysisUpdateInput, CostAnalysisUncheckedUpdateInput>
+  }
+
+  /**
+   * CostAnalysis delete
+   */
+  export type CostAnalysisDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+    /**
+     * Filter which CostAnalysis to delete.
+     */
+    where: CostAnalysisWhereUniqueInput
+  }
+
+  /**
+   * CostAnalysis deleteMany
+   */
+  export type CostAnalysisDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CostAnalyses to delete
+     */
+    where?: CostAnalysisWhereInput
+    /**
+     * Limit how many CostAnalyses to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * CostAnalysis without action
+   */
+  export type CostAnalysisDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CostAnalysis
+     */
+    select?: CostAnalysisSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CostAnalysis
+     */
+    omit?: CostAnalysisOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CostAnalysisInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -25468,12 +29657,75 @@ export namespace Prisma {
   export type SystemConfigScalarFieldEnum = (typeof SystemConfigScalarFieldEnum)[keyof typeof SystemConfigScalarFieldEnum]
 
 
+  export const ExpenseProjectionScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    planId: 'planId',
+    serviceType: 'serviceType',
+    estimatedCost: 'estimatedCost',
+    frequencyPerYear: 'frequencyPerYear',
+    isInNetwork: 'isInNetwork',
+    notes: 'notes',
+    projectionDate: 'projectionDate',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type ExpenseProjectionScalarFieldEnum = (typeof ExpenseProjectionScalarFieldEnum)[keyof typeof ExpenseProjectionScalarFieldEnum]
+
+
+  export const ExpenseActualScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    planId: 'planId',
+    projectionId: 'projectionId',
+    serviceType: 'serviceType',
+    providerName: 'providerName',
+    dateOfService: 'dateOfService',
+    billedAmount: 'billedAmount',
+    insurancePaid: 'insurancePaid',
+    patientPaid: 'patientPaid',
+    appliedToDeductible: 'appliedToDeductible',
+    appliedToOop: 'appliedToOop',
+    claimStatus: 'claimStatus',
+    isInNetwork: 'isInNetwork',
+    notes: 'notes',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type ExpenseActualScalarFieldEnum = (typeof ExpenseActualScalarFieldEnum)[keyof typeof ExpenseActualScalarFieldEnum]
+
+
+  export const CostAnalysisScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    planId: 'planId',
+    analysisDate: 'analysisDate',
+    claudeResponse: 'claudeResponse',
+    totalProjectedOop: 'totalProjectedOop',
+    deductibleMetMonth: 'deductibleMetMonth',
+    projectedExpensesSnapshot: 'projectedExpensesSnapshot',
+    createdAt: 'createdAt'
+  };
+
+  export type CostAnalysisScalarFieldEnum = (typeof CostAnalysisScalarFieldEnum)[keyof typeof CostAnalysisScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const NullableJsonNullValueInput: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull
+  };
+
+  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
   export const QueryMode: {
@@ -25490,6 +29742,15 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -25771,6 +30032,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'QueryMode'
+   */
+  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -25823,6 +30098,9 @@ export namespace Prisma {
     sessions?: SessionListRelationFilter
     encryptionKeys?: UserEncryptionKeyListRelationFilter
     files?: UserFileListRelationFilter
+    expenseProjections?: ExpenseProjectionListRelationFilter
+    expenseActuals?: ExpenseActualListRelationFilter
+    costAnalyses?: CostAnalysisListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -25858,6 +30136,9 @@ export namespace Prisma {
     sessions?: SessionOrderByRelationAggregateInput
     encryptionKeys?: UserEncryptionKeyOrderByRelationAggregateInput
     files?: UserFileOrderByRelationAggregateInput
+    expenseProjections?: ExpenseProjectionOrderByRelationAggregateInput
+    expenseActuals?: ExpenseActualOrderByRelationAggregateInput
+    costAnalyses?: CostAnalysisOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -25896,6 +30177,9 @@ export namespace Prisma {
     sessions?: SessionListRelationFilter
     encryptionKeys?: UserEncryptionKeyListRelationFilter
     files?: UserFileListRelationFilter
+    expenseProjections?: ExpenseProjectionListRelationFilter
+    expenseActuals?: ExpenseActualListRelationFilter
+    costAnalyses?: CostAnalysisListRelationFilter
   }, "id" | "email" | "emailVerificationToken" | "passwordResetToken">
 
   export type UserOrderByWithAggregationInput = {
@@ -26622,6 +30906,9 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"InsurancePlan"> | Date | string
     benefits?: InsuranceBenefitListRelationFilter
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    expenseProjections?: ExpenseProjectionListRelationFilter
+    expenseActuals?: ExpenseActualListRelationFilter
+    costAnalyses?: CostAnalysisListRelationFilter
   }
 
   export type InsurancePlanOrderByWithRelationInput = {
@@ -26744,6 +31031,9 @@ export namespace Prisma {
     updatedAt?: SortOrder
     benefits?: InsuranceBenefitOrderByRelationAggregateInput
     user?: UserOrderByWithRelationInput
+    expenseProjections?: ExpenseProjectionOrderByRelationAggregateInput
+    expenseActuals?: ExpenseActualOrderByRelationAggregateInput
+    costAnalyses?: CostAnalysisOrderByRelationAggregateInput
   }
 
   export type InsurancePlanWhereUniqueInput = Prisma.AtLeast<{
@@ -26869,6 +31159,9 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"InsurancePlan"> | Date | string
     benefits?: InsuranceBenefitListRelationFilter
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    expenseProjections?: ExpenseProjectionListRelationFilter
+    expenseActuals?: ExpenseActualListRelationFilter
+    costAnalyses?: CostAnalysisListRelationFilter
   }, "id">
 
   export type InsurancePlanOrderByWithAggregationInput = {
@@ -27932,6 +32225,302 @@ export namespace Prisma {
     updatedBy?: UuidNullableWithAggregatesFilter<"SystemConfig"> | string | null
   }
 
+  export type ExpenseProjectionWhereInput = {
+    AND?: ExpenseProjectionWhereInput | ExpenseProjectionWhereInput[]
+    OR?: ExpenseProjectionWhereInput[]
+    NOT?: ExpenseProjectionWhereInput | ExpenseProjectionWhereInput[]
+    id?: UuidFilter<"ExpenseProjection"> | string
+    userId?: UuidFilter<"ExpenseProjection"> | string
+    planId?: UuidFilter<"ExpenseProjection"> | string
+    serviceType?: StringFilter<"ExpenseProjection"> | string
+    estimatedCost?: DecimalFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFilter<"ExpenseProjection"> | number
+    isInNetwork?: BoolFilter<"ExpenseProjection"> | boolean
+    notes?: StringNullableFilter<"ExpenseProjection"> | string | null
+    projectionDate?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    createdAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    updatedAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
+    actuals?: ExpenseActualListRelationFilter
+  }
+
+  export type ExpenseProjectionOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    serviceType?: SortOrder
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrderInput | SortOrder
+    projectionDate?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+    plan?: InsurancePlanOrderByWithRelationInput
+    actuals?: ExpenseActualOrderByRelationAggregateInput
+  }
+
+  export type ExpenseProjectionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ExpenseProjectionWhereInput | ExpenseProjectionWhereInput[]
+    OR?: ExpenseProjectionWhereInput[]
+    NOT?: ExpenseProjectionWhereInput | ExpenseProjectionWhereInput[]
+    userId?: UuidFilter<"ExpenseProjection"> | string
+    planId?: UuidFilter<"ExpenseProjection"> | string
+    serviceType?: StringFilter<"ExpenseProjection"> | string
+    estimatedCost?: DecimalFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFilter<"ExpenseProjection"> | number
+    isInNetwork?: BoolFilter<"ExpenseProjection"> | boolean
+    notes?: StringNullableFilter<"ExpenseProjection"> | string | null
+    projectionDate?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    createdAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    updatedAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
+    actuals?: ExpenseActualListRelationFilter
+  }, "id">
+
+  export type ExpenseProjectionOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    serviceType?: SortOrder
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrderInput | SortOrder
+    projectionDate?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: ExpenseProjectionCountOrderByAggregateInput
+    _avg?: ExpenseProjectionAvgOrderByAggregateInput
+    _max?: ExpenseProjectionMaxOrderByAggregateInput
+    _min?: ExpenseProjectionMinOrderByAggregateInput
+    _sum?: ExpenseProjectionSumOrderByAggregateInput
+  }
+
+  export type ExpenseProjectionScalarWhereWithAggregatesInput = {
+    AND?: ExpenseProjectionScalarWhereWithAggregatesInput | ExpenseProjectionScalarWhereWithAggregatesInput[]
+    OR?: ExpenseProjectionScalarWhereWithAggregatesInput[]
+    NOT?: ExpenseProjectionScalarWhereWithAggregatesInput | ExpenseProjectionScalarWhereWithAggregatesInput[]
+    id?: UuidWithAggregatesFilter<"ExpenseProjection"> | string
+    userId?: UuidWithAggregatesFilter<"ExpenseProjection"> | string
+    planId?: UuidWithAggregatesFilter<"ExpenseProjection"> | string
+    serviceType?: StringWithAggregatesFilter<"ExpenseProjection"> | string
+    estimatedCost?: DecimalWithAggregatesFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntWithAggregatesFilter<"ExpenseProjection"> | number
+    isInNetwork?: BoolWithAggregatesFilter<"ExpenseProjection"> | boolean
+    notes?: StringNullableWithAggregatesFilter<"ExpenseProjection"> | string | null
+    projectionDate?: DateTimeWithAggregatesFilter<"ExpenseProjection"> | Date | string
+    createdAt?: DateTimeWithAggregatesFilter<"ExpenseProjection"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"ExpenseProjection"> | Date | string
+  }
+
+  export type ExpenseActualWhereInput = {
+    AND?: ExpenseActualWhereInput | ExpenseActualWhereInput[]
+    OR?: ExpenseActualWhereInput[]
+    NOT?: ExpenseActualWhereInput | ExpenseActualWhereInput[]
+    id?: UuidFilter<"ExpenseActual"> | string
+    userId?: UuidFilter<"ExpenseActual"> | string
+    planId?: UuidFilter<"ExpenseActual"> | string
+    projectionId?: UuidNullableFilter<"ExpenseActual"> | string | null
+    serviceType?: StringFilter<"ExpenseActual"> | string
+    providerName?: StringNullableFilter<"ExpenseActual"> | string | null
+    dateOfService?: DateTimeNullableFilter<"ExpenseActual"> | Date | string | null
+    billedAmount?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFilter<"ExpenseActual"> | string
+    isInNetwork?: BoolNullableFilter<"ExpenseActual"> | boolean | null
+    notes?: StringNullableFilter<"ExpenseActual"> | string | null
+    createdAt?: DateTimeFilter<"ExpenseActual"> | Date | string
+    updatedAt?: DateTimeFilter<"ExpenseActual"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
+    projection?: XOR<ExpenseProjectionNullableScalarRelationFilter, ExpenseProjectionWhereInput> | null
+  }
+
+  export type ExpenseActualOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    projectionId?: SortOrderInput | SortOrder
+    serviceType?: SortOrder
+    providerName?: SortOrderInput | SortOrder
+    dateOfService?: SortOrderInput | SortOrder
+    billedAmount?: SortOrderInput | SortOrder
+    insurancePaid?: SortOrderInput | SortOrder
+    patientPaid?: SortOrderInput | SortOrder
+    appliedToDeductible?: SortOrderInput | SortOrder
+    appliedToOop?: SortOrderInput | SortOrder
+    claimStatus?: SortOrder
+    isInNetwork?: SortOrderInput | SortOrder
+    notes?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+    plan?: InsurancePlanOrderByWithRelationInput
+    projection?: ExpenseProjectionOrderByWithRelationInput
+  }
+
+  export type ExpenseActualWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ExpenseActualWhereInput | ExpenseActualWhereInput[]
+    OR?: ExpenseActualWhereInput[]
+    NOT?: ExpenseActualWhereInput | ExpenseActualWhereInput[]
+    userId?: UuidFilter<"ExpenseActual"> | string
+    planId?: UuidFilter<"ExpenseActual"> | string
+    projectionId?: UuidNullableFilter<"ExpenseActual"> | string | null
+    serviceType?: StringFilter<"ExpenseActual"> | string
+    providerName?: StringNullableFilter<"ExpenseActual"> | string | null
+    dateOfService?: DateTimeNullableFilter<"ExpenseActual"> | Date | string | null
+    billedAmount?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFilter<"ExpenseActual"> | string
+    isInNetwork?: BoolNullableFilter<"ExpenseActual"> | boolean | null
+    notes?: StringNullableFilter<"ExpenseActual"> | string | null
+    createdAt?: DateTimeFilter<"ExpenseActual"> | Date | string
+    updatedAt?: DateTimeFilter<"ExpenseActual"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
+    projection?: XOR<ExpenseProjectionNullableScalarRelationFilter, ExpenseProjectionWhereInput> | null
+  }, "id">
+
+  export type ExpenseActualOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    projectionId?: SortOrderInput | SortOrder
+    serviceType?: SortOrder
+    providerName?: SortOrderInput | SortOrder
+    dateOfService?: SortOrderInput | SortOrder
+    billedAmount?: SortOrderInput | SortOrder
+    insurancePaid?: SortOrderInput | SortOrder
+    patientPaid?: SortOrderInput | SortOrder
+    appliedToDeductible?: SortOrderInput | SortOrder
+    appliedToOop?: SortOrderInput | SortOrder
+    claimStatus?: SortOrder
+    isInNetwork?: SortOrderInput | SortOrder
+    notes?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: ExpenseActualCountOrderByAggregateInput
+    _avg?: ExpenseActualAvgOrderByAggregateInput
+    _max?: ExpenseActualMaxOrderByAggregateInput
+    _min?: ExpenseActualMinOrderByAggregateInput
+    _sum?: ExpenseActualSumOrderByAggregateInput
+  }
+
+  export type ExpenseActualScalarWhereWithAggregatesInput = {
+    AND?: ExpenseActualScalarWhereWithAggregatesInput | ExpenseActualScalarWhereWithAggregatesInput[]
+    OR?: ExpenseActualScalarWhereWithAggregatesInput[]
+    NOT?: ExpenseActualScalarWhereWithAggregatesInput | ExpenseActualScalarWhereWithAggregatesInput[]
+    id?: UuidWithAggregatesFilter<"ExpenseActual"> | string
+    userId?: UuidWithAggregatesFilter<"ExpenseActual"> | string
+    planId?: UuidWithAggregatesFilter<"ExpenseActual"> | string
+    projectionId?: UuidNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    serviceType?: StringWithAggregatesFilter<"ExpenseActual"> | string
+    providerName?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    dateOfService?: DateTimeNullableWithAggregatesFilter<"ExpenseActual"> | Date | string | null
+    billedAmount?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringWithAggregatesFilter<"ExpenseActual"> | string
+    isInNetwork?: BoolNullableWithAggregatesFilter<"ExpenseActual"> | boolean | null
+    notes?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"ExpenseActual"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"ExpenseActual"> | Date | string
+  }
+
+  export type CostAnalysisWhereInput = {
+    AND?: CostAnalysisWhereInput | CostAnalysisWhereInput[]
+    OR?: CostAnalysisWhereInput[]
+    NOT?: CostAnalysisWhereInput | CostAnalysisWhereInput[]
+    id?: UuidFilter<"CostAnalysis"> | string
+    userId?: UuidFilter<"CostAnalysis"> | string
+    planId?: UuidFilter<"CostAnalysis"> | string
+    analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
+    claudeResponse?: StringFilter<"CostAnalysis"> | string
+    totalProjectedOop?: DecimalNullableFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
+    projectedExpensesSnapshot?: JsonNullableFilter<"CostAnalysis">
+    createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
+  }
+
+  export type CostAnalysisOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    analysisDate?: SortOrder
+    claudeResponse?: SortOrder
+    totalProjectedOop?: SortOrderInput | SortOrder
+    deductibleMetMonth?: SortOrderInput | SortOrder
+    projectedExpensesSnapshot?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+    plan?: InsurancePlanOrderByWithRelationInput
+  }
+
+  export type CostAnalysisWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: CostAnalysisWhereInput | CostAnalysisWhereInput[]
+    OR?: CostAnalysisWhereInput[]
+    NOT?: CostAnalysisWhereInput | CostAnalysisWhereInput[]
+    userId?: UuidFilter<"CostAnalysis"> | string
+    planId?: UuidFilter<"CostAnalysis"> | string
+    analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
+    claudeResponse?: StringFilter<"CostAnalysis"> | string
+    totalProjectedOop?: DecimalNullableFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
+    projectedExpensesSnapshot?: JsonNullableFilter<"CostAnalysis">
+    createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
+  }, "id">
+
+  export type CostAnalysisOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    analysisDate?: SortOrder
+    claudeResponse?: SortOrder
+    totalProjectedOop?: SortOrderInput | SortOrder
+    deductibleMetMonth?: SortOrderInput | SortOrder
+    projectedExpensesSnapshot?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: CostAnalysisCountOrderByAggregateInput
+    _avg?: CostAnalysisAvgOrderByAggregateInput
+    _max?: CostAnalysisMaxOrderByAggregateInput
+    _min?: CostAnalysisMinOrderByAggregateInput
+    _sum?: CostAnalysisSumOrderByAggregateInput
+  }
+
+  export type CostAnalysisScalarWhereWithAggregatesInput = {
+    AND?: CostAnalysisScalarWhereWithAggregatesInput | CostAnalysisScalarWhereWithAggregatesInput[]
+    OR?: CostAnalysisScalarWhereWithAggregatesInput[]
+    NOT?: CostAnalysisScalarWhereWithAggregatesInput | CostAnalysisScalarWhereWithAggregatesInput[]
+    id?: UuidWithAggregatesFilter<"CostAnalysis"> | string
+    userId?: UuidWithAggregatesFilter<"CostAnalysis"> | string
+    planId?: UuidWithAggregatesFilter<"CostAnalysis"> | string
+    analysisDate?: DateTimeWithAggregatesFilter<"CostAnalysis"> | Date | string
+    claudeResponse?: StringWithAggregatesFilter<"CostAnalysis"> | string
+    totalProjectedOop?: DecimalNullableWithAggregatesFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: IntNullableWithAggregatesFilter<"CostAnalysis"> | number | null
+    projectedExpensesSnapshot?: JsonNullableWithAggregatesFilter<"CostAnalysis">
+    createdAt?: DateTimeWithAggregatesFilter<"CostAnalysis"> | Date | string
+  }
+
   export type UserCreateInput = {
     id?: string
     email: string
@@ -27965,6 +32554,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -28000,6 +32592,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -28035,6 +32630,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -28070,6 +32668,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -28872,6 +33473,9 @@ export namespace Prisma {
     updatedAt?: Date | string
     benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
     user: UserCreateNestedOneWithoutInsurancePlansInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutPlanInput
   }
 
   export type InsurancePlanUncheckedCreateInput = {
@@ -28993,6 +33597,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutPlanInput
   }
 
   export type InsurancePlanUpdateInput = {
@@ -29114,6 +33721,9 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
     user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutPlanNestedInput
   }
 
   export type InsurancePlanUncheckedUpdateInput = {
@@ -29235,6 +33845,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type InsurancePlanCreateManyInput = {
@@ -30524,6 +35137,325 @@ export namespace Prisma {
     updatedBy?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
+  export type ExpenseProjectionCreateInput = {
+    id?: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutExpenseProjectionsInput
+    plan: InsurancePlanCreateNestedOneWithoutExpenseProjectionsInput
+    actuals?: ExpenseActualCreateNestedManyWithoutProjectionInput
+  }
+
+  export type ExpenseProjectionUncheckedCreateInput = {
+    id?: string
+    userId: string
+    planId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    actuals?: ExpenseActualUncheckedCreateNestedManyWithoutProjectionInput
+  }
+
+  export type ExpenseProjectionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutExpenseProjectionsNestedInput
+    plan?: InsurancePlanUpdateOneRequiredWithoutExpenseProjectionsNestedInput
+    actuals?: ExpenseActualUpdateManyWithoutProjectionNestedInput
+  }
+
+  export type ExpenseProjectionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    actuals?: ExpenseActualUncheckedUpdateManyWithoutProjectionNestedInput
+  }
+
+  export type ExpenseProjectionCreateManyInput = {
+    id?: string
+    userId: string
+    planId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseProjectionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseProjectionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualCreateInput = {
+    id?: string
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutExpenseActualsInput
+    plan: InsurancePlanCreateNestedOneWithoutExpenseActualsInput
+    projection?: ExpenseProjectionCreateNestedOneWithoutActualsInput
+  }
+
+  export type ExpenseActualUncheckedCreateInput = {
+    id?: string
+    userId: string
+    planId: string
+    projectionId?: string | null
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutExpenseActualsNestedInput
+    plan?: InsurancePlanUpdateOneRequiredWithoutExpenseActualsNestedInput
+    projection?: ExpenseProjectionUpdateOneWithoutActualsNestedInput
+  }
+
+  export type ExpenseActualUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    projectionId?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualCreateManyInput = {
+    id?: string
+    userId: string
+    planId: string
+    projectionId?: string | null
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    projectionId?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisCreateInput = {
+    id?: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    user: UserCreateNestedOneWithoutCostAnalysesInput
+    plan: InsurancePlanCreateNestedOneWithoutCostAnalysesInput
+  }
+
+  export type CostAnalysisUncheckedCreateInput = {
+    id?: string
+    userId: string
+    planId: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CostAnalysisUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutCostAnalysesNestedInput
+    plan?: InsurancePlanUpdateOneRequiredWithoutCostAnalysesNestedInput
+  }
+
+  export type CostAnalysisUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisCreateManyInput = {
+    id?: string
+    userId: string
+    planId: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CostAnalysisUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type UuidFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -30671,6 +35603,24 @@ export namespace Prisma {
     none?: UserFileWhereInput
   }
 
+  export type ExpenseProjectionListRelationFilter = {
+    every?: ExpenseProjectionWhereInput
+    some?: ExpenseProjectionWhereInput
+    none?: ExpenseProjectionWhereInput
+  }
+
+  export type ExpenseActualListRelationFilter = {
+    every?: ExpenseActualWhereInput
+    some?: ExpenseActualWhereInput
+    none?: ExpenseActualWhereInput
+  }
+
+  export type CostAnalysisListRelationFilter = {
+    every?: CostAnalysisWhereInput
+    some?: CostAnalysisWhereInput
+    none?: CostAnalysisWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -30713,6 +35663,18 @@ export namespace Prisma {
   }
 
   export type UserFileOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ExpenseProjectionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ExpenseActualOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CostAnalysisOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -32672,6 +37634,245 @@ export namespace Prisma {
     updatedBy?: SortOrder
   }
 
+  export type ExpenseProjectionCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    serviceType?: SortOrder
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrder
+    projectionDate?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ExpenseProjectionAvgOrderByAggregateInput = {
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+  }
+
+  export type ExpenseProjectionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    serviceType?: SortOrder
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrder
+    projectionDate?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ExpenseProjectionMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    serviceType?: SortOrder
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrder
+    projectionDate?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ExpenseProjectionSumOrderByAggregateInput = {
+    estimatedCost?: SortOrder
+    frequencyPerYear?: SortOrder
+  }
+
+  export type BoolNullableFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel> | null
+    not?: NestedBoolNullableFilter<$PrismaModel> | boolean | null
+  }
+
+  export type ExpenseProjectionNullableScalarRelationFilter = {
+    is?: ExpenseProjectionWhereInput | null
+    isNot?: ExpenseProjectionWhereInput | null
+  }
+
+  export type ExpenseActualCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    projectionId?: SortOrder
+    serviceType?: SortOrder
+    providerName?: SortOrder
+    dateOfService?: SortOrder
+    billedAmount?: SortOrder
+    insurancePaid?: SortOrder
+    patientPaid?: SortOrder
+    appliedToDeductible?: SortOrder
+    appliedToOop?: SortOrder
+    claimStatus?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ExpenseActualAvgOrderByAggregateInput = {
+    billedAmount?: SortOrder
+    insurancePaid?: SortOrder
+    patientPaid?: SortOrder
+    appliedToDeductible?: SortOrder
+    appliedToOop?: SortOrder
+  }
+
+  export type ExpenseActualMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    projectionId?: SortOrder
+    serviceType?: SortOrder
+    providerName?: SortOrder
+    dateOfService?: SortOrder
+    billedAmount?: SortOrder
+    insurancePaid?: SortOrder
+    patientPaid?: SortOrder
+    appliedToDeductible?: SortOrder
+    appliedToOop?: SortOrder
+    claimStatus?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ExpenseActualMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    projectionId?: SortOrder
+    serviceType?: SortOrder
+    providerName?: SortOrder
+    dateOfService?: SortOrder
+    billedAmount?: SortOrder
+    insurancePaid?: SortOrder
+    patientPaid?: SortOrder
+    appliedToDeductible?: SortOrder
+    appliedToOop?: SortOrder
+    claimStatus?: SortOrder
+    isInNetwork?: SortOrder
+    notes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ExpenseActualSumOrderByAggregateInput = {
+    billedAmount?: SortOrder
+    insurancePaid?: SortOrder
+    patientPaid?: SortOrder
+    appliedToDeductible?: SortOrder
+    appliedToOop?: SortOrder
+  }
+
+  export type BoolNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel> | null
+    not?: NestedBoolNullableWithAggregatesFilter<$PrismaModel> | boolean | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedBoolNullableFilter<$PrismaModel>
+    _max?: NestedBoolNullableFilter<$PrismaModel>
+  }
+  export type JsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type CostAnalysisCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    analysisDate?: SortOrder
+    claudeResponse?: SortOrder
+    totalProjectedOop?: SortOrder
+    deductibleMetMonth?: SortOrder
+    projectedExpensesSnapshot?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CostAnalysisAvgOrderByAggregateInput = {
+    totalProjectedOop?: SortOrder
+    deductibleMetMonth?: SortOrder
+  }
+
+  export type CostAnalysisMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    analysisDate?: SortOrder
+    claudeResponse?: SortOrder
+    totalProjectedOop?: SortOrder
+    deductibleMetMonth?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CostAnalysisMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    planId?: SortOrder
+    analysisDate?: SortOrder
+    claudeResponse?: SortOrder
+    totalProjectedOop?: SortOrder
+    deductibleMetMonth?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type CostAnalysisSumOrderByAggregateInput = {
+    totalProjectedOop?: SortOrder
+    deductibleMetMonth?: SortOrder
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
+
   export type AuditLogCreateNestedManyWithoutUserInput = {
     create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
@@ -32749,6 +37950,27 @@ export namespace Prisma {
     connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
   }
 
+  export type ExpenseProjectionCreateNestedManyWithoutUserInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutUserInput, ExpenseProjectionUncheckedCreateWithoutUserInput> | ExpenseProjectionCreateWithoutUserInput[] | ExpenseProjectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutUserInput | ExpenseProjectionCreateOrConnectWithoutUserInput[]
+    createMany?: ExpenseProjectionCreateManyUserInputEnvelope
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+  }
+
+  export type ExpenseActualCreateNestedManyWithoutUserInput = {
+    create?: XOR<ExpenseActualCreateWithoutUserInput, ExpenseActualUncheckedCreateWithoutUserInput> | ExpenseActualCreateWithoutUserInput[] | ExpenseActualUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutUserInput | ExpenseActualCreateOrConnectWithoutUserInput[]
+    createMany?: ExpenseActualCreateManyUserInputEnvelope
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+  }
+
+  export type CostAnalysisCreateNestedManyWithoutUserInput = {
+    create?: XOR<CostAnalysisCreateWithoutUserInput, CostAnalysisUncheckedCreateWithoutUserInput> | CostAnalysisCreateWithoutUserInput[] | CostAnalysisUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutUserInput | CostAnalysisCreateOrConnectWithoutUserInput[]
+    createMany?: CostAnalysisCreateManyUserInputEnvelope
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+  }
+
   export type AuditLogUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
@@ -32824,6 +38046,27 @@ export namespace Prisma {
     connectOrCreate?: UserFileCreateOrConnectWithoutUserInput | UserFileCreateOrConnectWithoutUserInput[]
     createMany?: UserFileCreateManyUserInputEnvelope
     connect?: UserFileWhereUniqueInput | UserFileWhereUniqueInput[]
+  }
+
+  export type ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutUserInput, ExpenseProjectionUncheckedCreateWithoutUserInput> | ExpenseProjectionCreateWithoutUserInput[] | ExpenseProjectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutUserInput | ExpenseProjectionCreateOrConnectWithoutUserInput[]
+    createMany?: ExpenseProjectionCreateManyUserInputEnvelope
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+  }
+
+  export type ExpenseActualUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<ExpenseActualCreateWithoutUserInput, ExpenseActualUncheckedCreateWithoutUserInput> | ExpenseActualCreateWithoutUserInput[] | ExpenseActualUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutUserInput | ExpenseActualCreateOrConnectWithoutUserInput[]
+    createMany?: ExpenseActualCreateManyUserInputEnvelope
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+  }
+
+  export type CostAnalysisUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<CostAnalysisCreateWithoutUserInput, CostAnalysisUncheckedCreateWithoutUserInput> | CostAnalysisCreateWithoutUserInput[] | CostAnalysisUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutUserInput | CostAnalysisCreateOrConnectWithoutUserInput[]
+    createMany?: CostAnalysisCreateManyUserInputEnvelope
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -33012,6 +38255,48 @@ export namespace Prisma {
     deleteMany?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
   }
 
+  export type ExpenseProjectionUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutUserInput, ExpenseProjectionUncheckedCreateWithoutUserInput> | ExpenseProjectionCreateWithoutUserInput[] | ExpenseProjectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutUserInput | ExpenseProjectionCreateOrConnectWithoutUserInput[]
+    upsert?: ExpenseProjectionUpsertWithWhereUniqueWithoutUserInput | ExpenseProjectionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ExpenseProjectionCreateManyUserInputEnvelope
+    set?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    disconnect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    delete?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    update?: ExpenseProjectionUpdateWithWhereUniqueWithoutUserInput | ExpenseProjectionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ExpenseProjectionUpdateManyWithWhereWithoutUserInput | ExpenseProjectionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ExpenseProjectionScalarWhereInput | ExpenseProjectionScalarWhereInput[]
+  }
+
+  export type ExpenseActualUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ExpenseActualCreateWithoutUserInput, ExpenseActualUncheckedCreateWithoutUserInput> | ExpenseActualCreateWithoutUserInput[] | ExpenseActualUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutUserInput | ExpenseActualCreateOrConnectWithoutUserInput[]
+    upsert?: ExpenseActualUpsertWithWhereUniqueWithoutUserInput | ExpenseActualUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ExpenseActualCreateManyUserInputEnvelope
+    set?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    disconnect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    delete?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    update?: ExpenseActualUpdateWithWhereUniqueWithoutUserInput | ExpenseActualUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ExpenseActualUpdateManyWithWhereWithoutUserInput | ExpenseActualUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+  }
+
+  export type CostAnalysisUpdateManyWithoutUserNestedInput = {
+    create?: XOR<CostAnalysisCreateWithoutUserInput, CostAnalysisUncheckedCreateWithoutUserInput> | CostAnalysisCreateWithoutUserInput[] | CostAnalysisUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutUserInput | CostAnalysisCreateOrConnectWithoutUserInput[]
+    upsert?: CostAnalysisUpsertWithWhereUniqueWithoutUserInput | CostAnalysisUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: CostAnalysisCreateManyUserInputEnvelope
+    set?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    disconnect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    delete?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    update?: CostAnalysisUpdateWithWhereUniqueWithoutUserInput | CostAnalysisUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: CostAnalysisUpdateManyWithWhereWithoutUserInput | CostAnalysisUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
+  }
+
   export type AuditLogUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
@@ -33164,6 +38449,48 @@ export namespace Prisma {
     update?: UserFileUpdateWithWhereUniqueWithoutUserInput | UserFileUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: UserFileUpdateManyWithWhereWithoutUserInput | UserFileUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: UserFileScalarWhereInput | UserFileScalarWhereInput[]
+  }
+
+  export type ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutUserInput, ExpenseProjectionUncheckedCreateWithoutUserInput> | ExpenseProjectionCreateWithoutUserInput[] | ExpenseProjectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutUserInput | ExpenseProjectionCreateOrConnectWithoutUserInput[]
+    upsert?: ExpenseProjectionUpsertWithWhereUniqueWithoutUserInput | ExpenseProjectionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ExpenseProjectionCreateManyUserInputEnvelope
+    set?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    disconnect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    delete?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    update?: ExpenseProjectionUpdateWithWhereUniqueWithoutUserInput | ExpenseProjectionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ExpenseProjectionUpdateManyWithWhereWithoutUserInput | ExpenseProjectionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ExpenseProjectionScalarWhereInput | ExpenseProjectionScalarWhereInput[]
+  }
+
+  export type ExpenseActualUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ExpenseActualCreateWithoutUserInput, ExpenseActualUncheckedCreateWithoutUserInput> | ExpenseActualCreateWithoutUserInput[] | ExpenseActualUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutUserInput | ExpenseActualCreateOrConnectWithoutUserInput[]
+    upsert?: ExpenseActualUpsertWithWhereUniqueWithoutUserInput | ExpenseActualUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ExpenseActualCreateManyUserInputEnvelope
+    set?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    disconnect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    delete?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    update?: ExpenseActualUpdateWithWhereUniqueWithoutUserInput | ExpenseActualUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ExpenseActualUpdateManyWithWhereWithoutUserInput | ExpenseActualUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+  }
+
+  export type CostAnalysisUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<CostAnalysisCreateWithoutUserInput, CostAnalysisUncheckedCreateWithoutUserInput> | CostAnalysisCreateWithoutUserInput[] | CostAnalysisUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutUserInput | CostAnalysisCreateOrConnectWithoutUserInput[]
+    upsert?: CostAnalysisUpsertWithWhereUniqueWithoutUserInput | CostAnalysisUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: CostAnalysisCreateManyUserInputEnvelope
+    set?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    disconnect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    delete?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    update?: CostAnalysisUpdateWithWhereUniqueWithoutUserInput | CostAnalysisUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: CostAnalysisUpdateManyWithWhereWithoutUserInput | CostAnalysisUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
   }
 
   export type UserCreateNestedOneWithoutSessionsInput = {
@@ -33405,11 +38732,53 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type ExpenseProjectionCreateNestedManyWithoutPlanInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutPlanInput, ExpenseProjectionUncheckedCreateWithoutPlanInput> | ExpenseProjectionCreateWithoutPlanInput[] | ExpenseProjectionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutPlanInput | ExpenseProjectionCreateOrConnectWithoutPlanInput[]
+    createMany?: ExpenseProjectionCreateManyPlanInputEnvelope
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+  }
+
+  export type ExpenseActualCreateNestedManyWithoutPlanInput = {
+    create?: XOR<ExpenseActualCreateWithoutPlanInput, ExpenseActualUncheckedCreateWithoutPlanInput> | ExpenseActualCreateWithoutPlanInput[] | ExpenseActualUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutPlanInput | ExpenseActualCreateOrConnectWithoutPlanInput[]
+    createMany?: ExpenseActualCreateManyPlanInputEnvelope
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+  }
+
+  export type CostAnalysisCreateNestedManyWithoutPlanInput = {
+    create?: XOR<CostAnalysisCreateWithoutPlanInput, CostAnalysisUncheckedCreateWithoutPlanInput> | CostAnalysisCreateWithoutPlanInput[] | CostAnalysisUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutPlanInput | CostAnalysisCreateOrConnectWithoutPlanInput[]
+    createMany?: CostAnalysisCreateManyPlanInputEnvelope
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+  }
+
   export type InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput = {
     create?: XOR<InsuranceBenefitCreateWithoutPlanInput, InsuranceBenefitUncheckedCreateWithoutPlanInput> | InsuranceBenefitCreateWithoutPlanInput[] | InsuranceBenefitUncheckedCreateWithoutPlanInput[]
     connectOrCreate?: InsuranceBenefitCreateOrConnectWithoutPlanInput | InsuranceBenefitCreateOrConnectWithoutPlanInput[]
     createMany?: InsuranceBenefitCreateManyPlanInputEnvelope
     connect?: InsuranceBenefitWhereUniqueInput | InsuranceBenefitWhereUniqueInput[]
+  }
+
+  export type ExpenseProjectionUncheckedCreateNestedManyWithoutPlanInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutPlanInput, ExpenseProjectionUncheckedCreateWithoutPlanInput> | ExpenseProjectionCreateWithoutPlanInput[] | ExpenseProjectionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutPlanInput | ExpenseProjectionCreateOrConnectWithoutPlanInput[]
+    createMany?: ExpenseProjectionCreateManyPlanInputEnvelope
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+  }
+
+  export type ExpenseActualUncheckedCreateNestedManyWithoutPlanInput = {
+    create?: XOR<ExpenseActualCreateWithoutPlanInput, ExpenseActualUncheckedCreateWithoutPlanInput> | ExpenseActualCreateWithoutPlanInput[] | ExpenseActualUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutPlanInput | ExpenseActualCreateOrConnectWithoutPlanInput[]
+    createMany?: ExpenseActualCreateManyPlanInputEnvelope
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+  }
+
+  export type CostAnalysisUncheckedCreateNestedManyWithoutPlanInput = {
+    create?: XOR<CostAnalysisCreateWithoutPlanInput, CostAnalysisUncheckedCreateWithoutPlanInput> | CostAnalysisCreateWithoutPlanInput[] | CostAnalysisUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutPlanInput | CostAnalysisCreateOrConnectWithoutPlanInput[]
+    createMany?: CostAnalysisCreateManyPlanInputEnvelope
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
   }
 
   export type EnumPlanTypeFieldUpdateOperationsInput = {
@@ -33446,6 +38815,48 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutInsurancePlansInput, UserUpdateWithoutInsurancePlansInput>, UserUncheckedUpdateWithoutInsurancePlansInput>
   }
 
+  export type ExpenseProjectionUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutPlanInput, ExpenseProjectionUncheckedCreateWithoutPlanInput> | ExpenseProjectionCreateWithoutPlanInput[] | ExpenseProjectionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutPlanInput | ExpenseProjectionCreateOrConnectWithoutPlanInput[]
+    upsert?: ExpenseProjectionUpsertWithWhereUniqueWithoutPlanInput | ExpenseProjectionUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: ExpenseProjectionCreateManyPlanInputEnvelope
+    set?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    disconnect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    delete?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    update?: ExpenseProjectionUpdateWithWhereUniqueWithoutPlanInput | ExpenseProjectionUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: ExpenseProjectionUpdateManyWithWhereWithoutPlanInput | ExpenseProjectionUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: ExpenseProjectionScalarWhereInput | ExpenseProjectionScalarWhereInput[]
+  }
+
+  export type ExpenseActualUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<ExpenseActualCreateWithoutPlanInput, ExpenseActualUncheckedCreateWithoutPlanInput> | ExpenseActualCreateWithoutPlanInput[] | ExpenseActualUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutPlanInput | ExpenseActualCreateOrConnectWithoutPlanInput[]
+    upsert?: ExpenseActualUpsertWithWhereUniqueWithoutPlanInput | ExpenseActualUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: ExpenseActualCreateManyPlanInputEnvelope
+    set?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    disconnect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    delete?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    update?: ExpenseActualUpdateWithWhereUniqueWithoutPlanInput | ExpenseActualUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: ExpenseActualUpdateManyWithWhereWithoutPlanInput | ExpenseActualUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+  }
+
+  export type CostAnalysisUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<CostAnalysisCreateWithoutPlanInput, CostAnalysisUncheckedCreateWithoutPlanInput> | CostAnalysisCreateWithoutPlanInput[] | CostAnalysisUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutPlanInput | CostAnalysisCreateOrConnectWithoutPlanInput[]
+    upsert?: CostAnalysisUpsertWithWhereUniqueWithoutPlanInput | CostAnalysisUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: CostAnalysisCreateManyPlanInputEnvelope
+    set?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    disconnect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    delete?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    update?: CostAnalysisUpdateWithWhereUniqueWithoutPlanInput | CostAnalysisUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: CostAnalysisUpdateManyWithWhereWithoutPlanInput | CostAnalysisUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
+  }
+
   export type InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput = {
     create?: XOR<InsuranceBenefitCreateWithoutPlanInput, InsuranceBenefitUncheckedCreateWithoutPlanInput> | InsuranceBenefitCreateWithoutPlanInput[] | InsuranceBenefitUncheckedCreateWithoutPlanInput[]
     connectOrCreate?: InsuranceBenefitCreateOrConnectWithoutPlanInput | InsuranceBenefitCreateOrConnectWithoutPlanInput[]
@@ -33458,6 +38869,48 @@ export namespace Prisma {
     update?: InsuranceBenefitUpdateWithWhereUniqueWithoutPlanInput | InsuranceBenefitUpdateWithWhereUniqueWithoutPlanInput[]
     updateMany?: InsuranceBenefitUpdateManyWithWhereWithoutPlanInput | InsuranceBenefitUpdateManyWithWhereWithoutPlanInput[]
     deleteMany?: InsuranceBenefitScalarWhereInput | InsuranceBenefitScalarWhereInput[]
+  }
+
+  export type ExpenseProjectionUncheckedUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutPlanInput, ExpenseProjectionUncheckedCreateWithoutPlanInput> | ExpenseProjectionCreateWithoutPlanInput[] | ExpenseProjectionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutPlanInput | ExpenseProjectionCreateOrConnectWithoutPlanInput[]
+    upsert?: ExpenseProjectionUpsertWithWhereUniqueWithoutPlanInput | ExpenseProjectionUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: ExpenseProjectionCreateManyPlanInputEnvelope
+    set?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    disconnect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    delete?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    connect?: ExpenseProjectionWhereUniqueInput | ExpenseProjectionWhereUniqueInput[]
+    update?: ExpenseProjectionUpdateWithWhereUniqueWithoutPlanInput | ExpenseProjectionUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: ExpenseProjectionUpdateManyWithWhereWithoutPlanInput | ExpenseProjectionUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: ExpenseProjectionScalarWhereInput | ExpenseProjectionScalarWhereInput[]
+  }
+
+  export type ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<ExpenseActualCreateWithoutPlanInput, ExpenseActualUncheckedCreateWithoutPlanInput> | ExpenseActualCreateWithoutPlanInput[] | ExpenseActualUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutPlanInput | ExpenseActualCreateOrConnectWithoutPlanInput[]
+    upsert?: ExpenseActualUpsertWithWhereUniqueWithoutPlanInput | ExpenseActualUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: ExpenseActualCreateManyPlanInputEnvelope
+    set?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    disconnect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    delete?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    update?: ExpenseActualUpdateWithWhereUniqueWithoutPlanInput | ExpenseActualUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: ExpenseActualUpdateManyWithWhereWithoutPlanInput | ExpenseActualUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+  }
+
+  export type CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<CostAnalysisCreateWithoutPlanInput, CostAnalysisUncheckedCreateWithoutPlanInput> | CostAnalysisCreateWithoutPlanInput[] | CostAnalysisUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: CostAnalysisCreateOrConnectWithoutPlanInput | CostAnalysisCreateOrConnectWithoutPlanInput[]
+    upsert?: CostAnalysisUpsertWithWhereUniqueWithoutPlanInput | CostAnalysisUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: CostAnalysisCreateManyPlanInputEnvelope
+    set?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    disconnect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    delete?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+    update?: CostAnalysisUpdateWithWhereUniqueWithoutPlanInput | CostAnalysisUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: CostAnalysisUpdateManyWithWhereWithoutPlanInput | CostAnalysisUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
   }
 
   export type InsurancePlanCreateNestedOneWithoutBenefitsInput = {
@@ -33747,6 +39200,152 @@ export namespace Prisma {
     delete?: UserWhereInput | boolean
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutAuditLogsInput, UserUpdateWithoutAuditLogsInput>, UserUncheckedUpdateWithoutAuditLogsInput>
+  }
+
+  export type UserCreateNestedOneWithoutExpenseProjectionsInput = {
+    create?: XOR<UserCreateWithoutExpenseProjectionsInput, UserUncheckedCreateWithoutExpenseProjectionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutExpenseProjectionsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type InsurancePlanCreateNestedOneWithoutExpenseProjectionsInput = {
+    create?: XOR<InsurancePlanCreateWithoutExpenseProjectionsInput, InsurancePlanUncheckedCreateWithoutExpenseProjectionsInput>
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutExpenseProjectionsInput
+    connect?: InsurancePlanWhereUniqueInput
+  }
+
+  export type ExpenseActualCreateNestedManyWithoutProjectionInput = {
+    create?: XOR<ExpenseActualCreateWithoutProjectionInput, ExpenseActualUncheckedCreateWithoutProjectionInput> | ExpenseActualCreateWithoutProjectionInput[] | ExpenseActualUncheckedCreateWithoutProjectionInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutProjectionInput | ExpenseActualCreateOrConnectWithoutProjectionInput[]
+    createMany?: ExpenseActualCreateManyProjectionInputEnvelope
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+  }
+
+  export type ExpenseActualUncheckedCreateNestedManyWithoutProjectionInput = {
+    create?: XOR<ExpenseActualCreateWithoutProjectionInput, ExpenseActualUncheckedCreateWithoutProjectionInput> | ExpenseActualCreateWithoutProjectionInput[] | ExpenseActualUncheckedCreateWithoutProjectionInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutProjectionInput | ExpenseActualCreateOrConnectWithoutProjectionInput[]
+    createMany?: ExpenseActualCreateManyProjectionInputEnvelope
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+  }
+
+  export type UserUpdateOneRequiredWithoutExpenseProjectionsNestedInput = {
+    create?: XOR<UserCreateWithoutExpenseProjectionsInput, UserUncheckedCreateWithoutExpenseProjectionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutExpenseProjectionsInput
+    upsert?: UserUpsertWithoutExpenseProjectionsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutExpenseProjectionsInput, UserUpdateWithoutExpenseProjectionsInput>, UserUncheckedUpdateWithoutExpenseProjectionsInput>
+  }
+
+  export type InsurancePlanUpdateOneRequiredWithoutExpenseProjectionsNestedInput = {
+    create?: XOR<InsurancePlanCreateWithoutExpenseProjectionsInput, InsurancePlanUncheckedCreateWithoutExpenseProjectionsInput>
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutExpenseProjectionsInput
+    upsert?: InsurancePlanUpsertWithoutExpenseProjectionsInput
+    connect?: InsurancePlanWhereUniqueInput
+    update?: XOR<XOR<InsurancePlanUpdateToOneWithWhereWithoutExpenseProjectionsInput, InsurancePlanUpdateWithoutExpenseProjectionsInput>, InsurancePlanUncheckedUpdateWithoutExpenseProjectionsInput>
+  }
+
+  export type ExpenseActualUpdateManyWithoutProjectionNestedInput = {
+    create?: XOR<ExpenseActualCreateWithoutProjectionInput, ExpenseActualUncheckedCreateWithoutProjectionInput> | ExpenseActualCreateWithoutProjectionInput[] | ExpenseActualUncheckedCreateWithoutProjectionInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutProjectionInput | ExpenseActualCreateOrConnectWithoutProjectionInput[]
+    upsert?: ExpenseActualUpsertWithWhereUniqueWithoutProjectionInput | ExpenseActualUpsertWithWhereUniqueWithoutProjectionInput[]
+    createMany?: ExpenseActualCreateManyProjectionInputEnvelope
+    set?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    disconnect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    delete?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    update?: ExpenseActualUpdateWithWhereUniqueWithoutProjectionInput | ExpenseActualUpdateWithWhereUniqueWithoutProjectionInput[]
+    updateMany?: ExpenseActualUpdateManyWithWhereWithoutProjectionInput | ExpenseActualUpdateManyWithWhereWithoutProjectionInput[]
+    deleteMany?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+  }
+
+  export type ExpenseActualUncheckedUpdateManyWithoutProjectionNestedInput = {
+    create?: XOR<ExpenseActualCreateWithoutProjectionInput, ExpenseActualUncheckedCreateWithoutProjectionInput> | ExpenseActualCreateWithoutProjectionInput[] | ExpenseActualUncheckedCreateWithoutProjectionInput[]
+    connectOrCreate?: ExpenseActualCreateOrConnectWithoutProjectionInput | ExpenseActualCreateOrConnectWithoutProjectionInput[]
+    upsert?: ExpenseActualUpsertWithWhereUniqueWithoutProjectionInput | ExpenseActualUpsertWithWhereUniqueWithoutProjectionInput[]
+    createMany?: ExpenseActualCreateManyProjectionInputEnvelope
+    set?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    disconnect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    delete?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    connect?: ExpenseActualWhereUniqueInput | ExpenseActualWhereUniqueInput[]
+    update?: ExpenseActualUpdateWithWhereUniqueWithoutProjectionInput | ExpenseActualUpdateWithWhereUniqueWithoutProjectionInput[]
+    updateMany?: ExpenseActualUpdateManyWithWhereWithoutProjectionInput | ExpenseActualUpdateManyWithWhereWithoutProjectionInput[]
+    deleteMany?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+  }
+
+  export type UserCreateNestedOneWithoutExpenseActualsInput = {
+    create?: XOR<UserCreateWithoutExpenseActualsInput, UserUncheckedCreateWithoutExpenseActualsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutExpenseActualsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type InsurancePlanCreateNestedOneWithoutExpenseActualsInput = {
+    create?: XOR<InsurancePlanCreateWithoutExpenseActualsInput, InsurancePlanUncheckedCreateWithoutExpenseActualsInput>
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutExpenseActualsInput
+    connect?: InsurancePlanWhereUniqueInput
+  }
+
+  export type ExpenseProjectionCreateNestedOneWithoutActualsInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutActualsInput, ExpenseProjectionUncheckedCreateWithoutActualsInput>
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutActualsInput
+    connect?: ExpenseProjectionWhereUniqueInput
+  }
+
+  export type NullableBoolFieldUpdateOperationsInput = {
+    set?: boolean | null
+  }
+
+  export type UserUpdateOneRequiredWithoutExpenseActualsNestedInput = {
+    create?: XOR<UserCreateWithoutExpenseActualsInput, UserUncheckedCreateWithoutExpenseActualsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutExpenseActualsInput
+    upsert?: UserUpsertWithoutExpenseActualsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutExpenseActualsInput, UserUpdateWithoutExpenseActualsInput>, UserUncheckedUpdateWithoutExpenseActualsInput>
+  }
+
+  export type InsurancePlanUpdateOneRequiredWithoutExpenseActualsNestedInput = {
+    create?: XOR<InsurancePlanCreateWithoutExpenseActualsInput, InsurancePlanUncheckedCreateWithoutExpenseActualsInput>
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutExpenseActualsInput
+    upsert?: InsurancePlanUpsertWithoutExpenseActualsInput
+    connect?: InsurancePlanWhereUniqueInput
+    update?: XOR<XOR<InsurancePlanUpdateToOneWithWhereWithoutExpenseActualsInput, InsurancePlanUpdateWithoutExpenseActualsInput>, InsurancePlanUncheckedUpdateWithoutExpenseActualsInput>
+  }
+
+  export type ExpenseProjectionUpdateOneWithoutActualsNestedInput = {
+    create?: XOR<ExpenseProjectionCreateWithoutActualsInput, ExpenseProjectionUncheckedCreateWithoutActualsInput>
+    connectOrCreate?: ExpenseProjectionCreateOrConnectWithoutActualsInput
+    upsert?: ExpenseProjectionUpsertWithoutActualsInput
+    disconnect?: ExpenseProjectionWhereInput | boolean
+    delete?: ExpenseProjectionWhereInput | boolean
+    connect?: ExpenseProjectionWhereUniqueInput
+    update?: XOR<XOR<ExpenseProjectionUpdateToOneWithWhereWithoutActualsInput, ExpenseProjectionUpdateWithoutActualsInput>, ExpenseProjectionUncheckedUpdateWithoutActualsInput>
+  }
+
+  export type UserCreateNestedOneWithoutCostAnalysesInput = {
+    create?: XOR<UserCreateWithoutCostAnalysesInput, UserUncheckedCreateWithoutCostAnalysesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutCostAnalysesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type InsurancePlanCreateNestedOneWithoutCostAnalysesInput = {
+    create?: XOR<InsurancePlanCreateWithoutCostAnalysesInput, InsurancePlanUncheckedCreateWithoutCostAnalysesInput>
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutCostAnalysesInput
+    connect?: InsurancePlanWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutCostAnalysesNestedInput = {
+    create?: XOR<UserCreateWithoutCostAnalysesInput, UserUncheckedCreateWithoutCostAnalysesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutCostAnalysesInput
+    upsert?: UserUpsertWithoutCostAnalysesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutCostAnalysesInput, UserUpdateWithoutCostAnalysesInput>, UserUncheckedUpdateWithoutCostAnalysesInput>
+  }
+
+  export type InsurancePlanUpdateOneRequiredWithoutCostAnalysesNestedInput = {
+    create?: XOR<InsurancePlanCreateWithoutCostAnalysesInput, InsurancePlanUncheckedCreateWithoutCostAnalysesInput>
+    connectOrCreate?: InsurancePlanCreateOrConnectWithoutCostAnalysesInput
+    upsert?: InsurancePlanUpsertWithoutCostAnalysesInput
+    connect?: InsurancePlanWhereUniqueInput
+    update?: XOR<XOR<InsurancePlanUpdateToOneWithWhereWithoutCostAnalysesInput, InsurancePlanUpdateWithoutCostAnalysesInput>, InsurancePlanUncheckedUpdateWithoutCostAnalysesInput>
   }
 
   export type NestedUuidFilter<$PrismaModel = never> = {
@@ -34309,6 +39908,42 @@ export namespace Prisma {
     _max?: NestedEnumAuditActionFilter<$PrismaModel>
   }
 
+  export type NestedBoolNullableFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel> | null
+    not?: NestedBoolNullableFilter<$PrismaModel> | boolean | null
+  }
+
+  export type NestedBoolNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel> | null
+    not?: NestedBoolNullableWithAggregatesFilter<$PrismaModel> | boolean | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedBoolNullableFilter<$PrismaModel>
+    _max?: NestedBoolNullableFilter<$PrismaModel>
+  }
+  export type NestedJsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
   export type AuditLogCreateWithoutUserInput = {
     id?: string
     actorType: $Enums.ActorType
@@ -34659,6 +40294,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutPlanInput
   }
 
   export type InsurancePlanUncheckedCreateWithoutUserInput = {
@@ -34779,6 +40417,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutPlanInput
   }
 
   export type InsurancePlanCreateOrConnectWithoutUserInput = {
@@ -34978,6 +40619,124 @@ export namespace Prisma {
 
   export type UserFileCreateManyUserInputEnvelope = {
     data: UserFileCreateManyUserInput | UserFileCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ExpenseProjectionCreateWithoutUserInput = {
+    id?: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    plan: InsurancePlanCreateNestedOneWithoutExpenseProjectionsInput
+    actuals?: ExpenseActualCreateNestedManyWithoutProjectionInput
+  }
+
+  export type ExpenseProjectionUncheckedCreateWithoutUserInput = {
+    id?: string
+    planId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    actuals?: ExpenseActualUncheckedCreateNestedManyWithoutProjectionInput
+  }
+
+  export type ExpenseProjectionCreateOrConnectWithoutUserInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    create: XOR<ExpenseProjectionCreateWithoutUserInput, ExpenseProjectionUncheckedCreateWithoutUserInput>
+  }
+
+  export type ExpenseProjectionCreateManyUserInputEnvelope = {
+    data: ExpenseProjectionCreateManyUserInput | ExpenseProjectionCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ExpenseActualCreateWithoutUserInput = {
+    id?: string
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    plan: InsurancePlanCreateNestedOneWithoutExpenseActualsInput
+    projection?: ExpenseProjectionCreateNestedOneWithoutActualsInput
+  }
+
+  export type ExpenseActualUncheckedCreateWithoutUserInput = {
+    id?: string
+    planId: string
+    projectionId?: string | null
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualCreateOrConnectWithoutUserInput = {
+    where: ExpenseActualWhereUniqueInput
+    create: XOR<ExpenseActualCreateWithoutUserInput, ExpenseActualUncheckedCreateWithoutUserInput>
+  }
+
+  export type ExpenseActualCreateManyUserInputEnvelope = {
+    data: ExpenseActualCreateManyUserInput | ExpenseActualCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CostAnalysisCreateWithoutUserInput = {
+    id?: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    plan: InsurancePlanCreateNestedOneWithoutCostAnalysesInput
+  }
+
+  export type CostAnalysisUncheckedCreateWithoutUserInput = {
+    id?: string
+    planId: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CostAnalysisCreateOrConnectWithoutUserInput = {
+    where: CostAnalysisWhereUniqueInput
+    create: XOR<CostAnalysisCreateWithoutUserInput, CostAnalysisUncheckedCreateWithoutUserInput>
+  }
+
+  export type CostAnalysisCreateManyUserInputEnvelope = {
+    data: CostAnalysisCreateManyUserInput | CostAnalysisCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -35455,6 +41214,109 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"UserFile"> | Date | string
   }
 
+  export type ExpenseProjectionUpsertWithWhereUniqueWithoutUserInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    update: XOR<ExpenseProjectionUpdateWithoutUserInput, ExpenseProjectionUncheckedUpdateWithoutUserInput>
+    create: XOR<ExpenseProjectionCreateWithoutUserInput, ExpenseProjectionUncheckedCreateWithoutUserInput>
+  }
+
+  export type ExpenseProjectionUpdateWithWhereUniqueWithoutUserInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    data: XOR<ExpenseProjectionUpdateWithoutUserInput, ExpenseProjectionUncheckedUpdateWithoutUserInput>
+  }
+
+  export type ExpenseProjectionUpdateManyWithWhereWithoutUserInput = {
+    where: ExpenseProjectionScalarWhereInput
+    data: XOR<ExpenseProjectionUpdateManyMutationInput, ExpenseProjectionUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type ExpenseProjectionScalarWhereInput = {
+    AND?: ExpenseProjectionScalarWhereInput | ExpenseProjectionScalarWhereInput[]
+    OR?: ExpenseProjectionScalarWhereInput[]
+    NOT?: ExpenseProjectionScalarWhereInput | ExpenseProjectionScalarWhereInput[]
+    id?: UuidFilter<"ExpenseProjection"> | string
+    userId?: UuidFilter<"ExpenseProjection"> | string
+    planId?: UuidFilter<"ExpenseProjection"> | string
+    serviceType?: StringFilter<"ExpenseProjection"> | string
+    estimatedCost?: DecimalFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFilter<"ExpenseProjection"> | number
+    isInNetwork?: BoolFilter<"ExpenseProjection"> | boolean
+    notes?: StringNullableFilter<"ExpenseProjection"> | string | null
+    projectionDate?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    createdAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
+    updatedAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
+  }
+
+  export type ExpenseActualUpsertWithWhereUniqueWithoutUserInput = {
+    where: ExpenseActualWhereUniqueInput
+    update: XOR<ExpenseActualUpdateWithoutUserInput, ExpenseActualUncheckedUpdateWithoutUserInput>
+    create: XOR<ExpenseActualCreateWithoutUserInput, ExpenseActualUncheckedCreateWithoutUserInput>
+  }
+
+  export type ExpenseActualUpdateWithWhereUniqueWithoutUserInput = {
+    where: ExpenseActualWhereUniqueInput
+    data: XOR<ExpenseActualUpdateWithoutUserInput, ExpenseActualUncheckedUpdateWithoutUserInput>
+  }
+
+  export type ExpenseActualUpdateManyWithWhereWithoutUserInput = {
+    where: ExpenseActualScalarWhereInput
+    data: XOR<ExpenseActualUpdateManyMutationInput, ExpenseActualUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type ExpenseActualScalarWhereInput = {
+    AND?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+    OR?: ExpenseActualScalarWhereInput[]
+    NOT?: ExpenseActualScalarWhereInput | ExpenseActualScalarWhereInput[]
+    id?: UuidFilter<"ExpenseActual"> | string
+    userId?: UuidFilter<"ExpenseActual"> | string
+    planId?: UuidFilter<"ExpenseActual"> | string
+    projectionId?: UuidNullableFilter<"ExpenseActual"> | string | null
+    serviceType?: StringFilter<"ExpenseActual"> | string
+    providerName?: StringNullableFilter<"ExpenseActual"> | string | null
+    dateOfService?: DateTimeNullableFilter<"ExpenseActual"> | Date | string | null
+    billedAmount?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFilter<"ExpenseActual"> | string
+    isInNetwork?: BoolNullableFilter<"ExpenseActual"> | boolean | null
+    notes?: StringNullableFilter<"ExpenseActual"> | string | null
+    createdAt?: DateTimeFilter<"ExpenseActual"> | Date | string
+    updatedAt?: DateTimeFilter<"ExpenseActual"> | Date | string
+  }
+
+  export type CostAnalysisUpsertWithWhereUniqueWithoutUserInput = {
+    where: CostAnalysisWhereUniqueInput
+    update: XOR<CostAnalysisUpdateWithoutUserInput, CostAnalysisUncheckedUpdateWithoutUserInput>
+    create: XOR<CostAnalysisCreateWithoutUserInput, CostAnalysisUncheckedCreateWithoutUserInput>
+  }
+
+  export type CostAnalysisUpdateWithWhereUniqueWithoutUserInput = {
+    where: CostAnalysisWhereUniqueInput
+    data: XOR<CostAnalysisUpdateWithoutUserInput, CostAnalysisUncheckedUpdateWithoutUserInput>
+  }
+
+  export type CostAnalysisUpdateManyWithWhereWithoutUserInput = {
+    where: CostAnalysisScalarWhereInput
+    data: XOR<CostAnalysisUpdateManyMutationInput, CostAnalysisUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type CostAnalysisScalarWhereInput = {
+    AND?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
+    OR?: CostAnalysisScalarWhereInput[]
+    NOT?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
+    id?: UuidFilter<"CostAnalysis"> | string
+    userId?: UuidFilter<"CostAnalysis"> | string
+    planId?: UuidFilter<"CostAnalysis"> | string
+    analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
+    claudeResponse?: StringFilter<"CostAnalysis"> | string
+    totalProjectedOop?: DecimalNullableFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
+    projectedExpensesSnapshot?: JsonNullableFilter<"CostAnalysis">
+    createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
+  }
+
   export type UserCreateWithoutSessionsInput = {
     id?: string
     email: string
@@ -35487,6 +41349,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -35521,6 +41386,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -35571,6 +41439,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -35605,6 +41476,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutEncryptionKeysInput = {
@@ -35639,6 +41513,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutEncryptionKeysInput = {
@@ -35673,6 +41550,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutEncryptionKeysInput = {
@@ -35723,6 +41603,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutEncryptionKeysInput = {
@@ -35757,6 +41640,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutPatientRelationshipsInput = {
@@ -35791,6 +41677,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutPatientRelationshipsInput = {
@@ -35825,6 +41714,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutPatientRelationshipsInput = {
@@ -35864,6 +41756,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutProviderRelationshipsInput = {
@@ -35898,6 +41793,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutProviderRelationshipsInput = {
@@ -35948,6 +41846,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutPatientRelationshipsInput = {
@@ -35982,6 +41883,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserUpsertWithoutProviderRelationshipsInput = {
@@ -36027,6 +41931,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutProviderRelationshipsInput = {
@@ -36061,6 +41968,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerCreateWithoutUserFileInput = {
@@ -36151,6 +42061,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutFilesInput = {
@@ -36185,6 +42098,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutFilesInput = {
@@ -36251,6 +42167,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutFilesInput = {
@@ -36285,6 +42204,9 @@ export namespace Prisma {
     providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerHistoryCreateWithoutBiomarkerInput = {
@@ -36380,6 +42302,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutBiomarkersInput = {
@@ -36414,6 +42339,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutBiomarkersInput = {
@@ -36534,6 +42462,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutBiomarkersInput = {
@@ -36568,6 +42499,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerCreateWithoutHistoryInput = {
@@ -36754,6 +42688,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutInsurancePlansInput = {
@@ -36788,11 +42725,132 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutInsurancePlansInput = {
     where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutInsurancePlansInput, UserUncheckedCreateWithoutInsurancePlansInput>
+  }
+
+  export type ExpenseProjectionCreateWithoutPlanInput = {
+    id?: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutExpenseProjectionsInput
+    actuals?: ExpenseActualCreateNestedManyWithoutProjectionInput
+  }
+
+  export type ExpenseProjectionUncheckedCreateWithoutPlanInput = {
+    id?: string
+    userId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    actuals?: ExpenseActualUncheckedCreateNestedManyWithoutProjectionInput
+  }
+
+  export type ExpenseProjectionCreateOrConnectWithoutPlanInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    create: XOR<ExpenseProjectionCreateWithoutPlanInput, ExpenseProjectionUncheckedCreateWithoutPlanInput>
+  }
+
+  export type ExpenseProjectionCreateManyPlanInputEnvelope = {
+    data: ExpenseProjectionCreateManyPlanInput | ExpenseProjectionCreateManyPlanInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ExpenseActualCreateWithoutPlanInput = {
+    id?: string
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutExpenseActualsInput
+    projection?: ExpenseProjectionCreateNestedOneWithoutActualsInput
+  }
+
+  export type ExpenseActualUncheckedCreateWithoutPlanInput = {
+    id?: string
+    userId: string
+    projectionId?: string | null
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualCreateOrConnectWithoutPlanInput = {
+    where: ExpenseActualWhereUniqueInput
+    create: XOR<ExpenseActualCreateWithoutPlanInput, ExpenseActualUncheckedCreateWithoutPlanInput>
+  }
+
+  export type ExpenseActualCreateManyPlanInputEnvelope = {
+    data: ExpenseActualCreateManyPlanInput | ExpenseActualCreateManyPlanInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type CostAnalysisCreateWithoutPlanInput = {
+    id?: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    user: UserCreateNestedOneWithoutCostAnalysesInput
+  }
+
+  export type CostAnalysisUncheckedCreateWithoutPlanInput = {
+    id?: string
+    userId: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type CostAnalysisCreateOrConnectWithoutPlanInput = {
+    where: CostAnalysisWhereUniqueInput
+    create: XOR<CostAnalysisCreateWithoutPlanInput, CostAnalysisUncheckedCreateWithoutPlanInput>
+  }
+
+  export type CostAnalysisCreateManyPlanInputEnvelope = {
+    data: CostAnalysisCreateManyPlanInput | CostAnalysisCreateManyPlanInput[]
+    skipDuplicates?: boolean
   }
 
   export type InsuranceBenefitUpsertWithWhereUniqueWithoutPlanInput = {
@@ -36875,6 +42933,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutInsurancePlansInput = {
@@ -36909,6 +42970,57 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type ExpenseProjectionUpsertWithWhereUniqueWithoutPlanInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    update: XOR<ExpenseProjectionUpdateWithoutPlanInput, ExpenseProjectionUncheckedUpdateWithoutPlanInput>
+    create: XOR<ExpenseProjectionCreateWithoutPlanInput, ExpenseProjectionUncheckedCreateWithoutPlanInput>
+  }
+
+  export type ExpenseProjectionUpdateWithWhereUniqueWithoutPlanInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    data: XOR<ExpenseProjectionUpdateWithoutPlanInput, ExpenseProjectionUncheckedUpdateWithoutPlanInput>
+  }
+
+  export type ExpenseProjectionUpdateManyWithWhereWithoutPlanInput = {
+    where: ExpenseProjectionScalarWhereInput
+    data: XOR<ExpenseProjectionUpdateManyMutationInput, ExpenseProjectionUncheckedUpdateManyWithoutPlanInput>
+  }
+
+  export type ExpenseActualUpsertWithWhereUniqueWithoutPlanInput = {
+    where: ExpenseActualWhereUniqueInput
+    update: XOR<ExpenseActualUpdateWithoutPlanInput, ExpenseActualUncheckedUpdateWithoutPlanInput>
+    create: XOR<ExpenseActualCreateWithoutPlanInput, ExpenseActualUncheckedCreateWithoutPlanInput>
+  }
+
+  export type ExpenseActualUpdateWithWhereUniqueWithoutPlanInput = {
+    where: ExpenseActualWhereUniqueInput
+    data: XOR<ExpenseActualUpdateWithoutPlanInput, ExpenseActualUncheckedUpdateWithoutPlanInput>
+  }
+
+  export type ExpenseActualUpdateManyWithWhereWithoutPlanInput = {
+    where: ExpenseActualScalarWhereInput
+    data: XOR<ExpenseActualUpdateManyMutationInput, ExpenseActualUncheckedUpdateManyWithoutPlanInput>
+  }
+
+  export type CostAnalysisUpsertWithWhereUniqueWithoutPlanInput = {
+    where: CostAnalysisWhereUniqueInput
+    update: XOR<CostAnalysisUpdateWithoutPlanInput, CostAnalysisUncheckedUpdateWithoutPlanInput>
+    create: XOR<CostAnalysisCreateWithoutPlanInput, CostAnalysisUncheckedCreateWithoutPlanInput>
+  }
+
+  export type CostAnalysisUpdateWithWhereUniqueWithoutPlanInput = {
+    where: CostAnalysisWhereUniqueInput
+    data: XOR<CostAnalysisUpdateWithoutPlanInput, CostAnalysisUncheckedUpdateWithoutPlanInput>
+  }
+
+  export type CostAnalysisUpdateManyWithWhereWithoutPlanInput = {
+    where: CostAnalysisScalarWhereInput
+    data: XOR<CostAnalysisUpdateManyMutationInput, CostAnalysisUncheckedUpdateManyWithoutPlanInput>
   }
 
   export type InsurancePlanCreateWithoutBenefitsInput = {
@@ -37029,6 +43141,9 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutInsurancePlansInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutPlanInput
   }
 
   export type InsurancePlanUncheckedCreateWithoutBenefitsInput = {
@@ -37149,6 +43264,9 @@ export namespace Prisma {
     isPrimary?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutPlanInput
   }
 
   export type InsurancePlanCreateOrConnectWithoutBenefitsInput = {
@@ -37285,6 +43403,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutPlanNestedInput
   }
 
   export type InsurancePlanUncheckedUpdateWithoutBenefitsInput = {
@@ -37405,6 +43526,9 @@ export namespace Prisma {
     isPrimary?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type UserCreateWithoutDnaDataInput = {
@@ -37439,6 +43563,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutDnaDataInput = {
@@ -37473,6 +43600,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutDnaDataInput = {
@@ -37587,6 +43717,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDnaDataInput = {
@@ -37621,6 +43754,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput = {
@@ -37861,6 +43997,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutHealthNeedsInput = {
@@ -37895,6 +44034,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutHealthNeedsInput = {
@@ -37945,6 +44087,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutHealthNeedsInput = {
@@ -37979,6 +44124,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type GoalProgressHistoryCreateWithoutGoalInput = {
@@ -38039,6 +44187,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutHealthGoalsInput = {
@@ -38073,6 +44224,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutHealthGoalsInput = {
@@ -38151,6 +44305,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutHealthGoalsInput = {
@@ -38185,6 +44342,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type HealthGoalCreateWithoutProgressHistoryInput = {
@@ -38331,6 +44491,9 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
     files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -38365,6 +44528,9 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -38415,6 +44581,9 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
     files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -38449,6 +44618,2161 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserCreateWithoutExpenseProjectionsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutExpenseProjectionsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutExpenseProjectionsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutExpenseProjectionsInput, UserUncheckedCreateWithoutExpenseProjectionsInput>
+  }
+
+  export type InsurancePlanCreateWithoutExpenseProjectionsInput = {
+    id?: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: Decimal | DecimalJsLike | number | string | null
+    copayXray?: Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: number | null
+    outpatientSurgeryCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: number | null
+    occupationalTherapyVisitsLimit?: number | null
+    speechTherapyVisitsLimit?: number | null
+    physicalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: number | null
+    rxMailOrderDaysSupply?: number | null
+    rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
+    preventiveServicesList?: string | null
+    exclusionsList?: string | null
+    priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
+    user: UserCreateNestedOneWithoutInsurancePlansInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanUncheckedCreateWithoutExpenseProjectionsInput = {
+    id?: string
+    userId: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: Decimal | DecimalJsLike | number | string | null
+    copayXray?: Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: number | null
+    outpatientSurgeryCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: number | null
+    occupationalTherapyVisitsLimit?: number | null
+    speechTherapyVisitsLimit?: number | null
+    physicalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: number | null
+    rxMailOrderDaysSupply?: number | null
+    rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
+    preventiveServicesList?: string | null
+    exclusionsList?: string | null
+    priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanCreateOrConnectWithoutExpenseProjectionsInput = {
+    where: InsurancePlanWhereUniqueInput
+    create: XOR<InsurancePlanCreateWithoutExpenseProjectionsInput, InsurancePlanUncheckedCreateWithoutExpenseProjectionsInput>
+  }
+
+  export type ExpenseActualCreateWithoutProjectionInput = {
+    id?: string
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutExpenseActualsInput
+    plan: InsurancePlanCreateNestedOneWithoutExpenseActualsInput
+  }
+
+  export type ExpenseActualUncheckedCreateWithoutProjectionInput = {
+    id?: string
+    userId: string
+    planId: string
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualCreateOrConnectWithoutProjectionInput = {
+    where: ExpenseActualWhereUniqueInput
+    create: XOR<ExpenseActualCreateWithoutProjectionInput, ExpenseActualUncheckedCreateWithoutProjectionInput>
+  }
+
+  export type ExpenseActualCreateManyProjectionInputEnvelope = {
+    data: ExpenseActualCreateManyProjectionInput | ExpenseActualCreateManyProjectionInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UserUpsertWithoutExpenseProjectionsInput = {
+    update: XOR<UserUpdateWithoutExpenseProjectionsInput, UserUncheckedUpdateWithoutExpenseProjectionsInput>
+    create: XOR<UserCreateWithoutExpenseProjectionsInput, UserUncheckedCreateWithoutExpenseProjectionsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutExpenseProjectionsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutExpenseProjectionsInput, UserUncheckedUpdateWithoutExpenseProjectionsInput>
+  }
+
+  export type UserUpdateWithoutExpenseProjectionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutExpenseProjectionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type InsurancePlanUpsertWithoutExpenseProjectionsInput = {
+    update: XOR<InsurancePlanUpdateWithoutExpenseProjectionsInput, InsurancePlanUncheckedUpdateWithoutExpenseProjectionsInput>
+    create: XOR<InsurancePlanCreateWithoutExpenseProjectionsInput, InsurancePlanUncheckedCreateWithoutExpenseProjectionsInput>
+    where?: InsurancePlanWhereInput
+  }
+
+  export type InsurancePlanUpdateToOneWithWhereWithoutExpenseProjectionsInput = {
+    where?: InsurancePlanWhereInput
+    data: XOR<InsurancePlanUpdateWithoutExpenseProjectionsInput, InsurancePlanUncheckedUpdateWithoutExpenseProjectionsInput>
+  }
+
+  export type InsurancePlanUpdateWithoutExpenseProjectionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    outpatientSurgeryCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    occupationalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    speechTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    physicalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
+    exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
+    priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
+    user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutPlanNestedInput
+  }
+
+  export type InsurancePlanUncheckedUpdateWithoutExpenseProjectionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    outpatientSurgeryCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    occupationalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    speechTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    physicalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
+    exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
+    priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput
+  }
+
+  export type ExpenseActualUpsertWithWhereUniqueWithoutProjectionInput = {
+    where: ExpenseActualWhereUniqueInput
+    update: XOR<ExpenseActualUpdateWithoutProjectionInput, ExpenseActualUncheckedUpdateWithoutProjectionInput>
+    create: XOR<ExpenseActualCreateWithoutProjectionInput, ExpenseActualUncheckedCreateWithoutProjectionInput>
+  }
+
+  export type ExpenseActualUpdateWithWhereUniqueWithoutProjectionInput = {
+    where: ExpenseActualWhereUniqueInput
+    data: XOR<ExpenseActualUpdateWithoutProjectionInput, ExpenseActualUncheckedUpdateWithoutProjectionInput>
+  }
+
+  export type ExpenseActualUpdateManyWithWhereWithoutProjectionInput = {
+    where: ExpenseActualScalarWhereInput
+    data: XOR<ExpenseActualUpdateManyMutationInput, ExpenseActualUncheckedUpdateManyWithoutProjectionInput>
+  }
+
+  export type UserCreateWithoutExpenseActualsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutExpenseActualsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutExpenseActualsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutExpenseActualsInput, UserUncheckedCreateWithoutExpenseActualsInput>
+  }
+
+  export type InsurancePlanCreateWithoutExpenseActualsInput = {
+    id?: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: Decimal | DecimalJsLike | number | string | null
+    copayXray?: Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: number | null
+    outpatientSurgeryCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: number | null
+    occupationalTherapyVisitsLimit?: number | null
+    speechTherapyVisitsLimit?: number | null
+    physicalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: number | null
+    rxMailOrderDaysSupply?: number | null
+    rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
+    preventiveServicesList?: string | null
+    exclusionsList?: string | null
+    priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
+    user: UserCreateNestedOneWithoutInsurancePlansInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanUncheckedCreateWithoutExpenseActualsInput = {
+    id?: string
+    userId: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: Decimal | DecimalJsLike | number | string | null
+    copayXray?: Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: number | null
+    outpatientSurgeryCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: number | null
+    occupationalTherapyVisitsLimit?: number | null
+    speechTherapyVisitsLimit?: number | null
+    physicalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: number | null
+    rxMailOrderDaysSupply?: number | null
+    rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
+    preventiveServicesList?: string | null
+    exclusionsList?: string | null
+    priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutPlanInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanCreateOrConnectWithoutExpenseActualsInput = {
+    where: InsurancePlanWhereUniqueInput
+    create: XOR<InsurancePlanCreateWithoutExpenseActualsInput, InsurancePlanUncheckedCreateWithoutExpenseActualsInput>
+  }
+
+  export type ExpenseProjectionCreateWithoutActualsInput = {
+    id?: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutExpenseProjectionsInput
+    plan: InsurancePlanCreateNestedOneWithoutExpenseProjectionsInput
+  }
+
+  export type ExpenseProjectionUncheckedCreateWithoutActualsInput = {
+    id?: string
+    userId: string
+    planId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseProjectionCreateOrConnectWithoutActualsInput = {
+    where: ExpenseProjectionWhereUniqueInput
+    create: XOR<ExpenseProjectionCreateWithoutActualsInput, ExpenseProjectionUncheckedCreateWithoutActualsInput>
+  }
+
+  export type UserUpsertWithoutExpenseActualsInput = {
+    update: XOR<UserUpdateWithoutExpenseActualsInput, UserUncheckedUpdateWithoutExpenseActualsInput>
+    create: XOR<UserCreateWithoutExpenseActualsInput, UserUncheckedCreateWithoutExpenseActualsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutExpenseActualsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutExpenseActualsInput, UserUncheckedUpdateWithoutExpenseActualsInput>
+  }
+
+  export type UserUpdateWithoutExpenseActualsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutExpenseActualsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type InsurancePlanUpsertWithoutExpenseActualsInput = {
+    update: XOR<InsurancePlanUpdateWithoutExpenseActualsInput, InsurancePlanUncheckedUpdateWithoutExpenseActualsInput>
+    create: XOR<InsurancePlanCreateWithoutExpenseActualsInput, InsurancePlanUncheckedCreateWithoutExpenseActualsInput>
+    where?: InsurancePlanWhereInput
+  }
+
+  export type InsurancePlanUpdateToOneWithWhereWithoutExpenseActualsInput = {
+    where?: InsurancePlanWhereInput
+    data: XOR<InsurancePlanUpdateWithoutExpenseActualsInput, InsurancePlanUncheckedUpdateWithoutExpenseActualsInput>
+  }
+
+  export type InsurancePlanUpdateWithoutExpenseActualsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    outpatientSurgeryCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    occupationalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    speechTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    physicalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
+    exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
+    priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
+    user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutPlanNestedInput
+  }
+
+  export type InsurancePlanUncheckedUpdateWithoutExpenseActualsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    outpatientSurgeryCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    occupationalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    speechTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    physicalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
+    exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
+    priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput
+  }
+
+  export type ExpenseProjectionUpsertWithoutActualsInput = {
+    update: XOR<ExpenseProjectionUpdateWithoutActualsInput, ExpenseProjectionUncheckedUpdateWithoutActualsInput>
+    create: XOR<ExpenseProjectionCreateWithoutActualsInput, ExpenseProjectionUncheckedCreateWithoutActualsInput>
+    where?: ExpenseProjectionWhereInput
+  }
+
+  export type ExpenseProjectionUpdateToOneWithWhereWithoutActualsInput = {
+    where?: ExpenseProjectionWhereInput
+    data: XOR<ExpenseProjectionUpdateWithoutActualsInput, ExpenseProjectionUncheckedUpdateWithoutActualsInput>
+  }
+
+  export type ExpenseProjectionUpdateWithoutActualsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutExpenseProjectionsNestedInput
+    plan?: InsurancePlanUpdateOneRequiredWithoutExpenseProjectionsNestedInput
+  }
+
+  export type ExpenseProjectionUncheckedUpdateWithoutActualsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserCreateWithoutCostAnalysesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutCostAnalysesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutCostAnalysesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutCostAnalysesInput, UserUncheckedCreateWithoutCostAnalysesInput>
+  }
+
+  export type InsurancePlanCreateWithoutCostAnalysesInput = {
+    id?: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: Decimal | DecimalJsLike | number | string | null
+    copayXray?: Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: number | null
+    outpatientSurgeryCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: number | null
+    occupationalTherapyVisitsLimit?: number | null
+    speechTherapyVisitsLimit?: number | null
+    physicalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: number | null
+    rxMailOrderDaysSupply?: number | null
+    rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
+    preventiveServicesList?: string | null
+    exclusionsList?: string | null
+    priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitCreateNestedManyWithoutPlanInput
+    user: UserCreateNestedOneWithoutInsurancePlansInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanUncheckedCreateWithoutCostAnalysesInput = {
+    id?: string
+    userId: string
+    planName: string
+    insurerName: string
+    planType: $Enums.PlanType
+    planIdNumber?: string | null
+    memberIdEncrypted?: string | null
+    groupIdEncrypted?: string | null
+    effectiveDate: Date | string
+    terminationDate?: Date | string | null
+    premiumMonthly?: Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual: Decimal | DecimalJsLike | number | string
+    deductibleFamily: Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: Decimal | DecimalJsLike | number | string
+    oopMaxIndividual: Decimal | DecimalJsLike | number | string
+    oopMaxFamily: Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: Decimal | DecimalJsLike | number | string
+    oopMetFamily?: Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: Decimal | DecimalJsLike | number | string | null
+    copayXray?: Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: number | null
+    outpatientSurgeryCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: number | null
+    occupationalTherapyVisitsLimit?: number | null
+    speechTherapyVisitsLimit?: number | null
+    physicalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: number | null
+    rxMailOrderDaysSupply?: number | null
+    rxDeductibleIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: string | null
+    visionLensesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: number | null
+    hospiceInpatientCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: number | null
+    chiropracticCopay?: Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: number | null
+    acupunctureCopay?: Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: number | null
+    cardiacRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: number | null
+    pulmonaryRehabCopay?: Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: number | null
+    preventiveServicesList?: string | null
+    exclusionsList?: string | null
+    priorAuthRequirements?: string | null
+    servicesWithLimits?: string | null
+    extractedFromSbc?: boolean
+    sbcExtractionConfidence?: Decimal | DecimalJsLike | number | string | null
+    isActive?: boolean
+    isPrimary?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    benefits?: InsuranceBenefitUncheckedCreateNestedManyWithoutPlanInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutPlanInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutPlanInput
+  }
+
+  export type InsurancePlanCreateOrConnectWithoutCostAnalysesInput = {
+    where: InsurancePlanWhereUniqueInput
+    create: XOR<InsurancePlanCreateWithoutCostAnalysesInput, InsurancePlanUncheckedCreateWithoutCostAnalysesInput>
+  }
+
+  export type UserUpsertWithoutCostAnalysesInput = {
+    update: XOR<UserUpdateWithoutCostAnalysesInput, UserUncheckedUpdateWithoutCostAnalysesInput>
+    create: XOR<UserCreateWithoutCostAnalysesInput, UserUncheckedCreateWithoutCostAnalysesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutCostAnalysesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutCostAnalysesInput, UserUncheckedUpdateWithoutCostAnalysesInput>
+  }
+
+  export type UserUpdateWithoutCostAnalysesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutCostAnalysesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type InsurancePlanUpsertWithoutCostAnalysesInput = {
+    update: XOR<InsurancePlanUpdateWithoutCostAnalysesInput, InsurancePlanUncheckedUpdateWithoutCostAnalysesInput>
+    create: XOR<InsurancePlanCreateWithoutCostAnalysesInput, InsurancePlanUncheckedCreateWithoutCostAnalysesInput>
+    where?: InsurancePlanWhereInput
+  }
+
+  export type InsurancePlanUpdateToOneWithWhereWithoutCostAnalysesInput = {
+    where?: InsurancePlanWhereInput
+    data: XOR<InsurancePlanUpdateWithoutCostAnalysesInput, InsurancePlanUncheckedUpdateWithoutCostAnalysesInput>
+  }
+
+  export type InsurancePlanUpdateWithoutCostAnalysesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    outpatientSurgeryCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    occupationalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    speechTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    physicalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
+    exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
+    priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
+    user?: UserUpdateOneRequiredWithoutInsurancePlansNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutPlanNestedInput
+  }
+
+  export type InsurancePlanUncheckedUpdateWithoutCostAnalysesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planName?: StringFieldUpdateOperationsInput | string
+    insurerName?: StringFieldUpdateOperationsInput | string
+    planType?: EnumPlanTypeFieldUpdateOperationsInput | $Enums.PlanType
+    planIdNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    memberIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    groupIdEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    effectiveDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    terminationDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    premiumMonthly?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMaxFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetIndividual?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    oopMetFamily?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    deductibleIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxIndividualOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    oopMaxFamilyOutOfNetwork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayPrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copaySpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    copayAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceRate?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsurancePrimaryCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceSpecialist?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceUrgentCare?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceEmergency?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceTelehealth?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceLabWork?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceXray?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    coinsuranceAdvancedImaging?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientHospitalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    inpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    maternityCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    skilledNursingDaysLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    outpatientSurgeryCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientSurgeryCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalHealthCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    outpatientMentalCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    physicalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    occupationalTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    speechTherapyVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    physicalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    occupationalTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    speechTherapyCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Copay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier1Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier2Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier3Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxTier4Coinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxRetailDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxMailOrderDaysSupply?: NullableIntFieldUpdateOperationsInput | number | null
+    rxDeductibleIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxDeductibleFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxIndividual?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    rxOopMaxFamily?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceGroundCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    ambulanceAirCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionExamFrequency?: NullableStringFieldUpdateOperationsInput | string | null
+    visionLensesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionFramesAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    visionContactsAllowance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalPreventiveCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalBasicCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalMajorCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalAnnualMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dentalOrthodontiaLifetimeMax?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    dmeCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    homeHealthVisitLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    hospiceInpatientCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceInpatientCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteCoinsurance?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    hospiceRespiteDayLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    chiropracticCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    chiropracticVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    acupunctureCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    acupunctureVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    cardiacRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    cardiacRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    pulmonaryRehabCopay?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pulmonaryRehabVisitsLimit?: NullableIntFieldUpdateOperationsInput | number | null
+    preventiveServicesList?: NullableStringFieldUpdateOperationsInput | string | null
+    exclusionsList?: NullableStringFieldUpdateOperationsInput | string | null
+    priorAuthRequirements?: NullableStringFieldUpdateOperationsInput | string | null
+    servicesWithLimits?: NullableStringFieldUpdateOperationsInput | string | null
+    extractedFromSbc?: BoolFieldUpdateOperationsInput | boolean
+    sbcExtractionConfidence?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    isPrimary?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type AuditLogCreateManyUserInput = {
@@ -38724,6 +47048,49 @@ export namespace Prisma {
     extractionConfidence?: Decimal | DecimalJsLike | number | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+  }
+
+  export type ExpenseProjectionCreateManyUserInput = {
+    id?: string
+    planId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualCreateManyUserInput = {
+    id?: string
+    planId: string
+    projectionId?: string | null
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CostAnalysisCreateManyUserInput = {
+    id?: string
+    planId: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
   }
 
   export type AuditLogUpdateWithoutUserInput = {
@@ -39113,6 +47480,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     benefits?: InsuranceBenefitUpdateManyWithoutPlanNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutPlanNestedInput
   }
 
   export type InsurancePlanUncheckedUpdateWithoutUserInput = {
@@ -39233,6 +47603,9 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     benefits?: InsuranceBenefitUncheckedUpdateManyWithoutPlanNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutPlanNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type InsurancePlanUncheckedUpdateManyWithoutUserInput = {
@@ -39563,6 +47936,137 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ExpenseProjectionUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    plan?: InsurancePlanUpdateOneRequiredWithoutExpenseProjectionsNestedInput
+    actuals?: ExpenseActualUpdateManyWithoutProjectionNestedInput
+  }
+
+  export type ExpenseProjectionUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    actuals?: ExpenseActualUncheckedUpdateManyWithoutProjectionNestedInput
+  }
+
+  export type ExpenseProjectionUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    plan?: InsurancePlanUpdateOneRequiredWithoutExpenseActualsNestedInput
+    projection?: ExpenseProjectionUpdateOneWithoutActualsNestedInput
+  }
+
+  export type ExpenseActualUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    projectionId?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    projectionId?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    plan?: InsurancePlanUpdateOneRequiredWithoutCostAnalysesNestedInput
+  }
+
+  export type CostAnalysisUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type BiomarkerCreateManyUserFileInput = {
     id?: string
     userId: string
@@ -39698,6 +48202,49 @@ export namespace Prisma {
     createdAt?: Date | string
   }
 
+  export type ExpenseProjectionCreateManyPlanInput = {
+    id?: string
+    userId: string
+    serviceType: string
+    estimatedCost: Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: number
+    isInNetwork?: boolean
+    notes?: string | null
+    projectionDate?: Date | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualCreateManyPlanInput = {
+    id?: string
+    userId: string
+    projectionId?: string | null
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CostAnalysisCreateManyPlanInput = {
+    id?: string
+    userId: string
+    analysisDate?: Date | string
+    claudeResponse: string
+    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
   export type InsuranceBenefitUpdateWithoutPlanInput = {
     id?: StringFieldUpdateOperationsInput | string
     serviceName?: StringFieldUpdateOperationsInput | string
@@ -39746,6 +48293,137 @@ export namespace Prisma {
     outNetworkDeductible?: BoolFieldUpdateOperationsInput | boolean
     limitations?: NullableStringFieldUpdateOperationsInput | string | null
     preAuthRequired?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseProjectionUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutExpenseProjectionsNestedInput
+    actuals?: ExpenseActualUpdateManyWithoutProjectionNestedInput
+  }
+
+  export type ExpenseProjectionUncheckedUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    actuals?: ExpenseActualUncheckedUpdateManyWithoutProjectionNestedInput
+  }
+
+  export type ExpenseProjectionUncheckedUpdateManyWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    frequencyPerYear?: IntFieldUpdateOperationsInput | number
+    isInNetwork?: BoolFieldUpdateOperationsInput | boolean
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutExpenseActualsNestedInput
+    projection?: ExpenseProjectionUpdateOneWithoutActualsNestedInput
+  }
+
+  export type ExpenseActualUncheckedUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    projectionId?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualUncheckedUpdateManyWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    projectionId?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutCostAnalysesNestedInput
+  }
+
+  export type CostAnalysisUncheckedUpdateWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CostAnalysisUncheckedUpdateManyWithoutPlanInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    claudeResponse?: StringFieldUpdateOperationsInput | string
+    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
+    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -39867,6 +48545,82 @@ export namespace Prisma {
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualCreateManyProjectionInput = {
+    id?: string
+    userId: string
+    planId: string
+    serviceType: string
+    providerName?: string | null
+    dateOfService?: Date | string | null
+    billedAmount?: Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: Decimal | DecimalJsLike | number | string | null
+    patientPaid?: Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    claimStatus?: string
+    isInNetwork?: boolean | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ExpenseActualUpdateWithoutProjectionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutExpenseActualsNestedInput
+    plan?: InsurancePlanUpdateOneRequiredWithoutExpenseActualsNestedInput
+  }
+
+  export type ExpenseActualUncheckedUpdateWithoutProjectionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ExpenseActualUncheckedUpdateManyWithoutProjectionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    planId?: StringFieldUpdateOperationsInput | string
+    serviceType?: StringFieldUpdateOperationsInput | string
+    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    claimStatus?: StringFieldUpdateOperationsInput | string
+    isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
 

@@ -27,6 +27,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 import * as insuranceController from '../controllers/insuranceController.js';
 import { uploadSBC, reanalyzePlan } from '../controllers/uploadController.js';
+import { updateCurrentSpending } from '../controllers/expenseController.js';
 
 const router = Router();
 
@@ -125,6 +126,13 @@ router.post(
   uploadLimiter,
   upload.single('file'),
   asyncHandler(uploadSBC)
+);
+
+// PUT /api/v1/insurance/plans/:id/spending - Update current deductible/OOP spending
+router.put(
+  '/plans/:id/spending',
+  validate(schemas.uuidParam, 'params'),
+  asyncHandler(updateCurrentSpending)
 );
 
 export default router;

@@ -483,9 +483,60 @@ exports.Prisma.SystemConfigScalarFieldEnum = {
   updatedBy: 'updatedBy'
 };
 
+exports.Prisma.ExpenseProjectionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  planId: 'planId',
+  serviceType: 'serviceType',
+  estimatedCost: 'estimatedCost',
+  frequencyPerYear: 'frequencyPerYear',
+  isInNetwork: 'isInNetwork',
+  notes: 'notes',
+  projectionDate: 'projectionDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ExpenseActualScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  planId: 'planId',
+  projectionId: 'projectionId',
+  serviceType: 'serviceType',
+  providerName: 'providerName',
+  dateOfService: 'dateOfService',
+  billedAmount: 'billedAmount',
+  insurancePaid: 'insurancePaid',
+  patientPaid: 'patientPaid',
+  appliedToDeductible: 'appliedToDeductible',
+  appliedToOop: 'appliedToOop',
+  claimStatus: 'claimStatus',
+  isInNetwork: 'isInNetwork',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CostAnalysisScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  planId: 'planId',
+  analysisDate: 'analysisDate',
+  claudeResponse: 'claudeResponse',
+  totalProjectedOop: 'totalProjectedOop',
+  deductibleMetMonth: 'deductibleMetMonth',
+  projectedExpensesSnapshot: 'projectedExpensesSnapshot',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -496,6 +547,12 @@ exports.Prisma.QueryMode = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 exports.UserRole = exports.$Enums.UserRole = {
   PATIENT: 'PATIENT',
@@ -638,7 +695,10 @@ exports.Prisma.ModelName = {
   HealthGoal: 'HealthGoal',
   GoalProgressHistory: 'GoalProgressHistory',
   AuditLog: 'AuditLog',
-  SystemConfig: 'SystemConfig'
+  SystemConfig: 'SystemConfig',
+  ExpenseProjection: 'ExpenseProjection',
+  ExpenseActual: 'ExpenseActual',
+  CostAnalysis: 'CostAnalysis'
 };
 
 /**

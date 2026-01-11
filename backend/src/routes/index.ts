@@ -29,6 +29,7 @@ import adminRoutes from './adminRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
 import fileRoutes from './fileRoutes.js';
+import expenseRoutes from './expenseRoutes.js';
 import type { ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -55,6 +56,7 @@ router.get('/', (_req: Request, res: Response) => {
         '/api/v1/auth',
         '/api/v1/biomarkers',
         '/api/v1/insurance',
+        '/api/v1/expenses',
         '/api/v1/health-needs',
         '/api/v1/health-goals',
         '/api/v1/provider',
@@ -73,6 +75,7 @@ router.get('/', (_req: Request, res: Response) => {
 router.use('/auth', authRoutes);
 router.use('/biomarkers', biomarkerRoutes);
 router.use('/insurance', insuranceRoutes);
+router.use('/expenses', expenseRoutes);
 router.use('/health-needs', healthNeedsRoutes);
 router.use('/health-goals', healthGoalsRoutes);
 

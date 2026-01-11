@@ -40,6 +40,9 @@ model User {
   sessions                 Session[]
   encryptionKeys           UserEncryptionKey[]
   files                    UserFile[]
+  expenseProjections       ExpenseProjection[]
+  expenseActuals           ExpenseActual[]
+  costAnalyses             CostAnalysis[]
 
   @@index([email])
   @@index([createdAt])
@@ -336,6 +339,9 @@ model InsurancePlan {
   updatedAt               DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   benefits                InsuranceBenefit[]
   user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenseProjections      ExpenseProjection[]
+  expenseActuals          ExpenseActual[]
+  costAnalyses            CostAnalysis[]
 
   @@index([userId])
   @@index([isActive])
@@ -654,4 +660,77 @@ enum AuditAction {
   PERMISSION_CHANGE
   SETTINGS_CHANGE
   KEY_ROTATION
+}
+
+// ===========================
+// EXPENSE TRACKING & COST OPTIMIZATION
+// ===========================
+
+model ExpenseProjection {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  planId             String   @map("plan_id") @db.Uuid
+  serviceType        String   @map("service_type")
+  estimatedCost      Decimal  @map("estimated_cost") @db.Decimal(10, 2)
+  frequencyPerYear   Int      @map("frequency_per_year") @default(1)
+  isInNetwork        Boolean  @map("is_in_network") @default(true)
+  notes              String?
+  projectionDate     DateTime @map("projection_date") @default(now()) @db.Date
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan               InsurancePlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  actuals            ExpenseActual[]
+
+  @@index([userId, planId])
+  @@index([createdAt])
+  @@map("expense_projections")
+}
+
+model ExpenseActual {
+  id                   String            @id @default(uuid()) @db.Uuid
+  userId               String            @map("user_id") @db.Uuid
+  planId               String            @map("plan_id") @db.Uuid
+  projectionId         String?           @map("projection_id") @db.Uuid
+  serviceType          String            @map("service_type")
+  providerName         String?           @map("provider_name")
+  dateOfService        DateTime?         @map("date_of_service") @db.Date
+  billedAmount         Decimal?          @map("billed_amount") @db.Decimal(10, 2)
+  insurancePaid        Decimal?          @map("insurance_paid") @db.Decimal(10, 2)
+  patientPaid          Decimal?          @map("patient_paid") @db.Decimal(10, 2)
+  appliedToDeductible  Decimal?          @map("applied_to_deductible") @db.Decimal(10, 2)
+  appliedToOop         Decimal?          @map("applied_to_oop") @db.Decimal(10, 2)
+  claimStatus          String            @default("processed") @map("claim_status")
+  isInNetwork          Boolean?          @default(true) @map("is_in_network")
+  notes                String?
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 InsurancePlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  projection           ExpenseProjection? @relation(fields: [projectionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, planId])
+  @@index([dateOfService])
+  @@map("expense_actuals")
+}
+
+model CostAnalysis {
+  id                          String   @id @default(uuid()) @db.Uuid
+  userId                      String   @map("user_id") @db.Uuid
+  planId                      String   @map("plan_id") @db.Uuid
+  analysisDate                DateTime @default(now()) @map("analysis_date")
+  claudeResponse              String   @map("claude_response")
+  totalProjectedOop           Decimal? @map("total_projected_oop") @db.Decimal(10, 2)
+  deductibleMetMonth          Int?     @map("deductible_met_month")
+  projectedExpensesSnapshot   Json?    @map("projected_expenses_snapshot")
+  createdAt                   DateTime @default(now()) @map("created_at")
+
+  user                        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                        InsurancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId, planId])
+  @@index([analysisDate])
+  @@map("cost_analyses")
 }

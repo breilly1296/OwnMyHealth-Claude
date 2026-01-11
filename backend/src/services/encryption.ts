@@ -28,6 +28,8 @@
  * - DNA: genotype data, trait descriptions/recommendations
  * - Health Needs: descriptions
  * - Health Goals: descriptions, progress notes
+ * - Expense Tracking: service types, costs, provider names, claim amounts
+ * - Cost Analyses: AI-generated recommendations, projected costs
  * - Audit Log: previous/new values (for PHI change tracking)
  *
  * Security Requirements:
@@ -411,6 +413,27 @@ export const PHI_FIELDS = {
   AuditLog: [
     'previousValueEncrypted',
     'newValueEncrypted',
+  ],
+  // Expense tracking PHI (cost optimization)
+  ExpenseProjection: [
+    'serviceType',
+    'estimatedCost',
+    'notes',
+  ],
+  ExpenseActual: [
+    'serviceType',
+    'providerName',
+    'billedAmount',
+    'insurancePaid',
+    'patientPaid',
+    'appliedToDeductible',
+    'appliedToOop',
+    'notes',
+  ],
+  CostAnalysis: [
+    'claudeResponse',
+    'totalProjectedOop',
+    'projectedExpensesSnapshot',
   ],
 } as const;
 
