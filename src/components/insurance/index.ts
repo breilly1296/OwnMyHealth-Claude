@@ -6,3 +6,6 @@ export { default as InsurancePlanCompare } from './InsurancePlanCompare';
 export { default as InsurancePlanViewer } from './InsurancePlanViewer';
 export { default as InsuranceSBCUpload } from './InsuranceSBCUpload';
 export { default as InsuranceUtilizationTracker } from './InsuranceUtilizationTracker';
+export { default as CostOptimization } from './CostOptimization';
+export { default as ExpenseProjectionModal } from './ExpenseProjectionModal';
+export { default as DeductibleProgressBar } from './DeductibleProgressBar';

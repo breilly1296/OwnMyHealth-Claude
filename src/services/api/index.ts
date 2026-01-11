@@ -65,3 +65,15 @@ export type { ExportBiomarker, ExportInsurancePlan, UserExportData } from './set
 // Files API
 export { filesApi } from './files';
 export type { UserFileData } from './files';
+
+// Expenses API
+export { expensesApi } from './expenses';
+export type {
+  ExpenseProjectionData,
+  ExpenseActualData,
+  CostAnalysisData,
+  CreateExpenseProjectionData,
+  UpdateExpenseProjectionData,
+  AnalyzeCostsRequest,
+  UpdateCurrentSpendingData,
+} from './expenses';

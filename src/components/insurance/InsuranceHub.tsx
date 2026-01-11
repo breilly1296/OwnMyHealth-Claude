@@ -46,6 +46,7 @@ import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
 import { SuccessToast } from '../common';
 import AddInsurancePlanModal from './AddInsurancePlanModal';
 import InsurancePlanDetail from './InsurancePlanDetail';
+import CostOptimization from './CostOptimization';
 
 interface InsuranceHubProps {
   insurancePlans: InsurancePlan[];
@@ -456,13 +457,22 @@ export default function InsuranceHub({
         {/* Costs Tab */}
         {activeTab === 'costs' && (
           <div className="space-y-6">
-            {guide.costProjections.length === 0 ? (
+            {insurancePlans.length === 0 ? (
               <div className="text-center py-16 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                 <CreditCard className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-600 dark:text-slate-400">No cost projections available</p>
-                <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Upload an insurance plan to see estimates</p>
+                <p className="text-slate-600 dark:text-slate-400">No insurance plans available</p>
+                <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Upload an insurance plan to start tracking costs</p>
               </div>
             ) : (
+              <>
+                {/* Cost Optimization Component */}
+                <CostOptimization
+                  plan={insurancePlans.find(p => p.isActive) || insurancePlans[0] as any}
+                  onPlanUpdate={onRefresh}
+                />
+
+                {/* Legacy Cost Projections (from guide) */}
+                {guide.costProjections.length > 0 && (
               <>
                 {/* Cost Projections */}
                 {guide.costProjections.map((projection, index) => (
@@ -596,6 +606,8 @@ export default function InsuranceHub({
                     </div>
                   </div>
                 </div>
+              </>
+                )}
               </>
             )}
           </div>
