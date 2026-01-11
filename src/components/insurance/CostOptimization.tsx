@@ -34,7 +34,7 @@ interface CostOptimizationProps {
   onPlanUpdate?: () => void;
 }
 
-export default function CostOptimization({ plan, onPlanUpdate }: CostOptimizationProps) {
+export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: CostOptimizationProps) {
   const [projections, setProjections] = useState<ExpenseProjectionData[]>([]);
   const [analyses, setAnalyses] = useState<CostAnalysisData[]>([]);
   const [isLoadingProjections, setIsLoadingProjections] = useState(true);

@@ -43,6 +43,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
+import type { InsurancePlanData } from '../../services/api';
 import { SuccessToast } from '../common';
 import AddInsurancePlanModal from './AddInsurancePlanModal';
 import InsurancePlanDetail from './InsurancePlanDetail';
@@ -467,7 +468,7 @@ export default function InsuranceHub({
               <>
                 {/* Cost Optimization Component */}
                 <CostOptimization
-                  plan={insurancePlans.find(p => p.isActive) || insurancePlans[0] as any}
+                  plan={(insurancePlans.find(p => p.isActive) || insurancePlans[0]) as InsurancePlanData}
                   onPlanUpdate={onRefresh}
                 />
 
