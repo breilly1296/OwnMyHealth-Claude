@@ -134,7 +134,7 @@ export async function updateProjection(req: AuthenticatedRequest, res: Response)
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (serviceType !== undefined) {
       updateData.serviceType = encryption.encrypt(serviceType, userSalt);
     }
@@ -394,7 +394,32 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
 // HELPER FUNCTIONS
 // ============================================
 
-function buildCostAnalysisPrompt(plan: any, projections: any[]): string {
+interface DecryptedProjection {
+  id: string;
+  serviceType: string;
+  estimatedCost: number;
+  frequencyPerYear: number;
+  isInNetwork: boolean;
+  notes: string | null;
+}
+
+interface PlanForAnalysis {
+  deductibleIndividual: unknown;
+  deductibleMetIndividual: unknown;
+  deductibleFamily: unknown;
+  oopMaxIndividual: unknown;
+  oopMaxFamily: unknown;
+  oopMetIndividual: unknown;
+  coinsuranceRate: unknown;
+  planName: unknown;
+  insurerName: unknown;
+  planType: unknown;
+  copayPrimaryCare: unknown;
+  copaySpecialist: unknown;
+  copayEmergency: unknown;
+}
+
+function buildCostAnalysisPrompt(plan: PlanForAnalysis, projections: DecryptedProjection[]): string {
   const today = new Date();
   const currentMonth = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const monthsRemaining = 12 - today.getMonth();
@@ -469,7 +494,7 @@ Prioritized list of 3-5 next steps the patient should take.
 Format as clean markdown with headers, bullet points, and tables where helpful.`;
 }
 
-function extractProjectedOOP(_claudeResponse: string, projections: any[], plan: any): number | null {
+function extractProjectedOOP(_claudeResponse: string, projections: DecryptedProjection[], plan: PlanForAnalysis): number | null {
   // Simple calculation fallback
   try {
     const deductibleRemaining = Math.max(0, Number(plan.deductibleIndividual) - Number(plan.deductibleMetIndividual));
@@ -492,7 +517,7 @@ function extractProjectedOOP(_claudeResponse: string, projections: any[], plan: 
     }
 
     return Math.min(totalOOP, Number(plan.oopMaxIndividual));
-  } catch (error) {
+  } catch {
     return null;
   }
 }
