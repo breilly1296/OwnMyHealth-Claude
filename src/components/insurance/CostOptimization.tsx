@@ -53,9 +53,10 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
     setError(null);
     try {
       const data = await expensesApi.getProjections(plan.id);
-      setProjections(data);
+      setProjections(data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load expense projections');
+      setProjections([]);
     } finally {
       setIsLoadingProjections(false);
     }
@@ -66,14 +67,15 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
     setIsLoadingAnalyses(true);
     try {
       const data = await expensesApi.getAnalyses(plan.id);
-      setAnalyses(data);
+      setAnalyses(data || []);
       // Auto-expand the most recent analysis
-      if (data.length > 0) {
+      if (data && data.length > 0) {
         setExpandedAnalysisId(data[0].id);
       }
     } catch (err) {
       // Silent fail for analyses - not critical
       console.error('Failed to load analyses:', err);
+      setAnalyses([]);
     } finally {
       setIsLoadingAnalyses(false);
     }
@@ -354,7 +356,7 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
       </div>
 
       {/* AI Analyses History */}
-      {analyses.length > 0 && (
+      {analyses && analyses.length > 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
