@@ -57,17 +57,17 @@ const formatPercent = (value: number | undefined | null): string => {
   return `${value}%`;
 };
 
-// Helper to format copay (shows $0 as "No charge")
+// Helper to format copay (shows $0 as "--" since actual cost depends on deductible status)
 const formatCopay = (amount: number | undefined | null): string => {
   if (amount === undefined || amount === null) return '--';
-  if (amount === 0) return 'No charge';
+  if (amount === 0) return '--';
   return formatCurrency(amount);
 };
 
-// Helper to format coinsurance
+// Helper to format coinsurance (shows 0% as "--" since actual cost depends on deductible status)
 const formatCoinsurance = (value: number | undefined | null): string => {
   if (value === undefined || value === null) return '--';
-  if (value === 0) return 'No charge';
+  if (value === 0) return '--';
   return `${value}% after deductible`;
 };
 
@@ -566,7 +566,7 @@ export default function InsurancePlanDetail({ plan, onBack, onPlanUpdated }: Ins
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
               <CoverageRow
                 label="Preventive (cleanings, exams)"
-                value={plan.dentalPreventiveCoinsurance === 0 ? 'No charge' : `${plan.dentalPreventiveCoinsurance}% coinsurance`}
+                value={plan.dentalPreventiveCoinsurance === 0 ? '--' : plan.dentalPreventiveCoinsurance !== undefined && plan.dentalPreventiveCoinsurance !== null ? `${plan.dentalPreventiveCoinsurance}% coinsurance` : '--'}
               />
               <CoverageRow
                 label="Basic (fillings, extractions)"
