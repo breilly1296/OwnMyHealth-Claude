@@ -524,22 +524,22 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation text):
   },
 
   "preventiveServices": [
-    "Annual wellness exam - $0",
-    "Routine immunizations - $0",
-    "Well-child visits - $0",
-    "Mammogram screening - $0",
-    "Colonoscopy screening - $0",
-    "Cervical cancer screening (Pap) - $0",
-    "Prostate cancer screening (PSA) - $0",
-    "Bone density test (DEXA) - $0",
-    "Diabetes screening - $0",
-    "Cholesterol screening - $0",
-    "Blood pressure screening - $0",
-    "Depression screening - $0",
-    "Obesity screening and counseling - $0",
-    "Tobacco cessation counseling - $0",
-    "Contraceptive counseling - $0",
-    "STI screening - $0"
+    "Annual wellness exam - --",
+    "Routine immunizations - --",
+    "Well-child visits - --",
+    "Mammogram screening - --",
+    "Colonoscopy screening - --",
+    "Cervical cancer screening (Pap) - --",
+    "Prostate cancer screening (PSA) - --",
+    "Bone density test (DEXA) - --",
+    "Diabetes screening - --",
+    "Cholesterol screening - --",
+    "Blood pressure screening - --",
+    "Depression screening - --",
+    "Obesity screening and counseling - --",
+    "Tobacco cessation counseling - --",
+    "Contraceptive counseling - --",
+    "STI screening - --"
   ],
 
   "exclusions": [
