@@ -86,8 +86,8 @@ export default function InsuranceUtilizationTracker({ biomarkers, insurancePlans
   });
 
   // Calculate total savings
-  const totalSavings = filteredServices.reduce((sum, service) => sum + service.savings, 0);
-  const totalOriginalCost = filteredServices.reduce((sum, service) => sum + service.originalCost, 0);
+  const totalSavings = (filteredServices || []).reduce((sum, service) => sum + service.savings, 0);
+  const totalOriginalCost = (filteredServices || []).reduce((sum, service) => sum + service.originalCost, 0);
   const savingsPercentage = totalOriginalCost > 0 
     ? Math.round((totalSavings / totalOriginalCost) * 100) 
     : 0;

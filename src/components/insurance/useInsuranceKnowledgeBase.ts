@@ -106,7 +106,7 @@ export function useInsuranceKnowledgeBase(plans: InsurancePlan[]) {
 
   // Calculate average coverage
   const avgCoverage = useMemo(() => {
-    if (normalizedPlans.length === 0) return 0;
+    if (!normalizedPlans || normalizedPlans.length === 0) return 0;
     return Math.round(
       normalizedPlans.reduce((sum, p) => sum + p.keyMetrics.coverageComprehensiveness, 0) / normalizedPlans.length
     );
@@ -114,7 +114,7 @@ export function useInsuranceKnowledgeBase(plans: InsurancePlan[]) {
 
   // Calculate average premium
   const avgPremium = useMemo(() => {
-    if (normalizedPlans.length === 0) return 0;
+    if (!normalizedPlans || normalizedPlans.length === 0) return 0;
     return normalizedPlans.reduce((sum, p) => {
       const premium = p.normalizedCosts.find(c => c.costType === 'premium')?.amount || 0;
       return sum + premium;

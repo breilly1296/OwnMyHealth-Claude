@@ -136,7 +136,7 @@ export default function InsuranceHub({
     }).format(amount);
   };
 
-  const totalPotentialSavings = guide.optimizationTips
+  const totalPotentialSavings = (guide.optimizationTips || [])
     .filter(tip => tip.potentialSavings)
     .reduce((sum, tip) => sum + (tip.potentialSavings || 0), 0);
 
@@ -189,7 +189,7 @@ export default function InsuranceHub({
               <span className="text-sm font-medium opacity-70">Services</span>
             </div>
             <div className="text-3xl font-bold">
-              {insurancePlans.reduce((sum, p) => sum + p.benefits.length, 0)}
+              {insurancePlans.reduce((sum, p) => sum + (p.benefits?.length || 0), 0)}
             </div>
             <p className="text-sm opacity-60 mt-1">covered</p>
           </div>

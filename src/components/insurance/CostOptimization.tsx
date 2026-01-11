@@ -168,7 +168,7 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
     });
   };
 
-  const totalProjectedAnnual = projections.reduce(
+  const totalProjectedAnnual = (projections || []).reduce(
     (sum, p) => sum + p.estimatedCost * p.frequencyPerYear,
     0
   );

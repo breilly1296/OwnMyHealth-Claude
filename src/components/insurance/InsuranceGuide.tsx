@@ -70,7 +70,7 @@ export default function InsuranceEducationPanel({ guide }: InsuranceEducationPan
     setExpandedSections(newExpanded);
   };
 
-  const totalPotentialSavings = guide.optimizationTips
+  const totalPotentialSavings = (guide.optimizationTips || [])
     .filter(tip => tip.potentialSavings)
     .reduce((sum, tip) => sum + (tip.potentialSavings || 0), 0);
 

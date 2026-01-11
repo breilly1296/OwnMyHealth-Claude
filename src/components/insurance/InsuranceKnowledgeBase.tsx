@@ -607,7 +607,7 @@ export default function InsuranceKnowledgeBase({ plans }: InsuranceKnowledgeBase
                 <div className="space-y-3">
                   {availableCategories.slice(0, 6).map((category) => {
                     const benefits = getBenefitsByCategory(category);
-                    const avgCoveragePct = benefits.length > 0
+                    const avgCoveragePct = benefits && benefits.length > 0
                       ? Math.round(benefits.reduce((sum, b) => sum + b.benefit.inNetworkCoverage.coveragePercentage, 0) / benefits.length)
                       : 0;
                     const Icon = categoryIcons[category];

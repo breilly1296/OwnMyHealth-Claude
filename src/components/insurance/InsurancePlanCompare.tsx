@@ -489,7 +489,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                   icon={DollarSign}
                   label="Avg Premium"
                   value={formatCurrency(
-                    normalizedPlans.reduce((sum, plan) => {
+                    (normalizedPlans || []).reduce((sum, plan) => {
                       const premium = plan.normalizedCosts.find(c => c.costType === 'premium')?.amount || 0;
                       return sum + premium;
                     }, 0) / (normalizedPlans.length || 1)
@@ -506,7 +506,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                   icon={Target}
                   label="Avg Coverage"
                   value={`${Math.round(
-                    normalizedPlans.reduce((sum, plan) => sum + plan.keyMetrics.coverageComprehensiveness, 0) /
+                    (normalizedPlans || []).reduce((sum, plan) => sum + plan.keyMetrics.coverageComprehensiveness, 0) /
                     (normalizedPlans.length || 1)
                   )}/10`}
                   colorScheme="orange"
@@ -518,7 +518,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                 <h4 className="text-md font-medium text-gray-900 mb-4">Plan Type Distribution</h4>
                 <div className="space-y-3">
                   {Object.entries(
-                    normalizedPlans.reduce((acc, plan) => {
+                    (normalizedPlans || []).reduce((acc, plan) => {
                       acc[plan.planType] = (acc[plan.planType] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>)
