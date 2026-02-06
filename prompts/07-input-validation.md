@@ -10,14 +10,17 @@ priority: 2
 # Input Validation Review
 
 ## Files to Review
-- `backend/src/middleware/validation.ts` (if exists)
+- `backend/src/middleware/validation.ts` (Zod schemas and sanitization)
 - `backend/src/controllers/*.ts` (check input handling)
 - `backend/src/services/*.ts` (check parameter usage)
-- `backend/src/utils/validators.ts` (if exists)
+- `backend/src/utils/securePdfParsing.ts` (PDF sandbox)
 
 ## OwnMyHealth Validation Requirements
+- **Framework**: Zod runtime validation schemas with TypeScript inference
+- **Sanitization**: HTML entity escaping, whitespace trimming
 - **UUIDs**: Must be validated before database queries
 - **Files**: Type, size, and magic bytes validation
+- **Passwords**: 12+ chars, uppercase, lowercase, number, special character
 - **User Input**: Sanitized before storage/display
 - **API Parameters**: Type checking and bounds validation
 
@@ -84,7 +87,24 @@ grep -r "req\.params\." backend/src/controllers/ | grep -v "validate"
 grep -r "req\.body\." backend/src/controllers/ | head -20
 ```
 
+### 8. Zod Schema Usage
+- [ ] Zod schemas defined for all request bodies
+- [ ] Schemas enforce required vs optional fields
+- [ ] Custom validators for: email (RFC), UUID, password strength, dates (ISO 8601), DNA rsid
+- [ ] `z.infer<T>` used for TypeScript type safety
+- [ ] Validation errors return field-level messages
+- [ ] HTML sanitization applied to free-text fields
+
+### 9. Domain-Specific Validation
+- [ ] Biomarker values: numeric range checks, unit validation
+- [ ] Insurance plan fields: enum validation (HMO, PPO, etc.)
+- [ ] Health need urgency/status: enum validation
+- [ ] Health goal direction/status: enum validation
+- [ ] Provider relationship type: enum validation
+- [ ] Expense amounts: positive numbers, currency precision
+
 ## Questions to Ask
 1. Are all route parameters validated before use?
 2. Are file uploads validated beyond just extension?
 3. Are there any places where user input goes directly to database?
+4. Are Zod schemas used consistently across all controllers?

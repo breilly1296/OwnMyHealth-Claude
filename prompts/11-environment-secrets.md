@@ -25,11 +25,35 @@ priority: 1
 
 ### 1. Secret Manager Inventory
 Verify these secrets exist and are used:
+
+**Critical Secrets (Secret Manager):**
 - [ ] `DATABASE_URL` - PostgreSQL connection string
 - [ ] `JWT_ACCESS_SECRET` - Access token signing
 - [ ] `JWT_REFRESH_SECRET` - Refresh token signing
-- [ ] `PHI_ENCRYPTION_KEY` - AES encryption key
+- [ ] `PHI_ENCRYPTION_KEY` - AES encryption key (64 hex chars, 256-bit)
 - [ ] `ANTHROPIC_API_KEY` - Claude API access
+- [ ] `SENDGRID_API_KEY` - Email service
+- [ ] `GOOGLE_APPLICATION_CREDENTIALS` - GCP service account
+
+**Configuration Variables (Environment):**
+- [ ] `NODE_ENV` - Runtime mode
+- [ ] `PORT` - Server port (3001)
+- [ ] `CORS_ORIGIN` - Allowed frontend origins
+- [ ] `GCS_BUCKET_NAME` - Google Cloud Storage bucket
+- [ ] `GCP_PROJECT_ID` - GCP project identifier
+- [ ] `EMAIL_FROM` - Sender email address
+- [ ] `EMAIL_FROM_NAME` - Sender display name
+- [ ] `FRONTEND_URL` - Frontend URL for email links
+
+**Security Configuration:**
+- [ ] `MAX_LOGIN_ATTEMPTS` - Account lockout threshold (default: 5)
+- [ ] `LOCKOUT_DURATION_MINUTES` - Lockout duration (default: 30)
+- [ ] `BCRYPT_ROUNDS` - Password hashing cost (default: 12)
+
+**Demo Configuration (non-production only):**
+- [ ] `DEMO_ACCOUNT_ENABLED` - Enable demo login
+- [ ] `DEMO_EMAIL` - Demo account email
+- [ ] `DEMO_PASSWORD` - Demo account password
 
 ### 2. No Hardcoded Secrets
 Search for hardcoded values:
@@ -81,9 +105,22 @@ GitHub Actions secrets required:
 | JWT_REFRESH_SECRET | Yes | Secret Manager | Refresh signing |
 | PHI_ENCRYPTION_KEY | Yes | Secret Manager | PHI encryption |
 | ANTHROPIC_API_KEY | Yes | Secret Manager | Claude API |
+| SENDGRID_API_KEY | Yes | Secret Manager | Email service |
+| GOOGLE_APPLICATION_CREDENTIALS | Yes | Secret Manager | GCP auth |
 | NODE_ENV | Yes | Environment | Runtime mode |
+| PORT | No | Environment | Server port |
 | CORS_ORIGIN | Yes | Environment | Allowed origins |
 | GCS_BUCKET_NAME | Yes | Environment | File storage |
+| GCP_PROJECT_ID | Yes | Environment | GCP project |
+| EMAIL_FROM | Yes | Environment | Sender email |
+| EMAIL_FROM_NAME | No | Environment | Sender name |
+| FRONTEND_URL | Yes | Environment | Email link base |
+| MAX_LOGIN_ATTEMPTS | No | Environment | Lockout threshold |
+| LOCKOUT_DURATION_MINUTES | No | Environment | Lockout duration |
+| BCRYPT_ROUNDS | No | Environment | Hash cost |
+| DEMO_ACCOUNT_ENABLED | No | Environment | Demo mode flag |
+| DEMO_EMAIL | No | Environment | Demo email |
+| DEMO_PASSWORD | No | Environment | Demo password |
 
 ## Questions to Ask
 1. Are all secrets documented?

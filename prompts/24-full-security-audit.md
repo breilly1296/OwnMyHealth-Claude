@@ -28,12 +28,17 @@ Run each prompt in sequence and document findings:
 - [ ] **07-input-validation** - UUID validation, file uploads, sanitization
 - [ ] **10-frontend-auth** - Token storage, auth context, protected routes
 - [ ] **12-cicd-security** - Workflow security, secrets, Docker
+- [ ] **26-provider-collaboration** - Provider-patient consent, cross-user data access
+- [ ] **27-ai-integration** - Claude API security, PHI in prompts, cost control
 
 ### Medium Priority
 - [ ] **08-rate-limiting** - Auth endpoints, upload limits, cost control
 - [ ] **09-external-apis** - API key security, SSRF prevention
 - [ ] **11-environment-secrets** - Secret inventory, no hardcoded values
 - [ ] **13-dependency-health** - Vulnerabilities, outdated packages
+- [ ] **28-file-storage** - GCS bucket security, signed URLs, upload validation
+- [ ] **29-data-portability** - Data export completeness, deletion cascades, HIPAA retention
+- [ ] **30-admin-security** - Admin privileges, user management, escalation prevention
 
 ## Audit Report Template
 

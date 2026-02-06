@@ -34,9 +34,14 @@ priority: 3
 - [ ] `POST /auth/reset-password` - strict limit
 
 ### 3. Resource-Intensive Endpoints
-- [ ] `POST /upload/*` - limit uploads (e.g., 10/hour)
-- [ ] `POST /*/guidance` - limit AI calls (e.g., 30/hour)
+- [ ] `POST /upload/*` - limit uploads (e.g., 20/hour) — `uploadLimiter`
+- [ ] `POST /biomarkers/:id/guidance` - limit AI calls — expensive Claude API
+- [ ] `POST /expenses/analyses` - limit cost analysis — expensive Claude API
+- [ ] `POST /biomarkers/batch` - limit bulk creates (e.g., 30/hour) — `bulkOperationLimiter`
 - [ ] `GET /files/*/download` - prevent bulk downloads
+- [ ] `GET /settings/export-data` - limit data exports — `sensitiveLimiter`
+- [ ] `DELETE /settings/*` - limit deletion operations — `sensitiveLimiter`
+- [ ] Provider access request endpoint - prevent spam
 
 ### 4. Rate Limit Headers
 - [ ] `X-RateLimit-Limit` - max requests
@@ -76,7 +81,18 @@ app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/upload', uploadLimiter);
 ```
 
+## Actual Limiters in Codebase
+Verify these exist in `backend/src/middleware/rateLimiter.ts`:
+- [ ] `standardLimiter` — 100 req/15 min (global)
+- [ ] `authLimiter` — 20 req/15 min (auth routes)
+- [ ] `strictAuthLimiter` — 5 req/15 min (login), keyed by email+IP
+- [ ] `uploadLimiter` — 20 uploads/hour
+- [ ] `sensitiveLimiter` — 10 req/hour (sensitive operations)
+- [ ] `bulkOperationLimiter` — 30 req/hour (batch creates)
+
 ## Questions to Ask
 1. Are authentication endpoints rate limited?
 2. Are AI/Claude API endpoints limited (cost control)?
 3. What happens when limits are hit?
+4. Are rate limits keyed by IP, user ID, or both?
+5. Do demo accounts have separate (stricter) limits?

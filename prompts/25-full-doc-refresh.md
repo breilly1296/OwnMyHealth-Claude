@@ -70,11 +70,14 @@ These pull from codebase:
 6. Generate KNOWN_ISSUES.md
 
 ### Step 6: Compliance Documents (Verification)
-1. Run 24-full-security-audit first (if due)
+1. Run 24-full-security-audit first (if due) — now includes prompts 26-30
 2. Run 21-security-status-doc
 3. Generate SECURITY_STATUS.md
 4. Run 22-hipaa-checklist-doc
 5. Generate HIPAA_CHECKLIST.md
+
+**Note:** Security audit (prompt 24) now covers 18 security prompts (01-13, 26-30):
+- Provider collaboration, AI integration, file storage, data portability, admin security
 
 ### Step 7: Changelog (If Maintaining)
 1. Run 19-changelog-doc

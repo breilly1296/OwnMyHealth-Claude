@@ -39,18 +39,38 @@ priority: 1
 ### 2. Actions Being Logged
 - [ ] Authentication events:
   - Login success/failure
-  - Logout
+  - Logout (single and all-sessions)
   - Token refresh
-  - Password reset
+  - Password change/reset
+  - Email verification
+  - Account lockout triggered
 - [ ] PHI access events:
   - Biomarker read/create/update/delete
   - File upload/download/delete
-  - DNA data import
-  - Insurance plan access
+  - DNA data import (if active)
+  - Insurance plan access/create/update/delete
+  - Health goal access/create/update/delete
+  - Health need access/create/update/delete
+  - Expense data access/create/update/delete
+- [ ] Cross-user access events:
+  - Provider access to patient biomarkers
+  - Provider access to patient health needs
+  - Consent grant/deny/revoke
+  - Permission changes on relationships
 - [ ] Administrative events:
+  - Admin user management (create, update, deactivate, delete)
+  - Admin role changes
+  - Admin audit log viewing
+  - Admin system health checks
+- [ ] Data lifecycle events:
+  - Data export (PHI_EXPORT)
+  - Health data deletion
   - Account deletion
-  - Data export
   - Settings changes
+- [ ] AI feature usage:
+  - Biomarker AI guidance requests
+  - Cost analysis generation
+  - SBC extraction via Claude
 
 ### 3. IP Address Handling
 - [ ] Using `req.ip` (not manual X-Forwarded-For parsing)

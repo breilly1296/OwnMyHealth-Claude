@@ -18,9 +18,12 @@ priority: 2
 
 ## OwnMyHealth CI/CD Architecture
 - **Platform**: GitHub Actions
-- **Container Registry**: GCP Artifact Registry
-- **Deployment Target**: Cloud Run
-- **Trigger**: Push to master branch
+- **CI Workflow**: `ci.yml` — lint, test, build (frontend + backend + security audit)
+- **Deploy Workflow**: `deploy.yml` — Docker build → Artifact Registry → Cloud Run
+- **Container Registry**: GCP Artifact Registry (`us-central1-docker.pkg.dev`)
+- **Backend Deployment**: Cloud Run (ownmyhealth-prod, us-central1)
+- **Frontend Deployment**: GCS bucket (ownmyhealth-frontend) with cache headers
+- **Trigger**: Push to master/main branch, or manual dispatch
 
 ## Checklist
 
@@ -87,7 +90,25 @@ Verify minimum required roles:
 - uses: some-action@latest
 ```
 
+### 9. Frontend Deployment
+- [ ] Frontend built with Vite (production mode)
+- [ ] Built assets uploaded to GCS bucket
+- [ ] `index.html` has `Cache-Control: no-cache` (prevent stale deployments)
+- [ ] Static assets have long cache headers (fingerprinted filenames)
+- [ ] No source maps in production build
+- [ ] No `.env` values embedded in build beyond `VITE_*` prefixed vars
+
+### 10. CI Pipeline (`ci.yml`)
+- [ ] Runs on push to main/master/develop and PRs
+- [ ] Frontend: ESLint → Vitest → Vite build
+- [ ] Backend: ESLint → Prisma generate → Unit tests → TypeScript build
+- [ ] Security: `npm audit` for both frontend and backend
+- [ ] Uses Node 20 LTS
+- [ ] Artifacts uploaded with retention limits
+
 ## Questions to Ask
 1. Are all action versions pinned?
 2. Are secrets properly masked in logs?
 3. Does the Dockerfile run as non-root?
+4. Is the GCS bucket configured with proper access controls?
+5. Are CI/CD service account permissions minimally scoped?

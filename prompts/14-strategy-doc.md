@@ -21,12 +21,28 @@ Create or update the strategic direction document for OwnMyHealth.
 
 ### Product Strategy
 1. What products are being built?
-   - OwnMyHealth (health tracking)
-   - HealthcareProviderDB (provider directory)
+   - OwnMyHealth (health biomarker tracking + insurance management)
+   - HealthcareProviderDB (provider directory) — is this still active?
    - Others?
 2. What is the validation status of each product?
 3. What's the launch sequence (which first)?
 4. What's the ecosystem hypothesis (how do they connect)?
+
+### AI Integration Strategy
+1. What role does Claude AI play in the product?
+   - Biomarker guidance (educational content)
+   - Cost analysis (expense optimization)
+   - Document extraction (SBC parsing, lab reports)
+2. Is AI a core differentiator or supplemental feature?
+3. What's the Anthropic BAA status for HIPAA compliance?
+4. What AI cost controls are in place?
+5. Are users aware of AI-generated content (disclaimers)?
+
+### Provider Collaboration Strategy
+1. How important is the provider-patient feature to the product?
+2. What's the target workflow (patient-initiated vs provider-initiated)?
+3. Are there plans for EHR integration?
+4. How does consent management fit the business model?
 
 ### Business Model
 1. What are the pricing tiers?
@@ -75,9 +91,13 @@ Create or update the strategic direction document for OwnMyHealth.
 ## Product Strategy
 ### OwnMyHealth
 [Description, status, validation path]
+[Key features: biomarker tracking, insurance management, provider collaboration, AI guidance]
 
 ### HealthcareProviderDB
-[Description, status, validation path]
+[Description, status, validation path — note if deprecated or paused]
+
+### AI Integration
+[Role of Claude AI, BAA status, cost model, disclaimers]
 
 ## Business Model
 ### Pricing Tiers

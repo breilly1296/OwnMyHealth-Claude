@@ -24,12 +24,18 @@ priority: 2
 
 ### 1. Route Authentication
 For each route file, verify auth middleware applied:
-- [ ] `authRoutes.ts` - public routes (login, register, refresh)
-- [ ] `biomarkerRoutes.ts` - all protected
+- [ ] `authRoutes.ts` - public routes (login, register, refresh, verify-email)
+- [ ] `biomarkerRoutes.ts` - all protected (includes AI guidance endpoint)
 - [ ] `fileRoutes.ts` - all protected
 - [ ] `uploadRoutes.ts` - all protected
 - [ ] `insuranceRoutes.ts` - all protected
-- [ ] `userRoutes.ts` - all protected
+- [ ] `expenseRoutes.ts` - all protected
+- [ ] `healthGoalsRoutes.ts` - all protected
+- [ ] `healthNeedsRoutes.ts` - all protected
+- [ ] `providerRoutes.ts` - protected + requires PROVIDER or ADMIN role
+- [ ] `patientRoutes.ts` - protected + requires PATIENT role
+- [ ] `adminRoutes.ts` - protected + requires ADMIN role
+- [ ] `settingsRoutes.ts` - all protected (export, delete data, delete account)
 
 ### 2. Authorization (Beyond Authentication)
 - [ ] Users can only access their own resources
@@ -58,13 +64,35 @@ For each route file, verify auth middleware applied:
 - [ ] PHI decrypted only when needed
 - [ ] Pagination on list endpoints (prevent data dumps)
 
+### 7. Role-Based Route Protection
+- [ ] Provider routes enforce `requireRole('PROVIDER', 'ADMIN')`
+- [ ] Patient consent routes enforce `requireRole('PATIENT')`
+- [ ] Admin routes enforce `requireRole('ADMIN')` or `requireMinRole('ADMIN')`
+- [ ] Role checked from JWT claims (re-verified on each request)
+- [ ] Demo accounts blocked from sensitive operations (`demoProtection.ts`)
+
+### 8. RLS Context
+- [ ] `withRLSContext(userId, ...)` or `withRLSTransaction(userId, ...)` used for all DB queries
+- [ ] userId from JWT token (not request body)
+- [ ] Admin operations use `withRLSContext(null, ...)` for system access
+- [ ] Provider cross-user queries properly scoped
+
 ## Route Inventory
 Generate a complete route list:
 ```bash
 grep -r "router\.\(get\|post\|put\|delete\|patch\)" backend/src/routes/ | sort
 ```
 
+Expected route files (13):
+```
+authRoutes.ts, biomarkerRoutes.ts, insuranceRoutes.ts, expenseRoutes.ts,
+healthGoalsRoutes.ts, healthNeedsRoutes.ts, uploadRoutes.ts, fileRoutes.ts,
+providerRoutes.ts, patientRoutes.ts, settingsRoutes.ts, adminRoutes.ts, index.ts
+```
+
 ## Questions to Ask
 1. Are there any routes missing authentication?
 2. Can users access other users' resources?
 3. Are all inputs validated before use?
+4. Are provider routes properly checking consent permissions?
+5. Are admin routes restricted to ADMIN role only?

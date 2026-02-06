@@ -12,7 +12,7 @@ Quick reference for all available prompts.
 
 ---
 
-## Security Audit Prompts (01-13)
+## Security Audit Prompts (01-13, 26-30)
 
 | # | Prompt | Purpose | Priority |
 |---|--------|---------|----------|
@@ -29,6 +29,11 @@ Quick reference for all available prompts.
 | 11 | [[11-environment-secrets]] | Secret management | Critical |
 | 12 | [[12-cicd-security]] | Pipeline security | High |
 | 13 | [[13-dependency-health]] | Vulnerabilities, updates | Medium |
+| 26 | [[26-provider-collaboration]] | Provider-patient consent, cross-user access | High |
+| 27 | [[27-ai-integration]] | Claude API, PHI in prompts, cost control | High |
+| 28 | [[28-file-storage]] | GCS, signed URLs, upload validation | Medium |
+| 29 | [[29-data-portability]] | Export, deletion, GDPR compliance | Medium |
+| 30 | [[30-admin-security]] | Admin privilege, user management | Medium |
 
 ---
 
@@ -67,7 +72,7 @@ Quick reference for all available prompts.
 
 ### Running a Security Audit?
 1. Use [[24-full-security-audit]] for comprehensive review
-2. Or run individual prompts 01-13 as needed
+2. Or run individual prompts 01-13 and 26-30 as needed
 3. Update [[21-security-status-doc]] with findings
 
 ### Updating Documentation?
@@ -84,7 +89,7 @@ Quick reference for all available prompts.
 
 ### In Claude Code
 Best for prompts that scan code:
-- 01-13 (security audits)
+- 01-13, 26-30 (security audits)
 - 16-architecture-doc
 - 17-api-reference-doc
 - 20-known-issues-doc

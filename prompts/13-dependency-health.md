@@ -73,14 +73,31 @@ Run `npm audit` and categorize:
 
 ## Key Dependencies to Monitor
 
+### Backend (Critical/High)
 | Package | Purpose | Risk Level |
 |---------|---------|------------|
 | express | HTTP server | High |
-| prisma | Database ORM | High |
-| jsonwebtoken | Auth | Critical |
-| bcrypt | Passwords | Critical |
-| @anthropic-ai/sdk | AI API | Medium |
-| react | UI | Medium |
+| @prisma/client | Database ORM | High |
+| jsonwebtoken | JWT auth | Critical |
+| bcryptjs | Password hashing | Critical |
+| @anthropic-ai/sdk | Claude AI API | Medium |
+| @sendgrid/mail | Email service | Medium |
+| @google-cloud/storage | File storage | Medium |
+| @google-cloud/documentai | OCR service | Medium |
+| helmet | Security headers | High |
+| express-rate-limit | Rate limiting | High |
+| zod | Input validation | High |
+| cookie-parser | Cookie handling | Medium |
+
+### Frontend (Critical/High)
+| Package | Purpose | Risk Level |
+|---------|---------|------------|
+| react / react-dom | UI framework | Medium |
+| vite | Build tool | Medium |
+| tesseract.js | Client-side OCR | Medium |
+| pdfjs-dist | PDF parsing | Medium |
+| jspdf | PDF generation | Low |
+| recharts | Charting | Low |
 
 ## Update Strategy
 

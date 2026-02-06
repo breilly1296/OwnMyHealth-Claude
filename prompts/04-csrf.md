@@ -10,9 +10,9 @@ priority: 1
 # CSRF Protection Review
 
 ## Files to Review
-- `backend/src/middleware/csrf.ts` (CSRF middleware)
+- `backend/src/middleware/csrf.ts` (CSRF middleware — double-submit cookie, timing-safe compare)
 - `backend/src/app.ts` (middleware registration)
-- `src/services/api.ts` or `src/services/api/*.ts` (frontend API client)
+- `src/services/api/client.ts` (frontend HTTP client — CSRF token extraction and injection)
 - Any component making POST/PUT/DELETE requests
 
 ## OwnMyHealth CSRF Architecture
@@ -42,9 +42,11 @@ priority: 1
 ### 4. Exempt Routes
 - [ ] Only safe routes exempted (if any):
   - GET requests (safe by default)
-  - Public endpoints (login, register)
+  - Public auth endpoints (login, register, refresh, verify-email)
+  - File upload endpoints (use Bearer token auth instead)
   - Webhook endpoints (use different auth)
 - [ ] No sensitive operations exempted
+- [ ] CSRF token endpoint available: `GET /api/v1/csrf-token`
 
 ### 5. Component-Level Check
 Search for any components using raw `fetch()` without CSRF:
