@@ -19,6 +19,7 @@ vi.mock('../../services/api', () => ({
     refreshToken: vi.fn(),
   },
   clearAuthToken: vi.fn(),
+  setOnAuthFailure: vi.fn(),
 }));
 
 import { authApi, clearAuthToken } from '../../services/api';

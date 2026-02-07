@@ -54,6 +54,7 @@ function sanitizeString(str: string): string {
  */
 export function sanitizeForPrompt(input: string): string {
   return input
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x1F\x7F]/g, '')   // Strip control characters
     .replace(/\n{2,}/g, '\n')           // Collapse multiple newlines
     .substring(0, 200);                  // Hard length cap

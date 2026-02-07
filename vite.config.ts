@@ -19,7 +19,7 @@ export default defineConfig({
           if (id.includes('node_modules/pdfjs-dist/') ||
               id.includes('node_modules/jspdf/') ||
               id.includes('node_modules/pdf-lib/') ||
-              id.includes('node_modules/html2canvas/')) {
+              id.includes('node_modules/html2canvas-pro/')) {
             return 'pdf';
           }
 

@@ -21,7 +21,7 @@ export function stripPHIFromText(text: string): string {
   text = text.replace(/\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[PHONE_REDACTED]');
 
   // Strip DOB patterns (MM/DD/YYYY, YYYY-MM-DD, etc.)
-  text = text.replace(/\b(?:DOB|Date of Birth|Birth Date)[:\s]*\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b/gi, '[DOB_REDACTED]');
+  text = text.replace(/\b(?:DOB|Date of Birth|Birth Date)[:\s]*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/gi, '[DOB_REDACTED]');
 
   // Strip addresses (basic pattern — street number + street name)
   text = text.replace(/\b\d{1,5}\s+[\w\s]{2,30}(?:Street|St|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Road|Rd|Lane|Ln|Way|Court|Ct|Circle|Cir)\b/gi, '[ADDRESS_REDACTED]');
