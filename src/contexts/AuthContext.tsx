@@ -31,7 +31,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { authApi, clearAuthToken, type AuthResponse } from '../services/api';
+import { authApi, clearAuthToken, setOnAuthFailure, type AuthResponse } from '../services/api';
 
 /**
  * User object stored in auth context
@@ -166,6 +166,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  // Wire logout to API client auth failure callback
+  // When a 401 occurs and refresh fails, this triggers automatic logout
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      logout();
+    });
+    return () => setOnAuthFailure(() => {});
+  }, [logout]);
 
   const value: AuthContextType = {
     user,

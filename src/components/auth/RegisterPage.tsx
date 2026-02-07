@@ -97,6 +97,9 @@ export default function RegisterPage({
         firstName.trim() || undefined,
         lastName.trim() || undefined
       );
+      // Clear sensitive state after successful registration
+      setPassword('');
+      setConfirmPassword('');
     } catch {
       // Error is handled by parent component
     }

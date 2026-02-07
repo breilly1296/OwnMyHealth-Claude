@@ -38,6 +38,20 @@ nul
 *.local
 cookies.txt
 
+# Service account keys
+*-key.json
+*-credentials.json
+service-account*.json
+
+# Certificate files
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Production env
+.env.production
+
 # Obsidian
 .obsidian/
 scratchpad.md.md

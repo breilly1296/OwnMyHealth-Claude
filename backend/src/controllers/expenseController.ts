@@ -25,6 +25,21 @@ import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
 import { sanitizeForPrompt } from '../middleware/validation.js';
+import { trackAIUsage } from '../services/aiCostTracker.js';
+
+/**
+ * Anthropic client singleton — reuse across requests
+ */
+let anthropicClient: Anthropic | null = null;
+
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+    anthropicClient = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
+  }
+  return anthropicClient;
+}
 
 const RESOURCE_TYPE_PROJECTION = 'expense_projection';
 const RESOURCE_TYPE_ANALYSIS = 'cost_analysis';
@@ -305,20 +320,14 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
       frequencyPerYear: p.frequencyPerYear,
       isInNetwork: p.isInNetwork,
-      notes: p.notesEncrypted ? encryption.decrypt(p.notesEncrypted, userSalt) : null,
+      notes: p.notesEncrypted ? sanitizeForPrompt(encryption.decrypt(p.notesEncrypted, userSalt)) : null,
     }));
 
     // Build Claude prompt
     const prompt = buildCostAnalysisPrompt(plan, decryptedProjections);
 
     // Call Claude API
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      res.status(500).json({ error: 'Claude API not configured' });
-      return;
-    }
-
-    const anthropic = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
+    const anthropic = getAnthropicClient();
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
@@ -332,6 +341,14 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     });
 
     const claudeResponse = message.content[0].type === 'text' ? message.content[0].text : '';
+
+    trackAIUsage({
+      endpoint: 'cost-analysis',
+      model: message.model,
+      inputTokens: message.usage?.input_tokens ?? 0,
+      outputTokens: message.usage?.output_tokens ?? 0,
+      userId,
+    });
 
     // Extract projected OOP from response (simple parsing)
     const totalProjectedOop = extractProjectedOOP(claudeResponse, decryptedProjections, plan);

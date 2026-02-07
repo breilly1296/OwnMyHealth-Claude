@@ -60,6 +60,12 @@ export function sanitizeForPrompt(input: string): string {
 }
 
 /**
+ * Finite number schema — rejects Infinity and -Infinity.
+ * Use instead of z.number() for any numeric field with bounds.
+ */
+const finiteNumber = z.number().refine(v => Number.isFinite(v), { message: 'Must be a finite number' });
+
+/**
  * Create a sanitized string schema
  */
 const sanitizedString = (minLength = 0, maxLength = 1000) =>
@@ -291,13 +297,13 @@ export const schemas = {
   biomarker: {
     create: z.object({
       name: sanitizedString(1, 100),
-      value: z.number().min(0, 'Value must be non-negative'),
+      value: finiteNumber.pipe(z.number().min(0, 'Value must be non-negative')),
       unit: sanitizedString(1, 20),
       category: sanitizedString(1, 50),
       date: dateString,
       normalRange: z.object({
-        min: z.number(),
-        max: z.number(),
+        min: finiteNumber,
+        max: finiteNumber,
         source: optionalSanitizedString(100),
       }),
       notes: optionalSanitizedString(1000),
@@ -378,22 +384,22 @@ export const schemas = {
       groupNumber: optionalSanitizedString(100),
       effectiveDate: dateString,
       terminationDate: dateString.optional(),
-      premium: z.number().min(0).optional(),
-      deductible: z.number().min(0),
-      deductibleFamily: z.number().min(0).optional(),
-      outOfPocketMax: z.number().min(0),
-      outOfPocketMaxFamily: z.number().min(0).optional(),
+      premium: finiteNumber.pipe(z.number().min(0)).optional(),
+      deductible: finiteNumber.pipe(z.number().min(0)),
+      deductibleFamily: finiteNumber.pipe(z.number().min(0)).optional(),
+      outOfPocketMax: finiteNumber.pipe(z.number().min(0)),
+      outOfPocketMaxFamily: finiteNumber.pipe(z.number().min(0)).optional(),
       // Tracking fields (how much has been paid toward limits)
-      deductibleMetIndividual: z.number().min(0).optional(),
-      deductibleMetFamily: z.number().min(0).optional(),
-      oopMetIndividual: z.number().min(0).optional(),
-      oopMetFamily: z.number().min(0).optional(),
+      deductibleMetIndividual: finiteNumber.pipe(z.number().min(0)).optional(),
+      deductibleMetFamily: finiteNumber.pipe(z.number().min(0)).optional(),
+      oopMetIndividual: finiteNumber.pipe(z.number().min(0)).optional(),
+      oopMetFamily: finiteNumber.pipe(z.number().min(0)).optional(),
       // Copay amounts
-      copayPrimaryCare: z.number().min(0).optional(),
-      copaySpecialist: z.number().min(0).optional(),
-      copayUrgentCare: z.number().min(0).optional(),
-      copayEmergency: z.number().min(0).optional(),
-      coinsuranceRate: z.number().min(0).max(100).optional(),
+      copayPrimaryCare: finiteNumber.pipe(z.number().min(0)).optional(),
+      copaySpecialist: finiteNumber.pipe(z.number().min(0)).optional(),
+      copayUrgentCare: finiteNumber.pipe(z.number().min(0)).optional(),
+      copayEmergency: finiteNumber.pipe(z.number().min(0)).optional(),
+      coinsuranceRate: finiteNumber.pipe(z.number().min(0).max(100)).optional(),
       isActive: z.boolean().optional(),
       isPrimary: z.boolean().optional(),
       benefits: z.array(z.object({
@@ -401,8 +407,8 @@ export const schemas = {
         serviceCategory: sanitizedString(1, 100),
         inNetworkCoverage: z.object({
           covered: z.boolean(),
-          copay: z.number().min(0).optional(),
-          coinsurance: z.number().min(0).max(100).optional(),
+          copay: finiteNumber.pipe(z.number().min(0)).optional(),
+          coinsurance: finiteNumber.pipe(z.number().min(0).max(100)).optional(),
           deductibleApplies: z.boolean().optional(),
         }),
         outNetworkCoverage: z.object({
@@ -588,16 +594,16 @@ export const schemas = {
     createProjection: z.object({
       planId: uuid,
       serviceType: sanitizedString(1, 100),
-      estimatedCost: z.number().positive().max(999999.99),
-      frequencyPerYear: z.number().int().min(1).max(365),
+      estimatedCost: finiteNumber.pipe(z.number().positive().max(999999.99)),
+      frequencyPerYear: finiteNumber.pipe(z.number().int().min(1).max(365)),
       isInNetwork: z.boolean().optional(),
       notes: optionalSanitizedString(2000),
     }),
 
     updateProjection: z.object({
       serviceType: sanitizedString(1, 100).optional(),
-      estimatedCost: z.number().positive().max(999999.99).optional(),
-      frequencyPerYear: z.number().int().min(1).max(365).optional(),
+      estimatedCost: finiteNumber.pipe(z.number().positive().max(999999.99)).optional(),
+      frequencyPerYear: finiteNumber.pipe(z.number().int().min(1).max(365)).optional(),
       isInNetwork: z.boolean().optional(),
       notes: optionalSanitizedString(2000),
     }),

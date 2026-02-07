@@ -185,22 +185,15 @@ function AppContent() {
     }
   };
 
-  // Handle demo login
+  // Handle demo login — uses server-side demo endpoint only
   const handleDemoLogin = async () => {
     clearError();
     setIsAuthLoading(true);
     try {
-      // Try demo endpoint first
       await authApi.demoLogin();
-      // Refresh auth state by getting current user
       window.location.reload();
     } catch {
-      // Fall back to regular login with demo credentials
-      try {
-        await login('demo@ownmyhealth.com', 'Demo123!');
-      } catch {
-        // Error handled by context
-      }
+      setError('Demo mode is not available');
     } finally {
       setIsAuthLoading(false);
     }
@@ -262,7 +255,7 @@ function AppContent() {
       <Suspense fallback={<LoadingFallback />}>
         <LoginPage
           onLogin={handleLogin}
-          onDemoLogin={handleDemoLogin}
+          onDemoLogin={import.meta.env.VITE_DEMO_MODE === 'true' ? handleDemoLogin : undefined}
           onSwitchToRegister={switchToRegister}
           onForgotPassword={switchToForgotPassword}
           error={error}

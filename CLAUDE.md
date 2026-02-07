@@ -31,7 +31,7 @@ Privacy-first HIPAA-compliant health biomarker tracking platform with insurance 
 - **Email Notifications**: Email verification, password reset via SendGrid
 
 ## Removed Features (Jan 2025)
-- ~~Health Scoring~~ - 0-100 health scores, risk assessments
+- ~~Health Scoring~~ - 0-100 health scores, risk assessments (dashboard shows "Biomarkers in Range %" instead — a simple in-range ratio, not the removed scoring system)
 - ~~CMS Marketplace Integration~~ - healthcare.gov plan search
 - ~~Provider Directory~~ - doctor search and recommendations
 
@@ -126,10 +126,10 @@ Must match Prisma schema exactly. Current encrypted fields:
 - Biomarker/History: values, notes, unit
 - Insurance: member ID, group ID, plan name, provider name, benefits
 - Health Goals/Progress: descriptions, notes, target values
-- Health Needs: description, notes
+- Health Needs: description
 - Provider-Patient: relationship notes
 - DNA/Genetic: raw data, variant descriptions, trait names
-- Expenses: descriptions, amounts, provider names, notes
+- Expenses: descriptions, amounts, provider names, notes (all monetary fields stored as `*Encrypted` String columns with AES-256-GCM ciphertext, not Decimal — see migration `20260206_fix_expense_encryption_types`)
 - AI Responses: guidance content, analysis results
 - Audit Log: previous/new values (encrypted PHI snapshots)
 

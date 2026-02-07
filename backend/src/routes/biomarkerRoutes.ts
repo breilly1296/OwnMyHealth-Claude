@@ -25,10 +25,12 @@ import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { bulkOperationLimiter, aiLimiter } from '../middleware/rateLimiter.js';
+import { blockDemoAI } from '../middleware/demoProtection.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
+import { trackAIUsage } from '../services/aiCostTracker.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -106,6 +108,7 @@ router.delete(
 router.post(
   '/:id/guidance',
   aiLimiter,
+  blockDemoAI,
   validate(schemas.uuidParam, 'params'),
   validate(schemas.biomarker.guidance),
   asyncHandler(async (req: Request, res: Response) => {
@@ -179,8 +182,20 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
         });
       }
 
-      const data = await response.json() as { content?: Array<{ text?: string }> };
+      const data = await response.json() as { content?: Array<{ text?: string }>; model?: string; usage?: { input_tokens: number; output_tokens: number } };
       const guidance = data.content?.[0]?.text || 'Unable to generate guidance';
+
+      // Track AI usage for cost monitoring
+      const authReqForCost = req as AuthenticatedRequest;
+      if (data.usage) {
+        trackAIUsage({
+          endpoint: 'biomarker-guidance',
+          model: data.model || 'claude-haiku-4-5-20251001',
+          inputTokens: data.usage.input_tokens,
+          outputTokens: data.usage.output_tokens,
+          userId: authReqForCost.user!.id,
+        });
+      }
 
       // Audit log: PHI disclosed to external AI API for guidance
       const prisma = getPrismaClient();

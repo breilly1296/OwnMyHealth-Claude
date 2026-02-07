@@ -130,4 +130,23 @@ export function demoProtection(
   next();
 }
 
+/**
+ * Middleware: Block demo users from AI features
+ *
+ * Prevents anonymous API cost generation via demo accounts.
+ * Apply to all AI-powered endpoints (guidance, extraction, analysis).
+ */
+export function blockDemoAI(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (isDemoAccount(req)) {
+    throw new ForbiddenError(
+      'AI features are not available in demo mode. Please create a real account.'
+    );
+  }
+  next();
+}
+
 export default demoProtection;

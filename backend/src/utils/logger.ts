@@ -24,6 +24,9 @@ const SENSITIVE_FIELDS = new Set([
   'memberIdEncrypted', 'groupIdEncrypted', 'valueEncrypted',
   'descriptionEncrypted', 'noteEncrypted', 'genotype',
   'email', 'phoneNumber', 'address', 'dateOfBirth',
+  // AI response fields that may contain PHI
+  'responseText', 'jsonText', 'claudeResponse', 'guidance',
+  'extractedData', 'pdfText', 'pdfContent', 'biomarker',
 ]);
 
 /**

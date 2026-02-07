@@ -14,7 +14,7 @@ interface BiomarkerStats {
   totalCount: number;
   inRangeCount: number;
   outOfRangeCount: number;
-  healthScore: number;
+  biomarkersInRangePercent: number;
   categoryCounts: Record<string, number>;
   outOfRangeBiomarkers: Biomarker[];
 }
@@ -69,17 +69,17 @@ export function DashboardContent({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Health Score */}
+        {/* Biomarkers in Range */}
         <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-5 text-white shadow-lg shadow-brand-500/20">
           <div className="flex items-center justify-between mb-3">
             <Heart className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">
-              {stats.healthScore >= 0 ? `${stats.healthScore}%` : '—'}
+              {stats.biomarkersInRangePercent >= 0 ? `${stats.biomarkersInRangePercent}%` : '—'}
             </span>
           </div>
-          <p className="text-sm opacity-90">Health Score</p>
+          <p className="text-sm opacity-90">Biomarkers in Range</p>
           <p className="text-xs opacity-70 mt-1">
-            {stats.healthScore >= 0 ? 'Based on biomarkers in range' : 'Add data to calculate'}
+            {stats.biomarkersInRangePercent >= 0 ? `${stats.inRangeCount} of ${stats.totalCount} within normal range` : 'Add data to calculate'}
           </p>
         </div>
 

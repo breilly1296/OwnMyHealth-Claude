@@ -10,6 +10,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
 import { InternalServerError } from '../middleware/errorHandler.js';
+import { trackAIUsage } from './aiCostTracker.js';
 
 // Create extraction-specific logger
 const sbcLogger = logger.createServiceLogger('SBCExtraction');
@@ -820,6 +821,14 @@ export async function extractInsuranceFromSBC(
       outputTokens: response.usage?.output_tokens,
     });
 
+    trackAIUsage({
+      endpoint: 'sbc-extraction',
+      model: response.model,
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+      userId: 'system',
+    });
+
     // Parse JSON from response
     let jsonText = responseText;
 
@@ -833,7 +842,7 @@ export async function extractInsuranceFromSBC(
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       sbcLogger.error('No JSON found in Claude SBC response', {
-        responseText: responseText.substring(0, 500),
+        responseLength: responseText.length,
       });
       throw new InternalServerError('Claude response did not contain valid JSON');
     }
@@ -844,7 +853,7 @@ export async function extractInsuranceFromSBC(
     } catch (parseError) {
       sbcLogger.error('Failed to parse Claude SBC JSON response', {
         parseError: parseError instanceof Error ? parseError.message : 'Unknown',
-        jsonText: jsonMatch[0].substring(0, 500),
+        jsonLength: jsonMatch[0].length,
       });
       throw new InternalServerError('Failed to parse insurance data from Claude response');
     }

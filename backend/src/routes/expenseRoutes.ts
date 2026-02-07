@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
+import { blockDemoAI } from '../middleware/demoProtection.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import {
@@ -68,6 +69,7 @@ router.delete(
 router.post(
   '/analyze',
   aiLimiter,
+  blockDemoAI,
   csrfProtection,
   validate(schemas.expense.analyzeCosts),
   asyncHandler(analyzeCosts)

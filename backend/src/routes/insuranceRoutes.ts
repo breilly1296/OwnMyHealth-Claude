@@ -25,6 +25,7 @@ import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
+import { blockDemoAI } from '../middleware/demoProtection.js';
 import * as insuranceController from '../controllers/insuranceController.js';
 import { uploadSBC, reanalyzePlan } from '../controllers/uploadController.js';
 import { updateCurrentSpending } from '../controllers/expenseController.js';
@@ -114,6 +115,7 @@ router.get(
 router.put(
   '/plans/:id/reanalyze',
   validate(schemas.uuidParam, 'params'),
+  blockDemoAI,
   uploadLimiter,
   upload.single('file'),
   asyncHandler(reanalyzePlan)
@@ -123,6 +125,7 @@ router.put(
 // Rate limited to 20 uploads/hour to prevent abuse
 router.post(
   '/upload-sbc',
+  blockDemoAI,
   uploadLimiter,
   upload.single('file'),
   asyncHandler(uploadSBC)

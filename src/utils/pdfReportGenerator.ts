@@ -11,7 +11,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import type { Biomarker } from '../types';
 import { analyzeTrend, detectRisks, generateInsights, type DataPoint } from './analytics';
 

@@ -11,6 +11,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
 import { InternalServerError } from '../middleware/errorHandler.js';
+import { stripPHIFromText } from '../utils/phiRedaction.js';
+import { trackAIUsage } from './aiCostTracker.js';
 
 // Create extraction-specific logger
 const extractionLogger = logger.createServiceLogger('ClaudeExtraction');
@@ -33,7 +35,6 @@ export interface ClaudeExtractionResult {
   biomarkers: ClaudeExtractedBiomarker[];
   labDate?: string;
   labName?: string;
-  patientName?: string;
 }
 
 /**
@@ -111,6 +112,7 @@ export async function extractBiomarkersWithClaude(
 
     extractionLogger.info('Sending PDF to Claude API', {
       base64Length: pdfBase64.length,
+      phiRedactionApplied: true,
     });
 
     const response = await client.messages.create({
@@ -139,13 +141,22 @@ export async function extractBiomarkersWithClaude(
 
     const processingTimeMs = Date.now() - startTime;
 
+    trackAIUsage({
+      endpoint: 'lab-extraction',
+      model: response.model,
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+      userId: 'system', // extraction doesn't have user context here
+    });
+
     // Extract text content from response
     const textContent = response.content.find((block) => block.type === 'text');
     if (!textContent || textContent.type !== 'text') {
       throw new InternalServerError('Claude returned no text content');
     }
 
-    const responseText = textContent.text;
+    // Strip any PHI that Claude may have included in its response
+    const responseText = stripPHIFromText(textContent.text);
     extractionLogger.info('Received Claude response', {
       responseLength: responseText.length,
       processingTimeMs,
@@ -167,7 +178,7 @@ export async function extractBiomarkersWithClaude(
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       extractionLogger.error('No JSON found in Claude response', {
-        responseText: responseText.substring(0, 500),
+        responseLength: responseText.length,
       });
       throw new InternalServerError('Claude response did not contain valid JSON');
     }
@@ -178,7 +189,7 @@ export async function extractBiomarkersWithClaude(
     } catch (parseError) {
       extractionLogger.error('Failed to parse Claude JSON response', {
         parseError: parseError instanceof Error ? parseError.message : 'Unknown',
-        jsonText: jsonMatch[0].substring(0, 500),
+        jsonLength: jsonMatch[0].length,
       });
       throw new InternalServerError('Failed to parse biomarker data from Claude response');
     }
