@@ -24,6 +24,7 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
+import { sanitizeForPrompt } from '../middleware/validation.js';
 
 const RESOURCE_TYPE_PROJECTION = 'expense_projection';
 const RESOURCE_TYPE_ANALYSIS = 'cost_analysis';
@@ -297,10 +298,10 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
-    // Decrypt projections
+    // Decrypt projections (sanitize serviceType for prompt safety)
     const decryptedProjections = projections.map((p) => ({
       id: p.id,
-      serviceType: encryption.decrypt(p.serviceTypeEncrypted, userSalt),
+      serviceType: sanitizeForPrompt(encryption.decrypt(p.serviceTypeEncrypted, userSalt)),
       estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
       frequencyPerYear: p.frequencyPerYear,
       isInNetwork: p.isInNetwork,
@@ -471,36 +472,39 @@ function buildCostAnalysisPrompt(plan: PlanForAnalysis, projections: DecryptedPr
 
 **CRITICAL**: This is informational guidance only, NOT medical or financial advice. Do NOT recommend delaying necessary medical care for cost reasons.
 
-## Patient's Insurance Plan
-- **Plan Type**: ${plan.planType}${plan.planType === 'HDHP' ? ' (High-Deductible Health Plan - HSA eligible)' : ''}
-- **Individual Deductible**: $${Number(plan.deductibleIndividual).toLocaleString()}
-- **Family Deductible**: $${Number(plan.deductibleFamily).toLocaleString()}
-- **OOP Max Individual**: $${Number(plan.oopMaxIndividual).toLocaleString()}
-- **OOP Max Family**: $${Number(plan.oopMaxFamily).toLocaleString()}
-- **Coinsurance Rate**: ${plan.coinsuranceRate}% (patient pays after deductible met)
-- **Primary Care Copay**: ${plan.copayPrimaryCare ? `$${plan.copayPrimaryCare}` : '--'}
-- **Specialist Copay**: ${plan.copaySpecialist ? `$${plan.copaySpecialist}` : '--'}
-- **Emergency Room Copay**: ${plan.copayEmergency ? `$${plan.copayEmergency}` : '--'}
+<insurance_plan_data>
+Plan Type: ${plan.planType}${plan.planType === 'HDHP' ? ' (High-Deductible Health Plan - HSA eligible)' : ''}
+Individual Deductible: $${Number(plan.deductibleIndividual).toLocaleString()}
+Family Deductible: $${Number(plan.deductibleFamily).toLocaleString()}
+OOP Max Individual: $${Number(plan.oopMaxIndividual).toLocaleString()}
+OOP Max Family: $${Number(plan.oopMaxFamily).toLocaleString()}
+Coinsurance Rate: ${plan.coinsuranceRate}% (patient pays after deductible met)
+Primary Care Copay: ${plan.copayPrimaryCare ? `$${plan.copayPrimaryCare}` : '--'}
+Specialist Copay: ${plan.copaySpecialist ? `$${plan.copaySpecialist}` : '--'}
+Emergency Room Copay: ${plan.copayEmergency ? `$${plan.copayEmergency}` : '--'}
+</insurance_plan_data>
 
-## Year-to-Date Spending (${monthsRemaining} months remaining in plan year)
-- **Spent Toward Deductible**: $${Number(plan.deductibleMetIndividual).toLocaleString()}
-- **Spent Toward OOP Max**: $${Number(plan.oopMetIndividual).toLocaleString()}
-- **Deductible Remaining**: $${deductibleRemaining.toLocaleString()}
-- **OOP Max Remaining**: $${oopRemaining.toLocaleString()}
+<spending_data>
+Months Remaining in Plan Year: ${monthsRemaining}
+Spent Toward Deductible: $${Number(plan.deductibleMetIndividual).toLocaleString()}
+Spent Toward OOP Max: $${Number(plan.oopMetIndividual).toLocaleString()}
+Deductible Remaining: $${deductibleRemaining.toLocaleString()}
+OOP Max Remaining: $${oopRemaining.toLocaleString()}
+</spending_data>
 
-## Planned/Expected Medical Expenses
+<expense_projections>
 ${
   projections.length === 0
     ? 'No planned expenses entered yet.'
     : projections
         .map((p) => {
           const annualCost = p.estimatedCost * p.frequencyPerYear;
-          return `- **${p.serviceType}**: $${p.estimatedCost.toLocaleString()} × ${p.frequencyPerYear}/year = $${annualCost.toLocaleString()} total (${p.isInNetwork ? 'In-Network' : 'Out-of-Network'})`;
+          return `- ${p.serviceType}: $${p.estimatedCost.toLocaleString()} × ${p.frequencyPerYear}/year = $${annualCost.toLocaleString()} total (${p.isInNetwork ? 'In-Network' : 'Out-of-Network'})`;
         })
         .join('\n')
 }
-
-**Total Projected Annual Cost**: $${totalProjectedCost.toLocaleString()} (before insurance)
+Total Projected Annual Cost: $${totalProjectedCost.toLocaleString()} (before insurance)
+</expense_projections>
 
 ## Analysis Required
 

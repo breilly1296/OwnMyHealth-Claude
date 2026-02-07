@@ -48,6 +48,18 @@ function sanitizeString(str: string): string {
 }
 
 /**
+ * Sanitize string input for LLM prompt interpolation.
+ * Strips control characters, collapses excessive newlines, and enforces a length cap
+ * to prevent prompt injection attacks.
+ */
+export function sanitizeForPrompt(input: string): string {
+  return input
+    .replace(/[\x00-\x1F\x7F]/g, '')   // Strip control characters
+    .replace(/\n{2,}/g, '\n')           // Collapse multiple newlines
+    .substring(0, 200);                  // Hard length cap
+}
+
+/**
  * Create a sanitized string schema
  */
 const sanitizedString = (minLength = 0, maxLength = 1000) =>
@@ -64,6 +76,16 @@ const optionalSanitizedString = (maxLength = 1000) =>
     .max(maxLength)
     .transform(sanitizeString)
     .optional();
+
+/**
+ * Create a prompt-safe string schema for values interpolated into LLM prompts.
+ * Applies sanitizeForPrompt (control char stripping, newline collapsing, length cap).
+ */
+const promptSafeString = (minLength = 0, maxLength = 200) =>
+  z.string()
+    .min(minLength)
+    .max(maxLength)
+    .transform(sanitizeForPrompt);
 
 // ============================================
 // Custom Validators
@@ -323,6 +345,23 @@ export const schemas = {
       category: z.string().optional(),
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
       limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
+    }),
+
+    guidance: z.object({
+      biomarker: z.object({
+        name: promptSafeString(1, 100),
+        value: z.number(),
+        unit: promptSafeString(1, 20),
+        normalRange: z.object({
+          min: z.number().optional(),
+          max: z.number().optional(),
+        }).optional(),
+        status: promptSafeString(1, 30),
+        history: z.array(z.object({
+          value: z.number(),
+          date: z.string().max(30),
+        })).max(10).optional(),
+      }),
     }),
   },
 

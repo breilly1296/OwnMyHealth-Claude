@@ -107,6 +107,7 @@ router.post(
   '/:id/guidance',
   aiLimiter,
   validate(schemas.uuidParam, 'params'),
+  validate(schemas.biomarker.guidance),
   asyncHandler(async (req: Request, res: Response) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -118,21 +119,17 @@ router.post(
       });
     }
 
-    const { biomarker, allBiomarkers: _allBiomarkers } = req.body;
+    const { biomarker } = req.body;
 
-    if (!biomarker) {
-      return res.status(400).json({
-        success: false,
-        error: 'Biomarker data is required',
-      });
-    }
+    const prompt = `You are a health education assistant. Be concise and specific.
 
-    const prompt = `Health education assistant. Be concise and specific.
-
-Biomarker: ${biomarker.name}
-Value: ${biomarker.value} ${biomarker.unit} (Range: ${biomarker.normalRange?.min || '?'}-${biomarker.normalRange?.max || '?'})
+<biomarker_data>
+Name: ${biomarker.name}
+Value: ${biomarker.value} ${biomarker.unit}
+Reference Range: ${biomarker.normalRange?.min ?? '?'}-${biomarker.normalRange?.max ?? '?'}
 Status: ${biomarker.status}
 ${biomarker.history?.length > 1 ? `History: ${biomarker.history.slice(0, 3).map((h: { value: number; date: string }) => `${h.value} (${h.date})`).join(', ')}` : ''}
+</biomarker_data>
 
 Respond with these sections (use exact headers):
 
@@ -142,11 +139,13 @@ Respond with these sections (use exact headers):
 
 **Trend Summary**: If history provided, 1-2 sentences on trajectory. Skip if no history.
 
-**Questions for Your Doctor**: 2 specific questions using the actual values, like "Given my ${biomarker.value} ${biomarker.unit}, should we check X?"
+**Questions for Your Doctor**: 2 specific questions using the actual values.
 
 **What You Can Do**: 2 specific lifestyle factors that affect this biomarker.
 
-Be direct. No disclaimers needed. Under 200 words total.`;
+Be direct. Under 200 words total.
+
+IMPORTANT: This is for educational purposes only and does not constitute medical advice. Always recommend consulting a healthcare provider for medical decisions.`;
 
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), 30_000);
