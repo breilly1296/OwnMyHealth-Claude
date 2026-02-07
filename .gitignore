@@ -41,3 +41,9 @@ cookies.txt
 # Obsidian
 .obsidian/
 scratchpad.md.md
+
+# Dev-only scripts (should not ship to production)
+dev-auto-commit.sh
+
+# Antigravity Exclusions
+main/

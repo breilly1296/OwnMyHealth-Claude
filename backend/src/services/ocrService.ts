@@ -280,7 +280,7 @@ async function processImageWithDocumentAI(
     },
   };
 
-  const [result] = await client.processDocument(request);
+  const [result] = await client.processDocument(request, { timeout: 60_000 });
   const document = result.document;
 
   if (!document) {
@@ -398,6 +398,13 @@ export async function processDocument(
     return await processImageWithDocumentAI(buffer, mimeType, startTime);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('DEADLINE_EXCEEDED') || errorMessage.includes('timed out')) {
+      ocrLogger.error('Document AI request timed out', { errorMessage });
+      throw new InternalServerError(
+        'Document processing timed out. Please try again.'
+      );
+    }
 
     if (errorMessage.includes('PERMISSION_DENIED')) {
       ocrLogger.error('Document AI permission denied', { errorMessage });

@@ -78,9 +78,10 @@ router.post(
   asyncHandler(forgotPassword)
 );
 
-// Reset password - use reset token to set new password
+// Reset password - use reset token to set new password (strict rate limiting to prevent token brute-force)
 router.post(
   '/reset-password',
+  strictAuthLimiter,
   validate(schemas.auth.resetPassword),
   asyncHandler(resetPasswordHandler)
 );

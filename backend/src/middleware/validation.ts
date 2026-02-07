@@ -543,6 +543,40 @@ export const schemas = {
   },
 
   // ============================================
+  // Expense Schemas
+  // ============================================
+  expense: {
+    createProjection: z.object({
+      planId: uuid,
+      serviceType: sanitizedString(1, 100),
+      estimatedCost: z.number().positive().max(999999.99),
+      frequencyPerYear: z.number().int().min(1).max(365),
+      isInNetwork: z.boolean().optional(),
+      notes: optionalSanitizedString(2000),
+    }),
+
+    updateProjection: z.object({
+      serviceType: sanitizedString(1, 100).optional(),
+      estimatedCost: z.number().positive().max(999999.99).optional(),
+      frequencyPerYear: z.number().int().min(1).max(365).optional(),
+      isInNetwork: z.boolean().optional(),
+      notes: optionalSanitizedString(2000),
+    }),
+
+    analyzeCosts: z.object({
+      planId: uuid,
+    }),
+
+    projectionsQuery: z.object({
+      planId: uuid.optional(),
+    }),
+
+    analysesQuery: z.object({
+      planId: uuid.optional(),
+    }),
+  },
+
+  // ============================================
   // Admin Schemas
   // ============================================
   admin: {

@@ -36,6 +36,8 @@ async function getSendGridClient() {
       const sendgrid = await import('@sendgrid/mail');
       sgMail = sendgrid.default;
       sgMail.setApiKey(config.email.sendgridApiKey);
+      // Set 10s request timeout for SendGrid API calls
+      (sgMail as any).setTimeout?.(10_000);
       logger.info('SendGrid client initialized', { prefix: 'Email' });
     } catch {
       logger.warn('SendGrid package not installed. Emails will be logged only.', { prefix: 'Email' });
@@ -239,6 +241,10 @@ async function sendEmail(
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
+      logger.error('Email sending timed out', { prefix: 'Email', data: { to, subject } });
+      return { success: false, error: 'Email service timed out. Please try again.' };
+    }
     logger.error(`Failed to send email: ${errorMessage}`, { prefix: 'Email', data: { to, subject } });
     return { success: false, error: errorMessage };
   }

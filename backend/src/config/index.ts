@@ -195,4 +195,16 @@ if (config.isProduction) {
       'Set DEMO_ACCOUNT_ENABLED=false or remove it from environment variables.'
     );
   }
+
+  // Non-fatal warnings for optional service credentials
+  // These services degrade gracefully but should be configured for full functionality
+  if (!process.env.ANTHROPIC_API_KEY) {
+    process.stderr.write(`${new Date().toISOString()} WARN [Config] ANTHROPIC_API_KEY is not set — AI features (biomarker guidance, document extraction, cost analysis) will be unavailable\n`);
+  }
+  if (!process.env.SENDGRID_API_KEY) {
+    process.stderr.write(`${new Date().toISOString()} WARN [Config] SENDGRID_API_KEY is not set — email functionality (verification, password reset) will be unavailable\n`);
+  }
+  if (!process.env.GCP_PROJECT_ID) {
+    process.stderr.write(`${new Date().toISOString()} WARN [Config] GCP_PROJECT_ID is not set — cloud storage and OCR services will be unavailable\n`);
+  }
 }

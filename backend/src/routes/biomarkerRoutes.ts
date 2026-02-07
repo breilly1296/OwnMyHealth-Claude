@@ -24,9 +24,12 @@ import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { bulkOperationLimiter } from '../middleware/rateLimiter.js';
+import { bulkOperationLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
+import { getPrismaClient } from '../services/database.js';
+import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
+import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
 
@@ -99,8 +102,10 @@ router.delete(
 
 // POST /api/v1/biomarkers/:id/guidance - Get AI-powered educational guidance
 // Uses Anthropic Claude API via fetch (no SDK) to provide educational health information
+// Rate limited to 10 AI requests/hour per user to control API costs
 router.post(
   '/:id/guidance',
+  aiLimiter,
   validate(schemas.uuidParam, 'params'),
   asyncHandler(async (req: Request, res: Response) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -143,9 +148,12 @@ Respond with these sections (use exact headers):
 
 Be direct. No disclaimers needed. Under 200 words total.`;
 
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 30_000);
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
+        signal: abortController.signal,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
@@ -175,16 +183,38 @@ Be direct. No disclaimers needed. Under 200 words total.`;
       const data = await response.json() as { content?: Array<{ text?: string }> };
       const guidance = data.content?.[0]?.text || 'Unable to generate guidance';
 
+      // Audit log: PHI disclosed to external AI API for guidance
+      const prisma = getPrismaClient();
+      const auditService = getAuditLogService(prisma);
+      const authReq = req as AuthenticatedRequest;
+      await auditService.logAccess('biomarker_ai_guidance', req.params.id, { req, userId: authReq.user!.id }, {
+        operation: 'PHI_ACCESS',
+        externalApiCall: true,
+        provider: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+        biomarkerName: biomarker.name,
+        phiDisclosedFields: ['name', 'value', 'unit', 'normalRange', 'status', 'history'],
+      });
+
       return res.json({
         success: true,
         data: { guidance },
       });
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.error('AI guidance request timed out');
+        return res.status(504).json({
+          success: false,
+          error: 'AI guidance request timed out. Please try again.',
+        });
+      }
       logger.error('AI guidance request failed', { data: { error: error instanceof Error ? error.message : String(error) } });
       return res.status(500).json({
         success: false,
         error: 'Failed to generate AI guidance',
       });
+    } finally {
+      clearTimeout(timeoutId);
     }
   })
 );

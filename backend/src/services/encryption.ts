@@ -416,24 +416,24 @@ export const PHI_FIELDS = {
   ],
   // Expense tracking PHI (cost optimization)
   ExpenseProjection: [
-    'serviceType',
-    'estimatedCost',
-    'notes',
+    'serviceTypeEncrypted',
+    'estimatedCostEncrypted',
+    'notesEncrypted',
   ],
   ExpenseActual: [
-    'serviceType',
-    'providerName',
-    'billedAmount',
-    'insurancePaid',
-    'patientPaid',
-    'appliedToDeductible',
-    'appliedToOop',
-    'notes',
+    'serviceTypeEncrypted',
+    'providerNameEncrypted',
+    'billedAmountEncrypted',
+    'insurancePaidEncrypted',
+    'patientPaidEncrypted',
+    'appliedToDeductibleEncrypted',
+    'appliedToOopEncrypted',
+    'notesEncrypted',
   ],
   CostAnalysis: [
     'claudeResponse',
-    'totalProjectedOop',
-    'projectedExpensesSnapshot',
+    'totalProjectedOopEncrypted',
+    'projectedExpensesSnapshotEncrypted',
   ],
 } as const;
 

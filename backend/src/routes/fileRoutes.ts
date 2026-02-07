@@ -18,6 +18,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import * as fileController from '../controllers/fileController.js';
 
 const router = Router();
@@ -41,6 +42,7 @@ router.get(
 // GET /api/v1/files/:id/download - Get signed download URL
 router.get(
   '/:id/download',
+  sensitiveLimiter,
   validate(schemas.uuidParam, 'params'),
   asyncHandler(fileController.getFileDownloadUrl)
 );

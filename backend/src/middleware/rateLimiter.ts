@@ -88,6 +88,25 @@ export const sensitiveLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// AI endpoint rate limiter (Claude API calls are expensive)
+export const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 AI requests per hour per user
+  message: {
+    success: false,
+    error: {
+      code: 'AI_RATE_LIMIT_EXCEEDED',
+      message: 'Too many AI requests. Please try again later.',
+    },
+  } as ApiResponse,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Key by authenticated user ID for per-user cost protection, fallback to IP
+    return (req as any).user?.id || req.ip || req.socket.remoteAddress || 'unknown';
+  },
+});
+
 // Bulk operations rate limiter (for batch creates, imports)
 export const bulkOperationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour

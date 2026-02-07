@@ -317,7 +317,7 @@ function getAnthropicClient(): Anthropic {
     if (!apiKey) {
       throw new InternalServerError('ANTHROPIC_API_KEY environment variable is not set');
     }
-    anthropicClient = new Anthropic({ apiKey });
+    anthropicClient = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
     sbcLogger.info('Initialized Anthropic client for SBC extraction');
   }
   return anthropicClient;
@@ -961,6 +961,12 @@ export async function extractInsuranceFromSBC(
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Handle timeout errors
+    if (error instanceof Error && (error.name === 'APIConnectionTimeoutError' || errorMessage.includes('timed out'))) {
+      sbcLogger.error('Anthropic API request timed out', { errorMessage });
+      throw new InternalServerError('AI extraction service timed out. Please try again.');
+    }
 
     // Handle specific Anthropic API errors
     if (errorMessage.includes('401') || errorMessage.includes('authentication')) {

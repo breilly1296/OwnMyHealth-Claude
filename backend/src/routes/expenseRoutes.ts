@@ -7,6 +7,9 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { csrfProtection } from '../middleware/csrf.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
+import { validate, schemas } from '../middleware/validation.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 import {
   createProjection,
   getProjections,
@@ -26,26 +29,56 @@ router.use(authenticate);
 // ============================================
 
 // GET /api/expenses/projections?planId=xxx
-router.get('/projections', getProjections);
+router.get(
+  '/projections',
+  validate(schemas.expense.projectionsQuery, 'query'),
+  asyncHandler(getProjections)
+);
 
 // POST /api/expenses/projections
-router.post('/projections', csrfProtection, createProjection);
+router.post(
+  '/projections',
+  csrfProtection,
+  validate(schemas.expense.createProjection),
+  asyncHandler(createProjection)
+);
 
 // PUT /api/expenses/projections/:id
-router.put('/projections/:id', csrfProtection, updateProjection);
+router.put(
+  '/projections/:id',
+  csrfProtection,
+  validate(schemas.uuidParam, 'params'),
+  validate(schemas.expense.updateProjection),
+  asyncHandler(updateProjection)
+);
 
 // DELETE /api/expenses/projections/:id
-router.delete('/projections/:id', csrfProtection, deleteProjection);
+router.delete(
+  '/projections/:id',
+  csrfProtection,
+  validate(schemas.uuidParam, 'params'),
+  asyncHandler(deleteProjection)
+);
 
 // ============================================
 // COST ANALYSIS
 // ============================================
 
 // POST /api/expenses/analyze
-router.post('/analyze', csrfProtection, analyzeCosts);
+router.post(
+  '/analyze',
+  aiLimiter,
+  csrfProtection,
+  validate(schemas.expense.analyzeCosts),
+  asyncHandler(analyzeCosts)
+);
 
 // GET /api/expenses/analyses?planId=xxx
-router.get('/analyses', getAnalyses);
+router.get(
+  '/analyses',
+  validate(schemas.expense.analysesQuery, 'query'),
+  asyncHandler(getAnalyses)
+);
 
 // ============================================
 // CURRENT SPENDING (added to insuranceRoutes in controller)

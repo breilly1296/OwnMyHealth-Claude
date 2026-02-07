@@ -13,20 +13,13 @@
  * @module routes/settingsRoutes
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import * as settingsController from '../controllers/settingsController.js';
-import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
-
-// Debug logging for settings routes
-router.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[SETTINGS ROUTE] ${req.method} ${req.path}`);
-  console.log(`[SETTINGS ROUTE] Headers: x-csrf-token=${req.headers['x-csrf-token'] ? 'present' : 'missing'}, authorization=${req.headers['authorization'] ? 'present' : 'missing'}`);
-  next();
-});
 
 // All routes require authentication
 router.use(authenticate);
@@ -34,23 +27,21 @@ router.use(authenticate);
 // GET /api/v1/settings/export-data - Export all user data
 router.get(
   '/export-data',
+  sensitiveLimiter,
   asyncHandler(settingsController.exportUserData)
 );
 
 // DELETE /api/v1/settings/delete-data - Delete all health data
 router.delete(
   '/delete-data',
-  (req: Request, _res: Response, next: NextFunction) => {
-    console.log('[DELETE-DATA] Handler reached after auth');
-    console.log('[DELETE-DATA] User ID:', (req as AuthenticatedRequest).user?.id);
-    next();
-  },
+  sensitiveLimiter,
   asyncHandler(settingsController.deleteAllData)
 );
 
 // DELETE /api/v1/settings/delete-account - Delete account
 router.delete(
   '/delete-account',
+  sensitiveLimiter,
   asyncHandler(settingsController.deleteAccount)
 );
 

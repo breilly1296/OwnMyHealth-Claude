@@ -19,7 +19,7 @@
 import { Response } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import type { AuthenticatedRequest } from '../types/index.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -51,16 +51,18 @@ export async function createProjection(req: AuthenticatedRequest, res: Response)
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const projection = await prisma.expenseProjection.create({
-      data: {
-        userId,
-        planId,
-        serviceType: encryption.encrypt(serviceType, userSalt),
-        estimatedCost: encryption.encrypt(estimatedCost.toString(), userSalt),
-        frequencyPerYear,
-        isInNetwork: isInNetwork ?? true,
-        notes: notes ? encryption.encrypt(notes, userSalt) : null,
-      },
+    const projection = await withRLSTransaction(userId, async (tx) => {
+      return tx.expenseProjection.create({
+        data: {
+          userId,
+          planId,
+          serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
+          estimatedCostEncrypted: encryption.encrypt(estimatedCost.toString(), userSalt),
+          frequencyPerYear,
+          isInNetwork: isInNetwork ?? true,
+          notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
+        },
+      });
     });
 
     const auditService = getAuditLogService(prisma);
@@ -72,9 +74,9 @@ export async function createProjection(req: AuthenticatedRequest, res: Response)
     // Decrypt for response
     const decrypted = {
       ...projection,
-      serviceType: encryption.decrypt(projection.serviceType, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(projection.estimatedCost.toString(), userSalt)),
-      notes: projection.notes ? encryption.decrypt(projection.notes, userSalt) : null,
+      serviceType: encryption.decrypt(projection.serviceTypeEncrypted, userSalt),
+      estimatedCost: parseFloat(encryption.decrypt(projection.estimatedCostEncrypted, userSalt)),
+      notes: projection.notesEncrypted ? encryption.decrypt(projection.notesEncrypted, userSalt) : null,
     };
 
     res.status(201).json(decrypted);
@@ -97,21 +99,31 @@ export async function getProjections(req: AuthenticatedRequest, res: Response): 
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const projections = await prisma.expenseProjection.findMany({
-      where: {
-        userId,
-        ...(planId && { planId: planId as string }),
-      },
-      orderBy: { createdAt: 'desc' },
+    const projections = await withRLSTransaction(userId, async (tx) => {
+      return tx.expenseProjection.findMany({
+        where: {
+          userId,
+          ...(planId && { planId: planId as string }),
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     });
 
     // Decrypt PHI fields
     const decrypted = projections.map((p) => ({
       ...p,
-      serviceType: encryption.decrypt(p.serviceType, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(p.estimatedCost.toString(), userSalt)),
-      notes: p.notes ? encryption.decrypt(p.notes, userSalt) : null,
+      serviceType: encryption.decrypt(p.serviceTypeEncrypted, userSalt),
+      estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
+      notes: p.notesEncrypted ? encryption.decrypt(p.notesEncrypted, userSalt) : null,
     }));
+
+    // Audit log: READ access to expense projections
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess(RESOURCE_TYPE_PROJECTION, undefined, { req, userId }, {
+      operation: 'LIST',
+      count: decrypted.length,
+      planId: (planId as string) || 'all',
+    });
 
     res.json(decrypted);
   } catch (error) {
@@ -136,20 +148,22 @@ export async function updateProjection(req: AuthenticatedRequest, res: Response)
 
     const updateData: Record<string, unknown> = {};
     if (serviceType !== undefined) {
-      updateData.serviceType = encryption.encrypt(serviceType, userSalt);
+      updateData.serviceTypeEncrypted = encryption.encrypt(serviceType, userSalt);
     }
     if (estimatedCost !== undefined) {
-      updateData.estimatedCost = encryption.encrypt(estimatedCost.toString(), userSalt);
+      updateData.estimatedCostEncrypted = encryption.encrypt(estimatedCost.toString(), userSalt);
     }
     if (frequencyPerYear !== undefined) updateData.frequencyPerYear = frequencyPerYear;
     if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
     if (notes !== undefined) {
-      updateData.notes = notes ? encryption.encrypt(notes, userSalt) : null;
+      updateData.notesEncrypted = notes ? encryption.encrypt(notes, userSalt) : null;
     }
 
-    const updated = await prisma.expenseProjection.update({
-      where: { id },
-      data: updateData,
+    const updated = await withRLSTransaction(userId, async (tx) => {
+      return tx.expenseProjection.update({
+        where: { id, userId },
+        data: updateData,
+      });
     });
 
     const auditService = getAuditLogService(prisma);
@@ -158,9 +172,9 @@ export async function updateProjection(req: AuthenticatedRequest, res: Response)
     // Decrypt for response
     const decrypted = {
       ...updated,
-      serviceType: encryption.decrypt(updated.serviceType, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(updated.estimatedCost.toString(), userSalt)),
-      notes: updated.notes ? encryption.decrypt(updated.notes, userSalt) : null,
+      serviceType: encryption.decrypt(updated.serviceTypeEncrypted, userSalt),
+      estimatedCost: parseFloat(encryption.decrypt(updated.estimatedCostEncrypted, userSalt)),
+      notes: updated.notesEncrypted ? encryption.decrypt(updated.notesEncrypted, userSalt) : null,
     };
 
     res.json(decrypted);
@@ -181,8 +195,10 @@ export async function deleteProjection(req: AuthenticatedRequest, res: Response)
   try {
     const prisma = getPrismaClient();
 
-    await prisma.expenseProjection.delete({
-      where: { id },
+    await withRLSTransaction(userId, async (tx) => {
+      await tx.expenseProjection.delete({
+        where: { id, userId },
+      });
     });
 
     const auditService = getAuditLogService(prisma);
@@ -216,13 +232,15 @@ export async function updateCurrentSpending(req: AuthenticatedRequest, res: Resp
 
     const prisma = getPrismaClient();
 
-    const updated = await prisma.insurancePlan.update({
-      where: { id },
-      data: {
-        deductibleMetIndividual: deductibleMet,
-        oopMetIndividual: oopMet,
-        updatedAt: new Date(),
-      },
+    const updated = await withRLSTransaction(userId, async (tx) => {
+      return tx.insurancePlan.update({
+        where: { id, userId },
+        data: {
+          deductibleMetIndividual: deductibleMet,
+          oopMetIndividual: oopMet,
+          updatedAt: new Date(),
+        },
+      });
     });
 
     const auditService = getAuditLogService(prisma);
@@ -260,9 +278,18 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    // Fetch plan details
-    const plan = await prisma.insurancePlan.findUnique({
-      where: { id: planId },
+    // Fetch plan details and expense projections within RLS transaction
+    const { plan, projections } = await withRLSTransaction(userId, async (tx) => {
+      const plan = await tx.insurancePlan.findUnique({
+        where: { id: planId, userId },
+      });
+
+      const projections = await tx.expenseProjection.findMany({
+        where: { userId, planId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return { plan, projections };
     });
 
     if (!plan) {
@@ -270,20 +297,14 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
-    // Fetch expense projections
-    const projections = await prisma.expenseProjection.findMany({
-      where: { userId, planId },
-      orderBy: { createdAt: 'desc' },
-    });
-
     // Decrypt projections
     const decryptedProjections = projections.map((p) => ({
       id: p.id,
-      serviceType: encryption.decrypt(p.serviceType, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(p.estimatedCost.toString(), userSalt)),
+      serviceType: encryption.decrypt(p.serviceTypeEncrypted, userSalt),
+      estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
       frequencyPerYear: p.frequencyPerYear,
       isInNetwork: p.isInNetwork,
-      notes: p.notes ? encryption.decrypt(p.notes, userSalt) : null,
+      notes: p.notesEncrypted ? encryption.decrypt(p.notesEncrypted, userSalt) : null,
     }));
 
     // Build Claude prompt
@@ -296,7 +317,7 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
-    const anthropic = new Anthropic({ apiKey });
+    const anthropic = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
@@ -315,18 +336,20 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     const totalProjectedOop = extractProjectedOOP(claudeResponse, decryptedProjections, plan);
     const deductibleMetMonth = extractDeductibleMonth(claudeResponse);
 
-    // Save analysis to database
-    const analysis = await prisma.costAnalysis.create({
-      data: {
-        userId,
-        planId,
-        claudeResponse: encryption.encrypt(claudeResponse, userSalt),
-        totalProjectedOop: totalProjectedOop
-          ? encryption.encrypt(totalProjectedOop.toString(), userSalt)
-          : null,
-        deductibleMetMonth,
-        projectedExpensesSnapshot: encryption.encrypt(JSON.stringify(decryptedProjections), userSalt),
-      },
+    // Save analysis to database within RLS transaction
+    const analysis = await withRLSTransaction(userId, async (tx) => {
+      return tx.costAnalysis.create({
+        data: {
+          userId,
+          planId,
+          claudeResponse: encryption.encrypt(claudeResponse, userSalt),
+          totalProjectedOopEncrypted: totalProjectedOop
+            ? encryption.encrypt(totalProjectedOop.toString(), userSalt)
+            : null,
+          deductibleMetMonth,
+          projectedExpensesSnapshotEncrypted: encryption.encrypt(JSON.stringify(decryptedProjections), userSalt),
+        },
+      });
     });
 
     const auditService = getAuditLogService(prisma);
@@ -344,6 +367,11 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       deductibleMetMonth,
     });
   } catch (error) {
+    if (error instanceof Error && (error.name === 'APIConnectionTimeoutError' || error.message.includes('timed out'))) {
+      logger.error('Cost analysis timed out', { data: { error: error.message } });
+      res.status(504).json({ error: 'Cost analysis timed out. Please try again.' });
+      return;
+    }
     logger.error('Operation failed:', { data: { error } });
     res.status(500).json({ error: 'Failed to generate cost analysis' });
   }
@@ -362,13 +390,15 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const analyses = await prisma.costAnalysis.findMany({
-      where: {
-        userId,
-        ...(planId && { planId: planId as string }),
-      },
-      orderBy: { analysisDate: 'desc' },
-      take: 10, // Limit to last 10 analyses
+    const analyses = await withRLSTransaction(userId, async (tx) => {
+      return tx.costAnalysis.findMany({
+        where: {
+          userId,
+          ...(planId && { planId: planId as string }),
+        },
+        orderBy: { analysisDate: 'desc' },
+        take: 10, // Limit to last 10 analyses
+      });
     });
 
     // Decrypt PHI fields
@@ -377,11 +407,19 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
       planId: a.planId,
       analysisDate: a.analysisDate,
       claudeResponse: encryption.decrypt(a.claudeResponse, userSalt),
-      totalProjectedOop: a.totalProjectedOop
-        ? parseFloat(encryption.decrypt(a.totalProjectedOop.toString(), userSalt))
+      totalProjectedOop: a.totalProjectedOopEncrypted
+        ? parseFloat(encryption.decrypt(a.totalProjectedOopEncrypted, userSalt))
         : null,
       deductibleMetMonth: a.deductibleMetMonth,
     }));
+
+    // Audit log: READ access to cost analyses
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess(RESOURCE_TYPE_ANALYSIS, undefined, { req, userId }, {
+      operation: 'LIST',
+      count: decrypted.length,
+      planId: (planId as string) || 'all',
+    });
 
     res.json(decrypted);
   } catch (error) {

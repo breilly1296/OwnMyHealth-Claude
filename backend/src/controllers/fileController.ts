@@ -9,7 +9,7 @@
 import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { getSignedUrl, deleteFile as deleteFromStorage } from '../services/storageService.js';
 import { logger } from '../utils/logger.js';
@@ -45,14 +45,16 @@ export async function getFiles(
   const prisma = getPrismaClient();
 
   // Get all files for the user with linked biomarker categories
-  const files = await prisma.userFile.findMany({
-    where: { userId },
-    include: {
-      biomarkers: {
-        select: { category: true },
+  const files = await withRLSTransaction(userId, async (tx) => {
+    return tx.userFile.findMany({
+      where: { userId },
+      include: {
+        biomarkers: {
+          select: { category: true },
+        },
       },
-    },
-    orderBy: { labDate: 'desc' },
+      orderBy: { labDate: 'desc' },
+    });
   });
 
   // Transform to response format with computed categories
@@ -105,13 +107,15 @@ export async function getFile(
 
   const prisma = getPrismaClient();
 
-  const file = await prisma.userFile.findFirst({
-    where: { id, userId },
-    include: {
-      biomarkers: {
-        select: { category: true },
+  const file = await withRLSTransaction(userId, async (tx) => {
+    return tx.userFile.findFirst({
+      where: { id, userId },
+      include: {
+        biomarkers: {
+          select: { category: true },
+        },
       },
-    },
+    });
   });
 
   if (!file) {
@@ -178,9 +182,11 @@ export async function getFileDownloadUrl(
 
   const prisma = getPrismaClient();
 
-  const file = await prisma.userFile.findFirst({
-    where: { id, userId },
-    select: { id: true, storageKey: true, filename: true },
+  const file = await withRLSTransaction(userId, async (tx) => {
+    return tx.userFile.findFirst({
+      where: { id, userId },
+      select: { id: true, storageKey: true, filename: true },
+    });
   });
 
   if (!file) {
@@ -226,9 +232,12 @@ export async function deleteFile(
 
   const prisma = getPrismaClient();
 
-  const file = await prisma.userFile.findFirst({
-    where: { id, userId },
-    select: { id: true, storageKey: true, filename: true, biomarkersExtracted: true },
+  // Find the file within RLS context
+  const file = await withRLSTransaction(userId, async (tx) => {
+    return tx.userFile.findFirst({
+      where: { id, userId },
+      select: { id: true, storageKey: true, filename: true, biomarkersExtracted: true },
+    });
   });
 
   if (!file) {
@@ -257,15 +266,18 @@ export async function deleteFile(
     // The file might already be deleted or the storage key might be invalid
   }
 
-  // Unlink biomarkers from this file (don't delete them)
-  await prisma.biomarker.updateMany({
-    where: { userFileId: id },
-    data: { userFileId: null },
-  });
+  // Unlink biomarkers and delete file record within RLS context
+  await withRLSTransaction(userId, async (tx) => {
+    // Unlink biomarkers from this file (don't delete them)
+    await tx.biomarker.updateMany({
+      where: { userFileId: id },
+      data: { userFileId: null },
+    });
 
-  // Delete the file record
-  await prisma.userFile.delete({
-    where: { id },
+    // Delete the file record
+    await tx.userFile.delete({
+      where: { id },
+    });
   });
 
   const response: ApiResponse = {

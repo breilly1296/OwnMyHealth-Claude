@@ -11,6 +11,7 @@
 import { Request, Response } from 'express';
 import type { ApiResponse } from '../types/index.js';
 import { BadRequestError, UnauthorizedError } from '../middleware/errorHandler.js';
+import { setCsrfCookie } from '../middleware/csrf.js';
 import { config } from '../config/index.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -307,6 +308,9 @@ export async function login(
   setAccessTokenCookie(res, tokens.accessToken);
   setRefreshTokenCookie(res, tokens.refreshToken, isDemo);
 
+  // Regenerate CSRF token to prevent token fixation attacks
+  setCsrfCookie(res);
+
   // Audit log: successful login
   await auditService.logAuth('LOGIN', { req, userId: result.user!.id }, {
     email: result.user!.email,
@@ -350,6 +354,9 @@ export async function refreshToken(
   // Set new cookies (preserve demo session duration)
   setAccessTokenCookie(res, result.tokens.accessToken);
   setRefreshTokenCookie(res, result.tokens.refreshToken, result.isDemo);
+
+  // Regenerate CSRF token on refresh to limit token lifetime
+  setCsrfCookie(res);
 
   // Return the access token in response body so frontend can store it
   // for Authorization header (needed for API calls after page refresh)

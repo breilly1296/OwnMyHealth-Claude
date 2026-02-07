@@ -13,6 +13,7 @@ import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { getPrismaClient } from '../services/database.js';
+import { getAuditLogService } from '../services/auditLog.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -75,6 +76,13 @@ router.get(
       };
     });
 
+    // Audit log: Patient listing their providers
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('patient_providers', undefined, { req, userId: patientId }, {
+      operation: 'LIST',
+      count: result.length,
+    });
+
     const response: ApiResponse<typeof result> = {
       success: true,
       data: result,
@@ -129,6 +137,13 @@ router.get(
       };
     });
 
+    // Audit log: Patient viewing pending access requests
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('patient_pending_requests', undefined, { req, userId: patientId }, {
+      operation: 'LIST',
+      count: result.length,
+    });
+
     const response: ApiResponse<typeof result> = {
       success: true,
       data: result,
@@ -166,7 +181,15 @@ router.post(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship) {
+      // Audit log: Failed consent approval — request not found
+      await auditService.logAccess('provider_consent', id, { req, userId: patientId }, {
+        operation: 'APPROVE',
+        success: false,
+        reason: 'request_not_found_or_processed',
+      });
       throw new NotFoundError('Access request not found or already processed');
     }
 
@@ -187,6 +210,24 @@ router.post(
         consentGrantedAt: new Date(),
         consentExpiresAt,
       },
+    });
+
+    // Audit log: Patient approved provider consent (critical consent event)
+    await auditService.logUpdate('provider_consent', id, {
+      status: relationship.status,
+      providerId: relationship.providerId,
+    }, {
+      status: 'ACTIVE',
+      providerId: relationship.providerId,
+      canViewBiomarkers,
+      canViewInsurance,
+      canViewDna,
+      canViewHealthNeeds,
+      canEditData,
+      consentExpiresAt: consentExpiresAt?.toISOString() ?? 'none',
+    }, { req, userId: patientId }, {
+      operation: 'CONSENT_GRANTED',
+      providerId: relationship.providerId,
     });
 
     const response: ApiResponse<{ message: string; relationship: typeof updated }> = {
@@ -220,9 +261,29 @@ router.post(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship) {
+      // Audit log: Failed consent denial — request not found
+      await auditService.logAccess('provider_consent', id, { req, userId: patientId }, {
+        operation: 'DENY',
+        success: false,
+        reason: 'request_not_found_or_processed',
+      });
       throw new NotFoundError('Access request not found or already processed');
     }
+
+    // Audit log: Patient denied provider consent (log before deletion)
+    await auditService.logUpdate('provider_consent', id, {
+      status: relationship.status,
+      providerId: relationship.providerId,
+    }, {
+      status: 'DENIED',
+      providerId: relationship.providerId,
+    }, { req, userId: patientId }, {
+      operation: 'CONSENT_DENIED',
+      providerId: relationship.providerId,
+    });
 
     await prisma.providerPatient.delete({ where: { id } });
 
@@ -256,9 +317,25 @@ router.patch(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship) {
+      // Audit log: Failed permission update — relationship not found
+      await auditService.logAccess('provider_consent_permissions', id, { req, userId: patientId }, {
+        operation: 'UPDATE_PERMISSIONS',
+        success: false,
+        reason: 'relationship_not_found_or_inactive',
+      });
       throw new NotFoundError('Active provider relationship not found');
     }
+
+    const previousPermissions = {
+      canViewBiomarkers: relationship.canViewBiomarkers,
+      canViewInsurance: relationship.canViewInsurance,
+      canViewDna: relationship.canViewDna,
+      canViewHealthNeeds: relationship.canViewHealthNeeds,
+      canEditData: relationship.canEditData,
+    };
 
     const updated = await prisma.providerPatient.update({
       where: { id },
@@ -269,6 +346,18 @@ router.patch(
         ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
         ...(canEditData !== undefined && { canEditData }),
       },
+    });
+
+    // Audit log: Patient updated provider permissions (consent modification)
+    await auditService.logUpdate('provider_consent_permissions', id, previousPermissions, {
+      canViewBiomarkers: updated.canViewBiomarkers,
+      canViewInsurance: updated.canViewInsurance,
+      canViewDna: updated.canViewDna,
+      canViewHealthNeeds: updated.canViewHealthNeeds,
+      canEditData: updated.canEditData,
+    }, { req, userId: patientId }, {
+      operation: 'PERMISSIONS_UPDATED',
+      providerId: relationship.providerId,
     });
 
     const response: ApiResponse<typeof updated> = {
@@ -299,9 +388,34 @@ router.post(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship) {
+      // Audit log: Failed revocation — relationship not found
+      await auditService.logAccess('provider_consent', id, { req, userId: patientId }, {
+        operation: 'REVOKE',
+        success: false,
+        reason: 'relationship_not_found_or_inactive',
+      });
       throw new NotFoundError('Active provider relationship not found');
     }
+
+    // Audit log: Patient revoked provider consent (critical consent event — log before change)
+    await auditService.logUpdate('provider_consent', id, {
+      status: relationship.status,
+      providerId: relationship.providerId,
+      canViewBiomarkers: relationship.canViewBiomarkers,
+      canViewInsurance: relationship.canViewInsurance,
+      canViewDna: relationship.canViewDna,
+      canViewHealthNeeds: relationship.canViewHealthNeeds,
+      canEditData: relationship.canEditData,
+    }, {
+      status: 'REVOKED',
+      providerId: relationship.providerId,
+    }, { req, userId: patientId }, {
+      operation: 'CONSENT_REVOKED',
+      providerId: relationship.providerId,
+    });
 
     await prisma.providerPatient.update({
       where: { id },
@@ -335,9 +449,32 @@ router.delete(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship) {
+      // Audit log: Failed delete — relationship not found
+      await auditService.logAccess('provider_consent', id, { req, userId: patientId }, {
+        operation: 'DELETE',
+        success: false,
+        reason: 'relationship_not_found',
+      });
       throw new NotFoundError('Provider relationship not found');
     }
+
+    // Audit log: Patient permanently removing provider relationship (log before deletion)
+    await auditService.logDelete('provider_consent', id, {
+      providerId: relationship.providerId,
+      relationshipType: relationship.relationshipType,
+      status: relationship.status,
+      canViewBiomarkers: relationship.canViewBiomarkers,
+      canViewInsurance: relationship.canViewInsurance,
+      canViewDna: relationship.canViewDna,
+      canViewHealthNeeds: relationship.canViewHealthNeeds,
+      canEditData: relationship.canEditData,
+    }, { req, userId: patientId }, {
+      operation: 'RELATIONSHIP_DELETED',
+      providerId: relationship.providerId,
+    });
 
     await prisma.providerPatient.delete({ where: { id } });
 

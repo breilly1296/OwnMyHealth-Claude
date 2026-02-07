@@ -9,7 +9,7 @@
 import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { ValidationError, NotFoundError } from '../middleware/errorHandler.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseSBC } from '../services/pdfParser.js';
 import {
@@ -116,7 +116,7 @@ interface CreateBiomarkersOptions {
 
 /** Create biomarkers from OCR results - handles encryption and database creation */
 async function createBiomarkersFromOCRResult(
-  prisma: ReturnType<typeof getPrismaClient>,
+  prisma: { biomarker: ReturnType<typeof getPrismaClient>['biomarker'] },
   encryptionService: ReturnType<typeof getEncryptionService>,
   userSalt: string,
   options: CreateBiomarkersOptions
@@ -261,20 +261,22 @@ export async function uploadLabReport(
   const reportDateStr = ocrResult.metadata.labDate || extractDateFromText(ocrResult.text);
   const reportDate = reportDateStr ? new Date(reportDateStr) : new Date();
 
-  // Create biomarkers in database using shared helper
-  const createdBiomarkers = await createBiomarkersFromOCRResult(
-    prisma,
-    encryptionService,
-    userSalt,
-    {
-      userId,
-      biomarkers: ocrResult.biomarkers,
-      reportDate,
-      labName: labName || undefined,
-      notesPrefix: 'Extracted from lab report',
-      normalRangeSource: 'Lab Report',
-    }
-  );
+  // Create biomarkers in database using shared helper (with RLS)
+  const createdBiomarkers = await withRLSTransaction(userId, async (tx) => {
+    return createBiomarkersFromOCRResult(
+      tx,
+      encryptionService,
+      userSalt,
+      {
+        userId,
+        biomarkers: ocrResult.biomarkers,
+        reportDate,
+        labName: labName || undefined,
+        notesPrefix: 'Extracted from lab report',
+        normalRangeSource: 'Lab Report',
+      }
+    );
+  });
 
   // Audit log: successful upload and extraction
   await auditService.logCreate(LAB_REPORT_RESOURCE, 'BATCH', {
@@ -581,186 +583,188 @@ export async function uploadSBC(
   const rx = extractedData.rxBenefits || {};
   const emergency = extractedData.emergencyCoverage || {};
 
-  const createdPlan = await prisma.insurancePlan.create({
-    data: {
-      userId,
-      planName,
-      insurerName,
-      planType: extractedData.planType || 'PPO',
-      planIdNumber: extractedData.planIdNumber || null,
-      memberIdEncrypted: null, // User can add this later
-      groupIdEncrypted: null,
-      effectiveDate,
-      terminationDate: null,
-      premiumMonthly: extractedData.premiumMonthly ?? null,
-      deductibleIndividual: extractedData.deductibleIndividual ?? 0,
-      deductibleFamily:
-        extractedData.deductibleFamily ??
-        (extractedData.deductibleIndividual ? extractedData.deductibleIndividual * 2 : 0),
-      oopMaxIndividual: extractedData.oopMaxIndividual ?? 0,
-      oopMaxFamily:
-        extractedData.oopMaxFamily ??
-        (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : 0),
-      // Out-of-network financial limits
-      deductibleIndividualOutOfNetwork: extractedData.deductibleIndividualOutOfNetwork ?? null,
-      deductibleFamilyOutOfNetwork: extractedData.deductibleFamilyOutOfNetwork ?? null,
-      oopMaxIndividualOutOfNetwork: extractedData.oopMaxIndividualOutOfNetwork ?? null,
-      oopMaxFamilyOutOfNetwork: extractedData.oopMaxFamilyOutOfNetwork ?? null,
-      // Tracking fields start at 0
-      deductibleMetIndividual: 0,
-      deductibleMetFamily: 0,
-      oopMetIndividual: 0,
-      oopMetFamily: 0,
+  const createdPlan = await withRLSTransaction(userId, async (tx) => {
+    return tx.insurancePlan.create({
+      data: {
+        userId,
+        planName,
+        insurerName,
+        planType: extractedData.planType || 'PPO',
+        planIdNumber: extractedData.planIdNumber || null,
+        memberIdEncrypted: null, // User can add this later
+        groupIdEncrypted: null,
+        effectiveDate,
+        terminationDate: null,
+        premiumMonthly: extractedData.premiumMonthly ?? null,
+        deductibleIndividual: extractedData.deductibleIndividual ?? 0,
+        deductibleFamily:
+          extractedData.deductibleFamily ??
+          (extractedData.deductibleIndividual ? extractedData.deductibleIndividual * 2 : 0),
+        oopMaxIndividual: extractedData.oopMaxIndividual ?? 0,
+        oopMaxFamily:
+          extractedData.oopMaxFamily ??
+          (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : 0),
+        // Out-of-network financial limits
+        deductibleIndividualOutOfNetwork: extractedData.deductibleIndividualOutOfNetwork ?? null,
+        deductibleFamilyOutOfNetwork: extractedData.deductibleFamilyOutOfNetwork ?? null,
+        oopMaxIndividualOutOfNetwork: extractedData.oopMaxIndividualOutOfNetwork ?? null,
+        oopMaxFamilyOutOfNetwork: extractedData.oopMaxFamilyOutOfNetwork ?? null,
+        // Tracking fields start at 0
+        deductibleMetIndividual: 0,
+        deductibleMetFamily: 0,
+        oopMetIndividual: 0,
+        oopMetFamily: 0,
 
-      // Core copay fields - use top-level values, fall back to nested coverage objects
-      copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
-      copaySpecialist: extractedData.copaySpecialist ?? null,
-      copayUrgentCare: extractedData.copayUrgentCare ?? emergency.urgentCareCopay ?? null,
-      copayEmergency: extractedData.copayEmergency ?? emergency.emergencyRoomCopay ?? null,
-      copayTelehealth: extractedData.copayTelehealth ?? null,
-      copayLabWork: extractedData.copayLabWork ?? outpatient.labWorkCopay ?? null,
-      copayXray: extractedData.copayXray ?? outpatient.xrayCopay ?? null,
-      copayAdvancedImaging: extractedData.copayAdvancedImaging ?? outpatient.advancedImagingCopay ?? null,
-      coinsuranceRate: extractedData.coinsuranceRate ?? null,
+        // Core copay fields - use top-level values, fall back to nested coverage objects
+        copayPrimaryCare: extractedData.copayPrimaryCare ?? null,
+        copaySpecialist: extractedData.copaySpecialist ?? null,
+        copayUrgentCare: extractedData.copayUrgentCare ?? emergency.urgentCareCopay ?? null,
+        copayEmergency: extractedData.copayEmergency ?? emergency.emergencyRoomCopay ?? null,
+        copayTelehealth: extractedData.copayTelehealth ?? null,
+        copayLabWork: extractedData.copayLabWork ?? outpatient.labWorkCopay ?? null,
+        copayXray: extractedData.copayXray ?? outpatient.xrayCopay ?? null,
+        copayAdvancedImaging: extractedData.copayAdvancedImaging ?? outpatient.advancedImagingCopay ?? null,
+        coinsuranceRate: extractedData.coinsuranceRate ?? null,
 
-      // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
-      coinsurancePrimaryCare: extractedData.coinsurancePrimaryCare ?? null,
-      coinsuranceSpecialist: extractedData.coinsuranceSpecialist ?? null,
-      coinsuranceUrgentCare: extractedData.coinsuranceUrgentCare ?? emergency.urgentCareCoinsurance ?? null,
-      coinsuranceEmergency: extractedData.coinsuranceEmergency ?? emergency.emergencyRoomCoinsurance ?? null,
-      coinsuranceTelehealth: extractedData.coinsuranceTelehealth ?? null,
-      coinsuranceLabWork: extractedData.coinsuranceLabWork ?? outpatient.labWorkCoinsurance ?? null,
-      coinsuranceXray: extractedData.coinsuranceXray ?? outpatient.xrayCoinsurance ?? null,
-      coinsuranceAdvancedImaging: extractedData.coinsuranceAdvancedImaging ?? outpatient.advancedImagingCoinsurance ?? null,
+        // Per-service coinsurance (for plans with "X% after deductible" instead of copays)
+        coinsurancePrimaryCare: extractedData.coinsurancePrimaryCare ?? null,
+        coinsuranceSpecialist: extractedData.coinsuranceSpecialist ?? null,
+        coinsuranceUrgentCare: extractedData.coinsuranceUrgentCare ?? emergency.urgentCareCoinsurance ?? null,
+        coinsuranceEmergency: extractedData.coinsuranceEmergency ?? emergency.emergencyRoomCoinsurance ?? null,
+        coinsuranceTelehealth: extractedData.coinsuranceTelehealth ?? null,
+        coinsuranceLabWork: extractedData.coinsuranceLabWork ?? outpatient.labWorkCoinsurance ?? null,
+        coinsuranceXray: extractedData.coinsuranceXray ?? outpatient.xrayCoinsurance ?? null,
+        coinsuranceAdvancedImaging: extractedData.coinsuranceAdvancedImaging ?? outpatient.advancedImagingCoinsurance ?? null,
 
-      // Inpatient coverage
-      // Prefer per-day copay, fall back to per-admission
-      inpatientHospitalCopay: inpatient.hospitalCopayPerDay ?? inpatient.hospitalCopayPerAdmission ?? null,
-      inpatientHospitalCoinsurance: inpatient.hospitalCoinsurance ?? null,
-      inpatientMentalHealthCopay: inpatient.mentalHealthCopay ?? null,
-      inpatientMentalCoinsurance: inpatient.mentalHealthCoinsurance ?? null,
-      maternityCopay: inpatient.maternityCopay ?? null,
-      maternityCoinsurance: inpatient.maternityCoinsurance ?? null,
-      skilledNursingCopay: inpatient.skilledNursingCopay ?? null,
-      skilledNursingCoinsurance: inpatient.skilledNursingCoinsurance ?? null,
-      skilledNursingDaysLimit: inpatient.skilledNursingDaysLimit ?? null,
+        // Inpatient coverage
+        // Prefer per-day copay, fall back to per-admission
+        inpatientHospitalCopay: inpatient.hospitalCopayPerDay ?? inpatient.hospitalCopayPerAdmission ?? null,
+        inpatientHospitalCoinsurance: inpatient.hospitalCoinsurance ?? null,
+        inpatientMentalHealthCopay: inpatient.mentalHealthCopay ?? null,
+        inpatientMentalCoinsurance: inpatient.mentalHealthCoinsurance ?? null,
+        maternityCopay: inpatient.maternityCopay ?? null,
+        maternityCoinsurance: inpatient.maternityCoinsurance ?? null,
+        skilledNursingCopay: inpatient.skilledNursingCopay ?? null,
+        skilledNursingCoinsurance: inpatient.skilledNursingCoinsurance ?? null,
+        skilledNursingDaysLimit: inpatient.skilledNursingDaysLimit ?? null,
 
-      // Outpatient coverage
-      outpatientSurgeryCopay: outpatient.surgeryCopay ?? null,
-      outpatientSurgeryCoinsurance: outpatient.surgeryCoinsurance ?? null,
-      // Prefer individual therapy copay, fall back to group
-      outpatientMentalHealthCopay: outpatient.mentalHealthIndividualCopay ?? outpatient.mentalHealthGroupCopay ?? null,
-      outpatientMentalCoinsurance: outpatient.mentalHealthCoinsurance ?? null,
+        // Outpatient coverage
+        outpatientSurgeryCopay: outpatient.surgeryCopay ?? null,
+        outpatientSurgeryCoinsurance: outpatient.surgeryCoinsurance ?? null,
+        // Prefer individual therapy copay, fall back to group
+        outpatientMentalHealthCopay: outpatient.mentalHealthIndividualCopay ?? outpatient.mentalHealthGroupCopay ?? null,
+        outpatientMentalCoinsurance: outpatient.mentalHealthCoinsurance ?? null,
 
-      // Therapy/Rehab coverage
-      physicalTherapyCopay: therapy.physicalTherapyCopay ?? null,
-      physicalTherapyVisitsLimit: therapy.physicalTherapyVisitsLimit ?? null,
-      occupationalTherapyCopay: therapy.occupationalTherapyCopay ?? null,
-      occupationalTherapyVisitsLimit: therapy.occupationalTherapyVisitsLimit ?? null,
-      speechTherapyCopay: therapy.speechTherapyCopay ?? null,
-      speechTherapyVisitsLimit: therapy.speechTherapyVisitsLimit ?? null,
+        // Therapy/Rehab coverage
+        physicalTherapyCopay: therapy.physicalTherapyCopay ?? null,
+        physicalTherapyVisitsLimit: therapy.physicalTherapyVisitsLimit ?? null,
+        occupationalTherapyCopay: therapy.occupationalTherapyCopay ?? null,
+        occupationalTherapyVisitsLimit: therapy.occupationalTherapyVisitsLimit ?? null,
+        speechTherapyCopay: therapy.speechTherapyCopay ?? null,
+        speechTherapyVisitsLimit: therapy.speechTherapyVisitsLimit ?? null,
 
-      // Prescription (Rx) benefits
-      rxTier1Copay: rx.tier1Copay ?? null,
-      rxTier2Copay: rx.tier2Copay ?? null,
-      rxTier3Copay: rx.tier3Copay ?? null,
-      rxTier4Copay: rx.tier4Copay ?? null,
-      rxTier1Coinsurance: rx.tier1CoinsurancePercent ?? null,
-      rxTier2Coinsurance: rx.tier2CoinsurancePercent ?? null,
-      rxTier3Coinsurance: rx.tier3CoinsurancePercent ?? null,
-      rxTier4Coinsurance: rx.tier4CoinsurancePercent ?? null,
-      rxRetailDaysSupply: rx.retailDaysSupply ?? null,
-      rxMailOrderDaysSupply: rx.mailOrderDaysSupply ?? null,
-      rxDeductibleIndividual: rx.deductibleIndividual ?? null,
-      rxDeductibleFamily: rx.deductibleFamily ?? null,
-      rxOopMaxIndividual: rx.oopMaxIndividual ?? null,
-      rxOopMaxFamily: rx.oopMaxFamily ?? null,
+        // Prescription (Rx) benefits
+        rxTier1Copay: rx.tier1Copay ?? null,
+        rxTier2Copay: rx.tier2Copay ?? null,
+        rxTier3Copay: rx.tier3Copay ?? null,
+        rxTier4Copay: rx.tier4Copay ?? null,
+        rxTier1Coinsurance: rx.tier1CoinsurancePercent ?? null,
+        rxTier2Coinsurance: rx.tier2CoinsurancePercent ?? null,
+        rxTier3Coinsurance: rx.tier3CoinsurancePercent ?? null,
+        rxTier4Coinsurance: rx.tier4CoinsurancePercent ?? null,
+        rxRetailDaysSupply: rx.retailDaysSupply ?? null,
+        rxMailOrderDaysSupply: rx.mailOrderDaysSupply ?? null,
+        rxDeductibleIndividual: rx.deductibleIndividual ?? null,
+        rxDeductibleFamily: rx.deductibleFamily ?? null,
+        rxOopMaxIndividual: rx.oopMaxIndividual ?? null,
+        rxOopMaxFamily: rx.oopMaxFamily ?? null,
 
-      // Emergency/Ambulance coverage
-      ambulanceGroundCopay: emergency.ambulanceGroundCopay ?? null,
-      ambulanceGroundCoinsurance: emergency.ambulanceGroundCoinsurance ?? null,
-      ambulanceAirCopay: emergency.ambulanceAirCopay ?? null,
-      ambulanceAirCoinsurance: emergency.ambulanceAirCoinsurance ?? null,
+        // Emergency/Ambulance coverage
+        ambulanceGroundCopay: emergency.ambulanceGroundCopay ?? null,
+        ambulanceGroundCoinsurance: emergency.ambulanceGroundCoinsurance ?? null,
+        ambulanceAirCopay: emergency.ambulanceAirCopay ?? null,
+        ambulanceAirCoinsurance: emergency.ambulanceAirCoinsurance ?? null,
 
-      // Vision coverage
-      visionExamCopay: extractedData.visionCoverage?.examCopay ?? null,
-      visionExamFrequency: extractedData.visionCoverage?.examFrequency ?? null,
-      visionLensesAllowance: extractedData.visionCoverage?.lensesAllowance ?? null,
-      visionFramesAllowance: extractedData.visionCoverage?.framesAllowance ?? null,
-      visionContactsAllowance: extractedData.visionCoverage?.contactsAllowance ?? null,
+        // Vision coverage
+        visionExamCopay: extractedData.visionCoverage?.examCopay ?? null,
+        visionExamFrequency: extractedData.visionCoverage?.examFrequency ?? null,
+        visionLensesAllowance: extractedData.visionCoverage?.lensesAllowance ?? null,
+        visionFramesAllowance: extractedData.visionCoverage?.framesAllowance ?? null,
+        visionContactsAllowance: extractedData.visionCoverage?.contactsAllowance ?? null,
 
-      // Dental coverage
-      dentalPreventiveCoinsurance: extractedData.dentalCoverage?.preventiveCoinsurance ?? null,
-      dentalBasicCoinsurance: extractedData.dentalCoverage?.basicCoinsurance ?? null,
-      dentalMajorCoinsurance: extractedData.dentalCoverage?.majorCoinsurance ?? null,
-      dentalAnnualMax: extractedData.dentalCoverage?.annualMaximum ?? null,
-      dentalDeductible: extractedData.dentalCoverage?.deductible ?? null,
-      dentalOrthodontiaCoinsurance: extractedData.dentalCoverage?.orthodontiaCoinsurance ?? null,
-      dentalOrthodontiaLifetimeMax: extractedData.dentalCoverage?.orthodontiaLifetimeMax ?? null,
+        // Dental coverage
+        dentalPreventiveCoinsurance: extractedData.dentalCoverage?.preventiveCoinsurance ?? null,
+        dentalBasicCoinsurance: extractedData.dentalCoverage?.basicCoinsurance ?? null,
+        dentalMajorCoinsurance: extractedData.dentalCoverage?.majorCoinsurance ?? null,
+        dentalAnnualMax: extractedData.dentalCoverage?.annualMaximum ?? null,
+        dentalDeductible: extractedData.dentalCoverage?.deductible ?? null,
+        dentalOrthodontiaCoinsurance: extractedData.dentalCoverage?.orthodontiaCoinsurance ?? null,
+        dentalOrthodontiaLifetimeMax: extractedData.dentalCoverage?.orthodontiaLifetimeMax ?? null,
 
-      // DME coverage
-      dmeCopay: extractedData.dmeCoverage?.copay ?? null,
-      dmeCoinsurance: extractedData.dmeCoverage?.coinsurance ?? null,
+        // DME coverage
+        dmeCopay: extractedData.dmeCoverage?.copay ?? null,
+        dmeCoinsurance: extractedData.dmeCoverage?.coinsurance ?? null,
 
-      // Home Health coverage
-      homeHealthVisitCopay: extractedData.homeHealthCoverage?.visitCopay ?? null,
-      homeHealthVisitCoinsurance: extractedData.homeHealthCoverage?.visitCoinsurance ?? null,
-      homeHealthVisitLimit: extractedData.homeHealthCoverage?.visitLimit ?? null,
+        // Home Health coverage
+        homeHealthVisitCopay: extractedData.homeHealthCoverage?.visitCopay ?? null,
+        homeHealthVisitCoinsurance: extractedData.homeHealthCoverage?.visitCoinsurance ?? null,
+        homeHealthVisitLimit: extractedData.homeHealthCoverage?.visitLimit ?? null,
 
-      // Hospice coverage
-      hospiceInpatientCopay: extractedData.hospiceCoverage?.inpatientCopay ?? null,
-      hospiceInpatientCoinsurance: extractedData.hospiceCoverage?.inpatientCoinsurance ?? null,
-      hospiceRespiteCopay: extractedData.hospiceCoverage?.respiteCopay ?? null,
-      hospiceRespiteCoinsurance: extractedData.hospiceCoverage?.respiteCoinsurance ?? null,
-      hospiceRespiteDayLimit: extractedData.hospiceCoverage?.respiteDayLimit ?? null,
+        // Hospice coverage
+        hospiceInpatientCopay: extractedData.hospiceCoverage?.inpatientCopay ?? null,
+        hospiceInpatientCoinsurance: extractedData.hospiceCoverage?.inpatientCoinsurance ?? null,
+        hospiceRespiteCopay: extractedData.hospiceCoverage?.respiteCopay ?? null,
+        hospiceRespiteCoinsurance: extractedData.hospiceCoverage?.respiteCoinsurance ?? null,
+        hospiceRespiteDayLimit: extractedData.hospiceCoverage?.respiteDayLimit ?? null,
 
-      // Additional therapy types
-      chiropracticCopay: therapy.chiropracticCopay ?? null,
-      chiropracticVisitsLimit: therapy.chiropracticVisitsLimit ?? null,
-      acupunctureCopay: therapy.acupunctureCopay ?? null,
-      acupunctureVisitsLimit: therapy.acupunctureVisitsLimit ?? null,
-      cardiacRehabCopay: therapy.cardiacRehabCopay ?? null,
-      cardiacRehabVisitsLimit: therapy.cardiacRehabVisitsLimit ?? null,
-      pulmonaryRehabCopay: therapy.pulmonaryRehabCopay ?? null,
-      pulmonaryRehabVisitsLimit: therapy.pulmonaryRehabVisitsLimit ?? null,
+        // Additional therapy types
+        chiropracticCopay: therapy.chiropracticCopay ?? null,
+        chiropracticVisitsLimit: therapy.chiropracticVisitsLimit ?? null,
+        acupunctureCopay: therapy.acupunctureCopay ?? null,
+        acupunctureVisitsLimit: therapy.acupunctureVisitsLimit ?? null,
+        cardiacRehabCopay: therapy.cardiacRehabCopay ?? null,
+        cardiacRehabVisitsLimit: therapy.cardiacRehabVisitsLimit ?? null,
+        pulmonaryRehabCopay: therapy.pulmonaryRehabCopay ?? null,
+        pulmonaryRehabVisitsLimit: therapy.pulmonaryRehabVisitsLimit ?? null,
 
-      // JSON lists (stored as stringified JSON)
-      preventiveServicesList: extractedData.preventiveServices?.length
-        ? JSON.stringify(extractedData.preventiveServices)
-        : null,
-      exclusionsList: extractedData.exclusions?.length
-        ? JSON.stringify(extractedData.exclusions)
-        : null,
-      priorAuthRequirements: extractedData.priorAuthRequirements?.length
-        ? JSON.stringify(extractedData.priorAuthRequirements)
-        : null,
-      servicesWithLimits: extractedData.servicesWithLimits?.length
-        ? JSON.stringify(extractedData.servicesWithLimits)
-        : null,
+        // JSON lists (stored as stringified JSON)
+        preventiveServicesList: extractedData.preventiveServices?.length
+          ? JSON.stringify(extractedData.preventiveServices)
+          : null,
+        exclusionsList: extractedData.exclusions?.length
+          ? JSON.stringify(extractedData.exclusions)
+          : null,
+        priorAuthRequirements: extractedData.priorAuthRequirements?.length
+          ? JSON.stringify(extractedData.priorAuthRequirements)
+          : null,
+        servicesWithLimits: extractedData.servicesWithLimits?.length
+          ? JSON.stringify(extractedData.servicesWithLimits)
+          : null,
 
-      // Source tracking
-      extractedFromSbc: true,
-      sbcExtractionConfidence: extractedData.extractionConfidence,
-      isActive: true,
-      isPrimary: false,
-      benefits: {
-        create: extractedData.benefits.map((benefit) => ({
-          serviceName: benefit.serviceName,
-          serviceCategory: benefit.serviceCategory,
-          inNetworkCovered: benefit.inNetworkCovered,
-          inNetworkCopay: benefit.inNetworkCopay ?? null,
-          inNetworkCoinsurance: benefit.inNetworkCoinsurance ?? null,
-          inNetworkDeductible: benefit.inNetworkDeductibleApplies,
-          outNetworkCovered: benefit.outNetworkCovered,
-          outNetworkCopay: benefit.outNetworkCopay ?? null,
-          outNetworkCoinsurance: benefit.outNetworkCoinsurance ?? null,
-          outNetworkDeductible: benefit.outNetworkDeductibleApplies,
-          limitations: benefit.limitations ?? null,
-          preAuthRequired: benefit.preAuthRequired,
-        })),
+        // Source tracking
+        extractedFromSbc: true,
+        sbcExtractionConfidence: extractedData.extractionConfidence,
+        isActive: true,
+        isPrimary: false,
+        benefits: {
+          create: extractedData.benefits.map((benefit) => ({
+            serviceName: benefit.serviceName,
+            serviceCategory: benefit.serviceCategory,
+            inNetworkCovered: benefit.inNetworkCovered,
+            inNetworkCopay: benefit.inNetworkCopay ?? null,
+            inNetworkCoinsurance: benefit.inNetworkCoinsurance ?? null,
+            inNetworkDeductible: benefit.inNetworkDeductibleApplies,
+            outNetworkCovered: benefit.outNetworkCovered,
+            outNetworkCopay: benefit.outNetworkCopay ?? null,
+            outNetworkCoinsurance: benefit.outNetworkCoinsurance ?? null,
+            outNetworkDeductible: benefit.outNetworkDeductibleApplies,
+            limitations: benefit.limitations ?? null,
+            preAuthRequired: benefit.preAuthRequired,
+          })),
+        },
       },
-    },
-    include: { benefits: true },
+      include: { benefits: true },
+    });
   });
 
   // Audit log: successful upload and extraction
@@ -838,10 +842,12 @@ export async function reanalyzePlan(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
-  // Verify the plan exists and belongs to this user
-  const existingPlan = await prisma.insurancePlan.findFirst({
-    where: { id: planId, userId },
-    include: { benefits: true },
+  // Verify the plan exists and belongs to this user (with RLS)
+  const existingPlan = await withRLSTransaction(userId, async (tx) => {
+    return tx.insurancePlan.findFirst({
+      where: { id: planId, userId },
+      include: { benefits: true },
+    });
   });
 
   if (!existingPlan) {
@@ -1088,10 +1094,10 @@ export async function reanalyzePlan(
   const rx = extractedData.rxBenefits || {};
   const emergency = extractedData.emergencyCoverage || {};
 
-  // Update the plan with new extracted data
+  // Update the plan with new extracted data (with RLS)
   // Preserve user-entered data: memberId, groupId, tracking fields (deductibleMet, oopMet)
   // Preserve user preferences: isActive, isPrimary
-  const updatedPlan = await prisma.$transaction(async (tx) => {
+  const updatedPlan = await withRLSTransaction(userId, async (tx) => {
     // Delete existing benefits
     await tx.insuranceBenefit.deleteMany({
       where: { planId },
@@ -1398,59 +1404,62 @@ export async function uploadLabResultOCR(
     });
   }
 
-  // Create UserFile record if GCS upload succeeded
-  let userFile: { id: string; filename: string; storageKey: string } | null = null;
-  if (storageKey) {
-    try {
-      const createdFile = await prisma.userFile.create({
-        data: {
-          id: fileId,
-          userId,
-          filename: labName
-            ? `${labName} - ${reportDate.toLocaleDateString()}`
-            : file.originalname,
-          originalFilename: file.originalname,
-          fileType: file.mimetype,
-          fileSize: file.size,
-          storageKey,
-          labName: labName || null,
-          labDate: reportDate,
-          biomarkersExtracted: ocrResult.biomarkers.length,
-          extractionConfidence: avgConfidence,
-        },
-      });
-      userFile = {
-        id: createdFile.id,
-        filename: createdFile.filename,
-        storageKey: createdFile.storageKey,
-      };
-      logger.info('UserFile record created', { data: { fileId: createdFile.id, userId } });
-    } catch (error) {
-      logger.error('Failed to create UserFile record', {
-        data: {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          fileId,
-          userId,
-        },
-      });
+  // Create UserFile record and biomarkers in database (with RLS)
+  const { createdBiomarkers, userFile } = await withRLSTransaction(userId, async (tx) => {
+    let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
+    if (storageKey) {
+      try {
+        const createdFile = await tx.userFile.create({
+          data: {
+            id: fileId,
+            userId,
+            filename: labName
+              ? `${labName} - ${reportDate.toLocaleDateString()}`
+              : file.originalname,
+            originalFilename: file.originalname,
+            fileType: file.mimetype,
+            fileSize: file.size,
+            storageKey,
+            labName: labName || null,
+            labDate: reportDate,
+            biomarkersExtracted: ocrResult.biomarkers.length,
+            extractionConfidence: avgConfidence,
+          },
+        });
+        fileRecord = {
+          id: createdFile.id,
+          filename: createdFile.filename,
+          storageKey: createdFile.storageKey,
+        };
+        logger.info('UserFile record created', { data: { fileId: createdFile.id, userId } });
+      } catch (error) {
+        logger.error('Failed to create UserFile record', {
+          data: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            fileId,
+            userId,
+          },
+        });
+      }
     }
-  }
 
-  // Create biomarkers in database using shared helper
-  const createdBiomarkers = await createBiomarkersFromOCRResult(
-    prisma,
-    encryptionService,
-    userSalt,
-    {
-      userId,
-      biomarkers: ocrResult.biomarkers,
-      reportDate,
-      labName: labName || undefined,
-      notesPrefix: 'OCR extracted from',
-      normalRangeSource: 'OCR Extraction',
-      userFileId: userFile?.id,
-    }
-  );
+    const createdBiomarkers = await createBiomarkersFromOCRResult(
+      tx,
+      encryptionService,
+      userSalt,
+      {
+        userId,
+        biomarkers: ocrResult.biomarkers,
+        reportDate,
+        labName: labName || undefined,
+        notesPrefix: 'OCR extracted from',
+        normalRangeSource: 'OCR Extraction',
+        userFileId: fileRecord?.id,
+      }
+    );
+
+    return { createdBiomarkers, userFile: fileRecord };
+  });
 
   // Audit log: successful upload and extraction
   await auditService.logCreate(

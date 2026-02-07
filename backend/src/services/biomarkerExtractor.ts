@@ -8,6 +8,9 @@
  */
 
 import { ALL_BIOMARKERS, type ExtractedBiomarker } from './biomarkerPatterns.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.createServiceLogger('BiomarkerExtractor');
 
 // ============================================
 // EXTRACTION HELPER CONSTANTS
@@ -83,10 +86,10 @@ function isReferenceRangeContext(textBeforeValue: string): boolean {
 function extractResultValue(line: string, biomarkerNameEndIndex: number): { value: number; rawMatch: string } | null {
   const afterName = line.substring(biomarkerNameEndIndex);
 
-  console.log(`[EXTRACT_VALUE] After name: "${afterName.substring(0, 80)}..."`);
+  log.debug('After name text', { text: afterName.substring(0, 80) });
 
   if (isEducationalText(afterName)) {
-    console.log(`[SKIP] Educational text detected: "${afterName.substring(0, 50)}..."`);
+    log.debug('Skipping educational text');
     return null;
   }
 
@@ -94,7 +97,7 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
   const resultMatch = afterName.match(/^\s*(\d+\.?\d*)\s*([HL])?\s/i);
   if (resultMatch) {
     const value = parseFloat(resultMatch[1]);
-    console.log(`[EXTRACT_VALUE] Pattern 1 matched: value=${value}, flag=${resultMatch[2] || 'none'}`);
+    log.debug('Pattern 1 matched', { value, flag: resultMatch[2] || 'none' });
     if (!isNaN(value) && value >= 0 && value < 100000) {
       return { value, rawMatch: line };
     }
@@ -104,7 +107,7 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
   const unitMatch = afterName.match(/^\s*(\d+\.?\d*)\s*(?:mg|g|%|K\/uL|M\/uL|mL|uL|fL|pg|ng|IU|U|mmol|umol|mEq|ratio)/i);
   if (unitMatch) {
     const value = parseFloat(unitMatch[1]);
-    console.log(`[EXTRACT_VALUE] Pattern 2 (with unit) matched: value=${value}`);
+    log.debug('Pattern 2 matched', { value });
     if (!isNaN(value) && value >= 0 && value < 100000) {
       return { value, rawMatch: line };
     }
@@ -116,14 +119,14 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
     const beforeNumber = afterName.substring(0, afterName.indexOf(lenientMatch[1]));
     if (!REFERENCE_RANGE_INDICATORS.some(pattern => pattern.test(beforeNumber))) {
       const value = parseFloat(lenientMatch[1]);
-      console.log(`[EXTRACT_VALUE] Pattern 3 (lenient) matched: value=${value}`);
+      log.debug('Pattern 3 matched', { value });
       if (!isNaN(value) && value >= 0 && value < 100000) {
         return { value, rawMatch: line };
       }
     }
   }
 
-  console.log(`[EXTRACT_VALUE] No pattern matched for: "${afterName.substring(0, 50)}"`);
+  log.debug('No value pattern matched', { text: afterName.substring(0, 50) });
   return null;
 }
 
@@ -132,14 +135,14 @@ function extractResultValue(line: string, biomarkerNameEndIndex: number): { valu
  */
 function looksLikeResultRow(line: string): boolean {
   if (line.length > 200) {
-    console.log(`[SKIP_ROW] Line too long (${line.length} chars): "${line.substring(0, 50)}..."`);
+    log.debug('Skipping long line', { length: line.length });
     return false;
   }
 
   if (line.length < 10) return false;
 
   if (isEducationalText(line)) {
-    console.log(`[SKIP_ROW] Educational text: "${line.substring(0, 50)}..."`);
+    log.debug('Skipping educational line');
     return false;
   }
 
@@ -161,7 +164,7 @@ function looksLikeResultRow(line: string): boolean {
   ];
 
   if (skipStarters.some(pattern => pattern.test(line.trim()))) {
-    console.log(`[SKIP_ROW] Non-result starter: "${line.substring(0, 50)}..."`);
+    log.debug('Skipping non-result line');
     return false;
   }
 
@@ -204,7 +207,7 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
   const results: ExtractedBiomarker[] = [];
   const foundNames = new Set<string>();
 
-  console.log('[PATTERN EXTRACTION] Starting pattern-based extraction');
+  log.debug('Starting pattern-based extraction');
 
   for (const biomarker of ALL_BIOMARKERS) {
     if (foundNames.has(biomarker.name)) continue;
@@ -222,20 +225,20 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
       if (isNaN(value)) continue;
       if (value < -100 || value > 100000) continue;
 
-      console.log(`[PATTERN] Candidate for ${biomarker.name}: value=${value}, match="${match[0].substring(0, 60)}"`);
+      log.debug('Pattern candidate', { name: biomarker.name, value });
 
       const contextStart = Math.max(0, match.index - 100);
       const contextEnd = Math.min(text.length, match.index + match[0].length + 100);
       const context = text.substring(contextStart, contextEnd);
 
       if (isEducationalText(context)) {
-        console.log(`[SKIP PATTERN] Educational context for ${biomarker.name}: "${match[0].substring(0, 50)}"`);
+        log.debug('Skipping educational context', { name: biomarker.name });
         continue;
       }
 
       const textBeforeValue = text.substring(Math.max(0, match.index), match.index + match[0].indexOf(rawValue));
       if (isReferenceRangeContext(textBeforeValue)) {
-        console.log(`[SKIP PATTERN] Reference range context for ${biomarker.name}: "${match[0].substring(0, 50)}"`);
+        log.debug('Skipping reference range context', { name: biomarker.name });
         continue;
       }
 
@@ -245,13 +248,13 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
       const rangePatternBefore = /[-–]\s*$/;
       const rangePatternAfter = /^\s*[-–]\s*\d/;
       if (rangePatternBefore.test(beforeMatch) || rangePatternAfter.test(afterMatch)) {
-        console.log(`[SKIP PATTERN] Value ${value} appears to be part of range for ${biomarker.name}`);
+        log.debug('Skipping range value', { name: biomarker.name, value });
         continue;
       }
 
       const range = biomarker.normalRange;
       if (value < range.min * 0.01 || value > range.max * 100) {
-        console.log(`[SKIP PATTERN] Value ${value} out of reasonable range for ${biomarker.name} (expected ${range.min}-${range.max})`);
+        log.debug('Value out of range', { name: biomarker.name, value, expected: `${range.min}-${range.max}` });
         continue;
       }
 
@@ -272,12 +275,12 @@ function extractWithPatterns(text: string): ExtractedBiomarker[] {
         rawMatch: match[0].substring(0, 100),
       });
 
-      console.log(`[PATTERN MATCH] ${biomarker.name}: ${value} ${biomarker.defaultUnit}`);
+      log.debug('Pattern match found', { name: biomarker.name, value, unit: biomarker.defaultUnit });
       break;
     }
   }
 
-  console.log(`[PATTERN EXTRACTION] Found ${results.length} biomarkers`);
+  log.debug('Pattern extraction complete', { count: results.length });
   return results;
 }
 
@@ -289,9 +292,7 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
   const foundNames = new Set<string>();
   const lines = text.split('\n');
 
-  console.log(`[LINE ANALYSIS] Processing ${lines.length} lines`);
-  console.log('[LINE ANALYSIS] First 30 lines:');
-  lines.slice(0, 30).forEach((line, i) => console.log(`  ${i}: "${line.substring(0, 80)}"`));
+  log.debug('Processing lines', { lineCount: lines.length });
 
   const usedValueLines = new Set<number>();
 
@@ -320,7 +321,7 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
 
       if (matchedNameEnd === -1) continue;
 
-      console.log(`[LINE ${i}] Found biomarker "${matchedName}" in line: "${line}"`);
+      log.debug('Found biomarker in line', { lineIndex: i, name: matchedName });
 
       let extractedValue: number | null = null;
       let rawMatch = line;
@@ -330,7 +331,7 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
       if (sameLineExtraction) {
         extractedValue = sameLineExtraction.value;
         rawMatch = sameLineExtraction.rawMatch;
-        console.log(`[LINE ${i}] Same-line extraction: value=${extractedValue}`);
+        log.debug('Same-line extraction', { lineIndex: i, value: extractedValue });
       }
 
       if (extractedValue === null && isNameOnlyLine(line, matchedNameEnd)) {
@@ -344,23 +345,23 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
               extractedValue = valueResult.value;
               valueLineIndex = nextLineIndex;
               rawMatch = `${line} | ${nextLine}`;
-              console.log(`[LINE ${i}] Multi-line: "${matchedName}" = ${extractedValue} (from line ${valueLineIndex})`);
+              log.debug('Multi-line extraction', { lineIndex: i, name: matchedName, value: extractedValue, valueLineIndex });
               usedValueLines.add(valueLineIndex);
             } else {
-              console.log(`[LINE ${i}] Next line not a value: "${nextLine.substring(0, 30)}"`);
+              log.debug('Next line not a value', { lineIndex: i });
             }
           }
         }
       }
 
       if (extractedValue === null) {
-        console.log(`[LINE ${i}] No value extracted for ${biomarker.name}`);
+        log.debug('No value extracted', { lineIndex: i, name: biomarker.name });
         continue;
       }
 
       const range = biomarker.normalRange;
       if (extractedValue < range.min * 0.01 || extractedValue > range.max * 100) {
-        console.log(`[LINE ${i}] Value ${extractedValue} out of range for ${biomarker.name} (expected ${range.min * 0.01}-${range.max * 100})`);
+        log.debug('Value out of range', { lineIndex: i, name: biomarker.name, value: extractedValue });
         continue;
       }
 
@@ -376,12 +377,12 @@ function extractFromLines(text: string): ExtractedBiomarker[] {
         rawMatch: rawMatch.substring(0, 150),
       });
 
-      console.log(`[LINE MATCH] ${biomarker.name}: ${extractedValue} ${biomarker.defaultUnit} (lines ${i}-${valueLineIndex})`);
+      log.debug('Line match found', { name: biomarker.name, value: extractedValue, unit: biomarker.defaultUnit });
       break;
     }
   }
 
-  console.log(`[LINE ANALYSIS] Found ${results.length} biomarkers`);
+  log.debug('Line analysis complete', { count: results.length });
   return results;
 }
 
@@ -392,7 +393,7 @@ function extractWithNewlineSpanning(text: string): ExtractedBiomarker[] {
   const results: ExtractedBiomarker[] = [];
   const foundNames = new Set<string>();
 
-  console.log('[NEWLINE-SPAN] Starting newline-spanning extraction');
+  log.debug('Starting newline-spanning extraction');
 
   for (const biomarker of ALL_BIOMARKERS) {
     if (foundNames.has(biomarker.name)) continue;
@@ -412,7 +413,7 @@ function extractWithNewlineSpanning(text: string): ExtractedBiomarker[] {
       if (match && match.index !== undefined) {
         const beforeMatch = text.substring(Math.max(0, match.index - 5), match.index);
         if (/[<>–-]\s*$/.test(beforeMatch)) {
-          console.log(`[NEWLINE-SPAN] Skipping ${biomarker.name}: preceded by range indicator`);
+          log.debug('Skipping range indicator', { name: biomarker.name });
           continue;
         }
       }
@@ -424,7 +425,7 @@ function extractWithNewlineSpanning(text: string): ExtractedBiomarker[] {
 
         const range = biomarker.normalRange;
         if (value < range.min * 0.01 || value > range.max * 100) {
-          console.log(`[NEWLINE-SPAN] Skipping ${biomarker.name}: ${value} out of range (${range.min}-${range.max})`);
+          log.debug('Value out of range', { name: biomarker.name, value, expected: `${range.min}-${range.max}` });
           continue;
         }
 
@@ -440,13 +441,13 @@ function extractWithNewlineSpanning(text: string): ExtractedBiomarker[] {
           rawMatch: match[0].substring(0, 100),
         });
 
-        console.log(`[NEWLINE-SPAN] ${biomarker.name}: ${value}${match[2] ? ' ' + match[2] : ''} ${biomarker.defaultUnit}`);
+        log.debug('Newline-span match', { name: biomarker.name, value, unit: biomarker.defaultUnit });
         break;
       }
     }
   }
 
-  console.log(`[NEWLINE-SPAN] Found ${results.length} biomarkers`);
+  log.debug('Newline-span extraction complete', { count: results.length });
   return results;
 }
 
@@ -458,27 +459,19 @@ function extractWithNewlineSpanning(text: string): ExtractedBiomarker[] {
  * Hybrid extraction: Try multiple strategies and merge results
  */
 export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
-  console.log('[EXTRACTION] ========================================');
-  console.log('[EXTRACTION] Starting hybrid biomarker extraction');
-  console.log(`[EXTRACTION] Text length: ${text.length} chars`);
-  console.log('[EXTRACTION] Text preview (first 500 chars):');
-  console.log(text.substring(0, 500));
-  console.log('[EXTRACTION] ========================================');
+  log.debug('Starting hybrid biomarker extraction', { textLength: text.length });
 
   // Strategy 1: Line-by-line extraction (for properly formatted tables)
   const lineResults = extractFromLines(text);
-  console.log(`[EXTRACTION] Line extraction found: ${lineResults.length} biomarkers`);
-  lineResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
+  log.debug('Line extraction results', { count: lineResults.length, results: lineResults.map(r => `${r.name}: ${r.value} ${r.unit}`) });
 
   // Strategy 2: Newline-spanning patterns (for Document AI split columns)
   const newlineSpanResults = extractWithNewlineSpanning(text);
-  console.log(`[EXTRACTION] Newline-span extraction found: ${newlineSpanResults.length} biomarkers`);
-  newlineSpanResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
+  log.debug('Newline-span extraction results', { count: newlineSpanResults.length, results: newlineSpanResults.map(r => `${r.name}: ${r.value} ${r.unit}`) });
 
   // Strategy 3: Traditional regex patterns (fallback)
   const patternResults = extractWithPatterns(text);
-  console.log(`[EXTRACTION] Pattern extraction found: ${patternResults.length} biomarkers`);
-  patternResults.forEach(r => console.log(`  - ${r.name}: ${r.value} ${r.unit}`));
+  log.debug('Pattern extraction results', { count: patternResults.length, results: patternResults.map(r => `${r.name}: ${r.value} ${r.unit}`) });
 
   // Merge results: line-based > newline-span > pattern-based
   const foundNames = new Set<string>();
@@ -505,10 +498,7 @@ export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
     }
   }
 
-  console.log('[EXTRACTION] ========================================');
-  console.log(`[EXTRACTION] Total unique biomarkers: ${combined.length}`);
-  combined.forEach(r => console.log(`  FINAL: ${r.name}: ${r.value} ${r.unit} (confidence: ${r.confidence})`));
-  console.log('[EXTRACTION] ========================================');
+  log.debug('Extraction complete', { totalCount: combined.length, results: combined.map(r => `${r.name}: ${r.value} ${r.unit} (${r.confidence})`) });
 
   return combined;
 }

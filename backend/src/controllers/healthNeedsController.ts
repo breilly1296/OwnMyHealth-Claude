@@ -9,7 +9,7 @@
 import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -82,13 +82,15 @@ export async function getHealthNeeds(
     where.urgency = urgencyFilter as 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE';
   }
 
-  const needs = await prisma.healthNeed.findMany({
-    where,
-    orderBy: [
-      // Sort by urgency (IMMEDIATE first)
-      { urgency: 'asc' },
-      { createdAt: 'desc' },
-    ],
+  const needs = await withRLSTransaction(userId, async (tx) => {
+    return tx.healthNeed.findMany({
+      where,
+      orderBy: [
+        // Sort by urgency (IMMEDIATE first)
+        { urgency: 'asc' },
+        { createdAt: 'desc' },
+      ],
+    });
   });
 
   // Custom sort to put IMMEDIATE first (Prisma doesn't support custom enum ordering)
@@ -135,8 +137,10 @@ export async function getHealthNeed(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const need = await prisma.healthNeed.findFirst({
-    where: { id, userId },
+  const need = await withRLSTransaction(userId, async (tx) => {
+    return tx.healthNeed.findFirst({
+      where: { id, userId },
+    });
   });
 
   if (!need) {
@@ -170,16 +174,18 @@ export async function createHealthNeed(
   // Encrypt description
   const descriptionEncrypted = encryptionService.encrypt(description, userSalt);
 
-  const need = await prisma.healthNeed.create({
-    data: {
-      userId,
-      needType,
-      name,
-      descriptionEncrypted,
-      urgency,
-      status: 'PENDING',
-      relatedBiomarkerIds: relatedBiomarkerIds || [],
-    },
+  const need = await withRLSTransaction(userId, async (tx) => {
+    return tx.healthNeed.create({
+      data: {
+        userId,
+        needType,
+        name,
+        descriptionEncrypted,
+        urgency,
+        status: 'PENDING',
+        relatedBiomarkerIds: relatedBiomarkerIds || [],
+      },
+    });
   });
 
   // Audit log: CREATE health need
@@ -211,14 +217,6 @@ export async function updateHealthNeed(
   const encryptionService = getEncryptionService();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const existing = await prisma.healthNeed.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existing) {
-    throw new NotFoundError('Health need not found');
-  }
-
   // Build update data
   const updateData: Record<string, unknown> = {};
 
@@ -230,9 +228,21 @@ export async function updateHealthNeed(
   if (urgency !== undefined) updateData.urgency = urgency;
   if (relatedBiomarkerIds !== undefined) updateData.relatedBiomarkerIds = relatedBiomarkerIds;
 
-  const updated = await prisma.healthNeed.update({
-    where: { id },
-    data: updateData,
+  const { existing, updated } = await withRLSTransaction(userId, async (tx) => {
+    const existing = await tx.healthNeed.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Health need not found');
+    }
+
+    const updated = await tx.healthNeed.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return { existing, updated };
   });
 
   // Audit log: UPDATE health need
@@ -268,14 +278,6 @@ export async function updateHealthNeedStatus(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const existing = await prisma.healthNeed.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existing) {
-    throw new NotFoundError('Health need not found');
-  }
-
   const updateData: { status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'; resolvedAt?: Date } = {
     status: status as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'
   };
@@ -284,9 +286,21 @@ export async function updateHealthNeedStatus(
     updateData.resolvedAt = new Date();
   }
 
-  const updated = await prisma.healthNeed.update({
-    where: { id },
-    data: updateData,
+  const { existing, updated } = await withRLSTransaction(userId, async (tx) => {
+    const existing = await tx.healthNeed.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Health need not found');
+    }
+
+    const updated = await tx.healthNeed.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return { existing, updated };
   });
 
   // Audit log: UPDATE health need status
@@ -315,24 +329,28 @@ export async function deleteHealthNeed(
 
   const prisma = getPrismaClient();
 
-  const need = await prisma.healthNeed.findFirst({
-    where: { id, userId },
+  const need = await withRLSTransaction(userId, async (tx) => {
+    const need = await tx.healthNeed.findFirst({
+      where: { id, userId },
+    });
+
+    if (!need) {
+      throw new NotFoundError('Health need not found');
+    }
+
+    await tx.healthNeed.delete({
+      where: { id },
+    });
+
+    return need;
   });
 
-  if (!need) {
-    throw new NotFoundError('Health need not found');
-  }
-
-  // Audit log: DELETE health need (log before deletion)
+  // Audit log: DELETE health need
   const auditService = getAuditLogService(prisma);
   await auditService.logDelete(RESOURCE_TYPE, id, {
     name: need.name,
     needType: need.needType,
   }, { req, userId });
-
-  await prisma.healthNeed.delete({
-    where: { id },
-  });
 
   const response: ApiResponse = {
     success: true,
@@ -351,10 +369,19 @@ export async function analyzeHealthNeeds(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  // Get user's biomarkers that are out of range
-  const outOfRangeBiomarkers = await prisma.biomarker.findMany({
-    where: { userId, isOutOfRange: true },
-    select: { id: true, name: true, category: true },
+  const { outOfRangeBiomarkers, existingConditions } = await withRLSTransaction(userId, async (tx) => {
+    // Get user's biomarkers that are out of range
+    const outOfRangeBiomarkers = await tx.biomarker.findMany({
+      where: { userId, isOutOfRange: true },
+      select: { id: true, name: true, category: true },
+    });
+
+    // Get existing health needs marked as conditions
+    const existingConditions = await tx.healthNeed.findMany({
+      where: { userId, needType: 'CONDITION' },
+    });
+
+    return { outOfRangeBiomarkers, existingConditions };
   });
 
   // Generate recommendations based on biomarkers
@@ -384,11 +411,6 @@ export async function analyzeHealthNeeds(
   recommendations.push('Schedule annual physical examination');
   recommendations.push('Maintain regular exercise routine');
   recommendations.push('Ensure adequate sleep and stress management');
-
-  // Get existing health needs marked as conditions
-  const existingConditions = await prisma.healthNeed.findMany({
-    where: { userId, needType: 'CONDITION' },
-  });
 
   const decryptedConditions = existingConditions.map((c) => toResponse(c, userSalt));
 
@@ -425,24 +447,26 @@ export async function getHealthNeedsSummary(
 
   const prisma = getPrismaClient();
 
-  // Run all count queries in parallel to avoid N+1 pattern
-  const [statusCounts, urgencyCounts, typeCounts] = await Promise.all([
-    prisma.healthNeed.groupBy({
-      by: ['status'],
-      where: { userId },
-      _count: { status: true },
-    }),
-    prisma.healthNeed.groupBy({
-      by: ['urgency'],
-      where: { userId },
-      _count: { urgency: true },
-    }),
-    prisma.healthNeed.groupBy({
-      by: ['needType'],
-      where: { userId },
-      _count: { needType: true },
-    }),
-  ]);
+  // Run all count queries in parallel inside RLS transaction
+  const [statusCounts, urgencyCounts, typeCounts] = await withRLSTransaction(userId, async (tx) => {
+    return Promise.all([
+      tx.healthNeed.groupBy({
+        by: ['status'],
+        where: { userId },
+        _count: { status: true },
+      }),
+      tx.healthNeed.groupBy({
+        by: ['urgency'],
+        where: { userId },
+        _count: { urgency: true },
+      }),
+      tx.healthNeed.groupBy({
+        by: ['needType'],
+        where: { userId },
+        _count: { needType: true },
+      }),
+    ]);
+  });
 
   const summary = {
     byStatus: Object.fromEntries(
@@ -495,8 +519,8 @@ export async function bulkCreateHealthNeeds(
   const userSalt = await getUserEncryptionSalt(userId);
   const auditService = getAuditLogService(prisma);
 
-  // Transaction ensures all creates succeed or fail together
-  const createdRecords = await prisma.$transaction(async (tx) => {
+  // Transaction with RLS ensures all creates succeed or fail together
+  const createdRecords = await withRLSTransaction(userId, async (tx) => {
     const records: { created: PrismaHealthNeed; need: typeof needs[number] }[] = [];
     for (const need of needs) {
       const created = await tx.healthNeed.create({

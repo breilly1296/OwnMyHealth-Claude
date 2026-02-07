@@ -9,7 +9,7 @@
 import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { NotFoundError, ValidationError } from '../middleware/errorHandler.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -174,18 +174,20 @@ export async function getHealthGoals(
     where.category = categoryFilter;
   }
 
-  const goals = await prisma.healthGoal.findMany({
-    where,
-    include: {
-      progressHistory: {
-        orderBy: { recordedAt: 'desc' },
-        take: 10, // Last 10 progress entries
+  const goals = await withRLSTransaction(userId, async (tx) => {
+    return tx.healthGoal.findMany({
+      where,
+      include: {
+        progressHistory: {
+          orderBy: { recordedAt: 'desc' },
+          take: 10, // Last 10 progress entries
+        },
       },
-    },
-    orderBy: [
-      { status: 'asc' }, // Active goals first
-      { targetDate: 'asc' }, // Nearest target date first
-    ],
+      orderBy: [
+        { status: 'asc' }, // Active goals first
+        { targetDate: 'asc' }, // Nearest target date first
+      ],
+    });
   });
 
   const decryptedGoals = goals.map((g) => toResponse(g, userSalt));
@@ -218,13 +220,15 @@ export async function getHealthGoal(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const goal = await prisma.healthGoal.findFirst({
-    where: { id, userId },
-    include: {
-      progressHistory: {
-        orderBy: { recordedAt: 'desc' },
+  const goal = await withRLSTransaction(userId, async (tx) => {
+    return tx.healthGoal.findFirst({
+      where: { id, userId },
+      include: {
+        progressHistory: {
+          orderBy: { recordedAt: 'desc' },
+        },
       },
-    },
+    });
   });
 
   if (!goal) {
@@ -295,7 +299,7 @@ export async function createHealthGoal(
     : 0;
 
   // Transaction ensures goal and initial history are created atomically
-  const goal = await prisma.$transaction(async (tx) => {
+  const goal = await withRLSTransaction(userId, async (tx) => {
     const newGoal = await tx.healthGoal.create({
       data: {
         userId,
@@ -370,35 +374,39 @@ export async function updateHealthGoal(
   const encryptionService = getEncryptionService();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const existing = await prisma.healthGoal.findFirst({
-    where: { id, userId },
-  });
+  const { existing, updated } = await withRLSTransaction(userId, async (tx) => {
+    const existingGoal = await tx.healthGoal.findFirst({
+      where: { id, userId },
+    });
 
-  if (!existing) {
-    throw new NotFoundError('Health goal not found');
-  }
-
-  // Build update data
-  const updateData: Prisma.HealthGoalUpdateInput = {};
-
-  if (name !== undefined) updateData.name = name;
-  if (description !== undefined) {
-    updateData.descriptionEncrypted = encryptionService.encrypt(description, userSalt);
-  }
-  if (targetValue !== undefined) updateData.targetValue = targetValue;
-  if (targetDate !== undefined) updateData.targetDate = new Date(targetDate);
-  if (milestones !== undefined) updateData.milestones = JSON.stringify(milestones);
-  if (reminderFrequency !== undefined) updateData.reminderFrequency = reminderFrequency;
-  if (status !== undefined) {
-    updateData.status = status;
-    if (status === 'ACHIEVED' || status === 'FAILED' || status === 'CANCELLED') {
-      updateData.completedAt = new Date();
+    if (!existingGoal) {
+      throw new NotFoundError('Health goal not found');
     }
-  }
 
-  const updated = await prisma.healthGoal.update({
-    where: { id },
-    data: updateData,
+    // Build update data
+    const updateData: Prisma.HealthGoalUpdateInput = {};
+
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) {
+      updateData.descriptionEncrypted = encryptionService.encrypt(description, userSalt);
+    }
+    if (targetValue !== undefined) updateData.targetValue = targetValue;
+    if (targetDate !== undefined) updateData.targetDate = new Date(targetDate);
+    if (milestones !== undefined) updateData.milestones = JSON.stringify(milestones);
+    if (reminderFrequency !== undefined) updateData.reminderFrequency = reminderFrequency;
+    if (status !== undefined) {
+      updateData.status = status;
+      if (status === 'ACHIEVED' || status === 'FAILED' || status === 'CANCELLED') {
+        updateData.completedAt = new Date();
+      }
+    }
+
+    const updatedGoal = await tx.healthGoal.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return { existing: existingGoal, updated: updatedGoal };
   });
 
   // Audit log
@@ -409,7 +417,7 @@ export async function updateHealthGoal(
   }, {
     name: updated.name,
     status: updated.status,
-    fieldsUpdated: Object.keys(updateData),
+    fieldsUpdated: Object.keys(req.body),
   }, { req, userId });
 
   const response: ApiResponse<HealthGoalResponse> = {
@@ -437,69 +445,84 @@ export async function updateGoalProgress(
   const encryptionService = getEncryptionService();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const goal = await prisma.healthGoal.findFirst({
-    where: { id, userId },
-  });
+  const { goal, goalWithHistory } = await withRLSTransaction(userId, async (tx) => {
+    const foundGoal = await tx.healthGoal.findFirst({
+      where: { id, userId },
+    });
 
-  if (!goal) {
-    throw new NotFoundError('Health goal not found');
-  }
-
-  // Calculate new progress
-  const startValue = Number(goal.startValue) || Number(goal.targetValue);
-  const progress = calculateProgress(startValue, value, Number(goal.targetValue), goal.direction);
-
-  // Check if goal is achieved
-  let status = goal.status;
-  let completedAt: Date | null = null;
-
-  if (progress >= 100) {
-    status = 'ACHIEVED';
-    completedAt = new Date();
-  }
-
-  // Update milestones
-  let milestones: Milestone[] | null = null;
-  if (goal.milestones) {
-    try {
-      milestones = JSON.parse(goal.milestones);
-      if (milestones) {
-        milestones = milestones.map((m) => {
-          const achieved = goal.direction === 'DECREASE'
-            ? value <= m.value
-            : value >= m.value;
-          return {
-            ...m,
-            achieved: m.achieved || achieved,
-            achievedAt: (m.achieved || achieved) ? (m.achievedAt || new Date().toISOString()) : undefined,
-          };
-        });
-      }
-    } catch {
-      milestones = null;
+    if (!foundGoal) {
+      throw new NotFoundError('Health goal not found');
     }
-  }
 
-  // Update goal
-  await prisma.healthGoal.update({
-    where: { id },
-    data: {
-      currentValue: value,
-      progress,
-      status,
-      completedAt,
-      milestones: milestones ? JSON.stringify(milestones) : goal.milestones,
-    },
-  });
+    // Calculate new progress
+    const startValue = Number(foundGoal.startValue) || Number(foundGoal.targetValue);
+    const progress = calculateProgress(startValue, value, Number(foundGoal.targetValue), foundGoal.direction);
 
-  // Create progress history entry
-  await prisma.goalProgressHistory.create({
-    data: {
-      goalId: id,
-      value,
-      progress,
-      noteEncrypted: note ? encryptionService.encrypt(note, userSalt) : null,
-    },
+    // Check if goal is achieved
+    let status = foundGoal.status;
+    let completedAt: Date | null = null;
+
+    if (progress >= 100) {
+      status = 'ACHIEVED';
+      completedAt = new Date();
+    }
+
+    // Update milestones
+    let milestones: Milestone[] | null = null;
+    if (foundGoal.milestones) {
+      try {
+        milestones = JSON.parse(foundGoal.milestones);
+        if (milestones) {
+          milestones = milestones.map((m) => {
+            const achieved = foundGoal.direction === 'DECREASE'
+              ? value <= m.value
+              : value >= m.value;
+            return {
+              ...m,
+              achieved: m.achieved || achieved,
+              achievedAt: (m.achieved || achieved) ? (m.achievedAt || new Date().toISOString()) : undefined,
+            };
+          });
+        }
+      } catch {
+        milestones = null;
+      }
+    }
+
+    // Update goal
+    await tx.healthGoal.update({
+      where: { id },
+      data: {
+        currentValue: value,
+        progress,
+        status,
+        completedAt,
+        milestones: milestones ? JSON.stringify(milestones) : foundGoal.milestones,
+      },
+    });
+
+    // Create progress history entry
+    await tx.goalProgressHistory.create({
+      data: {
+        goalId: id,
+        value,
+        progress,
+        noteEncrypted: note ? encryptionService.encrypt(note, userSalt) : null,
+      },
+    });
+
+    // Fetch with history
+    const fetchedGoalWithHistory = await tx.healthGoal.findFirst({
+      where: { id, userId },
+      include: {
+        progressHistory: {
+          orderBy: { recordedAt: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    return { goal: foundGoal, goalWithHistory: fetchedGoalWithHistory };
   });
 
   // Audit log
@@ -509,20 +532,9 @@ export async function updateGoalProgress(
     progress: Number(goal.progress),
   }, {
     currentValue: value,
-    progress,
-    status,
+    progress: goalWithHistory ? Number(goalWithHistory.progress) : value,
+    status: goalWithHistory ? goalWithHistory.status : goal.status,
   }, { req, userId });
-
-  // Fetch with history
-  const goalWithHistory = await prisma.healthGoal.findFirst({
-    where: { id },
-    include: {
-      progressHistory: {
-        orderBy: { recordedAt: 'desc' },
-        take: 10,
-      },
-    },
-  });
 
   const response: ApiResponse<HealthGoalResponse> = {
     success: true,
@@ -542,25 +554,29 @@ export async function deleteHealthGoal(
 
   const prisma = getPrismaClient();
 
-  const goal = await prisma.healthGoal.findFirst({
-    where: { id, userId },
+  const goal = await withRLSTransaction(userId, async (tx) => {
+    const foundGoal = await tx.healthGoal.findFirst({
+      where: { id, userId },
+    });
+
+    if (!foundGoal) {
+      throw new NotFoundError('Health goal not found');
+    }
+
+    await tx.healthGoal.delete({
+      where: { id },
+    });
+
+    return foundGoal;
   });
 
-  if (!goal) {
-    throw new NotFoundError('Health goal not found');
-  }
-
-  // Audit log (before deletion)
+  // Audit log (after deletion)
   const auditService = getAuditLogService(prisma);
   await auditService.logDelete(RESOURCE_TYPE, id, {
     name: goal.name,
     category: goal.category,
     status: goal.status,
   }, { req, userId });
-
-  await prisma.healthGoal.delete({
-    where: { id },
-  });
 
   const response: ApiResponse = {
     success: true,
@@ -578,37 +594,46 @@ export async function getGoalsSummary(
 
   const prisma = getPrismaClient();
 
-  // Count by status
-  const statusCounts = await prisma.healthGoal.groupBy({
-    by: ['status'],
-    where: { userId },
-    _count: { status: true },
-  });
+  const { statusCounts, categoryCounts, needAttention, recentlyAchieved } = await withRLSTransaction(userId, async (tx) => {
+    // Count by status
+    const statusCountsResult = await tx.healthGoal.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { status: true },
+    });
 
-  // Count by category
-  const categoryCounts = await prisma.healthGoal.groupBy({
-    by: ['category'],
-    where: { userId },
-    _count: { category: true },
-  });
+    // Count by category
+    const categoryCountsResult = await tx.healthGoal.groupBy({
+      by: ['category'],
+      where: { userId },
+      _count: { category: true },
+    });
 
-  // Get active goals with low progress (need attention)
-  const needAttention = await prisma.healthGoal.count({
-    where: {
-      userId,
-      status: 'ACTIVE',
-      progress: { lt: 25 },
-      targetDate: { lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }, // Within 30 days
-    },
-  });
+    // Get active goals with low progress (need attention)
+    const needAttentionResult = await tx.healthGoal.count({
+      where: {
+        userId,
+        status: 'ACTIVE',
+        progress: { lt: 25 },
+        targetDate: { lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }, // Within 30 days
+      },
+    });
 
-  // Get recently achieved
-  const recentlyAchieved = await prisma.healthGoal.count({
-    where: {
-      userId,
-      status: 'ACHIEVED',
-      completedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }, // Last 7 days
-    },
+    // Get recently achieved
+    const recentlyAchievedResult = await tx.healthGoal.count({
+      where: {
+        userId,
+        status: 'ACHIEVED',
+        completedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }, // Last 7 days
+      },
+    });
+
+    return {
+      statusCounts: statusCountsResult,
+      categoryCounts: categoryCountsResult,
+      needAttention: needAttentionResult,
+      recentlyAchieved: recentlyAchievedResult,
+    };
   });
 
   const summary = {
@@ -650,17 +675,19 @@ export async function suggestGoals(
   const prisma = getPrismaClient();
 
   // Get user's out-of-range biomarkers
-  const outOfRangeBiomarkers = await prisma.biomarker.findMany({
-    where: { userId, isOutOfRange: true },
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      valueEncrypted: true,
-      unit: true,
-      normalRangeMin: true,
-      normalRangeMax: true,
-    },
+  const outOfRangeBiomarkers = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.findMany({
+      where: { userId, isOutOfRange: true },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        valueEncrypted: true,
+        unit: true,
+        normalRangeMin: true,
+        normalRangeMax: true,
+      },
+    });
   });
 
   // Generate goal suggestions based on biomarkers

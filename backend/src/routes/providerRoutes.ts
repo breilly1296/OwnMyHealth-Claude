@@ -15,6 +15,7 @@ import { validate, schemas } from '../middleware/validation.js';
 import { getPrismaClient } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
+import { getAuditLogService } from '../services/auditLog.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -77,6 +78,13 @@ router.get(
       createdAt: rel.createdAt,
     }));
 
+    // Audit log: Provider listing their patients
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('provider_patients', undefined, { req, userId: providerId }, {
+      operation: 'LIST',
+      count: result.length,
+    });
+
     const response: ApiResponse<typeof result> = {
       success: true,
       data: result,
@@ -103,11 +111,25 @@ router.post(
       select: { id: true, role: true },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!patient) {
+      // Audit log: Failed access request — patient not found
+      await auditService.logAccess('provider_patient_request', undefined, { req, userId: providerId }, {
+        operation: 'REQUEST_ACCESS',
+        success: false,
+        reason: 'patient_not_found',
+      });
       throw new NotFoundError('Patient not found with this email');
     }
 
     if (patient.role !== 'PATIENT') {
+      // Audit log: Failed access request — not a patient account
+      await auditService.logAccess('provider_patient_request', patient.id, { req, userId: providerId }, {
+        operation: 'REQUEST_ACCESS',
+        success: false,
+        reason: 'not_patient_role',
+      });
       throw new ForbiddenError('Can only request access to patient accounts');
     }
 
@@ -160,6 +182,13 @@ router.post(
       },
     });
 
+    // Audit log: Provider requested access to patient
+    await auditService.logCreate('provider_patient_request', relationship.id, {
+      patientId: patient.id,
+      relationshipType: relationship.relationshipType,
+      status: relationship.status,
+    }, { req, userId: providerId });
+
     const response: ApiResponse<{ relationshipId: string; status: string }> = {
       success: true,
       data: {
@@ -193,8 +222,27 @@ router.get(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship || relationship.status !== 'ACTIVE') {
+      // Audit log: Failed patient detail access
+      await auditService.logAccess('patient_detail', patientId, { req, userId: providerId }, {
+        operation: 'VIEW_PATIENT',
+        success: false,
+        reason: !relationship ? 'no_relationship' : 'relationship_not_active',
+      });
       throw new ForbiddenError('You do not have access to this patient');
+    }
+
+    // Check consent expiration
+    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
+      await auditService.logAccess('patient_detail', patientId, { req, userId: providerId }, {
+        operation: 'VIEW_PATIENT',
+        success: false,
+        reason: 'consent_expired',
+        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
+      });
+      throw new ForbiddenError('Provider consent has expired');
     }
 
     // Get patient data based on permissions
@@ -236,6 +284,13 @@ router.get(
       },
     };
 
+    // Audit log: Provider viewed patient detail (cross-user PHI access)
+    await auditService.logAccess('patient_detail', patientId, { req, userId: providerId }, {
+      operation: 'VIEW_PATIENT',
+      patientId,
+      accessedFields: ['email', 'createdAt', 'lastLoginAt'],
+    });
+
     const response: ApiResponse<typeof result> = {
       success: true,
       data: result,
@@ -266,11 +321,36 @@ router.get(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship || relationship.status !== 'ACTIVE') {
+      // Audit log: Failed biomarker access attempt
+      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: !relationship ? 'no_relationship' : 'relationship_not_active',
+      });
       throw new ForbiddenError('You do not have access to this patient');
     }
 
+    // Check consent expiration
+    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
+      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: 'consent_expired',
+        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
+      });
+      throw new ForbiddenError('Provider consent has expired');
+    }
+
     if (!relationship.canViewBiomarkers) {
+      // Audit log: Failed biomarker access — insufficient permissions
+      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: 'permission_denied',
+      });
       throw new ForbiddenError('You do not have permission to view this patient\'s biomarkers');
     }
 
@@ -279,9 +359,44 @@ router.get(
       orderBy: { measurementDate: 'desc' },
     });
 
-    const response: ApiResponse<typeof biomarkers> = {
+    // Decrypt biomarker PHI using patient's encryption key
+    const patientSalt = await getUserEncryptionSalt(patientId);
+    const encryptionService = getEncryptionService();
+
+    const decryptedBiomarkers = biomarkers.map((b) => ({
+      id: b.id,
+      userId: b.userId,
+      category: b.category,
+      name: b.name,
+      unit: b.unit,
+      value: parseFloat(encryptionService.decrypt(b.valueEncrypted, patientSalt)),
+      notes: b.notesEncrypted ? encryptionService.decrypt(b.notesEncrypted, patientSalt) : undefined,
+      normalRange: {
+        min: Number(b.normalRangeMin),
+        max: Number(b.normalRangeMax),
+        source: b.normalRangeSource ?? undefined,
+      },
+      date: b.measurementDate.toISOString().split('T')[0],
+      sourceType: b.sourceType,
+      sourceFile: b.sourceFile ?? undefined,
+      labName: b.labName ?? undefined,
+      isOutOfRange: b.isOutOfRange,
+      isAcknowledged: b.isAcknowledged,
+      createdAt: b.createdAt,
+      updatedAt: b.updatedAt,
+    }));
+
+    // Audit log: Provider accessed patient biomarkers (cross-user PHI access)
+    await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
+      operation: 'PHI_ACCESS',
+      patientId,
+      count: decryptedBiomarkers.length,
+      accessedFields: ['biomarkers'],
+    });
+
+    const response: ApiResponse<typeof decryptedBiomarkers> = {
       success: true,
-      data: biomarkers,
+      data: decryptedBiomarkers,
     };
     res.json(response);
   })
@@ -309,11 +424,36 @@ router.get(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship || relationship.status !== 'ACTIVE') {
+      // Audit log: Failed health needs access attempt
+      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: !relationship ? 'no_relationship' : 'relationship_not_active',
+      });
       throw new ForbiddenError('You do not have access to this patient');
     }
 
+    // Check consent expiration
+    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
+      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: 'consent_expired',
+        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
+      });
+      throw new ForbiddenError('Provider consent has expired');
+    }
+
     if (!relationship.canViewHealthNeeds) {
+      // Audit log: Failed health needs access — insufficient permissions
+      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: 'permission_denied',
+      });
       throw new ForbiddenError('You do not have permission to view this patient\'s health needs');
     }
 
@@ -322,9 +462,35 @@ router.get(
       orderBy: { createdAt: 'desc' },
     });
 
-    const response: ApiResponse<typeof healthNeeds> = {
+    // Decrypt health need PHI using patient's encryption key
+    const patientSalt = await getUserEncryptionSalt(patientId);
+    const encryptionService = getEncryptionService();
+
+    const decryptedHealthNeeds = healthNeeds.map((n) => ({
+      id: n.id,
+      userId: n.userId,
+      needType: n.needType,
+      name: n.name,
+      description: encryptionService.decrypt(n.descriptionEncrypted, patientSalt),
+      urgency: n.urgency,
+      status: n.status,
+      relatedBiomarkerIds: n.relatedBiomarkerIds,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      resolvedAt: n.resolvedAt ?? undefined,
+    }));
+
+    // Audit log: Provider accessed patient health needs (cross-user PHI access)
+    await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
+      operation: 'PHI_ACCESS',
+      patientId,
+      count: decryptedHealthNeeds.length,
+      accessedFields: ['healthNeeds'],
+    });
+
+    const response: ApiResponse<typeof decryptedHealthNeeds> = {
       success: true,
-      data: healthNeeds,
+      data: decryptedHealthNeeds,
     };
     res.json(response);
   })
@@ -351,9 +517,44 @@ router.delete(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!relationship) {
+      // Audit log: Failed delete — relationship not found
+      await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
+        operation: 'DELETE',
+        success: false,
+        reason: 'relationship_not_found',
+      });
       throw new NotFoundError('Relationship not found');
     }
+
+    if (relationship.status !== 'ACTIVE') {
+      await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
+        operation: 'DELETE',
+        success: false,
+        reason: 'relationship_not_active',
+      });
+      throw new ForbiddenError('You do not have active access to this patient');
+    }
+
+    // Check consent expiration
+    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
+      await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
+        operation: 'DELETE',
+        success: false,
+        reason: 'consent_expired',
+        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
+      });
+      throw new ForbiddenError('Provider consent has expired');
+    }
+
+    // Audit log: Provider removing patient relationship (log before deletion)
+    await auditService.logDelete('provider_patient_relationship', relationship.id, {
+      patientId,
+      relationshipType: relationship.relationshipType,
+      status: relationship.status,
+    }, { req, userId: providerId });
 
     await prisma.providerPatient.delete({
       where: { id: relationship.id },

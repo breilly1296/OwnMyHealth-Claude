@@ -15,6 +15,7 @@ import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '..
 import { validate, schemas } from '../middleware/validation.js';
 import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import { getPrismaClient } from '../services/database.js';
+import { getAuditLogService } from '../services/auditLog.js';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/index.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
@@ -77,6 +78,19 @@ router.get(
       prisma.user.count({ where }),
     ]);
 
+    // Audit log: Admin listing users
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('admin_user_list', undefined, { req, userId: req.user!.id }, {
+      operation: 'LIST',
+      actorType: 'ADMIN',
+      count: users.length,
+      filterRole: role,
+      filterSearch: search,
+      filterIsActive: isActive,
+      page,
+      limit,
+    });
+
     const response: ApiResponse<{
       users: typeof users;
       pagination: { page: number; limit: number; total: number; totalPages: number };
@@ -131,9 +145,27 @@ router.get(
       },
     });
 
+    const auditService = getAuditLogService(prisma);
+
     if (!user) {
+      // Audit log: Failed user detail access — user not found
+      await auditService.logAccess('admin_user_detail', id, { req, userId: req.user!.id }, {
+        operation: 'VIEW',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'user_not_found',
+      });
       throw new NotFoundError('User not found');
     }
+
+    // Audit log: Admin viewed user detail
+    await auditService.logAccess('admin_user_detail', id, { req, userId: req.user!.id }, {
+      operation: 'VIEW',
+      actorType: 'ADMIN',
+      targetUserId: id,
+      targetEmail: user.email,
+      targetRole: user.role,
+    });
 
     const response: ApiResponse<typeof user> = {
       success: true,
@@ -181,6 +213,20 @@ router.post(
       },
     });
 
+    // Audit log: Admin created a new user
+    const auditService = getAuditLogService(prisma);
+    await auditService.logCreate('admin_user', user.id, {
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+    }, { req, userId: req.user!.id }, {
+      operation: 'CREATE',
+      actorType: 'ADMIN',
+      targetUserId: user.id,
+      targetRole: user.role,
+    });
+
     const response: ApiResponse<typeof user> = {
       success: true,
       data: user,
@@ -209,7 +255,16 @@ router.patch(
     }
 
     const existing = await prisma.user.findUnique({ where: { id } });
+    const auditService = getAuditLogService(prisma);
+
     if (!existing) {
+      // Audit log: Failed user update — user not found
+      await auditService.logAccess('admin_user', id, { req, userId: adminId }, {
+        operation: 'UPDATE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'user_not_found',
+      });
       throw new NotFoundError('User not found');
     }
 
@@ -234,6 +289,28 @@ router.patch(
       },
     });
 
+    // Determine if this is a role/permission change (elevated audit significance)
+    const isRoleChange = role !== undefined && role !== existing.role;
+    const operation = isRoleChange ? 'PERMISSION_CHANGE' : 'UPDATE';
+
+    // Audit log: Admin updated user (captures previous and new state)
+    await auditService.logUpdate('admin_user', id, {
+      role: existing.role,
+      isActive: existing.isActive,
+      emailVerified: existing.emailVerified,
+    }, {
+      role: user.role,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      passwordChanged: !!password,
+    }, { req, userId: adminId }, {
+      operation,
+      actorType: 'ADMIN',
+      targetUserId: id,
+      targetEmail: existing.email,
+      ...(isRoleChange && { previousRole: existing.role, newRole: role }),
+    });
+
     const response: ApiResponse<typeof user> = {
       success: true,
       data: user,
@@ -254,15 +331,47 @@ router.delete(
     const { id } = req.params;
     const adminId = req.user!.id;
 
+    const auditService = getAuditLogService(prisma);
+
     // Prevent self-deletion
     if (id === adminId) {
+      // Audit log: Admin attempted self-deactivation
+      await auditService.logAccess('admin_user_status', id, { req, userId: adminId }, {
+        operation: 'DEACTIVATE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'self_deletion_blocked',
+      });
       throw new ForbiddenError('Cannot delete your own account');
     }
 
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing) {
+      // Audit log: Failed deactivation — user not found
+      await auditService.logAccess('admin_user_status', id, { req, userId: adminId }, {
+        operation: 'DEACTIVATE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'user_not_found',
+      });
       throw new NotFoundError('User not found');
     }
+
+    // Audit log: Admin deactivating user (log before change)
+    await auditService.logUpdate('admin_user_status', id, {
+      isActive: existing.isActive,
+      email: existing.email,
+      role: existing.role,
+    }, {
+      isActive: false,
+      sessionsInvalidated: true,
+    }, { req, userId: adminId }, {
+      operation: 'DEACTIVATE',
+      actorType: 'ADMIN',
+      targetUserId: id,
+      targetEmail: existing.email,
+      targetRole: existing.role,
+    });
 
     // Soft delete by deactivating
     await prisma.user.update({
@@ -296,20 +405,58 @@ router.delete(
     const adminId = req.user!.id;
     const { confirmEmail } = req.body;
 
+    const auditService = getAuditLogService(prisma);
+
     // Prevent self-deletion
     if (id === adminId) {
+      // Audit log: Admin attempted self-permanent-deletion
+      await auditService.logAccess('admin_user_permanent', id, { req, userId: adminId }, {
+        operation: 'PERMANENT_DELETE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'self_deletion_blocked',
+      });
       throw new ForbiddenError('Cannot delete your own account');
     }
 
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing) {
+      // Audit log: Failed permanent delete — user not found
+      await auditService.logAccess('admin_user_permanent', id, { req, userId: adminId }, {
+        operation: 'PERMANENT_DELETE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'user_not_found',
+      });
       throw new NotFoundError('User not found');
     }
 
     // Require confirmation email
     if (confirmEmail !== existing.email) {
+      // Audit log: Failed permanent delete — email confirmation mismatch
+      await auditService.logAccess('admin_user_permanent', id, { req, userId: adminId }, {
+        operation: 'PERMANENT_DELETE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'email_confirmation_mismatch',
+      });
       throw new BadRequestError('Email confirmation does not match');
     }
+
+    // Audit log: Admin permanently deleting user (CRITICAL — log before deletion)
+    await auditService.logDelete('admin_user_permanent', id, {
+      email: existing.email,
+      role: existing.role,
+      isActive: existing.isActive,
+      emailVerified: existing.emailVerified,
+      createdAt: existing.createdAt,
+    }, { req, userId: adminId }, {
+      operation: 'PERMANENT_DELETE',
+      actorType: 'ADMIN',
+      targetUserId: id,
+      targetEmail: existing.email,
+      targetRole: existing.role,
+    });
 
     // Permanently delete user (cascades to related data)
     await prisma.user.delete({ where: { id } });
@@ -345,6 +492,15 @@ router.get(
       take: 100,
     });
 
+    // Audit log: Admin listing provider-patient relationships
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('admin_provider_relationship', undefined, { req, userId: req.user!.id }, {
+      operation: 'LIST',
+      actorType: 'ADMIN',
+      count: relationships.length,
+      filterStatus: status,
+    });
+
     const response: ApiResponse<typeof relationships> = {
       success: true,
       data: relationships,
@@ -363,7 +519,23 @@ router.patch(
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const { id } = req.params;
+    const adminId = req.user!.id;
     const { status, canViewBiomarkers, canViewInsurance, canViewDna, canViewHealthNeeds, canEditData } = req.body;
+
+    const auditService = getAuditLogService(prisma);
+
+    // Fetch existing relationship for audit trail
+    const existing = await prisma.providerPatient.findUnique({ where: { id } });
+    if (!existing) {
+      // Audit log: Failed relationship update — not found
+      await auditService.logAccess('admin_provider_relationship', id, { req, userId: adminId }, {
+        operation: 'UPDATE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'relationship_not_found',
+      });
+      throw new NotFoundError('Provider-patient relationship not found');
+    }
 
     const relationship = await prisma.providerPatient.update({
       where: { id },
@@ -375,6 +547,28 @@ router.patch(
         ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
         ...(canEditData !== undefined && { canEditData }),
       },
+    });
+
+    // Audit log: Admin updated provider-patient relationship
+    await auditService.logUpdate('admin_provider_relationship', id, {
+      status: existing.status,
+      canViewBiomarkers: existing.canViewBiomarkers,
+      canViewInsurance: existing.canViewInsurance,
+      canViewDna: existing.canViewDna,
+      canViewHealthNeeds: existing.canViewHealthNeeds,
+      canEditData: existing.canEditData,
+    }, {
+      status: relationship.status,
+      canViewBiomarkers: relationship.canViewBiomarkers,
+      canViewInsurance: relationship.canViewInsurance,
+      canViewDna: relationship.canViewDna,
+      canViewHealthNeeds: relationship.canViewHealthNeeds,
+      canEditData: relationship.canEditData,
+    }, { req, userId: adminId }, {
+      operation: 'UPDATE',
+      actorType: 'ADMIN',
+      providerId: existing.providerId,
+      patientId: existing.patientId,
     });
 
     const response: ApiResponse<typeof relationship> = {
@@ -395,7 +589,7 @@ router.patch(
  */
 router.get(
   '/stats',
-  asyncHandler(async (_req: AuthenticatedRequest, res: Response) => {
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
 
     const [
@@ -438,6 +632,13 @@ router.get(
         healthNeeds: totalHealthNeeds,
       },
     };
+
+    // Audit log: Admin viewed system statistics
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('admin_system_stats', undefined, { req, userId: req.user!.id }, {
+      operation: 'VIEW',
+      actorType: 'ADMIN',
+    });
 
     const response: ApiResponse<typeof stats> = {
       success: true,
@@ -492,6 +693,21 @@ router.get(
       }),
       prisma.auditLog.count({ where }),
     ]);
+
+    // Audit log: Admin viewed audit logs (meta-audit: who is watching the watchers)
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess('admin_audit_logs', undefined, { req, userId: req.user!.id }, {
+      operation: 'VIEW',
+      actorType: 'ADMIN',
+      count: logs.length,
+      filterUserId: userId,
+      filterAction: action,
+      filterResourceType: resourceType,
+      filterStartDate: startDate,
+      filterEndDate: endDate,
+      page,
+      limit,
+    });
 
     const response: ApiResponse<{
       logs: typeof logs;

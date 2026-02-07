@@ -10,9 +10,10 @@ import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
 import type { InsurancePlanCreateInput } from '../middleware/validation.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
+import { logger } from '../utils/logger.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseBooleanParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { toNumber } from '../utils/numberConversion.js';
@@ -224,7 +225,7 @@ function toResponse(
     try {
       memberId = encryptionService.decrypt(plan.memberIdEncrypted, userSalt);
     } catch (error) {
-      console.error(`[Insurance] Failed to decrypt memberId for plan ${plan.id}:`, error);
+      logger.warn('Failed to decrypt memberId for insurance plan', { data: { planId: plan.id } });
       memberId = undefined;
     }
   }
@@ -233,7 +234,7 @@ function toResponse(
     try {
       groupNumber = encryptionService.decrypt(plan.groupIdEncrypted, userSalt);
     } catch (error) {
-      console.error(`[Insurance] Failed to decrypt groupId for plan ${plan.id}:`, error);
+      logger.warn('Failed to decrypt groupId for insurance plan', { data: { planId: plan.id } });
       groupNumber = undefined;
     }
   }
@@ -429,17 +430,20 @@ export async function getInsurancePlans(
     where.isActive = true;
   }
 
-  // Get total count and paginated plans in parallel
-  const [total, plans] = await Promise.all([
-    prisma.insurancePlan.count({ where }),
-    prisma.insurancePlan.findMany({
-      where,
-      include: { benefits: true },
-      orderBy: [{ isPrimary: 'desc' }, { isActive: 'desc' }, { effectiveDate: 'desc' }],
-      skip: pagination.skip,
-      take: pagination.take,
-    }),
-  ]);
+  // Get total count and paginated plans in parallel (wrapped in RLS transaction)
+  const { total, plans } = await withRLSTransaction(userId, async (tx) => {
+    const [total, plans] = await Promise.all([
+      tx.insurancePlan.count({ where }),
+      tx.insurancePlan.findMany({
+        where,
+        include: { benefits: true },
+        orderBy: [{ isPrimary: 'desc' }, { isActive: 'desc' }, { effectiveDate: 'desc' }],
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+    ]);
+    return { total, plans };
+  });
 
   const decryptedPlans = plans.map((p) => toResponse(p, userSalt));
 
@@ -471,9 +475,11 @@ export async function getInsurancePlan(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const plan = await prisma.insurancePlan.findFirst({
-    where: { id, userId },
-    include: { benefits: true },
+  const plan = await withRLSTransaction(userId, async (tx) => {
+    return tx.insurancePlan.findFirst({
+      where: { id, userId },
+      include: { benefits: true },
+    });
   });
 
   if (!plan) {
@@ -512,66 +518,68 @@ export async function createInsurancePlan(
     ? encryptionService.encrypt(input.groupNumber, userSalt)
     : null;
 
-  // If this is marked as primary, unset other primary plans
-  if (input.isPrimary) {
-    await prisma.insurancePlan.updateMany({
-      where: { userId, isPrimary: true },
-      data: { isPrimary: false },
-    });
-  }
+  const plan = await withRLSTransaction(userId, async (tx) => {
+    // If this is marked as primary, unset other primary plans
+    if (input.isPrimary) {
+      await tx.insurancePlan.updateMany({
+        where: { userId, isPrimary: true },
+        data: { isPrimary: false },
+      });
+    }
 
-  const plan = await prisma.insurancePlan.create({
-    data: {
-      userId,
-      planName: input.planName,
-      insurerName: input.insurerName,
-      planType: input.planType,
-      planIdNumber: input.planIdNumber ?? null,
-      memberIdEncrypted,
-      groupIdEncrypted,
-      effectiveDate: new Date(input.effectiveDate),
-      terminationDate: input.terminationDate ? new Date(input.terminationDate) : null,
-      premiumMonthly: input.premium,
-      deductibleIndividual: input.deductible,
-      deductibleFamily: input.deductibleFamily ?? input.deductible * 2,
-      oopMaxIndividual: input.outOfPocketMax,
-      oopMaxFamily: input.outOfPocketMaxFamily ?? input.outOfPocketMax * 2,
-      // Tracking fields
-      deductibleMetIndividual: input.deductibleMetIndividual ?? 0,
-      deductibleMetFamily: input.deductibleMetFamily ?? 0,
-      oopMetIndividual: input.oopMetIndividual ?? 0,
-      oopMetFamily: input.oopMetFamily ?? 0,
-      // Copay amounts
-      copayPrimaryCare: input.copayPrimaryCare ?? null,
-      copaySpecialist: input.copaySpecialist ?? null,
-      copayUrgentCare: input.copayUrgentCare ?? null,
-      copayEmergency: input.copayEmergency ?? null,
-      coinsuranceRate: input.coinsuranceRate ?? null,
-      // Source tracking (manual entry)
-      extractedFromSbc: false,
-      sbcExtractionConfidence: null,
-      isActive: input.isActive ?? true,
-      isPrimary: input.isPrimary ?? false,
-      benefits: input.benefits
-        ? {
-            create: input.benefits.map((b) => ({
-              serviceName: b.serviceName,
-              serviceCategory: b.serviceCategory,
-              inNetworkCovered: b.inNetworkCoverage.covered,
-              inNetworkCopay: b.inNetworkCoverage.copay,
-              inNetworkCoinsurance: b.inNetworkCoverage.coinsurance,
-              inNetworkDeductible: b.inNetworkCoverage.deductibleApplies ?? true,
-              outNetworkCovered: b.outNetworkCoverage?.covered ?? false,
-              outNetworkCopay: b.outNetworkCoverage?.copay,
-              outNetworkCoinsurance: b.outNetworkCoverage?.coinsurance,
-              outNetworkDeductible: b.outNetworkCoverage?.deductibleApplies ?? true,
-              limitations: b.limitations,
-              preAuthRequired: b.preAuthRequired ?? false,
-            })),
-          }
-        : undefined,
-    },
-    include: { benefits: true },
+    return tx.insurancePlan.create({
+      data: {
+        userId,
+        planName: input.planName,
+        insurerName: input.insurerName,
+        planType: input.planType,
+        planIdNumber: input.planIdNumber ?? null,
+        memberIdEncrypted,
+        groupIdEncrypted,
+        effectiveDate: new Date(input.effectiveDate),
+        terminationDate: input.terminationDate ? new Date(input.terminationDate) : null,
+        premiumMonthly: input.premium,
+        deductibleIndividual: input.deductible,
+        deductibleFamily: input.deductibleFamily ?? input.deductible * 2,
+        oopMaxIndividual: input.outOfPocketMax,
+        oopMaxFamily: input.outOfPocketMaxFamily ?? input.outOfPocketMax * 2,
+        // Tracking fields
+        deductibleMetIndividual: input.deductibleMetIndividual ?? 0,
+        deductibleMetFamily: input.deductibleMetFamily ?? 0,
+        oopMetIndividual: input.oopMetIndividual ?? 0,
+        oopMetFamily: input.oopMetFamily ?? 0,
+        // Copay amounts
+        copayPrimaryCare: input.copayPrimaryCare ?? null,
+        copaySpecialist: input.copaySpecialist ?? null,
+        copayUrgentCare: input.copayUrgentCare ?? null,
+        copayEmergency: input.copayEmergency ?? null,
+        coinsuranceRate: input.coinsuranceRate ?? null,
+        // Source tracking (manual entry)
+        extractedFromSbc: false,
+        sbcExtractionConfidence: null,
+        isActive: input.isActive ?? true,
+        isPrimary: input.isPrimary ?? false,
+        benefits: input.benefits
+          ? {
+              create: input.benefits.map((b) => ({
+                serviceName: b.serviceName,
+                serviceCategory: b.serviceCategory,
+                inNetworkCovered: b.inNetworkCoverage.covered,
+                inNetworkCopay: b.inNetworkCoverage.copay,
+                inNetworkCoinsurance: b.inNetworkCoverage.coinsurance,
+                inNetworkDeductible: b.inNetworkCoverage.deductibleApplies ?? true,
+                outNetworkCovered: b.outNetworkCoverage?.covered ?? false,
+                outNetworkCopay: b.outNetworkCoverage?.copay,
+                outNetworkCoinsurance: b.outNetworkCoverage?.coinsurance,
+                outNetworkDeductible: b.outNetworkCoverage?.deductibleApplies ?? true,
+                limitations: b.limitations,
+                preAuthRequired: b.preAuthRequired ?? false,
+              })),
+            }
+          : undefined,
+      },
+      include: { benefits: true },
+    });
   });
 
   // Audit log: CREATE insurance plan
@@ -602,14 +610,6 @@ export async function updateInsurancePlan(
   const prisma = getPrismaClient();
   const encryptionService = getEncryptionService();
   const userSalt = await getUserEncryptionSalt(userId);
-
-  const existing = await prisma.insurancePlan.findFirst({
-    where: { id, userId },
-  });
-
-  if (!existing) {
-    throw new NotFoundError('Insurance plan not found');
-  }
 
   // Build update data
   const updateData: Record<string, unknown> = {};
@@ -650,21 +650,36 @@ export async function updateInsurancePlan(
   if (input.coinsuranceRate !== undefined) updateData.coinsuranceRate = input.coinsuranceRate;
   if (input.isActive !== undefined) updateData.isActive = input.isActive;
 
-  // Handle primary flag
   if (input.isPrimary === true) {
-    await prisma.insurancePlan.updateMany({
-      where: { userId, isPrimary: true, id: { not: id } },
-      data: { isPrimary: false },
-    });
     updateData.isPrimary = true;
   } else if (input.isPrimary === false) {
     updateData.isPrimary = false;
   }
 
-  const updated = await prisma.insurancePlan.update({
-    where: { id },
-    data: updateData,
-    include: { benefits: true },
+  const { existing, updated } = await withRLSTransaction(userId, async (tx) => {
+    const existing = await tx.insurancePlan.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Insurance plan not found');
+    }
+
+    // Handle primary flag
+    if (input.isPrimary === true) {
+      await tx.insurancePlan.updateMany({
+        where: { userId, isPrimary: true, id: { not: id } },
+        data: { isPrimary: false },
+      });
+    }
+
+    const updated = await tx.insurancePlan.update({
+      where: { id },
+      data: updateData,
+      include: { benefits: true },
+    });
+
+    return { existing, updated };
   });
 
   // Audit log: UPDATE insurance plan
@@ -696,25 +711,29 @@ export async function deleteInsurancePlan(
 
   const prisma = getPrismaClient();
 
-  const plan = await prisma.insurancePlan.findFirst({
-    where: { id, userId },
+  const plan = await withRLSTransaction(userId, async (tx) => {
+    const plan = await tx.insurancePlan.findFirst({
+      where: { id, userId },
+    });
+
+    if (!plan) {
+      throw new NotFoundError('Insurance plan not found');
+    }
+
+    // Delete plan (benefits will cascade delete)
+    await tx.insurancePlan.delete({
+      where: { id },
+    });
+
+    return plan;
   });
 
-  if (!plan) {
-    throw new NotFoundError('Insurance plan not found');
-  }
-
-  // Audit log: DELETE insurance plan (log before deletion)
+  // Audit log: DELETE insurance plan (log after deletion, using data captured in transaction)
   const auditService = getAuditLogService(prisma);
   await auditService.logDelete(RESOURCE_TYPE, id, {
     planName: plan.planName,
     insurerName: plan.insurerName,
   }, { req, userId });
-
-  // Delete plan (benefits will cascade delete)
-  await prisma.insurancePlan.delete({
-    where: { id },
-  });
 
   const response: ApiResponse = {
     success: true,
@@ -734,9 +753,11 @@ export async function comparePlans(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const plans = await prisma.insurancePlan.findMany({
-    where: { id: { in: planIds }, userId },
-    include: { benefits: true },
+  const plans = await withRLSTransaction(userId, async (tx) => {
+    return tx.insurancePlan.findMany({
+      where: { id: { in: planIds }, userId },
+      include: { benefits: true },
+    });
   });
 
   if (plans.length < 2) {
@@ -823,9 +844,11 @@ export async function searchBenefits(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const plans = await prisma.insurancePlan.findMany({
-    where: { userId },
-    include: { benefits: true },
+  const plans = await withRLSTransaction(userId, async (tx) => {
+    return tx.insurancePlan.findMany({
+      where: { userId },
+      include: { benefits: true },
+    });
   });
 
   const searchTerm = query.toLowerCase();

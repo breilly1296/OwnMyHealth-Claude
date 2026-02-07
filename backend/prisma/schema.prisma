@@ -667,17 +667,17 @@ enum AuditAction {
 // ===========================
 
 model ExpenseProjection {
-  id                 String   @id @default(uuid()) @db.Uuid
-  userId             String   @map("user_id") @db.Uuid
-  planId             String   @map("plan_id") @db.Uuid
-  serviceType        String   @map("service_type")
-  estimatedCost      Decimal  @map("estimated_cost") @db.Decimal(10, 2)
-  frequencyPerYear   Int      @map("frequency_per_year") @default(1)
-  isInNetwork        Boolean  @map("is_in_network") @default(true)
-  notes              String?
-  projectionDate     DateTime @map("projection_date") @default(now()) @db.Date
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @map("user_id") @db.Uuid
+  planId                 String   @map("plan_id") @db.Uuid
+  serviceTypeEncrypted   String   @map("service_type") @db.Text
+  estimatedCostEncrypted String   @map("estimated_cost") @db.Text
+  frequencyPerYear       Int      @map("frequency_per_year") @default(1)
+  isInNetwork            Boolean  @map("is_in_network") @default(true)
+  notesEncrypted         String?  @map("notes") @db.Text
+  projectionDate         DateTime @map("projection_date") @default(now()) @db.Date
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan               InsurancePlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
@@ -689,23 +689,23 @@ model ExpenseProjection {
 }
 
 model ExpenseActual {
-  id                   String            @id @default(uuid()) @db.Uuid
-  userId               String            @map("user_id") @db.Uuid
-  planId               String            @map("plan_id") @db.Uuid
-  projectionId         String?           @map("projection_id") @db.Uuid
-  serviceType          String            @map("service_type")
-  providerName         String?           @map("provider_name")
-  dateOfService        DateTime?         @map("date_of_service") @db.Date
-  billedAmount         Decimal?          @map("billed_amount") @db.Decimal(10, 2)
-  insurancePaid        Decimal?          @map("insurance_paid") @db.Decimal(10, 2)
-  patientPaid          Decimal?          @map("patient_paid") @db.Decimal(10, 2)
-  appliedToDeductible  Decimal?          @map("applied_to_deductible") @db.Decimal(10, 2)
-  appliedToOop         Decimal?          @map("applied_to_oop") @db.Decimal(10, 2)
-  claimStatus          String            @default("processed") @map("claim_status")
-  isInNetwork          Boolean?          @default(true) @map("is_in_network")
-  notes                String?
-  createdAt            DateTime          @default(now()) @map("created_at")
-  updatedAt            DateTime          @updatedAt @map("updated_at")
+  id                          String             @id @default(uuid()) @db.Uuid
+  userId                      String             @map("user_id") @db.Uuid
+  planId                      String             @map("plan_id") @db.Uuid
+  projectionId                String?            @map("projection_id") @db.Uuid
+  serviceTypeEncrypted        String             @map("service_type") @db.Text
+  providerNameEncrypted       String?            @map("provider_name") @db.Text
+  dateOfService               DateTime?          @map("date_of_service") @db.Date
+  billedAmountEncrypted       String?            @map("billed_amount") @db.Text
+  insurancePaidEncrypted      String?            @map("insurance_paid") @db.Text
+  patientPaidEncrypted        String?            @map("patient_paid") @db.Text
+  appliedToDeductibleEncrypted String?           @map("applied_to_deductible") @db.Text
+  appliedToOopEncrypted       String?            @map("applied_to_oop") @db.Text
+  claimStatus                 String             @default("processed") @map("claim_status")
+  isInNetwork                 Boolean?           @default(true) @map("is_in_network")
+  notesEncrypted              String?            @map("notes") @db.Text
+  createdAt                   DateTime           @default(now()) @map("created_at")
+  updatedAt                   DateTime           @updatedAt @map("updated_at")
 
   user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan                 InsurancePlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
@@ -717,15 +717,15 @@ model ExpenseActual {
 }
 
 model CostAnalysis {
-  id                          String   @id @default(uuid()) @db.Uuid
-  userId                      String   @map("user_id") @db.Uuid
-  planId                      String   @map("plan_id") @db.Uuid
-  analysisDate                DateTime @default(now()) @map("analysis_date")
-  claudeResponse              String   @map("claude_response")
-  totalProjectedOop           Decimal? @map("total_projected_oop") @db.Decimal(10, 2)
-  deductibleMetMonth          Int?     @map("deductible_met_month")
-  projectedExpensesSnapshot   Json?    @map("projected_expenses_snapshot")
-  createdAt                   DateTime @default(now()) @map("created_at")
+  id                                  String   @id @default(uuid()) @db.Uuid
+  userId                              String   @map("user_id") @db.Uuid
+  planId                              String   @map("plan_id") @db.Uuid
+  analysisDate                        DateTime @default(now()) @map("analysis_date")
+  claudeResponse                      String   @map("claude_response") @db.Text
+  totalProjectedOopEncrypted          String?  @map("total_projected_oop") @db.Text
+  deductibleMetMonth                  Int?     @map("deductible_met_month")
+  projectedExpensesSnapshotEncrypted  String?  @map("projected_expenses_snapshot") @db.Text
+  createdAt                           DateTime @default(now()) @map("created_at")
 
   user                        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan                        InsurancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)

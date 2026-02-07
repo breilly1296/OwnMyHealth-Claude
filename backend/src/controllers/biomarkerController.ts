@@ -10,7 +10,7 @@ import { Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
 import type { BiomarkerCreateInput, BiomarkerUpdateInput } from '../middleware/validation.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -125,21 +125,20 @@ export async function getBiomarkers(
     where.category = categoryFilter;
   }
 
-  // Get total count
+  // Get total count and paginated biomarkers with history via RLS transaction
   const countStart = Date.now();
-  const total = await prisma.biomarker.count({ where });
-  const countTime = Date.now() - countStart;
-
-  // Get paginated biomarkers with history
-  const queryStart = Date.now();
-  const biomarkers = await prisma.biomarker.findMany({
-    where,
-    include: { history: true },
-    skip: pagination.skip,
-    take: pagination.take,
-    orderBy: { measurementDate: 'desc' },
+  const { total, biomarkers } = await withRLSTransaction(userId, async (tx) => {
+    const total = await tx.biomarker.count({ where });
+    const biomarkers = await tx.biomarker.findMany({
+      where,
+      include: { history: true },
+      skip: pagination.skip,
+      take: pagination.take,
+      orderBy: { measurementDate: 'desc' },
+    });
+    return { total, biomarkers };
   });
-  const queryTime = Date.now() - queryStart;
+  const queryTime = Date.now() - countStart;
 
   // Decrypt all biomarkers with higher concurrency for better performance
   const decryptStart = Date.now();
@@ -165,7 +164,6 @@ export async function getBiomarkers(
       count: biomarkers.length,
       total,
       saltTime,
-      countTime,
       queryTime,
       decryptTime,
       auditTime,
@@ -194,9 +192,11 @@ export async function getBiomarker(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const biomarker = await prisma.biomarker.findFirst({
-    where: { id, userId },
-    include: { history: true },
+  const biomarker = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.findFirst({
+      where: { id, userId },
+      include: { history: true },
+    });
   });
 
   if (!biomarker) {
@@ -237,26 +237,28 @@ export async function createBiomarker(
   const isOutOfRange =
     input.value < input.normalRange.min || input.value > input.normalRange.max;
 
-  const biomarker = await prisma.biomarker.create({
-    data: {
-      userId,
-      category: input.category,
-      name: input.name,
-      unit: input.unit,
-      valueEncrypted,
-      notesEncrypted,
-      normalRangeMin: input.normalRange.min,
-      normalRangeMax: input.normalRange.max,
-      normalRangeSource: input.normalRange.source,
-      measurementDate: new Date(input.date),
-      sourceType: input.sourceType || 'MANUAL',
-      sourceFile: input.sourceFile,
-      extractionConfidence: input.extractionConfidence,
-      labName: input.labName,
-      isOutOfRange,
-      isAcknowledged: false,
-    },
-    include: { history: true },
+  const biomarker = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.create({
+      data: {
+        userId,
+        category: input.category,
+        name: input.name,
+        unit: input.unit,
+        valueEncrypted,
+        notesEncrypted,
+        normalRangeMin: input.normalRange.min,
+        normalRangeMax: input.normalRange.max,
+        normalRangeSource: input.normalRange.source,
+        measurementDate: new Date(input.date),
+        sourceType: input.sourceType || 'MANUAL',
+        sourceFile: input.sourceFile,
+        extractionConfidence: input.extractionConfidence,
+        labName: input.labName,
+        isOutOfRange,
+        isAcknowledged: false,
+      },
+      include: { history: true },
+    });
   });
 
   // Audit log: CREATE biomarker
@@ -288,61 +290,65 @@ export async function updateBiomarker(
   const encryptionService = getEncryptionService();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  // Find existing biomarker
-  const existing = await prisma.biomarker.findFirst({
-    where: { id, userId },
-  });
+  const { existing, updated } = await withRLSTransaction(userId, async (tx) => {
+    // Find existing biomarker
+    const existing = await tx.biomarker.findFirst({
+      where: { id, userId },
+    });
 
-  if (!existing) {
-    throw new NotFoundError('Biomarker not found');
-  }
-
-  // If value is changing, save current value to history
-  if (input.value !== undefined) {
-    const currentValue = encryptionService.decrypt(existing.valueEncrypted, userSalt);
-    if (String(input.value) !== currentValue) {
-      await prisma.biomarkerHistory.create({
-        data: {
-          biomarkerId: id,
-          valueEncrypted: existing.valueEncrypted,
-          measurementDate: existing.measurementDate,
-        },
-      });
+    if (!existing) {
+      throw new NotFoundError('Biomarker not found');
     }
-  }
 
-  // Build update data
-  const updateData: Record<string, unknown> = {};
+    // If value is changing, save current value to history
+    if (input.value !== undefined) {
+      const currentValue = encryptionService.decrypt(existing.valueEncrypted, userSalt);
+      if (String(input.value) !== currentValue) {
+        await tx.biomarkerHistory.create({
+          data: {
+            biomarkerId: id,
+            valueEncrypted: existing.valueEncrypted,
+            measurementDate: existing.measurementDate,
+          },
+        });
+      }
+    }
 
-  if (input.value !== undefined) {
-    updateData.valueEncrypted = encryptionService.encrypt(String(input.value), userSalt);
-  }
-  if (input.notes !== undefined) {
-    updateData.notesEncrypted = input.notes
-      ? encryptionService.encrypt(input.notes, userSalt)
-      : null;
-  }
-  if (input.category !== undefined) updateData.category = input.category;
-  if (input.name !== undefined) updateData.name = input.name;
-  if (input.unit !== undefined) updateData.unit = input.unit;
-  if (input.date !== undefined) updateData.measurementDate = new Date(input.date);
-  if (input.normalRange?.min !== undefined) updateData.normalRangeMin = input.normalRange.min;
-  if (input.normalRange?.max !== undefined) updateData.normalRangeMax = input.normalRange.max;
-  if (input.normalRange?.source !== undefined) updateData.normalRangeSource = input.normalRange.source;
-  if (input.labName !== undefined) updateData.labName = input.labName;
+    // Build update data
+    const updateData: Record<string, unknown> = {};
 
-  // Recalculate isOutOfRange if value or range changed
-  if (input.value !== undefined || input.normalRange?.min !== undefined || input.normalRange?.max !== undefined) {
-    const newValue = input.value ?? parseFloat(encryptionService.decrypt(existing.valueEncrypted, userSalt));
-    const newMin = input.normalRange?.min ?? toNumber(existing.normalRangeMin);
-    const newMax = input.normalRange?.max ?? toNumber(existing.normalRangeMax);
-    updateData.isOutOfRange = newValue < newMin || newValue > newMax;
-  }
+    if (input.value !== undefined) {
+      updateData.valueEncrypted = encryptionService.encrypt(String(input.value), userSalt);
+    }
+    if (input.notes !== undefined) {
+      updateData.notesEncrypted = input.notes
+        ? encryptionService.encrypt(input.notes, userSalt)
+        : null;
+    }
+    if (input.category !== undefined) updateData.category = input.category;
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.unit !== undefined) updateData.unit = input.unit;
+    if (input.date !== undefined) updateData.measurementDate = new Date(input.date);
+    if (input.normalRange?.min !== undefined) updateData.normalRangeMin = input.normalRange.min;
+    if (input.normalRange?.max !== undefined) updateData.normalRangeMax = input.normalRange.max;
+    if (input.normalRange?.source !== undefined) updateData.normalRangeSource = input.normalRange.source;
+    if (input.labName !== undefined) updateData.labName = input.labName;
 
-  const updated = await prisma.biomarker.update({
-    where: { id },
-    data: updateData,
-    include: { history: true },
+    // Recalculate isOutOfRange if value or range changed
+    if (input.value !== undefined || input.normalRange?.min !== undefined || input.normalRange?.max !== undefined) {
+      const newValue = input.value ?? parseFloat(encryptionService.decrypt(existing.valueEncrypted, userSalt));
+      const newMin = input.normalRange?.min ?? toNumber(existing.normalRangeMin);
+      const newMax = input.normalRange?.max ?? toNumber(existing.normalRangeMax);
+      updateData.isOutOfRange = newValue < newMin || newValue > newMax;
+    }
+
+    const updated = await tx.biomarker.update({
+      where: { id },
+      data: updateData,
+      include: { history: true },
+    });
+
+    return { existing, updated };
   });
 
   // Audit log: UPDATE biomarker
@@ -353,7 +359,7 @@ export async function updateBiomarker(
   }, {
     name: updated.name,
     category: updated.category,
-    fieldsUpdated: Object.keys(updateData),
+    fieldsUpdated: Object.keys(input),
   }, { req, userId });
 
   const response: ApiResponse<BiomarkerResponse> = {
@@ -374,25 +380,29 @@ export async function deleteBiomarker(
 
   const prisma = getPrismaClient();
 
-  const biomarker = await prisma.biomarker.findFirst({
-    where: { id, userId },
+  const biomarker = await withRLSTransaction(userId, async (tx) => {
+    const biomarker = await tx.biomarker.findFirst({
+      where: { id, userId },
+    });
+
+    if (!biomarker) {
+      throw new NotFoundError('Biomarker not found');
+    }
+
+    // Delete biomarker (history will cascade delete)
+    await tx.biomarker.delete({
+      where: { id },
+    });
+
+    return biomarker;
   });
 
-  if (!biomarker) {
-    throw new NotFoundError('Biomarker not found');
-  }
-
-  // Audit log: DELETE biomarker (log before deletion)
+  // Audit log: DELETE biomarker (log after deletion, using returned data)
   const auditService = getAuditLogService(prisma);
   await auditService.logDelete(RESOURCE_TYPE, id, {
     name: biomarker.name,
     category: biomarker.category,
   }, { req, userId });
-
-  // Delete biomarker (history will cascade delete)
-  await prisma.biomarker.delete({
-    where: { id },
-  });
 
   const response: ApiResponse = {
     success: true,
@@ -410,13 +420,22 @@ export async function getCategories(
 
   const prisma = getPrismaClient();
 
-  const biomarkers = await prisma.biomarker.findMany({
-    where: { userId },
-    select: { category: true },
-    distinct: ['category'],
+  const biomarkers = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.findMany({
+      where: { userId },
+      select: { category: true },
+      distinct: ['category'],
+    });
   });
 
   const categories = biomarkers.map((b) => b.category);
+
+  // Audit log: READ access to biomarker categories
+  const auditService = getAuditLogService(prisma);
+  await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
+    operation: 'CATEGORIES',
+    count: categories.length,
+  });
 
   const response: ApiResponse<string[]> = {
     success: true,
@@ -539,10 +558,26 @@ export async function bulkCreateBiomarkers(
     return;
   }
 
-  // Use createMany for efficient batch insert
+  // Use createMany for efficient batch insert, then fetch created records via RLS transaction
+  let createdRecords;
   try {
-    await prisma.biomarker.createMany({
-      data: validBiomarkerData,
+    createdRecords = await withRLSTransaction(userId, async (tx) => {
+      await tx.biomarker.createMany({
+        data: validBiomarkerData,
+      });
+
+      // Fetch the created biomarkers to return with IDs
+      const recentDate = new Date(Date.now() - 60000); // Last minute
+      return tx.biomarker.findMany({
+        where: {
+          userId,
+          createdAt: { gte: recentDate },
+          name: { in: validBiomarkerData.map(i => i.name) },
+        },
+        include: { history: true },
+        orderBy: { createdAt: 'desc' },
+        take: validBiomarkerData.length,
+      });
     });
   } catch (dbError) {
     // SECURITY: Log actual error server-side but don't expose to user
@@ -574,19 +609,6 @@ export async function bulkCreateBiomarkers(
     });
     return;
   }
-
-  // Fetch the created biomarkers to return with IDs
-  const recentDate = new Date(Date.now() - 60000); // Last minute
-  const createdRecords = await prisma.biomarker.findMany({
-    where: {
-      userId,
-      createdAt: { gte: recentDate },
-      name: { in: validBiomarkerData.map(i => i.name) },
-    },
-    include: { history: true },
-    orderBy: { createdAt: 'desc' },
-    take: validBiomarkerData.length,
-  });
 
   const createdBiomarkers = await Promise.all(
     createdRecords.map(b => toResponse(b, userSalt))
@@ -666,15 +688,17 @@ export async function getSummary(
   const prisma = getPrismaClient();
 
   // Get all biomarkers for the user (we don't need decryption for summary stats)
-  const biomarkers = await prisma.biomarker.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      category: true,
-      isOutOfRange: true,
-      isAcknowledged: true,
-      updatedAt: true,
-    },
+  const biomarkers = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        category: true,
+        isOutOfRange: true,
+        isAcknowledged: true,
+        updatedAt: true,
+      },
+    });
   });
 
   // Calculate totals
@@ -767,20 +791,22 @@ export async function getHistory(
   const limitNum = Math.min(1000, Math.max(1, parseInt(limit as string, 10) || 100));
 
   // Get the biomarker with filtered history
-  const biomarker = await prisma.biomarker.findFirst({
-    where: { id, userId },
-    include: {
-      history: {
-        where: {
-          measurementDate: {
-            gte: dateStart,
-            lte: dateEnd,
+  const biomarker = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.findFirst({
+      where: { id, userId },
+      include: {
+        history: {
+          where: {
+            measurementDate: {
+              gte: dateStart,
+              lte: dateEnd,
+            },
           },
+          orderBy: { measurementDate: 'asc' },
+          take: limitNum,
         },
-        orderBy: { measurementDate: 'asc' },
-        take: limitNum,
       },
-    },
+    });
   });
 
   if (!biomarker) {
@@ -849,24 +875,25 @@ export async function getHistory(
  * PERFORMANCE: Limits history to last 90 days, max 100 entries per biomarker
  */
 export async function getDecryptedBiomarkersForUser(userId: string): Promise<BiomarkerResponse[]> {
-  const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
   // Calculate date 90 days ago
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-  const biomarkers = await prisma.biomarker.findMany({
-    where: { userId },
-    include: {
-      history: {
-        where: {
-          measurementDate: { gte: ninetyDaysAgo },
+  const biomarkers = await withRLSTransaction(userId, async (tx) => {
+    return tx.biomarker.findMany({
+      where: { userId },
+      include: {
+        history: {
+          where: {
+            measurementDate: { gte: ninetyDaysAgo },
+          },
+          orderBy: { measurementDate: 'desc' },
+          take: 100,
         },
-        orderBy: { measurementDate: 'desc' },
-        take: 100,
       },
-    },
+    });
   });
 
   return Promise.all(biomarkers.map((b) => toResponse(b, userSalt)));

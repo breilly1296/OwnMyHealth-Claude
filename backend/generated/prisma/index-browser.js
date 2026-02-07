@@ -487,11 +487,11 @@ exports.Prisma.ExpenseProjectionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   planId: 'planId',
-  serviceType: 'serviceType',
-  estimatedCost: 'estimatedCost',
+  serviceTypeEncrypted: 'serviceTypeEncrypted',
+  estimatedCostEncrypted: 'estimatedCostEncrypted',
   frequencyPerYear: 'frequencyPerYear',
   isInNetwork: 'isInNetwork',
-  notes: 'notes',
+  notesEncrypted: 'notesEncrypted',
   projectionDate: 'projectionDate',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -502,17 +502,17 @@ exports.Prisma.ExpenseActualScalarFieldEnum = {
   userId: 'userId',
   planId: 'planId',
   projectionId: 'projectionId',
-  serviceType: 'serviceType',
-  providerName: 'providerName',
+  serviceTypeEncrypted: 'serviceTypeEncrypted',
+  providerNameEncrypted: 'providerNameEncrypted',
   dateOfService: 'dateOfService',
-  billedAmount: 'billedAmount',
-  insurancePaid: 'insurancePaid',
-  patientPaid: 'patientPaid',
-  appliedToDeductible: 'appliedToDeductible',
-  appliedToOop: 'appliedToOop',
+  billedAmountEncrypted: 'billedAmountEncrypted',
+  insurancePaidEncrypted: 'insurancePaidEncrypted',
+  patientPaidEncrypted: 'patientPaidEncrypted',
+  appliedToDeductibleEncrypted: 'appliedToDeductibleEncrypted',
+  appliedToOopEncrypted: 'appliedToOopEncrypted',
   claimStatus: 'claimStatus',
   isInNetwork: 'isInNetwork',
-  notes: 'notes',
+  notesEncrypted: 'notesEncrypted',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -523,20 +523,15 @@ exports.Prisma.CostAnalysisScalarFieldEnum = {
   planId: 'planId',
   analysisDate: 'analysisDate',
   claudeResponse: 'claudeResponse',
-  totalProjectedOop: 'totalProjectedOop',
+  totalProjectedOopEncrypted: 'totalProjectedOopEncrypted',
   deductibleMetMonth: 'deductibleMetMonth',
-  projectedExpensesSnapshot: 'projectedExpensesSnapshot',
+  projectedExpensesSnapshotEncrypted: 'projectedExpensesSnapshotEncrypted',
   createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
-};
-
-exports.Prisma.NullableJsonNullValueInput = {
-  DbNull: Prisma.DbNull,
-  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -547,12 +542,6 @@ exports.Prisma.QueryMode = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
-};
-
-exports.Prisma.JsonNullValueFilter = {
-  DbNull: Prisma.DbNull,
-  JsonNull: Prisma.JsonNull,
-  AnyNull: Prisma.AnyNull
 };
 exports.UserRole = exports.$Enums.UserRole = {
   PATIENT: 'PATIENT',

@@ -25579,12 +25579,10 @@ export namespace Prisma {
   }
 
   export type ExpenseProjectionAvgAggregateOutputType = {
-    estimatedCost: Decimal | null
     frequencyPerYear: number | null
   }
 
   export type ExpenseProjectionSumAggregateOutputType = {
-    estimatedCost: Decimal | null
     frequencyPerYear: number | null
   }
 
@@ -25592,11 +25590,11 @@ export namespace Prisma {
     id: string | null
     userId: string | null
     planId: string | null
-    serviceType: string | null
-    estimatedCost: Decimal | null
+    serviceTypeEncrypted: string | null
+    estimatedCostEncrypted: string | null
     frequencyPerYear: number | null
     isInNetwork: boolean | null
-    notes: string | null
+    notesEncrypted: string | null
     projectionDate: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -25606,11 +25604,11 @@ export namespace Prisma {
     id: string | null
     userId: string | null
     planId: string | null
-    serviceType: string | null
-    estimatedCost: Decimal | null
+    serviceTypeEncrypted: string | null
+    estimatedCostEncrypted: string | null
     frequencyPerYear: number | null
     isInNetwork: boolean | null
-    notes: string | null
+    notesEncrypted: string | null
     projectionDate: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -25620,11 +25618,11 @@ export namespace Prisma {
     id: number
     userId: number
     planId: number
-    serviceType: number
-    estimatedCost: number
+    serviceTypeEncrypted: number
+    estimatedCostEncrypted: number
     frequencyPerYear: number
     isInNetwork: number
-    notes: number
+    notesEncrypted: number
     projectionDate: number
     createdAt: number
     updatedAt: number
@@ -25633,12 +25631,10 @@ export namespace Prisma {
 
 
   export type ExpenseProjectionAvgAggregateInputType = {
-    estimatedCost?: true
     frequencyPerYear?: true
   }
 
   export type ExpenseProjectionSumAggregateInputType = {
-    estimatedCost?: true
     frequencyPerYear?: true
   }
 
@@ -25646,11 +25642,11 @@ export namespace Prisma {
     id?: true
     userId?: true
     planId?: true
-    serviceType?: true
-    estimatedCost?: true
+    serviceTypeEncrypted?: true
+    estimatedCostEncrypted?: true
     frequencyPerYear?: true
     isInNetwork?: true
-    notes?: true
+    notesEncrypted?: true
     projectionDate?: true
     createdAt?: true
     updatedAt?: true
@@ -25660,11 +25656,11 @@ export namespace Prisma {
     id?: true
     userId?: true
     planId?: true
-    serviceType?: true
-    estimatedCost?: true
+    serviceTypeEncrypted?: true
+    estimatedCostEncrypted?: true
     frequencyPerYear?: true
     isInNetwork?: true
-    notes?: true
+    notesEncrypted?: true
     projectionDate?: true
     createdAt?: true
     updatedAt?: true
@@ -25674,11 +25670,11 @@ export namespace Prisma {
     id?: true
     userId?: true
     planId?: true
-    serviceType?: true
-    estimatedCost?: true
+    serviceTypeEncrypted?: true
+    estimatedCostEncrypted?: true
     frequencyPerYear?: true
     isInNetwork?: true
-    notes?: true
+    notesEncrypted?: true
     projectionDate?: true
     createdAt?: true
     updatedAt?: true
@@ -25775,11 +25771,11 @@ export namespace Prisma {
     id: string
     userId: string
     planId: string
-    serviceType: string
-    estimatedCost: Decimal
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear: number
     isInNetwork: boolean
-    notes: string | null
+    notesEncrypted: string | null
     projectionDate: Date
     createdAt: Date
     updatedAt: Date
@@ -25808,11 +25804,11 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     planId?: boolean
-    serviceType?: boolean
-    estimatedCost?: boolean
+    serviceTypeEncrypted?: boolean
+    estimatedCostEncrypted?: boolean
     frequencyPerYear?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     projectionDate?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -25826,11 +25822,11 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     planId?: boolean
-    serviceType?: boolean
-    estimatedCost?: boolean
+    serviceTypeEncrypted?: boolean
+    estimatedCostEncrypted?: boolean
     frequencyPerYear?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     projectionDate?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -25842,11 +25838,11 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     planId?: boolean
-    serviceType?: boolean
-    estimatedCost?: boolean
+    serviceTypeEncrypted?: boolean
+    estimatedCostEncrypted?: boolean
     frequencyPerYear?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     projectionDate?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -25858,17 +25854,17 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     planId?: boolean
-    serviceType?: boolean
-    estimatedCost?: boolean
+    serviceTypeEncrypted?: boolean
+    estimatedCostEncrypted?: boolean
     frequencyPerYear?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     projectionDate?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type ExpenseProjectionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "serviceType" | "estimatedCost" | "frequencyPerYear" | "isInNetwork" | "notes" | "projectionDate" | "createdAt" | "updatedAt", ExtArgs["result"]["expenseProjection"]>
+  export type ExpenseProjectionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "serviceTypeEncrypted" | "estimatedCostEncrypted" | "frequencyPerYear" | "isInNetwork" | "notesEncrypted" | "projectionDate" | "createdAt" | "updatedAt", ExtArgs["result"]["expenseProjection"]>
   export type ExpenseProjectionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -25895,11 +25891,11 @@ export namespace Prisma {
       id: string
       userId: string
       planId: string
-      serviceType: string
-      estimatedCost: Prisma.Decimal
+      serviceTypeEncrypted: string
+      estimatedCostEncrypted: string
       frequencyPerYear: number
       isInNetwork: boolean
-      notes: string | null
+      notesEncrypted: string | null
       projectionDate: Date
       createdAt: Date
       updatedAt: Date
@@ -26332,11 +26328,11 @@ export namespace Prisma {
     readonly id: FieldRef<"ExpenseProjection", 'String'>
     readonly userId: FieldRef<"ExpenseProjection", 'String'>
     readonly planId: FieldRef<"ExpenseProjection", 'String'>
-    readonly serviceType: FieldRef<"ExpenseProjection", 'String'>
-    readonly estimatedCost: FieldRef<"ExpenseProjection", 'Decimal'>
+    readonly serviceTypeEncrypted: FieldRef<"ExpenseProjection", 'String'>
+    readonly estimatedCostEncrypted: FieldRef<"ExpenseProjection", 'String'>
     readonly frequencyPerYear: FieldRef<"ExpenseProjection", 'Int'>
     readonly isInNetwork: FieldRef<"ExpenseProjection", 'Boolean'>
-    readonly notes: FieldRef<"ExpenseProjection", 'String'>
+    readonly notesEncrypted: FieldRef<"ExpenseProjection", 'String'>
     readonly projectionDate: FieldRef<"ExpenseProjection", 'DateTime'>
     readonly createdAt: FieldRef<"ExpenseProjection", 'DateTime'>
     readonly updatedAt: FieldRef<"ExpenseProjection", 'DateTime'>
@@ -26784,26 +26780,8 @@ export namespace Prisma {
 
   export type AggregateExpenseActual = {
     _count: ExpenseActualCountAggregateOutputType | null
-    _avg: ExpenseActualAvgAggregateOutputType | null
-    _sum: ExpenseActualSumAggregateOutputType | null
     _min: ExpenseActualMinAggregateOutputType | null
     _max: ExpenseActualMaxAggregateOutputType | null
-  }
-
-  export type ExpenseActualAvgAggregateOutputType = {
-    billedAmount: Decimal | null
-    insurancePaid: Decimal | null
-    patientPaid: Decimal | null
-    appliedToDeductible: Decimal | null
-    appliedToOop: Decimal | null
-  }
-
-  export type ExpenseActualSumAggregateOutputType = {
-    billedAmount: Decimal | null
-    insurancePaid: Decimal | null
-    patientPaid: Decimal | null
-    appliedToDeductible: Decimal | null
-    appliedToOop: Decimal | null
   }
 
   export type ExpenseActualMinAggregateOutputType = {
@@ -26811,17 +26789,17 @@ export namespace Prisma {
     userId: string | null
     planId: string | null
     projectionId: string | null
-    serviceType: string | null
-    providerName: string | null
+    serviceTypeEncrypted: string | null
+    providerNameEncrypted: string | null
     dateOfService: Date | null
-    billedAmount: Decimal | null
-    insurancePaid: Decimal | null
-    patientPaid: Decimal | null
-    appliedToDeductible: Decimal | null
-    appliedToOop: Decimal | null
+    billedAmountEncrypted: string | null
+    insurancePaidEncrypted: string | null
+    patientPaidEncrypted: string | null
+    appliedToDeductibleEncrypted: string | null
+    appliedToOopEncrypted: string | null
     claimStatus: string | null
     isInNetwork: boolean | null
-    notes: string | null
+    notesEncrypted: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -26831,17 +26809,17 @@ export namespace Prisma {
     userId: string | null
     planId: string | null
     projectionId: string | null
-    serviceType: string | null
-    providerName: string | null
+    serviceTypeEncrypted: string | null
+    providerNameEncrypted: string | null
     dateOfService: Date | null
-    billedAmount: Decimal | null
-    insurancePaid: Decimal | null
-    patientPaid: Decimal | null
-    appliedToDeductible: Decimal | null
-    appliedToOop: Decimal | null
+    billedAmountEncrypted: string | null
+    insurancePaidEncrypted: string | null
+    patientPaidEncrypted: string | null
+    appliedToDeductibleEncrypted: string | null
+    appliedToOopEncrypted: string | null
     claimStatus: string | null
     isInNetwork: boolean | null
-    notes: string | null
+    notesEncrypted: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -26851,55 +26829,39 @@ export namespace Prisma {
     userId: number
     planId: number
     projectionId: number
-    serviceType: number
-    providerName: number
+    serviceTypeEncrypted: number
+    providerNameEncrypted: number
     dateOfService: number
-    billedAmount: number
-    insurancePaid: number
-    patientPaid: number
-    appliedToDeductible: number
-    appliedToOop: number
+    billedAmountEncrypted: number
+    insurancePaidEncrypted: number
+    patientPaidEncrypted: number
+    appliedToDeductibleEncrypted: number
+    appliedToOopEncrypted: number
     claimStatus: number
     isInNetwork: number
-    notes: number
+    notesEncrypted: number
     createdAt: number
     updatedAt: number
     _all: number
   }
 
 
-  export type ExpenseActualAvgAggregateInputType = {
-    billedAmount?: true
-    insurancePaid?: true
-    patientPaid?: true
-    appliedToDeductible?: true
-    appliedToOop?: true
-  }
-
-  export type ExpenseActualSumAggregateInputType = {
-    billedAmount?: true
-    insurancePaid?: true
-    patientPaid?: true
-    appliedToDeductible?: true
-    appliedToOop?: true
-  }
-
   export type ExpenseActualMinAggregateInputType = {
     id?: true
     userId?: true
     planId?: true
     projectionId?: true
-    serviceType?: true
-    providerName?: true
+    serviceTypeEncrypted?: true
+    providerNameEncrypted?: true
     dateOfService?: true
-    billedAmount?: true
-    insurancePaid?: true
-    patientPaid?: true
-    appliedToDeductible?: true
-    appliedToOop?: true
+    billedAmountEncrypted?: true
+    insurancePaidEncrypted?: true
+    patientPaidEncrypted?: true
+    appliedToDeductibleEncrypted?: true
+    appliedToOopEncrypted?: true
     claimStatus?: true
     isInNetwork?: true
-    notes?: true
+    notesEncrypted?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -26909,17 +26871,17 @@ export namespace Prisma {
     userId?: true
     planId?: true
     projectionId?: true
-    serviceType?: true
-    providerName?: true
+    serviceTypeEncrypted?: true
+    providerNameEncrypted?: true
     dateOfService?: true
-    billedAmount?: true
-    insurancePaid?: true
-    patientPaid?: true
-    appliedToDeductible?: true
-    appliedToOop?: true
+    billedAmountEncrypted?: true
+    insurancePaidEncrypted?: true
+    patientPaidEncrypted?: true
+    appliedToDeductibleEncrypted?: true
+    appliedToOopEncrypted?: true
     claimStatus?: true
     isInNetwork?: true
-    notes?: true
+    notesEncrypted?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -26929,17 +26891,17 @@ export namespace Prisma {
     userId?: true
     planId?: true
     projectionId?: true
-    serviceType?: true
-    providerName?: true
+    serviceTypeEncrypted?: true
+    providerNameEncrypted?: true
     dateOfService?: true
-    billedAmount?: true
-    insurancePaid?: true
-    patientPaid?: true
-    appliedToDeductible?: true
-    appliedToOop?: true
+    billedAmountEncrypted?: true
+    insurancePaidEncrypted?: true
+    patientPaidEncrypted?: true
+    appliedToDeductibleEncrypted?: true
+    appliedToOopEncrypted?: true
     claimStatus?: true
     isInNetwork?: true
-    notes?: true
+    notesEncrypted?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -26983,18 +26945,6 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
-     * Select which fields to average
-    **/
-    _avg?: ExpenseActualAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: ExpenseActualSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
      * Select which fields to find the minimum value
     **/
     _min?: ExpenseActualMinAggregateInputType
@@ -27025,8 +26975,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: ExpenseActualCountAggregateInputType | true
-    _avg?: ExpenseActualAvgAggregateInputType
-    _sum?: ExpenseActualSumAggregateInputType
     _min?: ExpenseActualMinAggregateInputType
     _max?: ExpenseActualMaxAggregateInputType
   }
@@ -27036,22 +26984,20 @@ export namespace Prisma {
     userId: string
     planId: string
     projectionId: string | null
-    serviceType: string
-    providerName: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted: string | null
     dateOfService: Date | null
-    billedAmount: Decimal | null
-    insurancePaid: Decimal | null
-    patientPaid: Decimal | null
-    appliedToDeductible: Decimal | null
-    appliedToOop: Decimal | null
+    billedAmountEncrypted: string | null
+    insurancePaidEncrypted: string | null
+    patientPaidEncrypted: string | null
+    appliedToDeductibleEncrypted: string | null
+    appliedToOopEncrypted: string | null
     claimStatus: string
     isInNetwork: boolean | null
-    notes: string | null
+    notesEncrypted: string | null
     createdAt: Date
     updatedAt: Date
     _count: ExpenseActualCountAggregateOutputType | null
-    _avg: ExpenseActualAvgAggregateOutputType | null
-    _sum: ExpenseActualSumAggregateOutputType | null
     _min: ExpenseActualMinAggregateOutputType | null
     _max: ExpenseActualMaxAggregateOutputType | null
   }
@@ -27075,17 +27021,17 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     projectionId?: boolean
-    serviceType?: boolean
-    providerName?: boolean
+    serviceTypeEncrypted?: boolean
+    providerNameEncrypted?: boolean
     dateOfService?: boolean
-    billedAmount?: boolean
-    insurancePaid?: boolean
-    patientPaid?: boolean
-    appliedToDeductible?: boolean
-    appliedToOop?: boolean
+    billedAmountEncrypted?: boolean
+    insurancePaidEncrypted?: boolean
+    patientPaidEncrypted?: boolean
+    appliedToDeductibleEncrypted?: boolean
+    appliedToOopEncrypted?: boolean
     claimStatus?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -27098,17 +27044,17 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     projectionId?: boolean
-    serviceType?: boolean
-    providerName?: boolean
+    serviceTypeEncrypted?: boolean
+    providerNameEncrypted?: boolean
     dateOfService?: boolean
-    billedAmount?: boolean
-    insurancePaid?: boolean
-    patientPaid?: boolean
-    appliedToDeductible?: boolean
-    appliedToOop?: boolean
+    billedAmountEncrypted?: boolean
+    insurancePaidEncrypted?: boolean
+    patientPaidEncrypted?: boolean
+    appliedToDeductibleEncrypted?: boolean
+    appliedToOopEncrypted?: boolean
     claimStatus?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -27121,17 +27067,17 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     projectionId?: boolean
-    serviceType?: boolean
-    providerName?: boolean
+    serviceTypeEncrypted?: boolean
+    providerNameEncrypted?: boolean
     dateOfService?: boolean
-    billedAmount?: boolean
-    insurancePaid?: boolean
-    patientPaid?: boolean
-    appliedToDeductible?: boolean
-    appliedToOop?: boolean
+    billedAmountEncrypted?: boolean
+    insurancePaidEncrypted?: boolean
+    patientPaidEncrypted?: boolean
+    appliedToDeductibleEncrypted?: boolean
+    appliedToOopEncrypted?: boolean
     claimStatus?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -27144,22 +27090,22 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     projectionId?: boolean
-    serviceType?: boolean
-    providerName?: boolean
+    serviceTypeEncrypted?: boolean
+    providerNameEncrypted?: boolean
     dateOfService?: boolean
-    billedAmount?: boolean
-    insurancePaid?: boolean
-    patientPaid?: boolean
-    appliedToDeductible?: boolean
-    appliedToOop?: boolean
+    billedAmountEncrypted?: boolean
+    insurancePaidEncrypted?: boolean
+    patientPaidEncrypted?: boolean
+    appliedToDeductibleEncrypted?: boolean
+    appliedToOopEncrypted?: boolean
     claimStatus?: boolean
     isInNetwork?: boolean
-    notes?: boolean
+    notesEncrypted?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type ExpenseActualOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "projectionId" | "serviceType" | "providerName" | "dateOfService" | "billedAmount" | "insurancePaid" | "patientPaid" | "appliedToDeductible" | "appliedToOop" | "claimStatus" | "isInNetwork" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["expenseActual"]>
+  export type ExpenseActualOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "projectionId" | "serviceTypeEncrypted" | "providerNameEncrypted" | "dateOfService" | "billedAmountEncrypted" | "insurancePaidEncrypted" | "patientPaidEncrypted" | "appliedToDeductibleEncrypted" | "appliedToOopEncrypted" | "claimStatus" | "isInNetwork" | "notesEncrypted" | "createdAt" | "updatedAt", ExtArgs["result"]["expenseActual"]>
   export type ExpenseActualInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -27188,17 +27134,17 @@ export namespace Prisma {
       userId: string
       planId: string
       projectionId: string | null
-      serviceType: string
-      providerName: string | null
+      serviceTypeEncrypted: string
+      providerNameEncrypted: string | null
       dateOfService: Date | null
-      billedAmount: Prisma.Decimal | null
-      insurancePaid: Prisma.Decimal | null
-      patientPaid: Prisma.Decimal | null
-      appliedToDeductible: Prisma.Decimal | null
-      appliedToOop: Prisma.Decimal | null
+      billedAmountEncrypted: string | null
+      insurancePaidEncrypted: string | null
+      patientPaidEncrypted: string | null
+      appliedToDeductibleEncrypted: string | null
+      appliedToOopEncrypted: string | null
       claimStatus: string
       isInNetwork: boolean | null
-      notes: string | null
+      notesEncrypted: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["expenseActual"]>
@@ -27631,17 +27577,17 @@ export namespace Prisma {
     readonly userId: FieldRef<"ExpenseActual", 'String'>
     readonly planId: FieldRef<"ExpenseActual", 'String'>
     readonly projectionId: FieldRef<"ExpenseActual", 'String'>
-    readonly serviceType: FieldRef<"ExpenseActual", 'String'>
-    readonly providerName: FieldRef<"ExpenseActual", 'String'>
+    readonly serviceTypeEncrypted: FieldRef<"ExpenseActual", 'String'>
+    readonly providerNameEncrypted: FieldRef<"ExpenseActual", 'String'>
     readonly dateOfService: FieldRef<"ExpenseActual", 'DateTime'>
-    readonly billedAmount: FieldRef<"ExpenseActual", 'Decimal'>
-    readonly insurancePaid: FieldRef<"ExpenseActual", 'Decimal'>
-    readonly patientPaid: FieldRef<"ExpenseActual", 'Decimal'>
-    readonly appliedToDeductible: FieldRef<"ExpenseActual", 'Decimal'>
-    readonly appliedToOop: FieldRef<"ExpenseActual", 'Decimal'>
+    readonly billedAmountEncrypted: FieldRef<"ExpenseActual", 'String'>
+    readonly insurancePaidEncrypted: FieldRef<"ExpenseActual", 'String'>
+    readonly patientPaidEncrypted: FieldRef<"ExpenseActual", 'String'>
+    readonly appliedToDeductibleEncrypted: FieldRef<"ExpenseActual", 'String'>
+    readonly appliedToOopEncrypted: FieldRef<"ExpenseActual", 'String'>
     readonly claimStatus: FieldRef<"ExpenseActual", 'String'>
     readonly isInNetwork: FieldRef<"ExpenseActual", 'Boolean'>
-    readonly notes: FieldRef<"ExpenseActual", 'String'>
+    readonly notesEncrypted: FieldRef<"ExpenseActual", 'String'>
     readonly createdAt: FieldRef<"ExpenseActual", 'DateTime'>
     readonly updatedAt: FieldRef<"ExpenseActual", 'DateTime'>
   }
@@ -28090,12 +28036,10 @@ export namespace Prisma {
   }
 
   export type CostAnalysisAvgAggregateOutputType = {
-    totalProjectedOop: Decimal | null
     deductibleMetMonth: number | null
   }
 
   export type CostAnalysisSumAggregateOutputType = {
-    totalProjectedOop: Decimal | null
     deductibleMetMonth: number | null
   }
 
@@ -28105,8 +28049,9 @@ export namespace Prisma {
     planId: string | null
     analysisDate: Date | null
     claudeResponse: string | null
-    totalProjectedOop: Decimal | null
+    totalProjectedOopEncrypted: string | null
     deductibleMetMonth: number | null
+    projectedExpensesSnapshotEncrypted: string | null
     createdAt: Date | null
   }
 
@@ -28116,8 +28061,9 @@ export namespace Prisma {
     planId: string | null
     analysisDate: Date | null
     claudeResponse: string | null
-    totalProjectedOop: Decimal | null
+    totalProjectedOopEncrypted: string | null
     deductibleMetMonth: number | null
+    projectedExpensesSnapshotEncrypted: string | null
     createdAt: Date | null
   }
 
@@ -28127,21 +28073,19 @@ export namespace Prisma {
     planId: number
     analysisDate: number
     claudeResponse: number
-    totalProjectedOop: number
+    totalProjectedOopEncrypted: number
     deductibleMetMonth: number
-    projectedExpensesSnapshot: number
+    projectedExpensesSnapshotEncrypted: number
     createdAt: number
     _all: number
   }
 
 
   export type CostAnalysisAvgAggregateInputType = {
-    totalProjectedOop?: true
     deductibleMetMonth?: true
   }
 
   export type CostAnalysisSumAggregateInputType = {
-    totalProjectedOop?: true
     deductibleMetMonth?: true
   }
 
@@ -28151,8 +28095,9 @@ export namespace Prisma {
     planId?: true
     analysisDate?: true
     claudeResponse?: true
-    totalProjectedOop?: true
+    totalProjectedOopEncrypted?: true
     deductibleMetMonth?: true
+    projectedExpensesSnapshotEncrypted?: true
     createdAt?: true
   }
 
@@ -28162,8 +28107,9 @@ export namespace Prisma {
     planId?: true
     analysisDate?: true
     claudeResponse?: true
-    totalProjectedOop?: true
+    totalProjectedOopEncrypted?: true
     deductibleMetMonth?: true
+    projectedExpensesSnapshotEncrypted?: true
     createdAt?: true
   }
 
@@ -28173,9 +28119,9 @@ export namespace Prisma {
     planId?: true
     analysisDate?: true
     claudeResponse?: true
-    totalProjectedOop?: true
+    totalProjectedOopEncrypted?: true
     deductibleMetMonth?: true
-    projectedExpensesSnapshot?: true
+    projectedExpensesSnapshotEncrypted?: true
     createdAt?: true
     _all?: true
   }
@@ -28272,9 +28218,9 @@ export namespace Prisma {
     planId: string
     analysisDate: Date
     claudeResponse: string
-    totalProjectedOop: Decimal | null
+    totalProjectedOopEncrypted: string | null
     deductibleMetMonth: number | null
-    projectedExpensesSnapshot: JsonValue | null
+    projectedExpensesSnapshotEncrypted: string | null
     createdAt: Date
     _count: CostAnalysisCountAggregateOutputType | null
     _avg: CostAnalysisAvgAggregateOutputType | null
@@ -28303,9 +28249,9 @@ export namespace Prisma {
     planId?: boolean
     analysisDate?: boolean
     claudeResponse?: boolean
-    totalProjectedOop?: boolean
+    totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
-    projectedExpensesSnapshot?: boolean
+    projectedExpensesSnapshotEncrypted?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -28317,9 +28263,9 @@ export namespace Prisma {
     planId?: boolean
     analysisDate?: boolean
     claudeResponse?: boolean
-    totalProjectedOop?: boolean
+    totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
-    projectedExpensesSnapshot?: boolean
+    projectedExpensesSnapshotEncrypted?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -28331,9 +28277,9 @@ export namespace Prisma {
     planId?: boolean
     analysisDate?: boolean
     claudeResponse?: boolean
-    totalProjectedOop?: boolean
+    totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
-    projectedExpensesSnapshot?: boolean
+    projectedExpensesSnapshotEncrypted?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -28345,13 +28291,13 @@ export namespace Prisma {
     planId?: boolean
     analysisDate?: boolean
     claudeResponse?: boolean
-    totalProjectedOop?: boolean
+    totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
-    projectedExpensesSnapshot?: boolean
+    projectedExpensesSnapshotEncrypted?: boolean
     createdAt?: boolean
   }
 
-  export type CostAnalysisOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "analysisDate" | "claudeResponse" | "totalProjectedOop" | "deductibleMetMonth" | "projectedExpensesSnapshot" | "createdAt", ExtArgs["result"]["costAnalysis"]>
+  export type CostAnalysisOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "analysisDate" | "claudeResponse" | "totalProjectedOopEncrypted" | "deductibleMetMonth" | "projectedExpensesSnapshotEncrypted" | "createdAt", ExtArgs["result"]["costAnalysis"]>
   export type CostAnalysisInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -28377,9 +28323,9 @@ export namespace Prisma {
       planId: string
       analysisDate: Date
       claudeResponse: string
-      totalProjectedOop: Prisma.Decimal | null
+      totalProjectedOopEncrypted: string | null
       deductibleMetMonth: number | null
-      projectedExpensesSnapshot: Prisma.JsonValue | null
+      projectedExpensesSnapshotEncrypted: string | null
       createdAt: Date
     }, ExtArgs["result"]["costAnalysis"]>
     composites: {}
@@ -28811,9 +28757,9 @@ export namespace Prisma {
     readonly planId: FieldRef<"CostAnalysis", 'String'>
     readonly analysisDate: FieldRef<"CostAnalysis", 'DateTime'>
     readonly claudeResponse: FieldRef<"CostAnalysis", 'String'>
-    readonly totalProjectedOop: FieldRef<"CostAnalysis", 'Decimal'>
+    readonly totalProjectedOopEncrypted: FieldRef<"CostAnalysis", 'String'>
     readonly deductibleMetMonth: FieldRef<"CostAnalysis", 'Int'>
-    readonly projectedExpensesSnapshot: FieldRef<"CostAnalysis", 'Json'>
+    readonly projectedExpensesSnapshotEncrypted: FieldRef<"CostAnalysis", 'String'>
     readonly createdAt: FieldRef<"CostAnalysis", 'DateTime'>
   }
     
@@ -29661,11 +29607,11 @@ export namespace Prisma {
     id: 'id',
     userId: 'userId',
     planId: 'planId',
-    serviceType: 'serviceType',
-    estimatedCost: 'estimatedCost',
+    serviceTypeEncrypted: 'serviceTypeEncrypted',
+    estimatedCostEncrypted: 'estimatedCostEncrypted',
     frequencyPerYear: 'frequencyPerYear',
     isInNetwork: 'isInNetwork',
-    notes: 'notes',
+    notesEncrypted: 'notesEncrypted',
     projectionDate: 'projectionDate',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -29679,17 +29625,17 @@ export namespace Prisma {
     userId: 'userId',
     planId: 'planId',
     projectionId: 'projectionId',
-    serviceType: 'serviceType',
-    providerName: 'providerName',
+    serviceTypeEncrypted: 'serviceTypeEncrypted',
+    providerNameEncrypted: 'providerNameEncrypted',
     dateOfService: 'dateOfService',
-    billedAmount: 'billedAmount',
-    insurancePaid: 'insurancePaid',
-    patientPaid: 'patientPaid',
-    appliedToDeductible: 'appliedToDeductible',
-    appliedToOop: 'appliedToOop',
+    billedAmountEncrypted: 'billedAmountEncrypted',
+    insurancePaidEncrypted: 'insurancePaidEncrypted',
+    patientPaidEncrypted: 'patientPaidEncrypted',
+    appliedToDeductibleEncrypted: 'appliedToDeductibleEncrypted',
+    appliedToOopEncrypted: 'appliedToOopEncrypted',
     claimStatus: 'claimStatus',
     isInNetwork: 'isInNetwork',
-    notes: 'notes',
+    notesEncrypted: 'notesEncrypted',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -29703,9 +29649,9 @@ export namespace Prisma {
     planId: 'planId',
     analysisDate: 'analysisDate',
     claudeResponse: 'claudeResponse',
-    totalProjectedOop: 'totalProjectedOop',
+    totalProjectedOopEncrypted: 'totalProjectedOopEncrypted',
     deductibleMetMonth: 'deductibleMetMonth',
-    projectedExpensesSnapshot: 'projectedExpensesSnapshot',
+    projectedExpensesSnapshotEncrypted: 'projectedExpensesSnapshotEncrypted',
     createdAt: 'createdAt'
   };
 
@@ -29718,14 +29664,6 @@ export namespace Prisma {
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
-
-
-  export const NullableJsonNullValueInput: {
-    DbNull: typeof DbNull,
-    JsonNull: typeof JsonNull
-  };
-
-  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
   export const QueryMode: {
@@ -29742,15 +29680,6 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
-
-
-  export const JsonNullValueFilter: {
-    DbNull: typeof DbNull,
-    JsonNull: typeof JsonNull,
-    AnyNull: typeof AnyNull
-  };
-
-  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -30028,20 +29957,6 @@ export namespace Prisma {
    * Reference to a field of type 'AuditAction[]'
    */
   export type ListEnumAuditActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AuditAction[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'Json'
-   */
-  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-  /**
-   * Reference to a field of type 'QueryMode'
-   */
-  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -32232,11 +32147,11 @@ export namespace Prisma {
     id?: UuidFilter<"ExpenseProjection"> | string
     userId?: UuidFilter<"ExpenseProjection"> | string
     planId?: UuidFilter<"ExpenseProjection"> | string
-    serviceType?: StringFilter<"ExpenseProjection"> | string
-    estimatedCost?: DecimalFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFilter<"ExpenseProjection"> | string
+    estimatedCostEncrypted?: StringFilter<"ExpenseProjection"> | string
     frequencyPerYear?: IntFilter<"ExpenseProjection"> | number
     isInNetwork?: BoolFilter<"ExpenseProjection"> | boolean
-    notes?: StringNullableFilter<"ExpenseProjection"> | string | null
+    notesEncrypted?: StringNullableFilter<"ExpenseProjection"> | string | null
     projectionDate?: DateTimeFilter<"ExpenseProjection"> | Date | string
     createdAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
     updatedAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
@@ -32249,11 +32164,11 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     planId?: SortOrder
-    serviceType?: SortOrder
-    estimatedCost?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    estimatedCostEncrypted?: SortOrder
     frequencyPerYear?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrderInput | SortOrder
+    notesEncrypted?: SortOrderInput | SortOrder
     projectionDate?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -32269,11 +32184,11 @@ export namespace Prisma {
     NOT?: ExpenseProjectionWhereInput | ExpenseProjectionWhereInput[]
     userId?: UuidFilter<"ExpenseProjection"> | string
     planId?: UuidFilter<"ExpenseProjection"> | string
-    serviceType?: StringFilter<"ExpenseProjection"> | string
-    estimatedCost?: DecimalFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFilter<"ExpenseProjection"> | string
+    estimatedCostEncrypted?: StringFilter<"ExpenseProjection"> | string
     frequencyPerYear?: IntFilter<"ExpenseProjection"> | number
     isInNetwork?: BoolFilter<"ExpenseProjection"> | boolean
-    notes?: StringNullableFilter<"ExpenseProjection"> | string | null
+    notesEncrypted?: StringNullableFilter<"ExpenseProjection"> | string | null
     projectionDate?: DateTimeFilter<"ExpenseProjection"> | Date | string
     createdAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
     updatedAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
@@ -32286,11 +32201,11 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     planId?: SortOrder
-    serviceType?: SortOrder
-    estimatedCost?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    estimatedCostEncrypted?: SortOrder
     frequencyPerYear?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrderInput | SortOrder
+    notesEncrypted?: SortOrderInput | SortOrder
     projectionDate?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -32308,11 +32223,11 @@ export namespace Prisma {
     id?: UuidWithAggregatesFilter<"ExpenseProjection"> | string
     userId?: UuidWithAggregatesFilter<"ExpenseProjection"> | string
     planId?: UuidWithAggregatesFilter<"ExpenseProjection"> | string
-    serviceType?: StringWithAggregatesFilter<"ExpenseProjection"> | string
-    estimatedCost?: DecimalWithAggregatesFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringWithAggregatesFilter<"ExpenseProjection"> | string
+    estimatedCostEncrypted?: StringWithAggregatesFilter<"ExpenseProjection"> | string
     frequencyPerYear?: IntWithAggregatesFilter<"ExpenseProjection"> | number
     isInNetwork?: BoolWithAggregatesFilter<"ExpenseProjection"> | boolean
-    notes?: StringNullableWithAggregatesFilter<"ExpenseProjection"> | string | null
+    notesEncrypted?: StringNullableWithAggregatesFilter<"ExpenseProjection"> | string | null
     projectionDate?: DateTimeWithAggregatesFilter<"ExpenseProjection"> | Date | string
     createdAt?: DateTimeWithAggregatesFilter<"ExpenseProjection"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"ExpenseProjection"> | Date | string
@@ -32326,17 +32241,17 @@ export namespace Prisma {
     userId?: UuidFilter<"ExpenseActual"> | string
     planId?: UuidFilter<"ExpenseActual"> | string
     projectionId?: UuidNullableFilter<"ExpenseActual"> | string | null
-    serviceType?: StringFilter<"ExpenseActual"> | string
-    providerName?: StringNullableFilter<"ExpenseActual"> | string | null
+    serviceTypeEncrypted?: StringFilter<"ExpenseActual"> | string
+    providerNameEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     dateOfService?: DateTimeNullableFilter<"ExpenseActual"> | Date | string | null
-    billedAmount?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    insurancePaidEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    patientPaidEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    appliedToDeductibleEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    appliedToOopEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     claimStatus?: StringFilter<"ExpenseActual"> | string
     isInNetwork?: BoolNullableFilter<"ExpenseActual"> | boolean | null
-    notes?: StringNullableFilter<"ExpenseActual"> | string | null
+    notesEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     createdAt?: DateTimeFilter<"ExpenseActual"> | Date | string
     updatedAt?: DateTimeFilter<"ExpenseActual"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -32349,17 +32264,17 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     projectionId?: SortOrderInput | SortOrder
-    serviceType?: SortOrder
-    providerName?: SortOrderInput | SortOrder
+    serviceTypeEncrypted?: SortOrder
+    providerNameEncrypted?: SortOrderInput | SortOrder
     dateOfService?: SortOrderInput | SortOrder
-    billedAmount?: SortOrderInput | SortOrder
-    insurancePaid?: SortOrderInput | SortOrder
-    patientPaid?: SortOrderInput | SortOrder
-    appliedToDeductible?: SortOrderInput | SortOrder
-    appliedToOop?: SortOrderInput | SortOrder
+    billedAmountEncrypted?: SortOrderInput | SortOrder
+    insurancePaidEncrypted?: SortOrderInput | SortOrder
+    patientPaidEncrypted?: SortOrderInput | SortOrder
+    appliedToDeductibleEncrypted?: SortOrderInput | SortOrder
+    appliedToOopEncrypted?: SortOrderInput | SortOrder
     claimStatus?: SortOrder
     isInNetwork?: SortOrderInput | SortOrder
-    notes?: SortOrderInput | SortOrder
+    notesEncrypted?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -32375,17 +32290,17 @@ export namespace Prisma {
     userId?: UuidFilter<"ExpenseActual"> | string
     planId?: UuidFilter<"ExpenseActual"> | string
     projectionId?: UuidNullableFilter<"ExpenseActual"> | string | null
-    serviceType?: StringFilter<"ExpenseActual"> | string
-    providerName?: StringNullableFilter<"ExpenseActual"> | string | null
+    serviceTypeEncrypted?: StringFilter<"ExpenseActual"> | string
+    providerNameEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     dateOfService?: DateTimeNullableFilter<"ExpenseActual"> | Date | string | null
-    billedAmount?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    insurancePaidEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    patientPaidEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    appliedToDeductibleEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    appliedToOopEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     claimStatus?: StringFilter<"ExpenseActual"> | string
     isInNetwork?: BoolNullableFilter<"ExpenseActual"> | boolean | null
-    notes?: StringNullableFilter<"ExpenseActual"> | string | null
+    notesEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     createdAt?: DateTimeFilter<"ExpenseActual"> | Date | string
     updatedAt?: DateTimeFilter<"ExpenseActual"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
@@ -32398,24 +32313,22 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     projectionId?: SortOrderInput | SortOrder
-    serviceType?: SortOrder
-    providerName?: SortOrderInput | SortOrder
+    serviceTypeEncrypted?: SortOrder
+    providerNameEncrypted?: SortOrderInput | SortOrder
     dateOfService?: SortOrderInput | SortOrder
-    billedAmount?: SortOrderInput | SortOrder
-    insurancePaid?: SortOrderInput | SortOrder
-    patientPaid?: SortOrderInput | SortOrder
-    appliedToDeductible?: SortOrderInput | SortOrder
-    appliedToOop?: SortOrderInput | SortOrder
+    billedAmountEncrypted?: SortOrderInput | SortOrder
+    insurancePaidEncrypted?: SortOrderInput | SortOrder
+    patientPaidEncrypted?: SortOrderInput | SortOrder
+    appliedToDeductibleEncrypted?: SortOrderInput | SortOrder
+    appliedToOopEncrypted?: SortOrderInput | SortOrder
     claimStatus?: SortOrder
     isInNetwork?: SortOrderInput | SortOrder
-    notes?: SortOrderInput | SortOrder
+    notesEncrypted?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: ExpenseActualCountOrderByAggregateInput
-    _avg?: ExpenseActualAvgOrderByAggregateInput
     _max?: ExpenseActualMaxOrderByAggregateInput
     _min?: ExpenseActualMinOrderByAggregateInput
-    _sum?: ExpenseActualSumOrderByAggregateInput
   }
 
   export type ExpenseActualScalarWhereWithAggregatesInput = {
@@ -32426,17 +32339,17 @@ export namespace Prisma {
     userId?: UuidWithAggregatesFilter<"ExpenseActual"> | string
     planId?: UuidWithAggregatesFilter<"ExpenseActual"> | string
     projectionId?: UuidNullableWithAggregatesFilter<"ExpenseActual"> | string | null
-    serviceType?: StringWithAggregatesFilter<"ExpenseActual"> | string
-    providerName?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    serviceTypeEncrypted?: StringWithAggregatesFilter<"ExpenseActual"> | string
+    providerNameEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
     dateOfService?: DateTimeNullableWithAggregatesFilter<"ExpenseActual"> | Date | string | null
-    billedAmount?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: DecimalNullableWithAggregatesFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    insurancePaidEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    patientPaidEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    appliedToDeductibleEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    appliedToOopEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
     claimStatus?: StringWithAggregatesFilter<"ExpenseActual"> | string
     isInNetwork?: BoolNullableWithAggregatesFilter<"ExpenseActual"> | boolean | null
-    notes?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
+    notesEncrypted?: StringNullableWithAggregatesFilter<"ExpenseActual"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"ExpenseActual"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"ExpenseActual"> | Date | string
   }
@@ -32450,9 +32363,9 @@ export namespace Prisma {
     planId?: UuidFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
     claudeResponse?: StringFilter<"CostAnalysis"> | string
-    totalProjectedOop?: DecimalNullableFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
-    projectedExpensesSnapshot?: JsonNullableFilter<"CostAnalysis">
+    projectedExpensesSnapshotEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
@@ -32464,9 +32377,9 @@ export namespace Prisma {
     planId?: SortOrder
     analysisDate?: SortOrder
     claudeResponse?: SortOrder
-    totalProjectedOop?: SortOrderInput | SortOrder
+    totalProjectedOopEncrypted?: SortOrderInput | SortOrder
     deductibleMetMonth?: SortOrderInput | SortOrder
-    projectedExpensesSnapshot?: SortOrderInput | SortOrder
+    projectedExpensesSnapshotEncrypted?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     user?: UserOrderByWithRelationInput
     plan?: InsurancePlanOrderByWithRelationInput
@@ -32481,9 +32394,9 @@ export namespace Prisma {
     planId?: UuidFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
     claudeResponse?: StringFilter<"CostAnalysis"> | string
-    totalProjectedOop?: DecimalNullableFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
-    projectedExpensesSnapshot?: JsonNullableFilter<"CostAnalysis">
+    projectedExpensesSnapshotEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     plan?: XOR<InsurancePlanScalarRelationFilter, InsurancePlanWhereInput>
@@ -32495,9 +32408,9 @@ export namespace Prisma {
     planId?: SortOrder
     analysisDate?: SortOrder
     claudeResponse?: SortOrder
-    totalProjectedOop?: SortOrderInput | SortOrder
+    totalProjectedOopEncrypted?: SortOrderInput | SortOrder
     deductibleMetMonth?: SortOrderInput | SortOrder
-    projectedExpensesSnapshot?: SortOrderInput | SortOrder
+    projectedExpensesSnapshotEncrypted?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: CostAnalysisCountOrderByAggregateInput
     _avg?: CostAnalysisAvgOrderByAggregateInput
@@ -32515,9 +32428,9 @@ export namespace Prisma {
     planId?: UuidWithAggregatesFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeWithAggregatesFilter<"CostAnalysis"> | Date | string
     claudeResponse?: StringWithAggregatesFilter<"CostAnalysis"> | string
-    totalProjectedOop?: DecimalNullableWithAggregatesFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: StringNullableWithAggregatesFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableWithAggregatesFilter<"CostAnalysis"> | number | null
-    projectedExpensesSnapshot?: JsonNullableWithAggregatesFilter<"CostAnalysis">
+    projectedExpensesSnapshotEncrypted?: StringNullableWithAggregatesFilter<"CostAnalysis"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"CostAnalysis"> | Date | string
   }
 
@@ -35139,11 +35052,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionCreateInput = {
     id?: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -35156,11 +35069,11 @@ export namespace Prisma {
     id?: string
     userId: string
     planId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -35169,11 +35082,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -35186,11 +35099,11 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -35201,11 +35114,11 @@ export namespace Prisma {
     id?: string
     userId: string
     planId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -35213,11 +35126,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -35227,11 +35140,11 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -35239,17 +35152,17 @@ export namespace Prisma {
 
   export type ExpenseActualCreateInput = {
     id?: string
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutExpenseActualsInput
@@ -35262,34 +35175,34 @@ export namespace Prisma {
     userId: string
     planId: string
     projectionId?: string | null
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
 
   export type ExpenseActualUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutExpenseActualsNestedInput
@@ -35302,17 +35215,17 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     projectionId?: NullableStringFieldUpdateOperationsInput | string | null
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -35322,34 +35235,34 @@ export namespace Prisma {
     userId: string
     planId: string
     projectionId?: string | null
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
 
   export type ExpenseActualUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -35359,17 +35272,17 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     projectionId?: NullableStringFieldUpdateOperationsInput | string | null
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -35378,9 +35291,9 @@ export namespace Prisma {
     id?: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
     user: UserCreateNestedOneWithoutCostAnalysesInput
     plan: InsurancePlanCreateNestedOneWithoutCostAnalysesInput
@@ -35392,9 +35305,9 @@ export namespace Prisma {
     planId: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
   }
 
@@ -35402,9 +35315,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutCostAnalysesNestedInput
     plan?: InsurancePlanUpdateOneRequiredWithoutCostAnalysesNestedInput
@@ -35416,9 +35329,9 @@ export namespace Prisma {
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -35428,9 +35341,9 @@ export namespace Prisma {
     planId: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
   }
 
@@ -35438,9 +35351,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -35450,9 +35363,9 @@ export namespace Prisma {
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -37638,18 +37551,17 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     planId?: SortOrder
-    serviceType?: SortOrder
-    estimatedCost?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    estimatedCostEncrypted?: SortOrder
     frequencyPerYear?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrder
+    notesEncrypted?: SortOrder
     projectionDate?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type ExpenseProjectionAvgOrderByAggregateInput = {
-    estimatedCost?: SortOrder
     frequencyPerYear?: SortOrder
   }
 
@@ -37657,11 +37569,11 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     planId?: SortOrder
-    serviceType?: SortOrder
-    estimatedCost?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    estimatedCostEncrypted?: SortOrder
     frequencyPerYear?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrder
+    notesEncrypted?: SortOrder
     projectionDate?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -37671,18 +37583,17 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     planId?: SortOrder
-    serviceType?: SortOrder
-    estimatedCost?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    estimatedCostEncrypted?: SortOrder
     frequencyPerYear?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrder
+    notesEncrypted?: SortOrder
     projectionDate?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type ExpenseProjectionSumOrderByAggregateInput = {
-    estimatedCost?: SortOrder
     frequencyPerYear?: SortOrder
   }
 
@@ -37701,27 +37612,19 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     projectionId?: SortOrder
-    serviceType?: SortOrder
-    providerName?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    providerNameEncrypted?: SortOrder
     dateOfService?: SortOrder
-    billedAmount?: SortOrder
-    insurancePaid?: SortOrder
-    patientPaid?: SortOrder
-    appliedToDeductible?: SortOrder
-    appliedToOop?: SortOrder
+    billedAmountEncrypted?: SortOrder
+    insurancePaidEncrypted?: SortOrder
+    patientPaidEncrypted?: SortOrder
+    appliedToDeductibleEncrypted?: SortOrder
+    appliedToOopEncrypted?: SortOrder
     claimStatus?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrder
+    notesEncrypted?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-  }
-
-  export type ExpenseActualAvgOrderByAggregateInput = {
-    billedAmount?: SortOrder
-    insurancePaid?: SortOrder
-    patientPaid?: SortOrder
-    appliedToDeductible?: SortOrder
-    appliedToOop?: SortOrder
   }
 
   export type ExpenseActualMaxOrderByAggregateInput = {
@@ -37729,17 +37632,17 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     projectionId?: SortOrder
-    serviceType?: SortOrder
-    providerName?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    providerNameEncrypted?: SortOrder
     dateOfService?: SortOrder
-    billedAmount?: SortOrder
-    insurancePaid?: SortOrder
-    patientPaid?: SortOrder
-    appliedToDeductible?: SortOrder
-    appliedToOop?: SortOrder
+    billedAmountEncrypted?: SortOrder
+    insurancePaidEncrypted?: SortOrder
+    patientPaidEncrypted?: SortOrder
+    appliedToDeductibleEncrypted?: SortOrder
+    appliedToOopEncrypted?: SortOrder
     claimStatus?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrder
+    notesEncrypted?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -37749,27 +37652,19 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     projectionId?: SortOrder
-    serviceType?: SortOrder
-    providerName?: SortOrder
+    serviceTypeEncrypted?: SortOrder
+    providerNameEncrypted?: SortOrder
     dateOfService?: SortOrder
-    billedAmount?: SortOrder
-    insurancePaid?: SortOrder
-    patientPaid?: SortOrder
-    appliedToDeductible?: SortOrder
-    appliedToOop?: SortOrder
+    billedAmountEncrypted?: SortOrder
+    insurancePaidEncrypted?: SortOrder
+    patientPaidEncrypted?: SortOrder
+    appliedToDeductibleEncrypted?: SortOrder
+    appliedToOopEncrypted?: SortOrder
     claimStatus?: SortOrder
     isInNetwork?: SortOrder
-    notes?: SortOrder
+    notesEncrypted?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-  }
-
-  export type ExpenseActualSumOrderByAggregateInput = {
-    billedAmount?: SortOrder
-    insurancePaid?: SortOrder
-    patientPaid?: SortOrder
-    appliedToDeductible?: SortOrder
-    appliedToOop?: SortOrder
   }
 
   export type BoolNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -37779,29 +37674,6 @@ export namespace Prisma {
     _min?: NestedBoolNullableFilter<$PrismaModel>
     _max?: NestedBoolNullableFilter<$PrismaModel>
   }
-  export type JsonNullableFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonNullableFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonNullableFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type CostAnalysisCountOrderByAggregateInput = {
     id?: SortOrder
@@ -37809,14 +37681,13 @@ export namespace Prisma {
     planId?: SortOrder
     analysisDate?: SortOrder
     claudeResponse?: SortOrder
-    totalProjectedOop?: SortOrder
+    totalProjectedOopEncrypted?: SortOrder
     deductibleMetMonth?: SortOrder
-    projectedExpensesSnapshot?: SortOrder
+    projectedExpensesSnapshotEncrypted?: SortOrder
     createdAt?: SortOrder
   }
 
   export type CostAnalysisAvgOrderByAggregateInput = {
-    totalProjectedOop?: SortOrder
     deductibleMetMonth?: SortOrder
   }
 
@@ -37826,8 +37697,9 @@ export namespace Prisma {
     planId?: SortOrder
     analysisDate?: SortOrder
     claudeResponse?: SortOrder
-    totalProjectedOop?: SortOrder
+    totalProjectedOopEncrypted?: SortOrder
     deductibleMetMonth?: SortOrder
+    projectedExpensesSnapshotEncrypted?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -37837,40 +37709,14 @@ export namespace Prisma {
     planId?: SortOrder
     analysisDate?: SortOrder
     claudeResponse?: SortOrder
-    totalProjectedOop?: SortOrder
+    totalProjectedOopEncrypted?: SortOrder
     deductibleMetMonth?: SortOrder
+    projectedExpensesSnapshotEncrypted?: SortOrder
     createdAt?: SortOrder
   }
 
   export type CostAnalysisSumOrderByAggregateInput = {
-    totalProjectedOop?: SortOrder
     deductibleMetMonth?: SortOrder
-  }
-  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedJsonNullableFilter<$PrismaModel>
-    _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
   export type AuditLogCreateNestedManyWithoutUserInput = {
@@ -39920,29 +39766,6 @@ export namespace Prisma {
     _min?: NestedBoolNullableFilter<$PrismaModel>
     _max?: NestedBoolNullableFilter<$PrismaModel>
   }
-  export type NestedJsonNullableFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
-        Required<NestedJsonNullableFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
-
-  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type AuditLogCreateWithoutUserInput = {
     id?: string
@@ -40624,11 +40447,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionCreateWithoutUserInput = {
     id?: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -40639,11 +40462,11 @@ export namespace Prisma {
   export type ExpenseProjectionUncheckedCreateWithoutUserInput = {
     id?: string
     planId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -40662,17 +40485,17 @@ export namespace Prisma {
 
   export type ExpenseActualCreateWithoutUserInput = {
     id?: string
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     plan: InsurancePlanCreateNestedOneWithoutExpenseActualsInput
@@ -40683,17 +40506,17 @@ export namespace Prisma {
     id?: string
     planId: string
     projectionId?: string | null
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -40712,9 +40535,9 @@ export namespace Prisma {
     id?: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
     plan: InsurancePlanCreateNestedOneWithoutCostAnalysesInput
   }
@@ -40724,9 +40547,9 @@ export namespace Prisma {
     planId: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
   }
 
@@ -41237,11 +41060,11 @@ export namespace Prisma {
     id?: UuidFilter<"ExpenseProjection"> | string
     userId?: UuidFilter<"ExpenseProjection"> | string
     planId?: UuidFilter<"ExpenseProjection"> | string
-    serviceType?: StringFilter<"ExpenseProjection"> | string
-    estimatedCost?: DecimalFilter<"ExpenseProjection"> | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFilter<"ExpenseProjection"> | string
+    estimatedCostEncrypted?: StringFilter<"ExpenseProjection"> | string
     frequencyPerYear?: IntFilter<"ExpenseProjection"> | number
     isInNetwork?: BoolFilter<"ExpenseProjection"> | boolean
-    notes?: StringNullableFilter<"ExpenseProjection"> | string | null
+    notesEncrypted?: StringNullableFilter<"ExpenseProjection"> | string | null
     projectionDate?: DateTimeFilter<"ExpenseProjection"> | Date | string
     createdAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
     updatedAt?: DateTimeFilter<"ExpenseProjection"> | Date | string
@@ -41271,17 +41094,17 @@ export namespace Prisma {
     userId?: UuidFilter<"ExpenseActual"> | string
     planId?: UuidFilter<"ExpenseActual"> | string
     projectionId?: UuidNullableFilter<"ExpenseActual"> | string | null
-    serviceType?: StringFilter<"ExpenseActual"> | string
-    providerName?: StringNullableFilter<"ExpenseActual"> | string | null
+    serviceTypeEncrypted?: StringFilter<"ExpenseActual"> | string
+    providerNameEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     dateOfService?: DateTimeNullableFilter<"ExpenseActual"> | Date | string | null
-    billedAmount?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: DecimalNullableFilter<"ExpenseActual"> | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    insurancePaidEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    patientPaidEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    appliedToDeductibleEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
+    appliedToOopEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     claimStatus?: StringFilter<"ExpenseActual"> | string
     isInNetwork?: BoolNullableFilter<"ExpenseActual"> | boolean | null
-    notes?: StringNullableFilter<"ExpenseActual"> | string | null
+    notesEncrypted?: StringNullableFilter<"ExpenseActual"> | string | null
     createdAt?: DateTimeFilter<"ExpenseActual"> | Date | string
     updatedAt?: DateTimeFilter<"ExpenseActual"> | Date | string
   }
@@ -41311,9 +41134,9 @@ export namespace Prisma {
     planId?: UuidFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
     claudeResponse?: StringFilter<"CostAnalysis"> | string
-    totalProjectedOop?: DecimalNullableFilter<"CostAnalysis"> | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
-    projectedExpensesSnapshot?: JsonNullableFilter<"CostAnalysis">
+    projectedExpensesSnapshotEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
   }
 
@@ -42737,11 +42560,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionCreateWithoutPlanInput = {
     id?: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -42752,11 +42575,11 @@ export namespace Prisma {
   export type ExpenseProjectionUncheckedCreateWithoutPlanInput = {
     id?: string
     userId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -42775,17 +42598,17 @@ export namespace Prisma {
 
   export type ExpenseActualCreateWithoutPlanInput = {
     id?: string
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutExpenseActualsInput
@@ -42796,17 +42619,17 @@ export namespace Prisma {
     id?: string
     userId: string
     projectionId?: string | null
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -42825,9 +42648,9 @@ export namespace Prisma {
     id?: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
     user: UserCreateNestedOneWithoutCostAnalysesInput
   }
@@ -42837,9 +42660,9 @@ export namespace Prisma {
     userId: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
   }
 
@@ -44955,17 +44778,17 @@ export namespace Prisma {
 
   export type ExpenseActualCreateWithoutProjectionInput = {
     id?: string
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutExpenseActualsInput
@@ -44976,17 +44799,17 @@ export namespace Prisma {
     id?: string
     userId: string
     planId: string
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -45691,11 +45514,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionCreateWithoutActualsInput = {
     id?: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -45707,11 +45530,11 @@ export namespace Prisma {
     id?: string
     userId: string
     planId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -46077,11 +45900,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionUpdateWithoutActualsInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -46093,11 +45916,11 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -47053,11 +46876,11 @@ export namespace Prisma {
   export type ExpenseProjectionCreateManyUserInput = {
     id?: string
     planId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -47067,17 +46890,17 @@ export namespace Prisma {
     id?: string
     planId: string
     projectionId?: string | null
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -47087,9 +46910,9 @@ export namespace Prisma {
     planId: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
   }
 
@@ -47938,11 +47761,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -47953,11 +47776,11 @@ export namespace Prisma {
   export type ExpenseProjectionUncheckedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -47967,11 +47790,11 @@ export namespace Prisma {
   export type ExpenseProjectionUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -47979,17 +47802,17 @@ export namespace Prisma {
 
   export type ExpenseActualUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     plan?: InsurancePlanUpdateOneRequiredWithoutExpenseActualsNestedInput
@@ -48000,17 +47823,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     projectionId?: NullableStringFieldUpdateOperationsInput | string | null
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -48019,17 +47842,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     projectionId?: NullableStringFieldUpdateOperationsInput | string | null
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -48038,9 +47861,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     plan?: InsurancePlanUpdateOneRequiredWithoutCostAnalysesNestedInput
   }
@@ -48050,9 +47873,9 @@ export namespace Prisma {
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -48061,9 +47884,9 @@ export namespace Prisma {
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -48205,11 +48028,11 @@ export namespace Prisma {
   export type ExpenseProjectionCreateManyPlanInput = {
     id?: string
     userId: string
-    serviceType: string
-    estimatedCost: Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted: string
+    estimatedCostEncrypted: string
     frequencyPerYear?: number
     isInNetwork?: boolean
-    notes?: string | null
+    notesEncrypted?: string | null
     projectionDate?: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -48219,17 +48042,17 @@ export namespace Prisma {
     id?: string
     userId: string
     projectionId?: string | null
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -48239,9 +48062,9 @@ export namespace Prisma {
     userId: string
     analysisDate?: Date | string
     claudeResponse: string
-    totalProjectedOop?: Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: string | null
     createdAt?: Date | string
   }
 
@@ -48298,11 +48121,11 @@ export namespace Prisma {
 
   export type ExpenseProjectionUpdateWithoutPlanInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -48313,11 +48136,11 @@ export namespace Prisma {
   export type ExpenseProjectionUncheckedUpdateWithoutPlanInput = {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -48327,11 +48150,11 @@ export namespace Prisma {
   export type ExpenseProjectionUncheckedUpdateManyWithoutPlanInput = {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    estimatedCostEncrypted?: StringFieldUpdateOperationsInput | string
     frequencyPerYear?: IntFieldUpdateOperationsInput | number
     isInNetwork?: BoolFieldUpdateOperationsInput | boolean
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     projectionDate?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -48339,17 +48162,17 @@ export namespace Prisma {
 
   export type ExpenseActualUpdateWithoutPlanInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutExpenseActualsNestedInput
@@ -48360,17 +48183,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     projectionId?: NullableStringFieldUpdateOperationsInput | string | null
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -48379,17 +48202,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     projectionId?: NullableStringFieldUpdateOperationsInput | string | null
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -48398,9 +48221,9 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutCostAnalysesNestedInput
   }
@@ -48410,9 +48233,9 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -48421,9 +48244,9 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
     claudeResponse?: StringFieldUpdateOperationsInput | string
-    totalProjectedOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
-    projectedExpensesSnapshot?: NullableJsonNullValueInput | InputJsonValue
+    projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -48551,34 +48374,34 @@ export namespace Prisma {
     id?: string
     userId: string
     planId: string
-    serviceType: string
-    providerName?: string | null
+    serviceTypeEncrypted: string
+    providerNameEncrypted?: string | null
     dateOfService?: Date | string | null
-    billedAmount?: Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: Decimal | DecimalJsLike | number | string | null
-    patientPaid?: Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: string | null
+    insurancePaidEncrypted?: string | null
+    patientPaidEncrypted?: string | null
+    appliedToDeductibleEncrypted?: string | null
+    appliedToOopEncrypted?: string | null
     claimStatus?: string
     isInNetwork?: boolean | null
-    notes?: string | null
+    notesEncrypted?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
 
   export type ExpenseActualUpdateWithoutProjectionInput = {
     id?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutExpenseActualsNestedInput
@@ -48589,17 +48412,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -48608,17 +48431,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
-    serviceType?: StringFieldUpdateOperationsInput | string
-    providerName?: NullableStringFieldUpdateOperationsInput | string | null
+    serviceTypeEncrypted?: StringFieldUpdateOperationsInput | string
+    providerNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     dateOfService?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    billedAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    insurancePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    patientPaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToDeductible?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    appliedToOop?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    billedAmountEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    insurancePaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    patientPaidEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToDeductibleEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    appliedToOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     claimStatus?: StringFieldUpdateOperationsInput | string
     isInNetwork?: NullableBoolFieldUpdateOperationsInput | boolean | null
-    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    notesEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
