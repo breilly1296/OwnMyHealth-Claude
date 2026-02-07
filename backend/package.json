@@ -18,7 +18,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@google-cloud/documentai": "^9.5.0",
     "@google-cloud/storage": "^7.18.0",
-    "@prisma/adapter-pg": "^7.0.1",
+    "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.0.1",
     "@sendgrid/mail": "^8.1.4",
     "bcryptjs": "^2.4.3",
