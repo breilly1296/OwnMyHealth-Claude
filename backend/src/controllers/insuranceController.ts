@@ -224,7 +224,7 @@ function toResponse(
   if (plan.memberIdEncrypted) {
     try {
       memberId = encryptionService.decrypt(plan.memberIdEncrypted, userSalt);
-    } catch (error) {
+    } catch {
       logger.warn('Failed to decrypt memberId for insurance plan', { data: { planId: plan.id } });
       memberId = undefined;
     }
@@ -233,7 +233,7 @@ function toResponse(
   if (plan.groupIdEncrypted) {
     try {
       groupNumber = encryptionService.decrypt(plan.groupIdEncrypted, userSalt);
-    } catch (error) {
+    } catch {
       logger.warn('Failed to decrypt groupId for insurance plan', { data: { planId: plan.id } });
       groupNumber = undefined;
     }

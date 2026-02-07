@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import type { Request } from 'express';
 import { config } from '../config/index.js';
 import type { ApiResponse } from '../types/index.js';
 
@@ -103,7 +104,7 @@ export const aiLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     // Key by authenticated user ID for per-user cost protection, fallback to IP
-    return (req as any).user?.id || req.ip || req.socket.remoteAddress || 'unknown';
+    return (req as Request & { user?: { id: string } }).user?.id || req.ip || req.socket.remoteAddress || 'unknown';
   },
 });
 

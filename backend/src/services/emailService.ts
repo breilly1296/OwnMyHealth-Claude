@@ -37,7 +37,7 @@ async function getSendGridClient() {
       sgMail = sendgrid.default;
       sgMail.setApiKey(config.email.sendgridApiKey);
       // Set 10s request timeout for SendGrid API calls
-      (sgMail as any).setTimeout?.(10_000);
+      (sgMail as unknown as { setTimeout?: (ms: number) => void }).setTimeout?.(10_000);
       logger.info('SendGrid client initialized', { prefix: 'Email' });
     } catch {
       logger.warn('SendGrid package not installed. Emails will be logged only.', { prefix: 'Email' });
