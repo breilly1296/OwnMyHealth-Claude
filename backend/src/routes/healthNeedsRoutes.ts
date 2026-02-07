@@ -30,6 +30,7 @@ import {
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
@@ -44,7 +45,7 @@ router.get(
 );
 
 // Analyze health needs (AI-powered)
-router.get('/analyze', asyncHandler(analyzeHealthNeeds));
+router.get('/analyze', aiLimiter, asyncHandler(analyzeHealthNeeds));
 
 // Get single health need
 router.get(

@@ -34,6 +34,7 @@ import {
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
@@ -44,7 +45,7 @@ router.use(authenticate);
 router.get('/summary', asyncHandler(getGoalsSummary));
 
 // Get goal suggestions based on biomarkers
-router.get('/suggestions', asyncHandler(suggestGoals));
+router.get('/suggestions', aiLimiter, asyncHandler(suggestGoals));
 
 // Get all health goals
 router.get(
