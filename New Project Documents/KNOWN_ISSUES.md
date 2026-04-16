@@ -1,260 +1,166 @@
 # OwnMyHealth Known Issues
 
-**Last Updated:** 2026-02-06
-
----
+**Last scanned:** 2026-04-16
 
 ## Critical (Blocks Core Functionality)
 
-### Expense Tracking Schema/Encryption Type Mismatch
-
-**Symptom:** Expense fields declared as `Decimal` in the Prisma schema are being stored as encrypted strings by the controller, which can cause Prisma type validation errors or data corruption at runtime.
-
-**Root Cause:** The `ExpenseProjection`, `ExpenseActual`, and `CostAnalysis` models have fields typed as `Decimal` (e.g., `estimatedCost Decimal @db.Decimal(10, 2)`) in `schema.prisma`, but the `expenseController.ts` encrypts these values into opaque ciphertext strings before passing them to Prisma's `create()`/`update()` methods. Prisma expects a `Decimal`-compatible value for these columns, not an AES-256-GCM ciphertext string.
-
-Affected schema fields:
-- `ExpenseProjection.estimatedCost` (Decimal)
-- `ExpenseActual.billedAmount`, `insurancePaid`, `patientPaid`, `appliedToDeductible`, `appliedToOop` (all Decimal?)
-- `CostAnalysis.totalProjectedOop` (Decimal?)
-- `CostAnalysis.projectedExpensesSnapshot` (Json?)
-
-The encryption service (`PHI_FIELDS` in `encryption.ts`) lists these fields for encryption, but the schema was not updated to use `String` types to hold the encrypted ciphertext. Other encrypted fields in the schema correctly use `String` with an `Encrypted` suffix (e.g., `valueEncrypted`, `notesEncrypted`).
-
-**Workaround:** None -- this is likely causing runtime errors when the expense tracking features are used, or Prisma may be silently coercing values in unexpected ways.
-
-**Fix Required:** Either (a) change schema fields to `String` type to hold encrypted ciphertext (consistent with other PHI fields), or (b) do not encrypt these fields and remove them from `PHI_FIELDS`. Option (a) is recommended for HIPAA compliance. A database migration would be required.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\prisma\schema.prisma` (lines 669-736)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\expenseController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\encryption.ts` (lines 418-437, `PHI_FIELDS`)
+None found. Grep across `backend/src/` and `src/` turned up no TODO/FIXME/HACK/XXX markers tagged as critical, no skipped tests, no `@ts-ignore` directives, and no production `console.log` debug statements that gate functionality.
 
 ---
 
 ## High Priority (Fix Before Beta)
 
-### Row-Level Security (RLS) Not Applied in Most Controllers
+### Display name edit is a no-op (stub)
+**Symptom:** User edits their display name on the Account Settings page; UI shows a saving spinner but nothing is persisted.
+**Source:** `src/components/settings/AccountSettingsPage.tsx:83` — `// TODO: Implement API call to save display name` followed by a 500 ms `setTimeout` placeholder.
+**Priority:** High (user-facing feature appears to work but silently discards input)
+**Fix required:** Add a `PATCH /api/user/profile` (or similar) endpoint and wire `settingsApi.updateDisplayName(name)` into `handleSaveName`.
 
-**Symptom:** Database queries in 7 of 8 controllers bypass PostgreSQL Row-Level Security, relying solely on application-level `WHERE userId = ?` filters instead of setting the database session context variable (`app.current_user_id`).
+### Critical npm audit advisory in frontend: jsPDF HTML injection
+**Symptom:** `npm audit` reports one critical vulnerability — `jsPDF has HTML Injection in New Window paths` (GHSA-wfv2-pwc8-crg5). `jspdf` is a direct dependency used for report export.
+**Source:** `package.json:19` (direct dep); `npm audit` root.
+**Priority:** High (PHI-touching report generation path)
+**Fix required:** `npm audit fix` or pin `jspdf` to a patched version; re-run audit.
 
-**Root Cause:** The project documents RLS usage via `withRLSContext()` and `withRLSTransaction()` from `database.ts`, and RLS policies exist at the PostgreSQL level. However, only `settingsController.ts` actually calls these functions. The remaining controllers (`biomarkerController`, `insuranceController`, `expenseController`, `fileController`, `uploadController`, `healthGoalsController`, `healthNeedsController`) use raw Prisma queries with `where: { userId }` without setting the RLS context. If a query is accidentally constructed without the `userId` filter, RLS would not catch it.
+### Critical npm audit advisory in backend: fast-xml-parser
+**Symptom:** `npm audit` reports one critical vulnerability — `fast-xml-parser has an entity encoding bypass via regex injection in DOCTYPE entity names` (GHSA-m7jm-9gc2-mpf2). Pulled in transitively via `@google-cloud/storage` / `@google-cloud/documentai`.
+**Source:** `backend/npm audit` output.
+**Priority:** High
+**Fix required:** `npm audit fix` in `backend/`; if blocked by peer deps, bump `@google-cloud/*` packages.
 
-**Workaround:** The application-level `userId` filtering in each query provides equivalent data isolation, but it is a single point of failure without the RLS defense-in-depth layer.
+### Vite dev-server path traversal and file-read advisories
+**Symptom:** Three high-severity vite advisories (GHSA-4w7w-66w2-5vf9 path traversal, GHSA-v2wj-q39q-566r server.fs.deny bypass, GHSA-p9ff-h696-f583 WebSocket arbitrary file read). Applies to `vite ^7.3.0` (root dev dep).
+**Source:** `package.json:49`; `npm audit` root.
+**Priority:** High (only impacts local dev, but any contributor running `npm run dev` is exposed)
+**Fix required:** Bump `vite` past 7.3.1 when a patched release is available; do not expose the dev server beyond localhost.
 
-**Fix Required:** Wrap all database operations in each controller with `withRLSContext(userId, ...)` or `withRLSTransaction(userId, ...)` to engage PostgreSQL RLS policies as a secondary access control layer.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\biomarkerController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\insuranceController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\expenseController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\fileController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\uploadController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\healthGoalsController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\healthNeedsController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\database.ts`
-
-### Debug console.log Statements in Production Code
-
-**Symptom:** Extensive `console.log` statements in production backend code output sensitive operational details to server logs, including user IDs, file content previews, extracted biomarker values, and request header information.
-
-**Root Cause:** Debug logging was added during development and never removed. Two files are primary offenders:
-
-1. **`settingsRoutes.ts`** -- Logs every request method/path, presence of auth/CSRF headers, and user IDs for delete operations (lines 26-45). These leak operational details about authenticated requests.
-
-2. **`biomarkerExtractor.ts`** -- Contains 50+ `console.log` calls that output text content from uploaded lab reports, extracted biomarker names/values, and processing details. In production, this could log PHI (biomarker values, lab results) to stdout/server logs in plaintext, violating HIPAA requirements.
-
-**Workaround:** None -- these log statements are active in all environments.
-
-**Fix Required:**
-- Remove all `console.log` statements from `settingsRoutes.ts` (debug middleware).
-- Replace all `console.log` in `biomarkerExtractor.ts` with the structured `logger` utility (from `utils/logger.ts`) which sanitizes sensitive data. Or wrap them in a `NODE_ENV === 'development'` guard. Removing lab report content from logs entirely is preferred.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\routes\settingsRoutes.ts` (lines 24-46)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\biomarkerExtractor.ts` (~50 occurrences throughout file)
-
-### Deprecated DNA/Genetics Models Still in Schema and Code
-
-**Symptom:** Three database models (`DNAData`, `DNAVariant`, `GeneticTrait`) remain in the Prisma schema and backend code but are not used by any frontend UI. They add unnecessary complexity, consume database resources, and require ongoing encryption/security maintenance.
-
-**Root Cause:** The DNA/Genetics feature was never fully implemented in the UI. The `CLAUDE.md` explicitly notes these as "consider removing if not planned." Despite this, the models are actively referenced in:
-
-- `schema.prisma` -- Full model definitions with indexes (lines 376-428)
-- `encryption.ts` -- `PHI_FIELDS` includes `DNAVariant.genotypeEncrypted` and `GeneticTrait.descriptionEncrypted/recommendationsEncrypted`
-- `types/index.ts` -- TypeScript interfaces for `DNAVariant` and `DNAFileInfo`
-- `rbac.ts` -- Permission checks for `canViewDna` in provider access control
-- `providerRoutes.ts` / `patientRoutes.ts` -- DNA consent flags in provider-patient relationship management
-- `validation.ts` -- Zod schemas include `canViewDna` fields
-
-**Workaround:** No functional impact since no frontend triggers DNA operations. However, the `ProviderPatient.canViewDna` field is actively set/read in consent management even though there is no DNA data to view.
-
-**Fix Required:** Either (a) remove the DNA models and all references if the feature is not planned, or (b) document them as a planned future feature. Removal would require a database migration to drop the `dna_data`, `dna_variants`, and `genetic_traits` tables, plus removing `canViewDna` from the `ProviderPatient` model.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\prisma\schema.prisma` (lines 34, 376-428)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\encryption.ts` (lines 392-399)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\types\index.ts` (lines 109-122)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\middleware\rbac.ts` (line 240)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\routes\providerRoutes.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\routes\patientRoutes.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\middleware\validation.ts` (lines 530, 539)
+### Axios SSRF / metadata-exfiltration advisories (backend)
+**Symptom:** `npm audit` flags axios for "NO_PROXY Hostname Normalization Bypass that Leads to SSRF" and "Unrestricted Cloud Metadata Exfiltration via Header Injection Chain". Axios is a transitive dep of `@anthropic-ai/sdk` / Google Cloud SDKs.
+**Source:** `backend/npm audit` output.
+**Priority:** High (SSRF risk against GCP metadata endpoint from a backend running on Cloud Run)
+**Fix required:** `npm audit fix` in `backend/`; verify the transitive axios version resolves to a patched release.
 
 ---
 
 ## Medium Priority (Fix During Beta)
 
-### Health Goal Reminders Not Implemented
+### Notification preferences stored in localStorage
+**Symptom:** Email / weekly-summary / abnormal-alert toggles are saved to `localStorage.setItem('omh-notifications', ...)`. CLAUDE.md rule: "NEVER use localStorage/sessionStorage for sensitive data". Notification preferences are not PHI, but they are user settings that should follow the user across devices.
+**Source:** `src/components/settings/AccountSettingsPage.tsx:58,94` (comment on line 56 acknowledges "stored in localStorage for now").
+**Priority:** Medium
+**Fix required:** Add a `user_preferences` table/column and `GET/PATCH /api/user/preferences`.
 
-**Symptom:** Users can set a `reminderFrequency` (DAILY, WEEKLY, BIWEEKLY, MONTHLY) on health goals, and the schema stores `lastReminderSent`, but no reminders are ever sent.
+### Backend picomatch / path-to-regexp / qs DoS advisories
+**Symptom:** High-severity ReDoS / DoS advisories in `picomatch`, `path-to-regexp`, and `qs` (the Express 4 query parser). All reachable from request-handling paths.
+**Source:** `backend/npm audit` output.
+**Priority:** Medium (ReDoS requires crafted input; rate limiting partially mitigates)
+**Fix required:** `npm audit fix` in `backend/`; consider upgrading to Express 5 to drop the old `qs` version.
 
-**Root Cause:** The `HealthGoal` model has `reminderFrequency` and `lastReminderSent` fields, and the `healthGoalsController.ts` accepts and stores these values. However, no scheduler, cron job, or background service exists to check for due reminders and send emails via the email service. The existing schedulers (session cleanup, audit log cleanup) demonstrate the pattern, but no reminder scheduler was built.
+### Backend dompurify moderate advisories (5 open)
+**Symptom:** Five moderate dompurify advisories: mutation-XSS, general XSS, ADD_ATTR URI-validation skip, USE_PROFILES prototype pollution, ADD_TAGS FORBID_TAGS bypass. Pulled in transitively.
+**Source:** `npm audit` root.
+**Priority:** Medium
+**Fix required:** `npm audit fix`; if transitive, audit the consuming package (likely `jspdf-autotable`).
 
-**Workaround:** None -- users configure reminders that silently do nothing.
-
-**Fix Required:** Implement a reminder scheduler (similar to `auditLog.ts` cleanup scheduler) that periodically queries health goals with active reminders, checks if `lastReminderSent` is past the configured frequency, and sends reminder emails via `emailService.ts`.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\prisma\schema.prisma` (lines 467-468)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\healthGoalsController.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\emailService.ts`
-
-### Unused DataSourceType Enum Values
-
-**Symptom:** The `DataSourceType` enum defines `EHR_IMPORT`, `DEVICE_SYNC`, and `API_IMPORT` source types, but no code exists to import biomarkers from EHR systems, wearable devices, or external APIs.
-
-**Root Cause:** The enum was designed for future extensibility. Currently only `MANUAL` and `LAB_UPLOAD` source types are functionally supported. The other values are accepted by validation schemas and referenced in `settingsController.ts` data export, but no import pipeline exists for them.
-
-**Workaround:** No functional impact. Users cannot select these source types since no UI or API endpoint triggers them.
-
-**Fix Required:** Either (a) document these as planned future features, or (b) remove unused enum values to avoid confusion. If kept, add inline documentation in the schema indicating they are reserved for future use.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\prisma\schema.prisma` (lines 563-569)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\middleware\validation.ts` (lines 282, 317)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\controllers\settingsController.ts` (lines 120-124)
-
-### CSRF Skip List References Removed Feature
-
-**Symptom:** The CSRF middleware contains a skip entry for `/marketplace/plans/search`, which references the CMS Marketplace Integration feature that was removed in January 2025.
-
-**Root Cause:** When the marketplace feature was removed, the CSRF skip list in `csrf.ts` was not cleaned up. The route no longer exists, so the skip entry is dead code.
-
-**Workaround:** No security impact since the route does not exist, so the skip is never triggered.
-
-**Fix Required:** Remove the `/marketplace/plans/search` entry from the `publicAuthRoutes` array in `csrf.ts`.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\middleware\csrf.ts` (line 107)
-
-### Rollup WASM Override Required for Windows ARM64
-
-**Symptom:** On Windows ARM64 machines, Vite/Rollup native binaries may fail to load, causing build failures.
-
-**Root Cause:** Native Rollup binaries have compatibility issues on Windows ARM64. Both `package.json` (frontend) and `backend/package.json` include workarounds: `@rollup/wasm-node` as a dev dependency, platform-specific optional dependencies (`@rollup/rollup-win32-arm64-msvc`), and an `overrides` section that replaces Rollup with the WASM build.
-
-**Workaround:** The `overrides` section in both `package.json` files (`"rollup": "npm:@rollup/wasm-node@^4.53.3"`) already mitigates this. However, if a developer removes these overrides or changes the Rollup version, the issue may resurface.
-
-**Fix Required:** Document this requirement and consider adding a postinstall check. Monitor upstream Rollup releases for native ARM64 Windows support.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\package.json` (lines 53-57)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\package.json` (lines 70-76)
+### Frontend debug `console.log` statements shipped to production
+**Symptom:** `AuthContext.tsx` calls `console.log('[AuthContext] Access token refreshed...')`, `'Refresh token invalid...'`, and `'Session restored successfully'` on every mount. Not PHI, but leaks auth-flow detail into the browser console.
+**Source:** `src/contexts/AuthContext.tsx:90, 93, 102`; also `src/services/api/client.ts:103, 166` for CSRF warnings.
+**Priority:** Medium
+**Fix required:** Route through `src/utils/logger.ts` (which already gates on `isProduction`) instead of raw `console.log`.
 
 ---
 
 ## Low Priority (Future Improvements)
 
-### Frontend Health Score Still Calculated Despite Feature Removal
+### Backend low-severity advisories (6)
+**Symptom:** Six low-severity advisories in `backend/` (`@tootallnate/once`, `follow-redirects`, `lodash`, misc). Not directly exploitable in our usage but increase supply-chain surface.
+**Source:** `backend/npm audit` — `6 low`.
+**Priority:** Low
+**Fix required:** Batch-resolve during next dependency sweep.
 
-**Symptom:** The dashboard still displays a "Health Score" percentage based on the ratio of biomarkers in range, even though the CLAUDE.md states "Health Scoring -- 0-100 health scores, risk assessments" was removed in January 2025.
-
-**Root Cause:** The `useBiomarkerStats.ts` hook calculates a `healthScore` as a simple percentage of biomarkers in range, and `DashboardContent.tsx` displays it prominently. This differs from the removed backend health scoring system (which included risk assessments), but the UI labeling as "Health Score" could confuse the scope of the removal.
-
-**Workaround:** The current implementation is a simple ratio calculation, not the removed risk assessment system. It may be intentionally retained as a lightweight summary statistic.
-
-**Fix Required:** Either (a) rename the UI label to "Biomarkers in Range" to differentiate from the removed health scoring feature, or (b) confirm this is the intended retained behavior and update documentation.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\src\hooks\useBiomarkerStats.ts` (lines 19, 53-60)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\src\components\dashboard\DashboardContent.tsx` (lines 72-82)
-
-### pdf-parse Library Has Known Security Concerns
-
-**Symptom:** The `pdf-parse` package (v1.1.1) is used for backend PDF text extraction and has been flagged in past npm audits for prototype pollution and ReDoS vulnerabilities.
-
-**Root Cause:** The project uses `pdf-parse` for extracting text from uploaded lab reports. The backend mitigates some risks via `securePdfParsing.ts` (which validates PDF headers, enforces file size limits, and implements timeouts), but the underlying library itself may have unpatched vulnerabilities.
-
-**Workaround:** The `securePdfParsing.ts` wrapper adds multiple layers of validation. Additionally, file uploads require authentication and the OCR pipeline via Google Document AI provides an alternative extraction path.
-
-**Fix Required:** Monitor `pdf-parse` for security updates. Consider migrating to a more actively maintained alternative (e.g., `pdf2json`, `unpdf`, or using Google Document AI exclusively).
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\package.json` (line 36)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\pdfParser.ts`
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\utils\securePdfParsing.ts`
-
-### HealthNeed Model Missing Notes Field
-
-**Symptom:** The `HealthNeed` schema model only has `descriptionEncrypted` but no `notesEncrypted` field, unlike similar models (`Biomarker`, `HealthGoal`, `ProviderPatient`) which have separate notes fields.
-
-**Root Cause:** The `HealthNeed` schema was designed with only a description. The `PHI_FIELDS` mapping in `encryption.ts` correctly lists only `descriptionEncrypted` for `HealthNeed`. However, the `CLAUDE.md` lists "Health Needs: description, notes" under PHI fields, suggesting notes were intended but not implemented.
-
-**Workaround:** Users can include notes within the description field.
-
-**Fix Required:** Either add a `notesEncrypted` field to the `HealthNeed` model (requires migration) and update the controller/encryption config, or update the CLAUDE.md documentation to reflect that HealthNeed only has `descriptionEncrypted`.
-
-**Files:**
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\prisma\schema.prisma` (lines 430-448)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\backend\src\services\encryption.ts` (lines 400-404)
-- `C:\Users\breil\OneDrive\Desktop\OwnMyHealth\CLAUDE.md`
+### `nul` files in repo root and `backend/`
+**Symptom:** Stray zero-byte `nul` files at `OwnMyHealth/nul` and `OwnMyHealth/backend/nul` — likely from accidental Windows `> nul` redirects.
+**Source:** Root and backend directory listings.
+**Priority:** Low
+**Fix required:** Delete and add to `.gitignore`.
 
 ---
 
 ## Technical Debt
 
-### Code Quality
-- [ ] Replace ~50 `console.log` calls in `biomarkerExtractor.ts` with structured logger
-- [ ] Remove debug middleware from `settingsRoutes.ts` (lines 24-29, 43-47)
-- [ ] Remove dead `/marketplace/plans/search` CSRF skip entry
-- [ ] Clean up deprecated DNA model references across codebase (encryption, RBAC, validation, routes)
-- [ ] Standardize expense model schema fields to use `String` type for encrypted PHI (requires migration)
-- [ ] Add `withRLSContext()` wrappers to all 7 controllers missing RLS context
-- [ ] Resolve `ExpenseProjection.estimatedCost` Decimal/String type conflict
+### Code quality
 
-### Missing Tests
-- [ ] No test files for controllers: `biomarkerController`, `insuranceController`, `expenseController`, `fileController`, `uploadController`, `healthGoalsController`, `healthNeedsController`, `settingsController`
-- [ ] No test files for services: `biomarkerExtractor`, `claudeExtraction`, `sbcExtraction`, `storageService`, `emailService`, `ocrService`, `pdfParser`, `userEncryption`, `database`
-- [ ] No test files for routes: all 13 route files lack tests
-- [ ] No test files for middleware: `csrf`, `rbac`, `demoProtection`, `auth`, `rateLimiter`
-- [ ] Frontend tests only cover 7 files: `AuthContext`, `LoginPage`, `Dashboard`, `useAuth`, `AddMeasurementModal`, `BiomarkerSummary`, `Button`
-- [ ] No frontend tests for: insurance components, file management, settings, trends, upload, analytics
-- [ ] No integration tests for end-to-end API flows
-- [ ] Backend has 5 test files total: `encryption.test.ts`, `authService.test.ts`, `errorHandler.test.ts`, `auditLog.test.ts`, `validation.test.ts`
+- [ ] `backend/src/controllers/uploadController.ts` — 1501 lines. By far the largest file in the repo; handles both PDF lab uploads and SBC insurance uploads. Split into `labUploadController.ts` and `sbcUploadController.ts`.
+- [ ] `backend/src/services/authService.ts` — 1028 lines. Register/login/refresh/reset/verify/demo/session-cleanup all in one module. Split along verbs.
+- [ ] `backend/src/services/sbcExtraction.ts` — 1015 lines. Single Claude-prompted extractor; candidate for per-section helpers.
+- [ ] `backend/src/controllers/biomarkerController.ts` — 900 lines.
+- [ ] `backend/src/controllers/insuranceController.ts` — 882 lines.
+- [ ] `backend/src/controllers/authController.ts` — 774 lines.
+- [ ] `backend/src/middleware/validation.ts` — 679 lines of Zod schemas; extract per-resource schema files.
+- [ ] Several frontend components exceed 700 lines: `BiomarkerActionPlan.tsx` (764), `InsurancePlanDetail.tsx` (740), `InsuranceHub.tsx` (736), `EnhancedInsuranceUpload.tsx` (731). Break into subcomponents.
+- [ ] `as any` casts in tests: `src/__tests__/components/Dashboard.test.tsx:131,198,223` — replace with properly typed mock helpers.
+- [ ] No `: any` type annotations in production code (grep confirmed). Keep it that way.
+
+### Missing tests
+
+- [ ] Backend test count: 5 files (`encryption`, `authService`, `auditLog`, `errorHandler`, `validation`). No tests for any controller (auth, biomarker, insurance, expense, file, upload, healthGoals, healthNeeds, settings), no route-level tests, no tests for `claudeExtraction`, `sbcExtraction`, `biomarkerExtractor`, `pdfParser`, `ocrService`, `storageService`, `emailService`, `database` (RLS context), `userEncryption`, `csrf`, `rbac`, `rateLimiter`, `demoProtection`.
+- [ ] Frontend test count: 6 files (`AddMeasurementModal`, `BiomarkerSummary`, `Button`, `Dashboard`, `LoginPage`, `AuthContext`, `useAuth`). No tests for insurance components, trends, upload flows, settings, or any of the ~35 remaining components.
+- [ ] E2E: only `e2e/auth-test.js` and `e2e/auth-complete-test.js` exist — no e2e coverage for biomarker entry, insurance upload, consent sharing, or data export/delete.
 
 ### Documentation
-- [ ] CLAUDE.md lists "Health Needs: description, notes" under PHI fields but schema only has `descriptionEncrypted`
-- [ ] CLAUDE.md removed features section should note that the dashboard still shows a health score percentage
-- [ ] No documentation for expense tracking encryption approach and its schema type conflict
-- [ ] No API documentation (OpenAPI/Swagger spec) for the 60+ endpoints
+
+- [ ] `AccountSettingsPage.tsx:56` — "Notification settings (stored in localStorage for now)" — inline TODO marker.
+- [ ] `AccountSettingsPage.tsx:83` — `// TODO: Implement API call to save display name`.
 
 ---
 
-## Fixed Issues (Reference)
+## Dependency health
 
-| Issue | Fixed Date | Solution |
-|-------|------------|----------|
-| Rollup native binary failure on Windows ARM64 | Pre-2026-02-06 | Added `@rollup/wasm-node` override in both `package.json` files |
-| CMS Marketplace Integration complexity | 2025-01 | Feature removed entirely |
-| Health Scoring / Risk Assessment complexity | 2025-01 | Backend scoring system removed (simple percentage retained in frontend) |
-| Provider Directory feature | 2025-01 | Feature removed entirely |
+### Vulnerabilities (`npm audit`)
+
+**Root (`package.json`):** 10 vulnerabilities — 1 critical, 6 high, 3 moderate, 0 low. Critical: `jspdf` HTML injection (direct dep). Highs: `vite` (3 CVEs), `picomatch` (2 CVEs), plus transitive via `serve`/`serve-handler`. Moderates: `dompurify` (5 CVEs), `ajv`, `brace-expansion`, `flatted`, `minimatch`.
+
+**Backend (`backend/package.json`):** 29 vulnerabilities — 1 critical, 15 high, 7 moderate, 6 low. Critical: `fast-xml-parser` entity-encoding bypass (transitive via Google Cloud SDKs). Highs include `axios` (3 CVEs — SSRF / cloud-metadata / DoS), `@hono/node-server`, `fast-xml-parser` (multiple), `picomatch`, `path-to-regexp`, `qs`, `vite`. Moderates include `ajv`, `brace-expansion`, `defu` (prototype pollution), `effect`, `flatted`, `follow-redirects`, `hono`, `lodash`, `multer`.
+
+Both `npm audit fix` reports `fixAvailable: true` for most entries.
+
+### Outdated dependencies (`npm outdated`)
+
+Unable to run — `npm outdated` was denied by the sandbox during this scan. Re-run manually:
+```
+npm outdated
+cd backend && npm outdated
+```
+Known major-version watch items from `package.json` inspection:
+- Backend pins `@prisma/client ^7.0.1` and `prisma ^7.0.1` (recent major).
+- Root pins `vite ^7.3.0`, `vitest ^4.0.14`, `@vitejs/plugin-react ^4.3.1`, React 18 (not 19).
+- Express 4.18.x (Express 5 is GA and closes the `qs` advisory).
 
 ---
 
-## Priority Definitions
+## Deprecated code
+
+The following models remain in `backend/prisma/schema.prisma` but are flagged in CLAUDE.md as "Deprecated (Still in Schema)":
+
+- **`DNAData`** — `schema.prisma:376-393`
+- **`DNAVariant`** — `schema.prisma:395-408`
+- **`GeneticTrait`** — `schema.prisma:410-428`
+
+**Current status:**
+- Schema: models present with relations to `User.dnaData` (line 34) and cascade-delete.
+- Backend: referenced in `services/encryption.ts:393,396` (PHI_FIELDS entries for `DNAVariant` and `GeneticTrait`), `types/index.ts:109` (`DNAVariant` interface), and `routes/adminRoutes.ts:140` (`dnaData: true` in admin user-detail include). Logger pre-configures `dnaLogger` / `dnaControllerLogger` (`utils/logger.ts:141-142`) but those loggers have no callers.
+- Frontend: zero references to `DNAData` / `DNAVariant` / `GeneticTrait` anywhere under `src/`.
+- No removal migration exists.
+
+**Removal plan status:** None found in repo. CLAUDE.md says "consider removing if not planned" — no ADR or migration has been drafted.
+
+---
+
+## Priority definitions
 
 | Priority | Definition | Timeline |
-|----------|------------|----------|
-| Critical | Blocks core functionality or causes data corruption | Fix immediately |
-| High | Significant security gap or feature broken | Fix before beta |
-| Medium | Usability issue or incomplete feature | Fix during beta |
-| Low | Minor annoyance or future improvement | Backlog |
+|---|---|---|
+| Critical | Blocks core functionality | Fix immediately |
+| High | Significant feature broken or HIPAA risk | Fix before beta |
+| Medium | Usability issue | Fix during beta |
+| Low | Minor annoyance | Backlog |

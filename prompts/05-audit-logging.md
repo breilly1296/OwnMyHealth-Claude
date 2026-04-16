@@ -5,14 +5,20 @@ tags:
   - critical
 type: prompt
 priority: 1
+updated: 2026-04-16
 ---
 
 # Audit Logging Review (HIPAA Required)
 
+> Follow the [review protocol](./_review-protocol.md).
+> For PHI fields stored in audit rows, see [PHI inventory](./_phi-inventory.md) — `AuditLog.previousValueEncrypted` / `newValueEncrypted`.
+> Application logs (non-audit) are reviewed separately in [31-logging-observability](./31-logging-observability.md).
+> Use [Claude Code tools](./_verification-tools.md).
+
 ## Files to Review
-- `backend/src/services/auditLog.ts` (primary)
-- `backend/prisma/schema.prisma` (AuditLog model)
-- All controllers in `backend/src/controllers/` (verify audit calls)
+- `backend/src/services/auditLog.ts` — `getAuditLogService(prisma)` singleton + retention scheduler
+- `backend/prisma/schema.prisma` — `AuditLog` model
+- All controllers in `backend/src/controllers/` — every PHI access must produce an audit row
 
 ## OwnMyHealth Audit Architecture
 - **Singleton Service**: `getAuditLogService(prisma)`
@@ -89,12 +95,19 @@ priority: 1
 - [ ] Timestamps are server-generated (not client-provided)
 
 ### 6. Coverage Verification
-Run this to find controllers without audit logging:
-```bash
-grep -L "auditLog" backend/src/controllers/*.ts
-```
+Two-step (replaces `grep -L`):
+1. **Glob** `pattern: "backend/src/controllers/*.ts"` → full controller list.
+2. **Grep** `pattern: "auditLog"`, `glob: "backend/src/controllers/**/*.ts"`, `output_mode: "files_with_matches"` → controllers with audit calls.
+3. Diff the two lists. Every controller that touches PHI but is missing from the second list is a **Critical** finding.
+
+### 7. Audit Log ≠ Application Log
+- [ ] Audit log rows live in PostgreSQL `audit_logs` table, not Cloud Logging.
+- [ ] Application logs (`logger.ts`) are **not** a HIPAA audit trail — they're redacted & ephemeral. Don't conflate.
+- [ ] An audit entry is created even when the action fails (e.g., failed provider access attempts).
 
 ## Questions to Ask
-1. Are all PHI access events being logged?
-2. Is the IP address source secure (req.ip vs headers)?
-3. Are there any console.log statements bypassing the logger?
+1. Are all PHI access events being logged? Cross-check every route under `biomarkerRoutes`, `insuranceRoutes`, `expenseRoutes`, `fileRoutes`, `healthGoalsRoutes`, `healthNeedsRoutes`, `providerRoutes`, `patientRoutes`.
+2. Is the IP address source secure (`req.ip` with `trust proxy` set, not raw `X-Forwarded-For`)?
+3. Is the audit-log retention scheduler running (check `authService.ts` / `auditLog.ts` for `setInterval` or equivalent)? What happens if the server crashes mid-sweep?
+4. Can an admin tamper with audit rows via Prisma Studio or direct SQL? If so, is there an offline backup / append-only mirror?
+5. If a user is deleted, do their audit rows remain readable (system salt, not per-user salt)?

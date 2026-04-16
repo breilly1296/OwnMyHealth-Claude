@@ -5,14 +5,19 @@ tags:
   - critical
 type: prompt
 priority: 1
+updated: 2026-04-16
 ---
 
 # Database Schema Review
 
+> Follow the [review protocol](./_review-protocol.md).
+> Use the [PHI inventory](./_phi-inventory.md) for encrypted-field verification.
+> Use [Claude Code tools](./_verification-tools.md).
+
 ## Files to Review
-- `backend/prisma/schema.prisma` (primary)
-- `backend/prisma/migrations/` (migration history)
-- `backend/src/services/database.ts` (connection handling)
+- `backend/prisma/schema.prisma` — authoritative model definitions
+- `backend/prisma/migrations/` — migration history (esp. `20260107_add_rls_policies`)
+- `backend/src/services/database.ts` — Prisma client, `withRLSContext`, `withRLSTransaction`
 
 ## OwnMyHealth Database Architecture
 - **ORM**: Prisma with PostgreSQL
@@ -51,19 +56,11 @@ priority: 1
 - [ ] Admin bypass uses `app.is_admin = true` correctly
 
 ### 3. PHI Fields Identification
-- [ ] Identify all PHI-containing columns
-- [ ] Verify encryption service is used for:
-  - Biomarker values and notes (`valueEncrypted`, `notesEncrypted`)
-  - BiomarkerHistory values (`valueEncrypted`)
-  - User PII (firstName, lastName, dateOfBirth, phone, address)
-  - Insurance details (memberIdEncrypted, groupIdEncrypted)
-  - Health goal and need descriptions (`descriptionEncrypted`)
-  - Goal progress notes (`noteEncrypted`)
-  - Provider relationship notes (`notesEncrypted`)
-  - DNA/genetic data (genotypeEncrypted, descriptionEncrypted, recommendationsEncrypted)
-  - Expense data (service types, costs, provider names, claim amounts)
-  - Cost analysis AI responses (`claudeResponse`)
-  - Audit log PHI values (previousValueEncrypted, newValueEncrypted)
+- [ ] Every `*Encrypted` column in `schema.prisma` matches a field listed in [_phi-inventory](./_phi-inventory.md).
+- [ ] Every field in the inventory exists in the schema (no stale entries after a migration).
+- [ ] No plaintext PHI column: if a non-`Encrypted` column name matches a PHI concept (`firstName`, `dateOfBirth`, `phone`, `memberId`), flag it.
+- [ ] Deprecated models (`DNAData`, `DNAVariant`, `GeneticTrait`) either (a) kept with their encrypted fields intact, or (b) slated for removal — ask user which.
+- [ ] `CostAnalysis.claudeResponse` (no `Encrypted` suffix) is still encrypted in code — confirm in the controller.
 
 ### 4. Indexes
 - [ ] Compound indexes exist for common query patterns:

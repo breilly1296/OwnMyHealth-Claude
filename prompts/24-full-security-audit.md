@@ -5,40 +5,47 @@ tags:
   - meta
 type: prompt
 priority: 1
+updated: 2026-04-16
 ---
 
 # Full Security Audit
 
+> Read the [review protocol](./_review-protocol.md) **first**. Every sub-prompt inherits it.
+> Reference the [PHI inventory](./_phi-inventory.md) for any field-level verification.
+> Use [Claude Code tools](./_verification-tools.md) for all greps.
+
 ## Purpose
-Run a comprehensive security audit using all security prompts.
+Run a comprehensive security audit using all 20 security prompts. Consolidate findings into one report per the review-protocol shape, then update [21-security-status-doc](./21-security-status-doc.md).
 
 ## Audit Checklist
 
-Run each prompt in sequence and document findings:
+Run each prompt in sequence. Carry findings forward — don't re-discover the same issue in multiple prompts.
 
-### Critical Priority
-- [ ] **01-database-schema** - Schema security, RLS, PHI identification
-- [ ] **02-encryption** - AES-256-GCM, key management, PHI coverage
-- [ ] **03-authentication** - JWT, passwords, cookies, refresh flow
-- [ ] **04-csrf** - Token validation, header handling
-- [ ] **05-audit-logging** - HIPAA logging, coverage, integrity
+### Critical
+- [ ] [01-database-schema](./01-database-schema.md) — Schema, RLS, PHI presence
+- [ ] [02-encryption](./02-encryption.md) — AES-256-GCM, per-user keys, PHI coverage
+- [ ] [03-authentication](./03-authentication.md) — JWT, bcrypt, lockout, session lifecycle
+- [ ] [04-csrf](./04-csrf.md) — Double-submit cookie, timing-safe compare
+- [ ] [05-audit-logging](./05-audit-logging.md) — HIPAA retention, immutability, coverage
+- [ ] [11-environment-secrets](./11-environment-secrets.md) — Secret Manager, no hardcoded keys
 
-### High Priority
-- [ ] **06-api-routes** - Auth on routes, authorization, input validation
-- [ ] **07-input-validation** - UUID validation, file uploads, sanitization
-- [ ] **10-frontend-auth** - Token storage, auth context, protected routes
-- [ ] **12-cicd-security** - Workflow security, secrets, Docker
-- [ ] **26-provider-collaboration** - Provider-patient consent, cross-user data access
-- [ ] **27-ai-integration** - Claude API security, PHI in prompts, cost control
+### High
+- [ ] [06-api-routes](./06-api-routes.md) — Auth/RBAC/RLS context on every route
+- [ ] [07-input-validation](./07-input-validation.md) — Zod schemas, UUIDs, file validation
+- [ ] [10-frontend-auth](./10-frontend-auth.md) — Memory-only tokens, refresh order
+- [ ] [12-cicd-security](./12-cicd-security.md) — Actions pinning, Dockerfile, service account scopes
+- [ ] [26-provider-collaboration](./26-provider-collaboration.md) — Consent lifecycle, cross-user IDOR
+- [ ] [27-ai-integration](./27-ai-integration.md) — Claude API, PHI in prompts, cost control
+- [ ] [31-logging-observability](./31-logging-observability.md) — PHI redaction, Cloud Logging
 
-### Medium Priority
-- [ ] **08-rate-limiting** - Auth endpoints, upload limits, cost control
-- [ ] **09-external-apis** - API key security, SSRF prevention
-- [ ] **11-environment-secrets** - Secret inventory, no hardcoded values
-- [ ] **13-dependency-health** - Vulnerabilities, outdated packages
-- [ ] **28-file-storage** - GCS bucket security, signed URLs, upload validation
-- [ ] **29-data-portability** - Data export completeness, deletion cascades, HIPAA retention
-- [ ] **30-admin-security** - Admin privileges, user management, escalation prevention
+### Medium
+- [ ] [08-rate-limiting](./08-rate-limiting.md) — 7 limiters, coverage on all expensive routes
+- [ ] [09-external-apis](./09-external-apis.md) — API key handling, SSRF, timeouts
+- [ ] [13-dependency-health](./13-dependency-health.md) — npm audit, outdated packages
+- [ ] [28-file-storage](./28-file-storage.md) — GCS IAM, signed URL TTL, upload validation
+- [ ] [29-data-portability](./29-data-portability.md) — Export completeness, deletion cascades
+- [ ] [30-admin-security](./30-admin-security.md) — Admin privilege, escalation prevention
+- [ ] [32-error-handling](./32-error-handling.md) — Error shape, stack-trace safety, async flow
 
 ## Audit Report Template
 

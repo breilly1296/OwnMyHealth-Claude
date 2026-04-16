@@ -5,32 +5,31 @@ tags:
   - compliance
 type: prompt
 priority: 1
+updated: 2026-04-16
 ---
 
 # Generate HIPAA_CHECKLIST.md
 
+> For PHI field identification, reference the [PHI inventory](./_phi-inventory.md) — don't re-enumerate.
+> Use [Claude Code tools](./_verification-tools.md).
+
 ## Purpose
-Generate a HIPAA compliance checklist with current status.
+Generate a HIPAA compliance checklist with **current** status — not historical.
 
 ## From Codebase (Claude Code)
 
 ### Technical Safeguards Verification
-```bash
-# Check encryption implementation
-grep -r "encrypt\|decrypt\|AES\|GCM" backend/src/services/
 
-# Check audit logging
-grep -r "auditLog\|createAuditLog" backend/src/
-
-# Check access controls
-grep -r "auth\|authenticate\|authorize" backend/src/middleware/
-
-# Check token expiration
-grep -r "expiresIn\|exp\|expiration" backend/src/
-```
+| Safeguard | Tool | Parameters |
+|---|---|---|
+| Encryption implementation | Grep | `pattern: "encrypt\|decrypt\|AES\|GCM"`, `glob: "backend/src/services/**/*.ts"` |
+| Audit logging coverage | Grep | `pattern: "auditLog\|createAuditLog"`, `glob: "backend/src/**/*.ts"` |
+| Access control middleware | Grep | `pattern: "authenticate\|authorize\|requireRole\|requireMinRole"`, `glob: "backend/src/middleware/**/*.ts"` |
+| Token expiration | Grep | `pattern: "expiresIn\|exp\\b"`, `glob: "backend/src/**/*.ts"` |
+| PHI fields in schema | Grep | `pattern: "Encrypted\\b"`, `path: "backend/prisma/schema.prisma"` — cross-check with [_phi-inventory](./_phi-inventory.md) |
 
 ### PHI Field Identification
-Review `backend/prisma/schema.prisma` for tables containing PHI.
+Pull the canonical list from [_phi-inventory](./_phi-inventory.md). If your output differs from the inventory, the inventory (not your output) is wrong — open a finding.
 
 ## Questions to Ask
 

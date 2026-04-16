@@ -5,14 +5,17 @@ tags:
   - medium
 type: prompt
 priority: 3
+updated: 2026-04-16
 ---
 
 # Rate Limiting Review
 
+> Follow the [review protocol](./_review-protocol.md). Use [Claude Code tools](./_verification-tools.md).
+
 ## Files to Review
-- `backend/src/middleware/rateLimiter.ts` (if exists)
-- `backend/src/app.ts` (middleware registration)
-- `backend/src/routes/*.ts` (route-specific limits)
+- `backend/src/middleware/rateLimiter.ts` — 7 exported limiters
+- `backend/src/app.ts` — global limiter registration
+- `backend/src/routes/*.ts` — per-route limiter attachment
 
 ## OwnMyHealth Rate Limiting Strategy
 - **Global**: Basic protection on all routes
@@ -82,17 +85,27 @@ app.use('/api/v1/upload', uploadLimiter);
 ```
 
 ## Actual Limiters in Codebase
-Verify these exist in `backend/src/middleware/rateLimiter.ts`:
-- [ ] `standardLimiter` — 100 req/15 min (global)
+Verify all **7** are exported from `backend/src/middleware/rateLimiter.ts`:
+- [ ] `standardLimiter` — 100 req/15 min (global default)
 - [ ] `authLimiter` — 20 req/15 min (auth routes)
 - [ ] `strictAuthLimiter` — 5 req/15 min (login), keyed by email+IP
 - [ ] `uploadLimiter` — 20 uploads/hour
-- [ ] `sensitiveLimiter` — 10 req/hour (sensitive operations)
+- [ ] `sensitiveLimiter` — 10 req/hour (export, delete, password reset)
+- [ ] `aiLimiter` — applied to Claude-backed endpoints (biomarker guidance, cost analysis, SBC extraction). **Verify it's actually attached to those routes**, not just exported.
 - [ ] `bulkOperationLimiter` — 30 req/hour (batch creates)
 
+### Limiter-to-route coverage (cross-check)
+- [ ] `strictAuthLimiter` on `POST /auth/login`
+- [ ] `authLimiter` on `POST /auth/register`, `POST /auth/forgot-password`, `POST /auth/reset-password`
+- [ ] `uploadLimiter` on every route in `uploadRoutes.ts`
+- [ ] `aiLimiter` on `POST /biomarkers/:id/guidance`, `POST /expenses/analyses`, `POST /upload/insurance-sbc`, `POST /upload/lab-report` (any route that can trigger a Claude or Document AI call)
+- [ ] `sensitiveLimiter` on `GET /settings/export-data`, `DELETE /settings/delete-data`, `DELETE /settings/delete-account`
+- [ ] `bulkOperationLimiter` on `POST /biomarkers/batch`
+- [ ] `standardLimiter` registered globally in `app.ts` (applies to everything else)
+
 ## Questions to Ask
-1. Are authentication endpoints rate limited?
-2. Are AI/Claude API endpoints limited (cost control)?
-3. What happens when limits are hit?
-4. Are rate limits keyed by IP, user ID, or both?
-5. Do demo accounts have separate (stricter) limits?
+1. Is `aiLimiter` keyed by userId (fair per-user spend) or IP (easier DoS)? Which is correct for cost control?
+2. Does `standardLimiter` registration in `app.ts` happen before or after route-specific limiters? Order affects which one applies.
+3. Do demo accounts have stricter AI limits (they can burn API budget on a shared key)?
+4. What's the monthly Claude spend cap, and does the limiter math match it (worst-case: `authenticatedUsers × aiLimiter.max × cost`)?
+5. Are 429 responses logged? A spike signals either abuse or a legitimate feature hitting the cap.

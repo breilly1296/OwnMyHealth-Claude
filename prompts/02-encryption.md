@@ -5,17 +5,22 @@ tags:
   - critical
 type: prompt
 priority: 1
+updated: 2026-04-16
 ---
 
 # Encryption Review
 
+> Follow the [review protocol](./_review-protocol.md).
+> The [PHI inventory](./_phi-inventory.md) is the canonical field list — don't duplicate it here.
+> Use [Claude Code tools](./_verification-tools.md).
+
 ## Files to Review
-- `backend/src/services/encryption.ts` (primary — AES-256-GCM implementation)
-- `backend/src/services/userEncryption.ts` (per-user key management)
-- `backend/prisma/schema.prisma` (identify encrypted fields)
-- `backend/src/controllers/*.ts` (verify encrypt/decrypt calls)
-- `backend/src/services/auditLog.ts` (PHI encryption in logs)
-- Any file importing encryption service
+- `backend/src/services/encryption.ts` — AES-256-GCM implementation, `PHI_FIELDS` constant
+- `backend/src/services/userEncryption.ts` — per-user key derivation (PBKDF2-SHA512)
+- `backend/prisma/schema.prisma` — encrypted column declarations
+- `backend/src/controllers/*.ts` — every encrypt/decrypt call site
+- `backend/src/services/auditLog.ts` — audit log PHI encryption (uses system salt, not per-user)
+- Any file importing `getEncryptionService()`
 
 ## OwnMyHealth Encryption Architecture
 - **Algorithm**: AES-256-GCM
@@ -48,38 +53,14 @@ priority: 1
 - [ ] Salt destroyed on account deletion
 
 ### 4. PHI Field Coverage
-Verify encryption is applied to ALL PHI fields:
+Verify against [_phi-inventory](./_phi-inventory.md) — do **not** re-enumerate fields in this prompt. For each model in the inventory:
 
-**User PII:**
-- [ ] firstName, lastName, dateOfBirth, phone, address
+- [ ] Every listed field appears in `PHI_FIELDS` in `encryption.ts`.
+- [ ] Every listed field has a corresponding encrypted column in `schema.prisma`.
+- [ ] The controller for that model encrypts on write and decrypts on read (find with Grep: `pattern: "encryptField\\(.*<fieldName>|decryptField\\(.*<fieldName>"`).
+- [ ] No PLAINTEXT write path exists that bypasses encryption (Grep each non-`Encrypted` concept name — `firstName`, `memberId`, etc. — outside test files).
 
-**Biomarker Data:**
-- [ ] Biomarker `valueEncrypted`, `notesEncrypted`
-- [ ] BiomarkerHistory `valueEncrypted`
-
-**Insurance:**
-- [ ] InsurancePlan `memberIdEncrypted`, `groupIdEncrypted`
-
-**Health Tracking:**
-- [ ] HealthNeed `descriptionEncrypted`
-- [ ] HealthGoal `descriptionEncrypted`
-- [ ] GoalProgressHistory `noteEncrypted`
-
-**Provider Collaboration:**
-- [ ] ProviderPatient `notesEncrypted`
-
-**DNA/Genetic (if models still active):**
-- [ ] DNAVariant `genotypeEncrypted`
-- [ ] GeneticTrait `descriptionEncrypted`, `recommendationsEncrypted`
-
-**Expense Tracking:**
-- [ ] Expense service types, costs, provider names, claim amounts
-
-**AI Responses:**
-- [ ] CostAnalysis `claudeResponse` (contains health recommendations)
-
-**Audit Logs:**
-- [ ] AuditLog `previousValueEncrypted`, `newValueEncrypted`
+Flag any drift between schema ↔ `PHI_FIELDS` ↔ inventory as a **Critical** finding.
 
 ### 5. Encryption Service Usage
 - [ ] All PHI writes go through encryption service
@@ -94,17 +75,14 @@ Verify encryption is applied to ALL PHI fields:
 - [ ] PDF/document buffers cleared after processing
 - [ ] Encryption keys not retained beyond function scope
 
-## Verification Commands
-```bash
-# Find all encrypted fields in schema
-grep -r "Encrypted" backend/prisma/schema.prisma
+## Verification (Claude Code tools)
 
-# Find files using encryption service
-grep -r "encrypt\|decrypt" backend/src/controllers/ --include="*.ts" -l
-
-# Find potential plaintext PHI storage
-grep -r "firstName\|lastName\|dateOfBirth\|phone\|address\|memberId\|groupId" backend/src/ --include="*.ts" | grep -v "Encrypted\|encrypt\|decrypt\|test\|\.d\.ts"
-```
+| Check | Tool | Parameters |
+|---|---|---|
+| All `*Encrypted` columns in schema | Grep | `pattern: "Encrypted\\b"`, `path: "backend/prisma/schema.prisma"`, `output_mode: "content"` |
+| Controllers that touch encryption | Grep | `pattern: "encrypt\|decrypt"`, `glob: "backend/src/controllers/**/*.ts"`, `output_mode: "files_with_matches"` |
+| Plaintext PHI leaks | Grep | `pattern: "firstName\|lastName\|dateOfBirth\|phone\|address\|memberId\|groupId"`, `glob: "backend/src/**/*.ts"`; manually filter hits inside `encryptField(...)` / `decryptField(...)` calls and test files |
+| `PHI_FIELDS` definition | Read | `backend/src/services/encryption.ts` lines ~360–440 |
 
 ## Questions to Ask
 1. Are there any PHI fields being stored without encryption?

@@ -4,6 +4,7 @@ tags:
   - meta
 type: prompt
 priority: 2
+updated: 2026-04-16
 ---
 
 # Full Documentation Refresh
@@ -16,22 +17,22 @@ Systematically update all documentation using the document prompts.
 Go through each prompt and generate/update the document:
 
 ### Strategy & Business
-- [ ] **14-strategy-doc** → STRATEGY.md
-- [ ] **23-financial-tracker-doc** → FINANCIAL_TRACKER.md
+- [ ] [14-strategy-doc](./14-strategy-doc.md) → `docs/STRATEGY.md`
+- [ ] [23-financial-tracker-doc](./23-financial-tracker-doc.md) → `docs/FINANCIAL_TRACKER.md`
 
 ### Operations & Technical
-- [ ] **15-runbook-doc** → RUNBOOK.md
-- [ ] **16-architecture-doc** → ARCHITECTURE.md
-- [ ] **17-api-reference-doc** → API_REFERENCE.md
+- [ ] [15-runbook-doc](./15-runbook-doc.md) → `docs/RUNBOOK.md`
+- [ ] [16-architecture-doc](./16-architecture-doc.md) → `docs/ARCHITECTURE.md`
+- [ ] [17-api-reference-doc](./17-api-reference-doc.md) → `docs/API_REFERENCE.md`
 
 ### Support & Maintenance
-- [ ] **18-troubleshooting-doc** → TROUBLESHOOTING.md
-- [ ] **19-changelog-doc** → CHANGELOG.md
-- [ ] **20-known-issues-doc** → KNOWN_ISSUES.md
+- [ ] [18-troubleshooting-doc](./18-troubleshooting-doc.md) → `docs/TROUBLESHOOTING.md`
+- [ ] [19-changelog-doc](./19-changelog-doc.md) → `docs/CHANGELOG.md`
+- [ ] [20-known-issues-doc](./20-known-issues-doc.md) → `docs/KNOWN_ISSUES.md`
 
 ### Security & Compliance
-- [ ] **21-security-status-doc** → SECURITY_STATUS.md
-- [ ] **22-hipaa-checklist-doc** → HIPAA_CHECKLIST.md
+- [ ] [21-security-status-doc](./21-security-status-doc.md) → `docs/SECURITY_STATUS.md`
+- [ ] [22-hipaa-checklist-doc](./22-hipaa-checklist-doc.md) → `docs/HIPAA_CHECKLIST.md`
 
 ## Refresh Process
 
@@ -76,8 +77,8 @@ These pull from codebase:
 4. Run 22-hipaa-checklist-doc
 5. Generate HIPAA_CHECKLIST.md
 
-**Note:** Security audit (prompt 24) now covers 18 security prompts (01-13, 26-30):
-- Provider collaboration, AI integration, file storage, data portability, admin security
+**Note:** Security audit ([24-full-security-audit](./24-full-security-audit.md)) now covers **20** security prompts (01-13, 26-32):
+- Provider collaboration, AI integration, file storage, data portability, admin security, logging & observability, error handling.
 
 ### Step 7: Changelog (If Maintaining)
 1. Run 19-changelog-doc
