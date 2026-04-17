@@ -167,8 +167,12 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       await waitFor(() => {
-        // Look for the h1 heading specifically (there's also a "Dashboard" nav item)
-        expect(screen.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
+        // Overview h1 derives the display name from the user's email local part
+        // (falls back to "Dashboard" only when unauthenticated). mockUser.email
+        // is 'test@example.com', so the h1 renders "Welcome back, test".
+        expect(
+          screen.getByRole('heading', { name: /welcome back, test/i, level: 1 })
+        ).toBeInTheDocument();
       });
     });
 
@@ -212,8 +216,11 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       await waitFor(() => {
-        // Should still render dashboard with sample data
-        expect(screen.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
+        // Should still render dashboard with sample data — greeting uses the
+        // email local part (see note in "should render navigation categories").
+        expect(
+          screen.getByRole('heading', { name: /welcome back, test/i, level: 1 })
+        ).toBeInTheDocument();
       });
     });
   });
