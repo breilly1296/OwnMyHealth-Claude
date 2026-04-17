@@ -23,12 +23,6 @@
 **Priority:** High (user-facing feature appears to work but silently discards input)
 **Fix required:** Add a `PATCH /api/user/profile` (or similar) endpoint and wire `settingsApi.updateDisplayName(name)` into `handleSaveName`.
 
-### Critical npm audit advisory in frontend: jsPDF HTML injection
-**Symptom:** `npm audit` reports one critical vulnerability — `jsPDF has HTML Injection in New Window paths` (GHSA-wfv2-pwc8-crg5). `jspdf` is a direct dependency used for report export.
-**Source:** `package.json:19` (direct dep); `npm audit` root.
-**Priority:** High (PHI-touching report generation path)
-**Fix required:** `npm audit fix` or pin `jspdf` to a patched version; re-run audit.
-
 ### Critical npm audit advisory in backend: fast-xml-parser
 **Symptom:** `npm audit` reports one critical vulnerability — `fast-xml-parser has an entity encoding bypass via regex injection in DOCTYPE entity names` (GHSA-m7jm-9gc2-mpf2). Pulled in transitively via `@google-cloud/storage` / `@google-cloud/documentai`.
 **Source:** `backend/npm audit` output.
@@ -78,6 +72,12 @@
 ---
 
 ## Low Priority (Future Improvements)
+
+### `encryption.test.ts` intermittent flake
+**Symptom:** `src/services/encryption.test.ts > encryptFields / decryptFields > should gracefully handle decryption failures for specific fields` fails roughly 1 in 5-10 full-suite runs with an assertion mismatch on a tampered-ciphertext case. Running the file in isolation (`npx vitest run src/services/encryption.test.ts`) passes every time — looks like test-isolation / parallel-execution state in a crypto-heavy module. Surfaced during the 2026-04-16 session while running sanity checks after the C-2 audit-salt-encryption merge; not caused by any of the C-1..C-6 fixes (reproduces on a clean origin/master checkout).
+**Source:** `backend/src/services/encryption.test.ts`, around the `encryptFields / decryptFields` describe block.
+**Priority:** Low (flake, not a regression; full suite passes on re-run).
+**Fix required:** Investigate whether `mockedLogger` state is leaking across tests, or whether there's a shared EncryptionService singleton being mutated. Candidates: add `vi.clearAllMocks()` in afterEach for that describe, or make the service instance local to the test.
 
 ### Backend low-severity advisories (6)
 **Symptom:** Six low-severity advisories in `backend/` (`@tootallnate/once`, `follow-redirects`, `lodash`, misc). Not directly exploitable in our usage but increase supply-chain surface.

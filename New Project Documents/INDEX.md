@@ -23,7 +23,7 @@
 | [SECURITY_AUDIT_infrastructure.md](./SECURITY_AUDIT_infrastructure.md) | 1 finding (C-8): DB role model, BYPASSRLS verification. Surfaced out-of-band during PR #30 regression testing. | — (infra review) |
 | [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) | §164.308/310/312 section-by-section status; BAA inventory | 22 |
 
-**Critical findings total: 8.** See SECURITY_STATUS.md for full remediation plan.
+**Critical findings: 8 total, 6 fixed (PRs #30, #32, #33, #34, #36, #37), 2 open (C-7, C-8).** See SECURITY_STATUS.md for full remediation plan.
 
 ---
 
@@ -71,7 +71,7 @@ These prompts were part of the library but weren't run as standalone docs:
 
 | Severity | Count | Notable (see SECURITY_STATUS.md for full list) |
 |---|---|---|
-| **Critical** | **8** | RLS `SET LOCAL` outside tx; audit salt plaintext; JWT dev fallbacks; insecure `.env.example` key; jspdf CVEs; GCS files not deleted on account deletion; raw PHI PDFs sent to Claude; RLS policies inert at runtime (app connects as BYPASSRLS role) |
+| **Critical** | **8 (6 fixed, 2 open)** | **Fixed:** RLS `SET LOCAL` outside tx (C-1, #30); audit salt plaintext (C-2, #32); JWT dev fallbacks (C-3, #33); insecure `.env.example` key (C-4, #34); jspdf CVEs (C-5, #36); GCS files not deleted on account deletion (C-6, #37). **Open:** raw PHI PDFs sent to Claude (C-7); RLS policies inert at runtime / BYPASSRLS role (C-8, infra). |
 | **High** | ~22 | aiLimiter missing on 4 Claude endpoints; demo-protection middleware never attached; data export missing 8 of 11 PHI categories; password-policy mismatch (8 vs 12); provider cross-user RLS bypass; no password confirmation on destructive ops |
 | **Medium** | ~37 | Bare `console.*` leaking frontend auth state; Zod errors echoing PHI; CSRF readable from JS; session race conditions; narrow PHI regex; deprecated models still exposed |
 | **Low** | ~27 | Code quality, comments, UUID generation inconsistencies, old env var names |
@@ -98,9 +98,9 @@ Re-run after major changes:
 
 ## Suggested next actions (in order)
 
-1. **Fix the 7 Criticals** (SECURITY_STATUS.md §Remediation plan §Immediate). Target: this week.
-2. **Sign Anthropic BAA** (blocks production PHI through Claude). Legal process.
-3. **Clear npm audit** on root (`jspdf@latest`) and backend (29 vulns). `npm audit fix` + re-test.
+1. **Fix the 2 remaining Criticals** — C-7 (input-side PHI minimization for Claude) and C-8 (BYPASSRLS runtime role; staged four-PR infra sequence). C-1 through C-6 closed 2026-04-16 (PRs #30, #32, #33, #34, #36, #37); Anthropic BAA signed same day.
+2. ~~**Sign Anthropic BAA**~~ — Done 2026-04-16.
+3. **Clear remaining npm audit** on backend (`fast-xml-parser` critical, axios SSRF triple, etc.) and root (vite, picomatch, dompurify, etc.). jspdf critical already closed by C-5. `npm audit fix` + re-test, per-advisory review.
 4. **Fill STRATEGY.md and FINANCIAL_TRACKER.md** TBD sections via prompts 14 and 23 Q&A.
 5. **Write the HIPAA compliance documents** listed in HIPAA_CHECKLIST.md §Required Documentation.
-6. **Re-run full security audit** after fixes; target: Critical=0, High<5 before beta launch.
+6. **Re-run full security audit** after C-7/C-8 close; target: Critical=0, High<5 before beta launch.
