@@ -97,6 +97,8 @@ N/A — solo founder. Revisit when hiring.
 | Emergency access procedure | 🟡 Partial | Admin role + audit log; written emergency-access policy TBD. |
 | Automatic logoff | ✅ | 15-minute JWT access token; refresh token 7 days. Configured in `backend/src/config/index.ts` (`accessExpiresIn=900`, `refreshExpiresIn=604800`). |
 | Encryption and decryption | ✅ | AES-256-GCM in `backend/src/services/encryption.ts`. Per-user keys via PBKDF2-SHA512 in `userEncryption.ts`. Field inventory in `prompts/_phi-inventory.md`. |
+| Access controls — application layer | ✅ | RBAC middleware (`backend/src/middleware/rbac.ts`); per-query `where: { userId }` filters in Prisma. This is the effective runtime control today. |
+| Access controls — database layer (RLS) | 🟡 Partial | RLS policies defined in migration `20260107_add_rls_policies` but **not currently enforced at runtime** — app connects as a DB superuser (BYPASSRLS). Tracked as C-8. PR #30 fixes the application-side `SET LOCAL` bug so the control works correctly once the runtime role is changed. |
 
 ### §164.312(b) Audit Controls
 | Requirement | Status | Evidence |

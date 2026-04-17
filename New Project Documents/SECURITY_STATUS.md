@@ -10,16 +10,16 @@
 
 | Severity | Total | Open | In progress | Fixed |
 |---|---|---|---|---|
-| Critical | 7 | 7 | 0 | 0 |
+| Critical | 8 | 8 | 0 | 0 |
 | High | ~22 | ~22 | 0 | 0 |
 | Medium | ~37 | ~37 | 0 | 0 |
 | Low | ~27 | ~27 | 0 | 0 |
 | Info | 6 | — | — | — |
 
-(Counts aggregated from the three audit reports: `SECURITY_AUDIT_core.md`, `SECURITY_AUDIT_periphery.md`, `SECURITY_AUDIT_domain.md`.)
+(Counts aggregated from the three code-audit reports — `SECURITY_AUDIT_core.md`, `SECURITY_AUDIT_periphery.md`, `SECURITY_AUDIT_domain.md` — plus one infrastructure finding in `SECURITY_AUDIT_infrastructure.md` surfaced out-of-band during PR #30 regression testing.)
 
 ### Interpretation
-The codebase reflects a thoughtful security-first architecture — AES-256-GCM encryption, per-user keys, RLS, audit logging, CSRF, rate limiting, multi-layer RBAC, and PHI redaction are all present. But several implementations have **gaps or bypasses** that undermine the intent of the controls. The 7 Critical findings below are the gap between *designed* security posture and *operating* security posture. **They should be fixed before any production PHI ingress.**
+The codebase reflects a thoughtful security-first architecture — AES-256-GCM encryption, per-user keys, RLS, audit logging, CSRF, rate limiting, multi-layer RBAC, and PHI redaction are all present. But several implementations have **gaps or bypasses** that undermine the intent of the controls. The 8 Critical findings below are the gap between *designed* security posture and *operating* security posture. **They should be fixed before any production PHI ingress.**
 
 ---
 
@@ -34,8 +34,9 @@ The codebase reflects a thoughtful security-first architecture — AES-256-GCM e
 | C-5 | **jspdf 4.0.0 HTML/PDF injection (1 critical + 6 high CVEs)** — direct dependency. CVSS 9.6 HTML injection; PDF object injection enables arbitrary JS in generated PDFs. Fix in 4.2.0+. | `package.json` root | 13 |
 | C-6 | **GCS objects not deleted on account/data deletion** — `deleteAccount`/`deleteAllData` remove DB rows but never call `storageService.deleteFile`. All uploaded lab PDFs / SBCs remain in the bucket forever. HIPAA §164.524 violation. | `backend/src/controllers/settingsController.ts:231-236, 296-300` | 29 |
 | C-7 | **Raw PHI PDFs sent to Claude in biomarker + SBC extraction** — `extractBiomarkersWithClaude` and `extractInsuranceFromSBC` pass the unredacted PDF as base64 to Anthropic. Lab reports contain name/DOB/MRN/address. `stripPHIFromText` only runs on the response. HIPAA §164.502 violation absent BAA. | `backend/src/services/claudeExtraction.ts:110-140`, `sbcExtraction.ts:778-806` | 27 |
+| C-8 | **RLS policies inert at runtime** — every `CREATE POLICY` in `20260107_add_rls_policies` is silently bypassed because the app connects as a role with `rolbypassrls=true` (Cloud SQL `cloudsqlsuperuser` in dev; Railway vanilla `postgres` superuser in prod). Tenant isolation is carried by application-level `where: { userId }` filters only — any missed filter is a live cross-tenant bug. | `backend/.env`, `backend/.env.production.example`, `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, `backend/src/services/auditLog.ts:106,114` (blocker for remediation) | — (infra) |
 
-**Remediation priority:** fix all 7 before any production PHI. C-2 and C-6 are HIPAA right-of-access/right-to-delete violations. C-1 breaks the RLS defense-in-depth assumption. C-7 is a recurring disclosure to a third party without confirmed BAA.
+**Remediation priority:** fix all 8 before any production PHI. C-2 and C-6 are HIPAA right-of-access/right-to-delete violations. C-1 fixes the application-side RLS wiring so it works correctly **once** the runtime role is changed, and C-8 is the infrastructure change that actually turns RLS on. Until C-8 lands, do not cite RLS as an enforced control — it is defense-in-depth on paper only. C-7 is a recurring disclosure to a third party without confirmed BAA.
 
 ---
 
@@ -125,7 +126,7 @@ Grouped by area. Full details in the per-area audit files.
 | Control | Status | Notes |
 |---|---|---|
 | RBAC (PATIENT/PROVIDER/ADMIN) | ✅ | `rbac.ts` middleware. |
-| RLS policies | 🟡 | Defined in migration `20260107_add_rls_policies` but bypassed by `SET LOCAL` issue (C-1). |
+| RLS policies | ❌ | Two layered gaps: the app-side `SET LOCAL` bug (C-1, fixed in PR #30) meant the user context never reached the policy; and the runtime DB role has `BYPASSRLS` so policies don't fire even with the context set (C-8, open). Until C-8 is closed, tenant isolation is carried by application-level `where: { userId }` filters only. |
 | Consent lifecycle | 🟡 | PENDING→ACTIVE implemented; SUSPENDED/EXPIRED dead code (domain F-19). |
 | Granular permissions | 🟡 | `canViewBiomarkers` / `canViewHealthNeeds` checked. `canViewInsurance` / `canViewDna` / `canEditData` have no enforcement endpoints (domain F-18). |
 | Provider rate limiting | ❌ | Missing on access request (H). |
@@ -168,9 +169,17 @@ Grouped by area. Full details in the per-area audit files.
 2. **C-5:** `npm install jspdf@latest` + re-test PDF generation paths.
 3. **C-6:** Add `storageService.deleteFile` loop to `deleteAccount` and `deleteAllData` before DB cascade.
 4. **C-7:** Implement input-side PHI stripping for Claude calls — extract text from PDF with `pdf-parse`, run `stripPHIFromText` (widen regex to include name patterns), then send text-only prompt. Add `ANTHROPIC_BAA_ACTIVE` config gate that refuses the call if unset.
-5. **C-1:** Refactor `setRLSContext` to use a Prisma middleware or `$transaction` wrapper so `SET LOCAL` binds to a transaction. Migrate list/read endpoints to `withRLSTransaction`.
+5. **C-1:** Refactor `setRLSContext` to use a Prisma middleware or `$transaction` wrapper so `SET LOCAL` binds to a transaction. Migrate list/read endpoints to `withRLSTransaction`. **Shipped in PR #30 (2026-04-16).**
 6. **C-2:** Encrypt audit system salt — either store in GCP Secret Manager directly or encrypt the `system_config.value` row with the master key and flip `isEncrypted=true`.
-7. **Anthropic BAA:** Start legal process in parallel.
+7. **C-8:** Staged infrastructure work — see dedicated plan below. Do NOT attempt before the `auditService.initialize()` fix lands, or server startup will crash under the new role.
+8. **Anthropic BAA:** Start legal process in parallel.
+
+### C-8 staged rollout (separate PR sequence)
+The C-8 remediation is infrastructure work that must land in order:
+1. **PR A (code):** Wrap `auditService.initialize()` (`backend/src/services/auditLog.ts:106,114`) in `withRLSContext(null, …, { isAdmin: true })` or move the audit salt to Secret Manager and drop the `system_config` row. Blocker for PR B.
+2. **PR B (code sweep):** Audit the 24 bare `prisma.*` call sites enumerated in PR #30's follow-up. Each gets an RLS wrapper with the correct user or admin context. Under the current BYPASSRLS role they already work; this pass makes them fail-safe against the role cutover.
+3. **PR C (infra):** Provision `omh_app` role on Cloud SQL + Railway (`NOSUPERUSER NOBYPASSRLS`); grant schema/table/sequence/function privileges; set `ALTER DEFAULT PRIVILEGES` so new migrations auto-grant. Rotate `DATABASE_URL` in GCP Secret Manager and Railway. Add a startup assertion that refuses to boot in `NODE_ENV=production` if `SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user` returns `t`.
+4. **PR D (test):** Multi-tenant integration test that exercises every controller with two distinct users and asserts cross-tenant reads are blocked. Only meaningful after PR C.
 
 ### Short-term (next 2 weeks — all Highs)
 - Attach `aiLimiter` to all 4 Claude endpoints.
@@ -204,7 +213,7 @@ Full findings with file:line and quoted evidence:
 
 | Area | Status |
 |---|---|
-| Technical safeguards (§164.312) | 🟡 Implemented with gaps (C-1, C-2, C-6, C-7) |
+| Technical safeguards (§164.312) | 🟡 Implemented with gaps (C-1, C-2, C-6, C-7, C-8). C-8 specifically downgrades §164.312(a) Access Control from ✅ to 🟡 Partial at the DB layer — the application layer still enforces it. |
 | Administrative safeguards (§164.308) | ⏳ Risk assessment + policies TBD |
 | Physical safeguards (§164.310) | 🟡 GCP-covered; workstation-level policy TBD |
 | Breach notification (§164.400) | ⏳ Written plan TBD |
