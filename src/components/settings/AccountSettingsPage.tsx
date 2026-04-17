@@ -9,7 +9,7 @@
  * 5. Health Focus Areas - Placeholder for future features
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   User,
@@ -33,7 +33,31 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { settingsApi } from '../../services/api';
+import type { NotificationPreferences } from '../../services/api/settings';
 import ChangePasswordModal from './ChangePasswordModal';
+
+const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
+  emailNotifications: true,
+  weeklySummary: false,
+  abnormalAlerts: true,
+};
+
+function composeDisplayName(firstName: string | null, lastName: string | null, fallback: string): string {
+  const parts = [firstName, lastName].filter((p): p is string => !!p && p.trim().length > 0);
+  return parts.length > 0 ? parts.join(' ') : fallback;
+}
+
+function splitDisplayName(displayName: string): { firstName: string; lastName: string } {
+  const trimmed = displayName.trim();
+  const spaceIndex = trimmed.indexOf(' ');
+  if (spaceIndex === -1) {
+    return { firstName: trimmed, lastName: '' };
+  }
+  return {
+    firstName: trimmed.slice(0, spaceIndex),
+    lastName: trimmed.slice(spaceIndex + 1).trim(),
+  };
+}
 
 interface AccountSettingsPageProps {
   onBack: () => void;
@@ -45,23 +69,20 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
 
+  const emailLocal = user?.email?.split('@')[0] || '';
+
   // Profile state
-  const [displayName, setDisplayName] = useState(user?.email?.split('@')[0] || '');
+  const [displayName, setDisplayName] = useState(emailLocal);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
 
   // Password modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  // Notification settings (stored in localStorage for now)
-  const [notifications, setNotifications] = useState(() => {
-    const stored = localStorage.getItem('omh-notifications');
-    return stored ? JSON.parse(stored) : {
-      emailNotifications: true,
-      weeklySummary: false,
-      abnormalAlerts: true,
-    };
-  });
+  // Notification settings (persisted server-side)
+  const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
 
   // Delete confirmation state
   const [deleteType, setDeleteType] = useState<'data' | 'account' | null>(null);
@@ -77,21 +98,60 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast((current) => (current?.message === message ? null : current)), 3000);
+  }, []);
+
+  // Load profile from backend on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const profile = await settingsApi.getProfile();
+        if (cancelled) return;
+        setDisplayName(composeDisplayName(profile.firstName, profile.lastName, emailLocal));
+        setNotifications(profile.notificationPreferences);
+      } catch (err) {
+        if (cancelled) return;
+        setProfileLoadError(err instanceof Error ? err.message : 'Failed to load profile');
+      } finally {
+        if (!cancelled) setIsLoadingProfile(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [emailLocal]);
+
   const handleSaveName = async () => {
     setIsSavingName(true);
     try {
-      // TODO: Implement API call to save display name
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const { firstName, lastName } = splitDisplayName(displayName);
+      const profile = await settingsApi.updateProfile({ firstName, lastName });
+      setDisplayName(composeDisplayName(profile.firstName, profile.lastName, emailLocal));
       setIsEditingName(false);
+      showToast('Display name updated', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to update display name', 'error');
     } finally {
       setIsSavingName(false);
     }
   };
 
-  const handleNotificationChange = (key: NotificationSetting) => {
-    const updated = { ...notifications, [key]: !notifications[key] };
+  const handleNotificationChange = async (key: NotificationSetting) => {
+    const previous = notifications;
+    const updated = { ...previous, [key]: !previous[key] };
     setNotifications(updated);
-    localStorage.setItem('omh-notifications', JSON.stringify(updated));
+    try {
+      const saved = await settingsApi.updateNotifications({ [key]: updated[key] });
+      setNotifications(saved);
+    } catch (err) {
+      setNotifications(previous);
+      showToast(err instanceof Error ? err.message : 'Failed to update notification setting', 'error');
+    }
   };
 
   const handleExportData = async () => {
@@ -189,7 +249,14 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Display Name
               </label>
-              {isEditingName ? (
+              {isLoadingProfile ? (
+                <div className="h-10 bg-slate-100 dark:bg-slate-700 rounded-xl animate-pulse" />
+              ) : profileLoadError ? (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-600 dark:text-red-400">{profileLoadError}</p>
+                </div>
+              ) : isEditingName ? (
                 <div className="space-y-3">
                   <input
                     type="text"

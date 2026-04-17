@@ -50,12 +50,47 @@ export interface UserExportData {
   };
 }
 
+export interface NotificationPreferences {
+  emailNotifications: boolean;
+  weeklySummary: boolean;
+  abnormalAlerts: boolean;
+}
+
+export interface UserProfile {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+  notificationPreferences: NotificationPreferences;
+}
+
 export const settingsApi = {
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await apiFetch('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+  },
+
+  async getProfile(): Promise<UserProfile> {
+    const response = await apiFetch<UserProfile>('/settings/profile');
+    return response.data;
+  },
+
+  async updateProfile(data: { firstName?: string; lastName?: string }): Promise<UserProfile> {
+    const response = await apiFetch<UserProfile>('/settings/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  },
+
+  async updateNotifications(prefs: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    const response = await apiFetch<NotificationPreferences>('/settings/notifications', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    });
+    return response.data;
   },
 
   async exportData(): Promise<UserExportData> {

@@ -10,3 +10,4 @@ export * from './useModals';
 export * from './useErrorNotification';
 export * from './useBiomarkerStats';
 export * from './useBiomarkerData';
+export * from './useBiomarkerTrends';

@@ -6,9 +6,21 @@
  */
 
 import React from 'react';
-import { Activity, Plus, FileUp, Heart, AlertCircle } from 'lucide-react';
+import {
+  Activity,
+  Plus,
+  FileUp,
+  Heart,
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react';
 import type { Biomarker, BiomarkerCategory, InsurancePlan } from '../../types';
 import { getIcon } from './getIcon';
+import { useAuth } from '../../contexts/AuthContext';
+import { useBiomarkerTrends, type BiomarkerTrends } from '../../hooks/useBiomarkerTrends';
+import RecentActivity from './RecentActivity';
 
 interface BiomarkerStats {
   totalCount: number;
@@ -31,39 +43,91 @@ interface DashboardContentProps {
   onOpenClinicalUpload: () => void;
 }
 
+function netTrendLabel(trends: BiomarkerTrends): { text: string; className: string; Icon: typeof TrendingUp } {
+  if (trends.netDirection === 'improving') {
+    return {
+      text: `↑ ${trends.improvedCount} improved`,
+      className: 'text-wellness-100',
+      Icon: TrendingUp,
+    };
+  }
+  if (trends.netDirection === 'declining') {
+    return {
+      text: `↓ ${trends.declinedCount} declined`,
+      className: 'text-red-100',
+      Icon: TrendingDown,
+    };
+  }
+  return {
+    text: '→ Stable',
+    className: 'text-slate-100',
+    Icon: Minus,
+  };
+}
+
+function statusSummary(stats: BiomarkerStats): string {
+  if (stats.totalCount === 0) return 'No biomarkers tracked yet';
+  if (stats.outOfRangeCount === 0) {
+    return `All ${stats.totalCount} biomarkers in range`;
+  }
+  const noun = stats.outOfRangeCount === 1 ? 'biomarker needs' : 'biomarkers need';
+  return `${stats.outOfRangeCount} ${noun} attention`;
+}
+
+function formatToday(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+function CategoryTrendIcon({
+  summary,
+}: {
+  summary?: { improving: number; declining: number; stable: number };
+}) {
+  if (!summary || summary.improving + summary.declining + summary.stable === 0) {
+    return <Minus className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" aria-hidden="true" />;
+  }
+  if (summary.improving > summary.declining) {
+    return <TrendingUp className="w-3.5 h-3.5 text-wellness-500 dark:text-wellness-400" aria-hidden="true" />;
+  }
+  if (summary.declining > summary.improving) {
+    return <TrendingDown className="w-3.5 h-3.5 text-red-500 dark:text-red-400" aria-hidden="true" />;
+  }
+  return <Minus className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" aria-hidden="true" />;
+}
+
 /**
  * Main dashboard overview content
- *
- * @example
- * <DashboardContent
- *   biomarkers={biomarkers}
- *   categories={categories}
- *   stats={biomarkerStats}
- *   insurancePlans={insurancePlans}
- *   onCategorySelect={setSelectedCategory}
- *   onOpenAddMeasurement={() => modals.open('addMeasurement')}
- *   onOpenPDFUpload={() => modals.open('pdfUpload')}
- *   onOpenLabUpload={() => modals.open('labUpload')}
- *   onOpenClinicalUpload={() => modals.open('clinicalUpload')}
- * />
  */
 export function DashboardContent({
   biomarkers,
   categories,
   stats,
-  insurancePlans: _insurancePlans,
+  insurancePlans,
   onCategorySelect,
   onOpenAddMeasurement,
   onOpenPDFUpload,
   onOpenLabUpload,
 }: DashboardContentProps) {
+  const { user } = useAuth();
+  const trends = useBiomarkerTrends(biomarkers);
+  const firstName = user?.email?.split('@')[0] || '';
+  const greeting = firstName ? `Welcome back, ${firstName}` : 'Dashboard';
+  const netTrend = netTrendLabel(trends);
+  const NetTrendIcon = netTrend.Icon;
+
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
       {/* Welcome Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{greeting}</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">
-          Track and manage your health biomarkers
+          <span>{formatToday()}</span>
+          <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
+          <span>{statusSummary(stats)}</span>
         </p>
       </div>
 
@@ -79,8 +143,16 @@ export function DashboardContent({
           </div>
           <p className="text-sm opacity-90">Biomarkers in Range</p>
           <p className="text-xs opacity-70 mt-1">
-            {stats.biomarkersInRangePercent >= 0 ? `${stats.inRangeCount} of ${stats.totalCount} within normal range` : 'Add data to calculate'}
+            {stats.biomarkersInRangePercent >= 0
+              ? `${stats.inRangeCount} of ${stats.totalCount} within normal range`
+              : 'Add data to calculate'}
           </p>
+          {stats.totalCount > 0 && (
+            <div className={`mt-2 flex items-center gap-1 text-xs ${netTrend.className}`}>
+              <NetTrendIcon className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{netTrend.text}</span>
+            </div>
+          )}
         </div>
 
         {/* Total Biomarkers */}
@@ -118,6 +190,14 @@ export function DashboardContent({
           <p className="text-sm text-slate-500 dark:text-slate-400">Needs Attention</p>
         </div>
       </div>
+
+      {/* Recent Activity */}
+      <RecentActivity
+        biomarkers={biomarkers}
+        insurancePlans={insurancePlans}
+        onViewAll={() => onCategorySelect('Trends')}
+        onOpenAddMeasurement={onOpenAddMeasurement}
+      />
 
       {/* Quick Actions */}
       <div className="mb-8">
@@ -175,6 +255,9 @@ export function DashboardContent({
                 (b) => b.value < b.normalRange.min || b.value > b.normalRange.max
               ).length;
               const icon = getIcon(category.icon);
+              const inRangeCount = count - outOfRange;
+              const inRangePercent = count > 0 ? Math.round((inRangeCount / count) * 100) : 0;
+              const trendSummary = trends.categoryTrends[category.name];
 
               return (
                 <button
@@ -189,18 +272,36 @@ export function DashboardContent({
                     >
                       {React.cloneElement(icon, { style: { color: category.color } })}
                     </div>
-                    {outOfRange > 0 && (
-                      <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full">
-                        {outOfRange} alert{outOfRange > 1 ? 's' : ''}
+                    {count > 0 && (
+                      <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                          outOfRange > 0
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                            : 'bg-wellness-100 dark:bg-wellness-900/30 text-wellness-700 dark:text-wellness-400'
+                        }`}
+                      >
+                        {outOfRange}/{count} out of range
                       </span>
                     )}
                   </div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                    {category.name}
-                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                      {category.name}
+                    </h3>
+                    <CategoryTrendIcon summary={trendSummary} />
+                  </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                     {count} biomarker{count !== 1 ? 's' : ''}
                   </p>
+
+                  {/* Progress bar — % in range for this category */}
+                  <div className="mt-3 h-[3px] w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${outOfRange > 0 ? 'bg-red-500' : 'bg-wellness-500'} transition-all`}
+                      style={{ width: count > 0 ? `${inRangePercent}%` : '0%' }}
+                      aria-label={`${inRangePercent}% in range`}
+                    />
+                  </div>
                 </button>
               );
             })}

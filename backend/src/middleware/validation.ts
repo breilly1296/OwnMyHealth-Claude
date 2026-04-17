@@ -623,6 +623,28 @@ export const schemas = {
   },
 
   // ============================================
+  // Settings Schemas
+  // ============================================
+  settings: {
+    updateProfile: z.object({
+      firstName: optionalSanitizedString(100),
+      lastName: optionalSanitizedString(100),
+    }).refine(
+      (data) => data.firstName !== undefined || data.lastName !== undefined,
+      { message: 'At least one field (firstName or lastName) must be provided' }
+    ),
+
+    updateNotifications: z.object({
+      emailNotifications: z.boolean().optional(),
+      weeklySummary: z.boolean().optional(),
+      abnormalAlerts: z.boolean().optional(),
+    }).refine(
+      (data) => Object.keys(data).length > 0,
+      { message: 'At least one notification preference must be provided' }
+    ),
+  },
+
+  // ============================================
   // Admin Schemas
   // ============================================
   admin: {

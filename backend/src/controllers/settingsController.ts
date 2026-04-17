@@ -19,6 +19,41 @@ import { verifyPassword } from '../services/authService.js';
 
 const DECRYPT_BATCH_SIZE = 20;
 
+// ============================================
+// Profile response types
+// ============================================
+
+interface NotificationPreferences {
+  emailNotifications: boolean;
+  weeklySummary: boolean;
+  abnormalAlerts: boolean;
+}
+
+interface ProfileResponse {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+  notificationPreferences: NotificationPreferences;
+}
+
+const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  emailNotifications: true,
+  weeklySummary: false,
+  abnormalAlerts: true,
+};
+
+function normalizeNotificationPreferences(raw: unknown): NotificationPreferences {
+  const base = { ...DEFAULT_NOTIFICATION_PREFERENCES };
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const stored = raw as Record<string, unknown>;
+    if (typeof stored.emailNotifications === 'boolean') base.emailNotifications = stored.emailNotifications;
+    if (typeof stored.weeklySummary === 'boolean') base.weeklySummary = stored.weeklySummary;
+    if (typeof stored.abnormalAlerts === 'boolean') base.abnormalAlerts = stored.abnormalAlerts;
+  }
+  return base;
+}
+
 // Export data response types
 interface ExportBiomarker {
   name: string;
@@ -376,6 +411,191 @@ export async function deleteAccount(
 
   const response: ApiResponse = {
     success: true,
+  };
+
+  res.json(response);
+}
+
+/**
+ * Get the authenticated user's profile
+ * GET /api/v1/settings/profile
+ */
+export async function getProfile(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+
+  const prisma = getPrismaClient();
+  const encryptionService = getEncryptionService();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const auditService = getAuditLogService(prisma);
+
+  const user = await withRLSContext(userId, async (tx) => {
+    return tx.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        createdAt: true,
+        firstNameEncrypted: true,
+        lastNameEncrypted: true,
+        notificationPreferences: true,
+      },
+    });
+  });
+
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  const firstName = user.firstNameEncrypted
+    ? encryptionService.decrypt(user.firstNameEncrypted, userSalt)
+    : null;
+  const lastName = user.lastNameEncrypted
+    ? encryptionService.decrypt(user.lastNameEncrypted, userSalt)
+    : null;
+
+  await auditService.logAccess('User', userId, { req, userId }, {
+    operation: 'PHI_ACCESS',
+    fields: ['firstName', 'lastName'],
+  });
+
+  const response: ApiResponse<ProfileResponse> = {
+    success: true,
+    data: {
+      email: user.email,
+      firstName,
+      lastName,
+      createdAt: user.createdAt.toISOString(),
+      notificationPreferences: normalizeNotificationPreferences(user.notificationPreferences),
+    },
+  };
+
+  res.json(response);
+}
+
+/**
+ * Update the authenticated user's profile (first/last name)
+ * PATCH /api/v1/settings/profile
+ */
+export async function updateProfile(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+  const { firstName, lastName } = req.body as { firstName?: string; lastName?: string };
+
+  const prisma = getPrismaClient();
+  const encryptionService = getEncryptionService();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const auditService = getAuditLogService(prisma);
+
+  const updateData: { firstNameEncrypted?: string | null; lastNameEncrypted?: string | null } = {};
+  const fieldsUpdated: string[] = [];
+
+  if (firstName !== undefined) {
+    updateData.firstNameEncrypted = firstName ? encryptionService.encrypt(firstName, userSalt) : null;
+    fieldsUpdated.push('firstName');
+  }
+  if (lastName !== undefined) {
+    updateData.lastNameEncrypted = lastName ? encryptionService.encrypt(lastName, userSalt) : null;
+    fieldsUpdated.push('lastName');
+  }
+
+  const updated = await withRLSContext(userId, async (tx) => {
+    return tx.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        email: true,
+        createdAt: true,
+        firstNameEncrypted: true,
+        lastNameEncrypted: true,
+        notificationPreferences: true,
+      },
+    });
+  });
+
+  const decryptedFirstName = updated.firstNameEncrypted
+    ? encryptionService.decrypt(updated.firstNameEncrypted, userSalt)
+    : null;
+  const decryptedLastName = updated.lastNameEncrypted
+    ? encryptionService.decrypt(updated.lastNameEncrypted, userSalt)
+    : null;
+
+  await auditService.logUpdate(
+    'User',
+    userId,
+    null,
+    null,
+    { req, userId },
+    { fieldsUpdated }
+  );
+
+  const response: ApiResponse<ProfileResponse> = {
+    success: true,
+    data: {
+      email: updated.email,
+      firstName: decryptedFirstName,
+      lastName: decryptedLastName,
+      createdAt: updated.createdAt.toISOString(),
+      notificationPreferences: normalizeNotificationPreferences(updated.notificationPreferences),
+    },
+  };
+
+  res.json(response);
+}
+
+/**
+ * Update the authenticated user's notification preferences
+ * PATCH /api/v1/settings/notifications
+ */
+export async function updateNotifications(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+  const input = req.body as Partial<NotificationPreferences>;
+
+  const prisma = getPrismaClient();
+  const auditService = getAuditLogService(prisma);
+
+  const updated = await withRLSContext(userId, async (tx) => {
+    const current = await tx.user.findUnique({
+      where: { id: userId },
+      select: { notificationPreferences: true },
+    });
+
+    if (!current) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    const merged: NotificationPreferences = {
+      ...normalizeNotificationPreferences(current.notificationPreferences),
+      ...input,
+    };
+
+    return tx.user.update({
+      where: { id: userId },
+      data: { notificationPreferences: { ...merged } },
+      select: { notificationPreferences: true },
+    });
+  });
+
+  const prefs = normalizeNotificationPreferences(updated.notificationPreferences);
+
+  await auditService.logUpdate(
+    'User',
+    userId,
+    null,
+    null,
+    { req, userId },
+    { fieldsUpdated: Object.keys(input), resource: 'notificationPreferences' }
+  );
+
+  const response: ApiResponse<NotificationPreferences> = {
+    success: true,
+    data: prefs,
   };
 
   res.json(response);

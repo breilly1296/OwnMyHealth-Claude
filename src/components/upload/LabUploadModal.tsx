@@ -1,26 +1,25 @@
 /**
  * LabUploadModal Component
  *
- * A modal dialog for uploading lab results using Google Document AI OCR.
- * Supports both PDF and image files for bone health biomarker extraction.
+ * Uploads lab PDFs/images to the server-side OCR endpoint
+ * (Google Document AI) and then renders ExtractionReviewStep so the user
+ * can review the extraction before the dashboard refresh is triggered.
  *
- * Features:
- * - Drag-and-drop or click-to-upload interface
- * - Server-side OCR using Google Document AI
- * - Bone health biomarker extraction (Calcium, Vitamin D, PTH, Phosphorus, Alk Phos)
- * - Visual upload progress indicator
- * - Error handling for invalid files
- *
- * Supported formats:
- * - PDF files
- * - Image files (PNG, JPG, TIFF)
+ * Note: the OCR endpoint persists biomarkers server-side during upload —
+ * the review step is effectively a verification surface. Deselects and
+ * edits here are not sent to a separate update endpoint (out of scope for
+ * this prompt); on confirm, the parent refresh pulls authoritative data
+ * from the server.
  *
  * @module components/upload/LabUploadModal
  */
 
 import React, { useState, useCallback } from 'react';
-import { X, Loader2, AlertTriangle, FileText, Image, CheckCircle, Calendar, Building2 } from 'lucide-react';
+import { X, Loader2, AlertTriangle, FileText, Image, Building2, Calendar, CheckCircle } from 'lucide-react';
 import { uploadFile } from '../../services/uploadUtils';
+import ExtractionReviewStep, {
+  type ExtractedBiomarkerPreview,
+} from './ExtractionReviewStep';
 
 interface ExtractedBiomarker {
   id: string;
@@ -50,12 +49,43 @@ interface LabUploadModalProps {
   onSuccess: (biomarkers: ExtractedBiomarker[]) => void;
 }
 
+function toPreview(
+  b: ExtractedBiomarker,
+  overallConfidence: number
+): ExtractedBiomarkerPreview {
+  return {
+    id: b.id,
+    name: b.name,
+    value: b.value,
+    unit: b.unit,
+    category: b.category,
+    isOutOfRange: b.isOutOfRange,
+    confidence: overallConfidence,
+    selected: true,
+    edited: false,
+    source: 'ocr',
+  };
+}
+
+function previewToBiomarker(preview: ExtractedBiomarkerPreview): ExtractedBiomarker {
+  return {
+    id: preview.id,
+    name: preview.name,
+    value: preview.value,
+    unit: preview.unit,
+    category: preview.category,
+    isOutOfRange: preview.isOutOfRange,
+  };
+}
+
 export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUploadModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LabOCRResponse | null>(null);
+  const [previews, setPreviews] = useState<ExtractedBiomarkerPreview[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
 
   const resetState = useCallback(() => {
     setIsProcessing(false);
@@ -63,17 +93,30 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     setProgressMessage('');
     setError(null);
     setResult(null);
+    setPreviews([]);
+    setIsImporting(false);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    onClose();
+    resetState();
+  }, [onClose, resetState]);
+
+  const backToDropzone = useCallback(() => {
+    setResult(null);
+    setPreviews([]);
+    setError(null);
   }, []);
 
   const processFile = useCallback(async (file: File) => {
     setIsProcessing(true);
     setError(null);
     setResult(null);
+    setPreviews([]);
     setProgressMessage('Preparing upload...');
     setUploadProgress(10);
 
     try {
-      // Validate file type
       const validTypes = [
         'application/pdf',
         'image/png',
@@ -86,7 +129,6 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
         throw new Error('Unsupported file type. Please upload a PDF or image file (PNG, JPG, TIFF).');
       }
 
-      // Validate file size (10MB max)
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
         throw new Error('File is too large. Maximum file size is 10MB.');
@@ -95,22 +137,17 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
       setProgressMessage('Uploading file...');
       setUploadProgress(30);
 
-      // Simulate progress during upload
       const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev < 80) return prev + 5;
-          return prev;
-        });
+        setUploadProgress((prev) => (prev < 80 ? prev + 5 : prev));
       }, 500);
 
       setProgressMessage('Processing with OCR...');
 
-      // Upload and process with server-side OCR
       const response = await uploadFile<LabOCRResponse>(
         '/upload/lab-results-ocr',
         file,
         {
-          timeoutMs: 120000, // 2 minutes for OCR processing
+          timeoutMs: 120000,
           timeoutMessage: 'OCR processing took too long. Please try again with a clearer image.',
         }
       );
@@ -120,8 +157,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
       setProgressMessage('Processing complete!');
 
       setResult(response);
-      // Call onSuccess to update parent state, but keep modal open for review
-      onSuccess(response.biomarkers);
+      setPreviews(response.biomarkers.map((b) => toPreview(b, response.extractionConfidence)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process file. Please try again.');
       setUploadProgress(0);
@@ -129,18 +165,24 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     } finally {
       setIsProcessing(false);
     }
-  }, [onSuccess]);
+  }, []);
+
+  const handleConfirmImport = useCallback((selected: ExtractedBiomarkerPreview[]) => {
+    setIsImporting(true);
+    try {
+      onSuccess(selected.map(previewToBiomarker));
+      handleClose();
+    } finally {
+      setIsImporting(false);
+    }
+  }, [onSuccess, handleClose]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     e.stopPropagation();
-
     if (isProcessing) return;
-
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      processFile(file);
-    }
+    if (file) processFile(file);
   }, [isProcessing, processFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
@@ -150,18 +192,19 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
 
   if (!isOpen) return null;
 
+  const showReview = result !== null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg p-4 md:p-6 w-full md:max-w-md max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+      <div className={`bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl p-4 md:p-6 w-full ${showReview ? 'md:max-w-4xl' : 'md:max-w-md'} max-h-[95vh] md:max-h-[90vh] overflow-y-auto`}>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Upload Lab Results</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+            {showReview ? 'Review Extracted Biomarkers' : 'Upload Lab Results'}
+          </h2>
           <button
-            onClick={() => {
-              onClose();
-              resetState();
-            }}
+            onClick={handleClose}
             className="p-2 -mr-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            disabled={isProcessing}
+            disabled={isProcessing || isImporting}
           >
             <X className="w-5 h-5" />
           </button>
@@ -174,75 +217,40 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
           </div>
         )}
 
-        {result && (
-          <div className="mb-4">
-            {/* Success Header */}
-            <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-t-lg border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-semibold text-base">
-                  Successfully extracted {result.biomarkersCreated} biomarker{result.biomarkersCreated !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-
-            {/* Lab Info */}
-            <div className="p-3 bg-gray-50 dark:bg-slate-700 border-x border-gray-200 dark:border-slate-600">
-              <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-slate-300">
+        {showReview && result ? (
+          <>
+            <div className="p-3 mb-4 bg-green-100 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-800">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-green-800 dark:text-green-300">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <CheckCircle className="w-4 h-4" />
+                  Extracted {result.biomarkersCreated} biomarker{result.biomarkersCreated !== 1 ? 's' : ''}
+                </div>
                 {result.labName && (
                   <div className="flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-gray-400 dark:text-slate-500" />
-                    <span>{result.labName}</span>
+                    <Building2 className="w-4 h-4" />
+                    {result.labName}
                   </div>
                 )}
                 {result.reportDate && (
                   <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-gray-400 dark:text-slate-500" />
-                    <span>{new Date(result.reportDate).toLocaleDateString()}</span>
+                    <Calendar className="w-4 h-4" />
+                    {new Date(result.reportDate).toLocaleDateString()}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Biomarkers List */}
-            <div className="p-3 bg-white dark:bg-slate-800 border border-t-0 border-gray-200 dark:border-slate-600 rounded-b-lg max-h-48 overflow-y-auto">
-              <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Extracted Values</p>
-              <div className="space-y-1.5">
-                {result.biomarkers.map((b) => (
-                  <div
-                    key={b.id}
-                    className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
-                      b.isOutOfRange
-                        ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
-                        : 'text-gray-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <span className="font-medium">{b.name}</span>
-                    <span>
-                      {b.value} {b.unit}
-                      {b.isOutOfRange && (
-                        <span className="ml-1 text-xs">(out of range)</span>
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Done Button */}
-            <button
-              onClick={() => {
-                onClose();
-                resetState();
-              }}
-              className="w-full mt-4 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        )}
-
-        {!result && (
+            <ExtractionReviewStep
+              biomarkers={previews}
+              labName={result.labName}
+              reportDate={result.reportDate}
+              extractionConfidence={result.extractionConfidence}
+              onConfirmImport={handleConfirmImport}
+              onCancel={backToDropzone}
+              isImporting={isImporting}
+            />
+          </>
+        ) : (
           <div className="mb-6">
             <label
               htmlFor="lab-upload"
@@ -255,61 +263,60 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
               onDrop={handleDrop}
               onDragOver={handleDragOver}
             >
-            <div className="flex flex-col items-center justify-center py-6">
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-10 h-10 text-blue-500 dark:text-blue-400 animate-spin mb-3" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">{progressMessage}</p>
-                  <div className="w-48 h-2 bg-gray-200 dark:bg-slate-600 rounded-full mt-3 overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{uploadProgress}% complete</p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-6 h-6 text-blue-500 dark:text-blue-400" />
-                    <Image className="w-6 h-6 text-blue-500 dark:text-blue-400" />
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-slate-200 font-medium">Upload Lab Results</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Click to upload or drag and drop</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">PDF or image files supported</p>
-                </>
-              )}
-            </div>
-            <input
-              id="lab-upload"
-              type="file"
-              className="hidden"
-              accept=".pdf,image/*"
-              disabled={isProcessing}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) processFile(file);
-                // Reset input so same file can be selected again
-                e.target.value = '';
-              }}
-            />
-          </label>
+              <div className="flex flex-col items-center justify-center py-6">
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-10 h-10 text-blue-500 dark:text-blue-400 animate-spin mb-3" />
+                    <p className="text-sm font-medium text-gray-700 dark:text-slate-200">{progressMessage}</p>
+                    <div className="w-48 h-2 bg-gray-200 dark:bg-slate-600 rounded-full mt-3 overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{uploadProgress}% complete</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-6 h-6 text-blue-500 dark:text-blue-400" />
+                      <Image className="w-6 h-6 text-blue-500 dark:text-blue-400" />
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-slate-200 font-medium">Upload Lab Results</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Click to upload or drag and drop</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">PDF or image files supported</p>
+                  </>
+                )}
+              </div>
+              <input
+                id="lab-upload"
+                type="file"
+                className="hidden"
+                accept=".pdf,image/*"
+                disabled={isProcessing}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) processFile(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
 
-          <div className="text-xs text-gray-500 dark:text-slate-400 space-y-2 mt-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-md">
-              <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Biomarkers Extracted:</p>
-              <p className="text-blue-700 dark:text-blue-400">
-                All standard lab values including lipids, CBC, metabolic panel, thyroid, vitamins, and more.
+            <div className="text-xs text-gray-500 dark:text-slate-400 space-y-2 mt-4">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-md">
+                <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">Biomarkers Extracted:</p>
+                <p className="text-blue-700 dark:text-blue-400">
+                  All standard lab values including lipids, CBC, metabolic panel, thyroid, vitamins, and more.
+                </p>
+              </div>
+              <p><span className="font-medium">Supported formats:</span> PDF, PNG, JPG, TIFF</p>
+              <p><span className="font-medium">Maximum file size:</span> 10MB</p>
+              <p className="text-gray-400 dark:text-slate-500 mt-2">
+                Our AI will extract biomarker values from your lab report.
+                For best results, ensure the document is clear and readable.
               </p>
             </div>
-            <p><span className="font-medium">Supported formats:</span> PDF, PNG, JPG, TIFF</p>
-            <p><span className="font-medium">Maximum file size:</span> 10MB</p>
-            <p className="text-gray-400 dark:text-slate-500 mt-2">
-              Our AI will extract biomarker values from your lab report.
-              For best results, ensure the document is clear and readable.
-            </p>
           </div>
-        </div>
         )}
       </div>
     </div>
