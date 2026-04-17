@@ -237,17 +237,41 @@ export async function checkDatabaseHealth(): Promise<{
 // ============================================
 
 /**
- * UUID format validation regex
- * SECURITY: Prevents SQL injection in RLS context setting
+ * UUID format validation regex.
+ *
+ * With parameterized set_config() the userId is no longer interpolated
+ * into SQL, so this is defense-in-depth rather than the primary injection
+ * barrier — reject malformed input at the boundary anyway so callers get
+ * a clear error instead of a Postgres cast failure deep in the stack.
  */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Validate that a string is a valid UUID format
- * SECURITY: This is critical to prevent SQL injection in $executeRawUnsafe calls
- */
 function validateUUID(id: string): boolean {
   return UUID_REGEX.test(id);
+}
+
+/**
+ * Apply RLS session variables to a Prisma transaction client.
+ *
+ * Uses PostgreSQL's `set_config(name, value, is_local=true)` with
+ * parameterized queries via `$executeRaw` — no string interpolation,
+ * so the userId cannot alter SQL structure regardless of content.
+ *
+ * Always sets BOTH `app.current_user_id` and `app.is_admin` explicitly
+ * (admin → empty-string user id, user → 'false' is_admin). This prevents
+ * a pooled connection from carrying a previous request's values into
+ * the new transaction — without the explicit write, `SET LOCAL` only
+ * overrides one variable per call and the other can linger.
+ */
+async function applyRLSContext(
+  tx: Prisma.TransactionClient,
+  userId: string | null,
+  isAdmin: boolean
+): Promise<void> {
+  const userIdValue = userId ?? '';
+  const isAdminValue = isAdmin ? 'true' : 'false';
+  await tx.$executeRaw`SELECT set_config('app.current_user_id', ${userIdValue}, true)`;
+  await tx.$executeRaw`SELECT set_config('app.is_admin', ${isAdminValue}, true)`;
 }
 
 /**
@@ -295,28 +319,13 @@ export async function withRLSContext<T>(
 
   const useAdmin = options.isAdmin || userId === null;
 
-  // SECURITY: userId is interpolated into SET LOCAL via $executeRawUnsafe
-  // below. The UUID regex is the only thing standing between the caller
-  // and SQL injection; parameterization via set_config() is the follow-up
-  // hardening (see fix-F-15 commit).
   if (!useAdmin && !validateUUID(userId!)) {
     throw new Error('Invalid user ID format: must be a valid UUID');
   }
 
   return prisma.$transaction(
     async (tx) => {
-      if (useAdmin) {
-        // Explicitly clear current_user_id so a pooled connection that
-        // previously carried a user's context cannot leak it into this
-        // admin operation. (Defense against F-14.)
-        await tx.$executeRawUnsafe(`SET LOCAL app.current_user_id = ''`);
-        await tx.$executeRawUnsafe(`SET LOCAL app.is_admin = 'true'`);
-      } else {
-        await tx.$executeRawUnsafe(`SET LOCAL app.current_user_id = '${userId}'`);
-        await tx.$executeRawUnsafe(
-          `SET LOCAL app.is_admin = '${options.isAdmin ? 'true' : 'false'}'`
-        );
-      }
+      await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
       return fn(tx);
     },
     {
@@ -345,22 +354,14 @@ export async function withRLSTransaction<T>(
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
 
-  // SECURITY: Validate UUID format to prevent SQL injection
-  // The userId is used in $executeRawUnsafe, so we must validate it
-  if (userId !== null && !validateUUID(userId)) {
+  const useAdmin = options.isAdmin || userId === null;
+
+  if (!useAdmin && !validateUUID(userId!)) {
     throw new Error('Invalid user ID format: must be a valid UUID');
   }
 
   return prisma.$transaction(async (tx) => {
-    const useAdmin = options.isAdmin || userId === null;
-
-    if (useAdmin) {
-      await tx.$executeRawUnsafe(`SET LOCAL app.is_admin = 'true'`);
-    } else {
-      await tx.$executeRawUnsafe(`SET LOCAL app.current_user_id = '${userId}'`);
-      await tx.$executeRawUnsafe(`SET LOCAL app.is_admin = '${options.isAdmin || false}'`);
-    }
-
+    await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
     return fn(tx);
   });
 }
