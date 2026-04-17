@@ -18,7 +18,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
-import { getPrismaClient } from './database.js';
+import { withRLSContext } from './database.js';
 import { logger } from '../utils/logger.js';
 import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
 
@@ -200,7 +200,6 @@ export function isDemoEmail(email: string): boolean {
  * @param metadata - Optional session metadata (IP address, user agent)
  */
 export async function generateRefreshToken(user: User, metadata?: SessionMetadata): Promise<string> {
-  const prisma = getPrismaClient();
   const tokenId = uuidv4();
 
   // Demo users get a longer session (30 days) when demo mode is enabled
@@ -222,16 +221,18 @@ export async function generateRefreshToken(user: User, metadata?: SessionMetadat
     expiresIn: tokenExpiry,
   });
 
-  // Store session in database with metadata
-  await prisma.session.create({
-    data: {
-      id: tokenId,
-      userId: user.id,
-      token: token.substring(0, 500), // Store truncated token for reference
-      ipAddress: metadata?.ipAddress,
-      userAgent: metadata?.userAgent,
-      expiresAt,
-    },
+  // Store session — user-context, since we have the user id in scope.
+  await withRLSContext(user.id, async (tx) => {
+    await tx.session.create({
+      data: {
+        id: tokenId,
+        userId: user.id,
+        token: token.substring(0, 500), // Store truncated token for reference
+        ipAddress: metadata?.ipAddress,
+        userAgent: metadata?.userAgent,
+        expiresAt,
+      },
+    });
   });
 
   return token;
@@ -282,21 +283,26 @@ export async function verifyRefreshToken(token: string): Promise<(TokenPayload &
       return null;
     }
 
-    // Check if session exists and is not expired in database
-    const prisma = getPrismaClient();
-    const session = await prisma.session.findUnique({
-      where: { id: payload.jti },
-    });
+    // Session lookup is JTI-keyed, not user-keyed — admin context. The caller
+    // isn't authenticated yet (refresh flow runs before a user context exists).
+    return await withRLSContext(
+      null,
+      async (tx) => {
+        const session = await tx.session.findUnique({
+          where: { id: payload.jti },
+        });
 
-    if (!session || session.expiresAt < new Date()) {
-      // Clean up expired session
-      if (session) {
-        await prisma.session.delete({ where: { id: payload.jti } });
-      }
-      return null;
-    }
+        if (!session || session.expiresAt < new Date()) {
+          if (session) {
+            await tx.session.delete({ where: { id: payload.jti } });
+          }
+          return null;
+        }
 
-    return payload;
+        return payload;
+      },
+      { isAdmin: true }
+    );
   } catch {
     return null;
   }
@@ -309,12 +315,18 @@ export async function revokeRefreshToken(token: string): Promise<boolean> {
   try {
     const payload = jwt.decode(token) as TokenPayload & { jti: string } | null;
     if (payload?.jti) {
-      const prisma = getPrismaClient();
-      await prisma.session.delete({
-        where: { id: payload.jti },
-      }).catch(() => {
-        // Session may not exist, that's okay
-      });
+      // JTI-keyed delete — admin context.
+      await withRLSContext(
+        null,
+        async (tx) => {
+          await tx.session.delete({
+            where: { id: payload.jti },
+          }).catch(() => {
+            // Session may not exist, that's okay
+          });
+        },
+        { isAdmin: true }
+      );
       return true;
     }
     return false;
@@ -327,9 +339,12 @@ export async function revokeRefreshToken(token: string): Promise<boolean> {
  * Revoke all refresh tokens for a user
  */
 export async function revokeAllUserTokens(userId: string): Promise<void> {
-  const prisma = getPrismaClient();
-  await prisma.session.deleteMany({
-    where: { userId },
+  // userId is in scope — use user context. The sessions_delete_own policy
+  // permits user_id = current_user_id(), so admin bypass isn't needed.
+  await withRLSContext(userId, async (tx) => {
+    await tx.session.deleteMany({
+      where: { userId },
+    });
   });
 }
 
@@ -390,7 +405,6 @@ export function getLockoutRemainingTime(user: User): number {
  * Record a failed login attempt
  */
 export async function recordFailedLogin(user: User): Promise<{ locked: boolean; remainingAttempts: number; lockedUntil?: Date }> {
-  const prisma = getPrismaClient();
   const newAttempts = user.failedLoginAttempts + 1;
   const remainingAttempts = Math.max(0, config.security.maxLoginAttempts - newAttempts);
 
@@ -398,13 +412,16 @@ export async function recordFailedLogin(user: User): Promise<{ locked: boolean; 
   const shouldLock = newAttempts >= config.security.maxLoginAttempts;
   const lockedUntil = shouldLock ? new Date(Date.now() + config.security.lockoutDuration) : null;
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      failedLoginAttempts: newAttempts,
-      lastFailedLogin: new Date(),
-      lockedUntil: lockedUntil,
-    },
+  // user.id is in scope (findUserByEmail resolved before this call) — user context.
+  await withRLSContext(user.id, async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: newAttempts,
+        lastFailedLogin: new Date(),
+        lockedUntil: lockedUntil,
+      },
+    });
   });
 
   if (shouldLock) {
@@ -425,15 +442,16 @@ export async function recordFailedLogin(user: User): Promise<{ locked: boolean; 
  * Reset failed login attempts on successful login
  */
 export async function resetFailedLoginAttempts(user: User): Promise<void> {
-  const prisma = getPrismaClient();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastFailedLogin: null,
-      lastLoginAt: new Date(),
-    },
+  await withRLSContext(user.id, async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastFailedLogin: null,
+        lastLoginAt: new Date(),
+      },
+    });
   });
 }
 
@@ -458,24 +476,31 @@ export async function createUser(
   password: string,
   role: 'PATIENT' | 'PROVIDER' | 'ADMIN' = 'PATIENT'
 ): Promise<{ user: User; verificationToken: string }> {
-  const prisma = getPrismaClient();
   const passwordHash = await hashPassword(password);
 
   // Generate verification token
   const verificationToken = generateEmailVerificationToken();
   const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRATION_HOURS * 60 * 60 * 1000);
 
-  const prismaUser = await prisma.user.create({
-    data: {
-      email: email.toLowerCase().trim(),
-      passwordHash,
-      role: role as UserRole,
-      failedLoginAttempts: 0,
-      emailVerified: false,
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpires,
+  // Registration — pre-auth, admin context (the users_insert_system policy
+  // permits `is_admin_session() OR current_user_id() IS NULL`).
+  const prismaUser = await withRLSContext(
+    null,
+    async (tx) => {
+      return tx.user.create({
+        data: {
+          email: email.toLowerCase().trim(),
+          passwordHash,
+          role: role as UserRole,
+          failedLoginAttempts: 0,
+          emailVerified: false,
+          emailVerificationToken: verificationToken,
+          emailVerificationExpires: verificationExpires,
+        },
+      });
     },
-  });
+    { isAdmin: true }
+  );
 
   return {
     user: prismaUserToUser(prismaUser),
@@ -487,12 +512,18 @@ export async function createUser(
  * Find user by email
  */
 export async function findUserByEmail(email: string): Promise<User | null> {
-  const prisma = getPrismaClient();
   const normalizedEmail = email.toLowerCase().trim();
 
-  const prismaUser = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  });
+  // Pre-auth lookup (login, registration collision check, forgot-password, demo init).
+  const prismaUser = await withRLSContext(
+    null,
+    async (tx) => {
+      return tx.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+    },
+    { isAdmin: true }
+  );
 
   return prismaUser ? prismaUserToUser(prismaUser) : null;
 }
@@ -501,11 +532,18 @@ export async function findUserByEmail(email: string): Promise<User | null> {
  * Find user by ID
  */
 export async function findUserById(id: string): Promise<User | null> {
-  const prisma = getPrismaClient();
-
-  const prismaUser = await prisma.user.findUnique({
-    where: { id },
-  });
+  // Called by JWT verify middleware before the request's user context is
+  // established — admin context. (Once established, callers that want to
+  // re-read their own user can use a user-context helper; none do today.)
+  const prismaUser = await withRLSContext(
+    null,
+    async (tx) => {
+      return tx.user.findUnique({
+        where: { id },
+      });
+    },
+    { isAdmin: true }
+  );
 
   return prismaUser ? prismaUserToUser(prismaUser) : null;
 }
@@ -522,12 +560,14 @@ export async function emailExists(email: string): Promise<boolean> {
  * Update user password
  */
 export async function updateUserPassword(userId: string, newPasswordHash: string): Promise<void> {
-  const prisma = getPrismaClient();
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash: newPasswordHash,
-    },
+  // userId in signature — user context.
+  await withRLSContext(userId, async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newPasswordHash,
+      },
+    });
   });
 }
 
@@ -554,18 +594,20 @@ export async function attemptLogin(
     // For demo account, just check password (no other restrictions)
     const isValidPassword = await verifyPassword(password, user.passwordHash);
     if (isValidPassword) {
-      // Reset any lockout/failed attempts for demo account
-      const prisma = getPrismaClient();
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-          lastFailedLogin: null,
-          lastLoginAt: new Date(),
-          emailVerified: true, // Always ensure verified
-          isActive: true, // Always ensure active
-        },
+      // Reset any lockout/failed attempts for demo account.
+      // user.id in scope (just found via findUserByEmail) — user context.
+      await withRLSContext(user.id, async (tx) => {
+        await tx.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: 0,
+            lockedUntil: null,
+            lastFailedLogin: null,
+            lastLoginAt: new Date(),
+            emailVerified: true, // Always ensure verified
+            isActive: true, // Always ensure active
+          },
+        });
       });
       const updatedUser = await findUserById(user.id);
       return {
@@ -679,50 +721,54 @@ export interface VerifyEmailResult {
  * Verify user's email using verification token
  */
 export async function verifyEmail(token: string): Promise<VerifyEmailResult> {
-  const prisma = getPrismaClient();
+  // Pre-auth: verification token is the only identifier. Admin context.
+  return withRLSContext(
+    null,
+    async (tx): Promise<VerifyEmailResult> => {
+      const prismaUser = await tx.user.findUnique({
+        where: { emailVerificationToken: token },
+      });
 
-  // Find user by verification token
-  const prismaUser = await prisma.user.findUnique({
-    where: { emailVerificationToken: token },
-  });
+      if (!prismaUser) {
+        return {
+          success: false,
+          error: 'Invalid verification token',
+        };
+      }
 
-  if (!prismaUser) {
-    return {
-      success: false,
-      error: 'Invalid verification token',
-    };
-  }
+      // Check if token is expired
+      if (prismaUser.emailVerificationExpires && prismaUser.emailVerificationExpires < new Date()) {
+        return {
+          success: false,
+          error: 'Verification token has expired. Please request a new one.',
+        };
+      }
 
-  // Check if token is expired
-  if (prismaUser.emailVerificationExpires && prismaUser.emailVerificationExpires < new Date()) {
-    return {
-      success: false,
-      error: 'Verification token has expired. Please request a new one.',
-    };
-  }
+      // Check if already verified
+      if (prismaUser.emailVerified) {
+        return {
+          success: false,
+          error: 'Email is already verified',
+        };
+      }
 
-  // Check if already verified
-  if (prismaUser.emailVerified) {
-    return {
-      success: false,
-      error: 'Email is already verified',
-    };
-  }
+      // Mark user as verified and clear token
+      const updatedPrismaUser = await tx.user.update({
+        where: { id: prismaUser.id },
+        data: {
+          emailVerified: true,
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+        },
+      });
 
-  // Mark user as verified and clear token
-  const updatedPrismaUser = await prisma.user.update({
-    where: { id: prismaUser.id },
-    data: {
-      emailVerified: true,
-      emailVerificationToken: null,
-      emailVerificationExpires: null,
+      return {
+        success: true,
+        user: prismaUserToUser(updatedPrismaUser),
+      };
     },
-  });
-
-  return {
-    success: true,
-    user: prismaUserToUser(updatedPrismaUser),
-  };
+    { isAdmin: true }
+  );
 }
 
 /**
@@ -730,51 +776,63 @@ export async function verifyEmail(token: string): Promise<VerifyEmailResult> {
  * Generates a new token and extends expiration
  */
 export async function resendVerificationEmail(email: string): Promise<{ success: boolean; token?: string; error?: string }> {
-  const prisma = getPrismaClient();
   const normalizedEmail = email.toLowerCase().trim();
 
-  const prismaUser = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  });
-
-  if (!prismaUser) {
-    // Don't reveal if user exists
-    return { success: true };
-  }
-
-  if (prismaUser.emailVerified) {
-    return {
-      success: false,
-      error: 'Email is already verified',
-    };
-  }
-
-  // Generate new token
+  // Generate new token (CPU-only; doesn't need to be inside the tx)
   const verificationToken = generateEmailVerificationToken();
   const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRATION_HOURS * 60 * 60 * 1000);
 
-  await prisma.user.update({
-    where: { id: prismaUser.id },
-    data: {
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpires,
-    },
-  });
+  // Pre-auth lookup + update under admin context.
+  return withRLSContext(
+    null,
+    async (tx): Promise<{ success: boolean; token?: string; error?: string }> => {
+      const prismaUser = await tx.user.findUnique({
+        where: { email: normalizedEmail },
+      });
 
-  return {
-    success: true,
-    token: verificationToken,
-  };
+      if (!prismaUser) {
+        // Don't reveal if user exists
+        return { success: true };
+      }
+
+      if (prismaUser.emailVerified) {
+        return {
+          success: false,
+          error: 'Email is already verified',
+        };
+      }
+
+      await tx.user.update({
+        where: { id: prismaUser.id },
+        data: {
+          emailVerificationToken: verificationToken,
+          emailVerificationExpires: verificationExpires,
+        },
+      });
+
+      return {
+        success: true,
+        token: verificationToken,
+      };
+    },
+    { isAdmin: true }
+  );
 }
 
 /**
  * Find user by verification token
  */
 export async function findUserByVerificationToken(token: string): Promise<User | null> {
-  const prisma = getPrismaClient();
-  const prismaUser = await prisma.user.findUnique({
-    where: { emailVerificationToken: token },
-  });
+  // Token-keyed, pre-auth. Admin context.
+  const prismaUser = await withRLSContext(
+    null,
+    async (tx) => {
+      return tx.user.findUnique({
+        where: { emailVerificationToken: token },
+      });
+    },
+    { isAdmin: true }
+  );
   return prismaUser ? prismaUserToUser(prismaUser) : null;
 }
 
@@ -809,76 +867,92 @@ export function generatePasswordResetToken(): string {
  * Always returns success to prevent email enumeration attacks
  */
 export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
-  const prisma = getPrismaClient();
   const normalizedEmail = email.toLowerCase().trim();
-
-  const prismaUser = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  });
-
-  // Always return success to prevent email enumeration
-  if (!prismaUser) {
-    return { success: true };
-  }
-
-  // Check if user is active
-  if (!prismaUser.isActive) {
-    return { success: true };
-  }
-
-  // Generate reset token
   const resetToken = generatePasswordResetToken();
   const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRATION_HOURS * 60 * 60 * 1000);
 
-  await prisma.user.update({
-    where: { id: prismaUser.id },
-    data: {
-      passwordResetToken: resetToken,
-      passwordResetExpires: resetExpires,
-    },
-  });
+  // Pre-auth (email-keyed lookup + token-stamp update). Admin context.
+  return withRLSContext(
+    null,
+    async (tx): Promise<ForgotPasswordResult> => {
+      const prismaUser = await tx.user.findUnique({
+        where: { email: normalizedEmail },
+      });
 
-  return {
-    success: true,
-    token: resetToken,
-  };
+      // Always return success to prevent email enumeration
+      if (!prismaUser) {
+        return { success: true };
+      }
+
+      // Check if user is active
+      if (!prismaUser.isActive) {
+        return { success: true };
+      }
+
+      await tx.user.update({
+        where: { id: prismaUser.id },
+        data: {
+          passwordResetToken: resetToken,
+          passwordResetExpires: resetExpires,
+        },
+      });
+
+      return {
+        success: true,
+        token: resetToken,
+      };
+    },
+    { isAdmin: true }
+  );
 }
 
 /**
  * Reset password using reset token
  */
 export async function resetPassword(token: string, newPassword: string): Promise<ResetPasswordResult> {
-  const prisma = getPrismaClient();
+  // Pre-auth (reset-token-keyed). Admin context for the initial lookup +
+  // expiry-clear path. The success path hashes + updates + revokes sessions;
+  // for atomicity the hash and the update run inside the same transaction,
+  // but password validation happens before the wrapper to fail fast.
+  //
+  // Step 1: look up by token under admin context to decide what to do.
+  const lookupResult = await withRLSContext(
+    null,
+    async (tx): Promise<{ userId: string } | ResetPasswordResult> => {
+      const prismaUser = await tx.user.findUnique({
+        where: { passwordResetToken: token },
+      });
 
-  // Find user by reset token
-  const prismaUser = await prisma.user.findUnique({
-    where: { passwordResetToken: token },
-  });
+      if (!prismaUser) {
+        return { success: false, error: 'Invalid or expired reset token' };
+      }
 
-  if (!prismaUser) {
-    return {
-      success: false,
-      error: 'Invalid or expired reset token',
-    };
+      if (prismaUser.passwordResetExpires && prismaUser.passwordResetExpires < new Date()) {
+        // Clear expired token
+        await tx.user.update({
+          where: { id: prismaUser.id },
+          data: {
+            passwordResetToken: null,
+            passwordResetExpires: null,
+          },
+        });
+        return {
+          success: false,
+          error: 'Reset token has expired. Please request a new password reset.',
+        };
+      }
+
+      return { userId: prismaUser.id };
+    },
+    { isAdmin: true }
+  );
+
+  // If the lookup returned a result (either error shape), short-circuit.
+  if ('success' in lookupResult) {
+    return lookupResult;
   }
 
-  // Check if token is expired
-  if (prismaUser.passwordResetExpires && prismaUser.passwordResetExpires < new Date()) {
-    // Clear expired token
-    await prisma.user.update({
-      where: { id: prismaUser.id },
-      data: {
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      },
-    });
-    return {
-      success: false,
-      error: 'Reset token has expired. Please request a new password reset.',
-    };
-  }
-
-  // Validate new password strength
+  // Validate new password strength (CPU-only)
   const passwordValidation = validatePasswordStrength(newPassword);
   if (!passwordValidation.valid) {
     return {
@@ -887,24 +961,28 @@ export async function resetPassword(token: string, newPassword: string): Promise
     };
   }
 
-  // Hash new password
+  // Hash new password (CPU-only, kept outside tx to minimize transaction time)
   const newPasswordHash = await hashPassword(newPassword);
 
-  // Update password and clear reset token
-  const updatedPrismaUser = await prisma.user.update({
-    where: { id: prismaUser.id },
-    data: {
-      passwordHash: newPasswordHash,
-      passwordResetToken: null,
-      passwordResetExpires: null,
-      // Also reset failed login attempts
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-    },
-  });
+  // Step 2: update password + clear token. userId is now known → user context.
+  const updatedPrismaUser = await withRLSContext(
+    lookupResult.userId,
+    async (tx) => {
+      return tx.user.update({
+        where: { id: lookupResult.userId },
+        data: {
+          passwordHash: newPasswordHash,
+          passwordResetToken: null,
+          passwordResetExpires: null,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+    }
+  );
 
   // Revoke all existing sessions (security: force re-login everywhere)
-  await revokeAllUserTokens(prismaUser.id);
+  await revokeAllUserTokens(updatedPrismaUser.id);
 
   return {
     success: true,
@@ -916,10 +994,16 @@ export async function resetPassword(token: string, newPassword: string): Promise
  * Find user by password reset token
  */
 export async function findUserByResetToken(token: string): Promise<User | null> {
-  const prisma = getPrismaClient();
-  const prismaUser = await prisma.user.findUnique({
-    where: { passwordResetToken: token },
-  });
+  // Token-keyed, pre-auth. Admin context.
+  const prismaUser = await withRLSContext(
+    null,
+    async (tx) => {
+      return tx.user.findUnique({
+        where: { passwordResetToken: token },
+      });
+    },
+    { isAdmin: true }
+  );
   return prismaUser ? prismaUserToUser(prismaUser) : null;
 }
 
@@ -938,36 +1022,45 @@ export async function initializeDemoUser(): Promise<void> {
   }
 
   try {
-    const prisma = getPrismaClient();
-    const existingUser = await findUserByEmail(config.demo.email);
-    if (!existingUser) {
-      const { user } = await createUser(config.demo.email, config.demo.password, 'PATIENT');
-      // Auto-verify demo user so they can login without email verification
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          emailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationExpires: null,
-          isActive: true,
-        },
-      });
-      // Note: Password intentionally not logged for security
-      logger.info(`Demo user created (auto-verified) - email: ${config.demo.email}`, { prefix: 'DEMO' });
-    } else {
-      // Ensure existing demo user is always in a valid state
-      await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          emailVerified: true,
-          isActive: true,
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-          lastFailedLogin: null,
-        },
-      });
-      logger.info(`Demo user verified - email: ${config.demo.email}`, { prefix: 'DEMO' });
-    }
+    // Boot-time demo-user setup. Admin context because we're touching the
+    // users table before any auth happens. findUserByEmail and createUser
+    // each have their own admin-context wrappers; nested withRLSContext
+    // calls nest transparently at the DB layer.
+    await withRLSContext(
+      null,
+      async (tx) => {
+        const existingUser = await findUserByEmail(config.demo.email);
+        if (!existingUser) {
+          const { user } = await createUser(config.demo.email, config.demo.password, 'PATIENT');
+          // Auto-verify demo user so they can login without email verification
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              emailVerified: true,
+              emailVerificationToken: null,
+              emailVerificationExpires: null,
+              isActive: true,
+            },
+          });
+          // Note: Password intentionally not logged for security
+          logger.info(`Demo user created (auto-verified) - email: ${config.demo.email}`, { prefix: 'DEMO' });
+        } else {
+          // Ensure existing demo user is always in a valid state
+          await tx.user.update({
+            where: { id: existingUser.id },
+            data: {
+              emailVerified: true,
+              isActive: true,
+              failedLoginAttempts: 0,
+              lockedUntil: null,
+              lastFailedLogin: null,
+            },
+          });
+          logger.info(`Demo user verified - email: ${config.demo.email}`, { prefix: 'DEMO' });
+        }
+      },
+      { isAdmin: true }
+    );
   } catch {
     // Database might not be ready yet, that's okay
     logger.info('Could not create/verify demo user (database may not be initialized yet)', { prefix: 'DEMO' });
@@ -980,12 +1073,18 @@ export async function initializeDemoUser(): Promise<void> {
 
 export async function cleanupExpiredSessions(): Promise<void> {
   try {
-    const prisma = getPrismaClient();
-    const result = await prisma.session.deleteMany({
-      where: {
-        expiresAt: { lt: new Date() },
+    // Cross-user system cleanup — admin context.
+    const result = await withRLSContext(
+      null,
+      async (tx) => {
+        return tx.session.deleteMany({
+          where: {
+            expiresAt: { lt: new Date() },
+          },
+        });
       },
-    });
+      { isAdmin: true }
+    );
     if (result.count > 0) {
       logger.info(`Cleaned up ${result.count} expired sessions`, { prefix: 'Auth' });
     }
