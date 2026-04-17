@@ -5,10 +5,13 @@
  * Uses CollapsibleNavGroup for organized category navigation.
  */
 
-import React from 'react';
-import { Heart, Zap, X } from 'lucide-react';
+import { Heart, Zap, X, Shield, AlertCircle, TrendingUp, FileUp } from 'lucide-react';
 import CollapsibleNavGroup from './CollapsibleNavGroup';
-import type { BiomarkerCategory, NavGroup } from '../../types';
+import type { BiomarkerCategory, Biomarker, InsurancePlan, NavGroup } from '../../types';
+
+interface SidebarStats {
+  outOfRangeCount: number;
+}
 
 interface DashboardSidebarProps {
   navGroups: NavGroup[];
@@ -18,6 +21,71 @@ interface DashboardSidebarProps {
   categoryCounts: Record<string, number>;
   showMobileSidebar: boolean;
   onCloseMobileSidebar: () => void;
+  /** Data for contextual Pro Tip. Optional — falls back to generic tip. */
+  biomarkers?: Biomarker[];
+  insurancePlans?: InsurancePlan[];
+  stats?: SidebarStats;
+}
+
+type ProTipIcon = 'upload' | 'shield' | 'alert' | 'trend' | 'zap';
+
+interface ProTip {
+  message: string;
+  icon: ProTipIcon;
+}
+
+function getProTip(
+  biomarkers: Biomarker[] | undefined,
+  insurancePlans: InsurancePlan[] | undefined,
+  stats: SidebarStats | undefined
+): ProTip {
+  const bio = biomarkers ?? [];
+  const plans = insurancePlans ?? [];
+  const outOfRangeCount = stats?.outOfRangeCount ?? 0;
+
+  if (bio.length === 0) {
+    return { message: 'Upload your lab reports to start tracking biomarkers.', icon: 'upload' };
+  }
+  if (outOfRangeCount > 0) {
+    const noun = outOfRangeCount === 1 ? 'biomarker' : 'biomarkers';
+    return {
+      message: `You have ${outOfRangeCount} out-of-range ${noun} — tap any to see AI guidance.`,
+      icon: 'alert',
+    };
+  }
+  if (plans.length === 0) {
+    return {
+      message: 'Add your insurance plan to see coverage for your biomarkers.',
+      icon: 'shield',
+    };
+  }
+  const hasHistory = bio.some((b) => (b.history?.length ?? 0) > 0);
+  if (!hasHistory) {
+    return {
+      message: 'Upload another lab report to start seeing trends over time.',
+      icon: 'trend',
+    };
+  }
+  return {
+    message: 'All biomarkers in range! Keep tracking to maintain your health profile.',
+    icon: 'zap',
+  };
+}
+
+function ProTipIconFor({ icon }: { icon: ProTipIcon }) {
+  switch (icon) {
+    case 'upload':
+      return <FileUp className="w-4 h-4 text-white" />;
+    case 'shield':
+      return <Shield className="w-4 h-4 text-white" />;
+    case 'alert':
+      return <AlertCircle className="w-4 h-4 text-white" />;
+    case 'trend':
+      return <TrendingUp className="w-4 h-4 text-white" />;
+    case 'zap':
+    default:
+      return <Zap className="w-4 h-4 text-white" />;
+  }
 }
 
 /**
@@ -45,7 +113,11 @@ export function DashboardSidebar({
   categoryCounts,
   showMobileSidebar,
   onCloseMobileSidebar,
+  biomarkers,
+  insurancePlans,
+  stats,
 }: DashboardSidebarProps) {
+  const proTip = getProTip(biomarkers, insurancePlans, stats);
   const handleMobileCategorySelect = (category: string) => {
     onCategorySelect(category);
     onCloseMobileSidebar();
@@ -113,12 +185,12 @@ export function DashboardSidebar({
           <div className="mt-6 p-4 bg-gradient-to-br from-brand-50 to-brand-100/50 dark:from-slate-800 dark:to-slate-800 rounded-2xl border border-brand-200/50 dark:border-slate-700">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" />
+                <ProTipIconFor icon={proTip.icon} />
               </div>
               <span className="text-sm font-semibold text-brand-900 dark:text-white">Pro Tip</span>
             </div>
             <p className="text-xs text-brand-700 dark:text-slate-300 leading-relaxed">
-              Upload your lab reports to automatically extract and track biomarkers over time.
+              {proTip.message}
             </p>
           </div>
         </div>

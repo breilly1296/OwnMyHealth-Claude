@@ -16,11 +16,12 @@
  * @module components/trends/TrendsPage
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Filter, ChevronDown, Calendar, AlertCircle } from 'lucide-react';
 import type { Biomarker, BiomarkerCategoryType } from '../../types';
 import TrendSparkline from './TrendSparkline';
 import TrendDetailModal from './TrendDetailModal';
+import { calculateTrend, type TrendInfo } from '../../utils/biomarkers/trendCalculations';
 
 interface TrendsPageProps {
   /** Array of all biomarkers to display */
@@ -29,12 +30,6 @@ interface TrendsPageProps {
 
 type TimeRange = '30d' | '90d' | '1y' | 'all';
 type SortOption = 'recent' | 'improved' | 'attention' | 'az';
-
-interface TrendInfo {
-  direction: 'up' | 'down' | 'stable';
-  change: number;
-  isImproving: boolean | null;
-}
 
 // Available categories for filtering
 const CATEGORIES: (BiomarkerCategoryType | 'All')[] = [
@@ -53,42 +48,6 @@ const CATEGORIES: (BiomarkerCategoryType | 'All')[] = [
   'Bone Health',
   'Electrolytes',
 ];
-
-// Calculate trend for a biomarker
-const calculateTrend = (biomarker: Biomarker): TrendInfo => {
-  const history = biomarker.history || [];
-
-  if (history.length < 1) {
-    return { direction: 'stable', change: 0, isImproving: null };
-  }
-
-  const oldest = history[0].value;
-  const newest = biomarker.value;
-
-  if (oldest === 0) {
-    return { direction: 'stable', change: 0, isImproving: null };
-  }
-
-  const change = ((newest - oldest) / oldest) * 100;
-
-  // Determine direction (stable if less than 5% change)
-  let direction: 'up' | 'down' | 'stable' = 'stable';
-  if (Math.abs(change) >= 5) {
-    direction = change > 0 ? 'up' : 'down';
-  }
-
-  // Determine if improving (moving toward normal range midpoint)
-  const midRange = (biomarker.normalRange.min + biomarker.normalRange.max) / 2;
-  const wasCloser = Math.abs(oldest - midRange);
-  const isCloser = Math.abs(newest - midRange);
-  const isImproving = Math.abs(change) >= 5 ? isCloser < wasCloser : null;
-
-  return {
-    direction,
-    change: Math.abs(change),
-    isImproving,
-  };
-};
 
 // Filter history by time range
 const filterByTimeRange = (biomarker: Biomarker, range: TimeRange): Biomarker => {

@@ -229,6 +229,9 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
           categoryCounts={stats.categoryCounts}
           showMobileSidebar={modals.isOpen('mobileSidebar')}
           onCloseMobileSidebar={() => modals.close('mobileSidebar')}
+          biomarkers={biomarkers}
+          insurancePlans={insurancePlans}
+          stats={{ outOfRangeCount: stats.outOfRangeCount }}
         />
 
         {/* Main Content */}
