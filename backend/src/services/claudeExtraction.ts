@@ -11,8 +11,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
 import { InternalServerError } from '../middleware/errorHandler.js';
-import { stripPHIFromText } from '../utils/phiRedaction.js';
+import { redactPHI, stripPHIFromText } from '../utils/phiRedaction.js';
 import { trackAIUsage } from './aiCostTracker.js';
+import { extractTextFromPDF } from './pdfTextExtraction.js';
+import { config } from '../config/index.js';
 
 // Create extraction-specific logger
 const extractionLogger = logger.createServiceLogger('ClaudeExtraction');
@@ -87,7 +89,10 @@ IMPORTANT INSTRUCTIONS:
 7. Include referenceRange if available
 8. Extract the lab/collection date in ISO format (YYYY-MM-DD)
 9. Extract the lab name (e.g., "Quest Diagnostics", "LabCorp")
-10. Do NOT include the patient's name in the response
+10. All patient identifiers have been redacted from the input. Do NOT attempt
+    to infer, reconstruct, or include any patient name, DOB, MRN, address,
+    phone, or email in your response. If you see [*_REDACTED] tokens, preserve
+    them verbatim if quoted back — never guess at the original value.
 
 Return ONLY the JSON object, no other text.`;
 
@@ -106,38 +111,89 @@ export async function extractBiomarkersWithClaude(
     bufferSize: pdfBuffer.length,
   });
 
+  // C-7 runtime gate — refuse to send anything to Claude unless the BAA flag
+  // is explicitly set. Defense in depth for the minimum-necessary rewrite
+  // below, and a hard stop against a misconfigured deploy with a stale key.
+  if (!config.anthropic.baaActive) {
+    throw new InternalServerError(
+      'Claude extraction is disabled: ANTHROPIC_BAA_ACTIVE is not set to "true". ' +
+      'Enable after confirming BAA coverage. See SECURITY_STATUS.md C-7.'
+    );
+  }
+
   try {
     const client = getAnthropicClient();
-    const pdfBase64 = pdfBuffer.toString('base64');
 
-    extractionLogger.info('Sending PDF to Claude API', {
-      base64Length: pdfBase64.length,
-      phiRedactionApplied: true,
+    // Stage A — extract text locally. No network call, no PHI transmitted.
+    const extracted = await extractTextFromPDF(pdfBuffer);
+
+    // Stage B — redact PHI from the extracted text before it goes anywhere.
+    const { text: redactedText, firedPatterns } = redactPHI(extracted.text);
+
+    extractionLogger.info('PHI redaction complete', {
+      originalLength: extracted.text.length,
+      redactedLength: redactedText.length,
+      firedPatterns,
+      pdfUsable: extracted.usable,
+      pdfLikelyScanned: extracted.isLikelyScanned,
     });
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 8192,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfBase64,
+    // Stage C — call Claude. Text-only when the local extraction was usable,
+    // vision fallback only when it wasn't (scanned/image-only PDF). The
+    // fallback still sends the PDF — that's why the BAA gate above is
+    // required — but attaches the redacted text so Claude has a scrubbed
+    // reference to prefer when in doubt.
+    let response;
+    if (extracted.usable) {
+      extractionLogger.info('Sending PHI-redacted text to Claude (minimum-necessary path)', {
+        model: 'claude-haiku-4-5-20251001',
+        redactedLength: redactedText.length,
+      });
+      response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 8192,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `${EXTRACTION_PROMPT}\n\n--- LAB REPORT TEXT (PHI-redacted) ---\n${redactedText}`,
               },
-            },
-            {
-              type: 'text',
-              text: EXTRACTION_PROMPT,
-            },
-          ],
-        },
-      ],
-    });
+            ],
+          },
+        ],
+      });
+    } else {
+      extractionLogger.warn('Text extraction insufficient — falling back to PDF vision', {
+        textLength: extracted.text.length,
+        isLikelyScanned: extracted.isLikelyScanned,
+      });
+      const pdfBase64 = pdfBuffer.toString('base64');
+      response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 8192,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'document',
+                source: {
+                  type: 'base64',
+                  media_type: 'application/pdf',
+                  data: pdfBase64,
+                },
+              },
+              {
+                type: 'text',
+                text: `${EXTRACTION_PROMPT}\n\nNote: local text extraction was insufficient — this appears to be a scanned PDF. Extract biomarkers from the document image. Do not include patient identifiers even if visible in the scan.`,
+              },
+            ],
+          },
+        ],
+      });
+    }
 
     const processingTimeMs = Date.now() - startTime;
 

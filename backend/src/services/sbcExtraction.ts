@@ -11,6 +11,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
 import { InternalServerError } from '../middleware/errorHandler.js';
 import { trackAIUsage } from './aiCostTracker.js';
+import { extractTextFromPDF } from './pdfTextExtraction.js';
+import { redactPHI } from '../utils/phiRedaction.js';
+import { config } from '../config/index.js';
 
 // Create extraction-specific logger
 const sbcLogger = logger.createServiceLogger('SBCExtraction');
@@ -773,37 +776,85 @@ export async function extractInsuranceFromSBC(
     bufferSize: pdfBuffer.length,
   });
 
+  // C-7 runtime gate — BAA must be acknowledged before PHI leaves the box.
+  if (!config.anthropic.baaActive) {
+    throw new InternalServerError(
+      'Claude extraction is disabled: ANTHROPIC_BAA_ACTIVE is not set to "true". ' +
+      'Enable after confirming BAA coverage. See SECURITY_STATUS.md C-7.'
+    );
+  }
+
   try {
     const client = getAnthropicClient();
-    const pdfBase64 = pdfBuffer.toString('base64');
 
-    sbcLogger.info('Sending SBC PDF to Claude Sonnet API', {
-      base64Length: pdfBase64.length,
+    // Stage A — local text extraction.
+    const extracted = await extractTextFromPDF(pdfBuffer);
+
+    // Stage B — redact PHI from the extracted text.
+    const { text: redactedText, firedPatterns } = redactPHI(extracted.text);
+
+    sbcLogger.info('PHI redaction complete', {
+      originalLength: extracted.text.length,
+      redactedLength: redactedText.length,
+      firedPatterns,
+      pdfUsable: extracted.usable,
+      pdfLikelyScanned: extracted.isLikelyScanned,
     });
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 16384,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfBase64,
+    // Stage C — call Claude. SBC PDFs are table-heavy; vision fallback fires
+    // more often than for lab reports, but that is acceptable — the goal is
+    // minimum-necessary, not zero-vision.
+    let response;
+    if (extracted.usable) {
+      sbcLogger.info('Sending PHI-redacted SBC text to Claude Sonnet (minimum-necessary path)', {
+        model: 'claude-sonnet-4-20250514',
+        redactedLength: redactedText.length,
+      });
+      response = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16384,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `${SBC_EXTRACTION_PROMPT}\n\n--- SBC DOCUMENT TEXT (PHI-redacted) ---\n${redactedText}\n\nNote: patient/subscriber identifiers have been redacted as [*_REDACTED] tokens. Do not attempt to reconstruct them.`,
               },
-            },
-            {
-              type: 'text',
-              text: SBC_EXTRACTION_PROMPT,
-            },
-          ],
-        },
-      ],
-    });
+            ],
+          },
+        ],
+      });
+    } else {
+      sbcLogger.warn('Text extraction insufficient — falling back to PDF vision', {
+        textLength: extracted.text.length,
+        isLikelyScanned: extracted.isLikelyScanned,
+      });
+      const pdfBase64 = pdfBuffer.toString('base64');
+      response = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16384,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'document',
+                source: {
+                  type: 'base64',
+                  media_type: 'application/pdf',
+                  data: pdfBase64,
+                },
+              },
+              {
+                type: 'text',
+                text: `${SBC_EXTRACTION_PROMPT}\n\nNote: local text extraction was insufficient — treating as scanned PDF. Extract plan details from the document image. Do not include subscriber/member identifiers even if visible.`,
+              },
+            ],
+          },
+        ],
+      });
+    }
 
     const processingTimeMs = Date.now() - startTime;
 
