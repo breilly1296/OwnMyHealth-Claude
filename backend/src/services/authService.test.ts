@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import * as authService from './authService.js';
 import { config } from '../config/index.js';
-import { getPrismaClient } from './database.js';
+import { getPrismaClient, withRLSContext } from './database.js';
 import { logger } from '../utils/logger.js';
 import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
 
@@ -20,7 +20,22 @@ vi.mock('crypto', () => ({
 vi.mock('uuid', () => ({ v4: vi.fn() }));
 vi.mock('../config/index.js');
 vi.mock('../utils/logger.js');
-vi.mock('./database.js');
+
+// C-8 Part 2b-i — every DB operation in authService now goes through
+// withRLSContext(userId|null, (tx) => ..., options?). The mock forwards
+// `tx` as the same mockPrisma object, so existing mockPrisma.* expectations
+// keep working unchanged. Re-bind in beforeEach because vi.resetAllMocks()
+// wipes the implementation.
+const mocks = vi.hoisted(() => ({
+  mockPrismaForRLS: null as unknown,
+  withRLSContext: vi.fn(),
+  getPrismaClient: vi.fn(),
+}));
+
+vi.mock('./database.js', () => ({
+  getPrismaClient: mocks.getPrismaClient,
+  withRLSContext: mocks.withRLSContext,
+}));
 
 const MOCK_USER_ID = 'test-user-id-123';
 const MOCK_EMAIL = 'test@example.com';
@@ -129,6 +144,12 @@ describe('authService', () => {
         deleteMany: vi.fn(),
       },
     };
+    // Re-bind withRLSContext implementation each test — resetAllMocks wipes it.
+    mocks.mockPrismaForRLS = mockPrisma;
+    mocks.withRLSContext.mockImplementation(
+      async (_userId: unknown, fn: (tx: unknown) => Promise<unknown>) => fn(mocks.mockPrismaForRLS)
+    );
+    mocks.getPrismaClient.mockReturnValue(mockPrisma);
     vi.mocked(getPrismaClient).mockReturnValue(mockPrisma);
 
     // Mock bcryptjs
@@ -1098,6 +1119,31 @@ describe('authService', () => {
         authService.stopSessionCleanup(); // Call without starting
         expect(clearIntervalSpy).not.toHaveBeenCalled();
         expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Session cleanup scheduler stopped'), expect.any(Object));
+    });
+  });
+
+  describe('RLS context wrapping (C-8 Part 2b-i)', () => {
+    it('cleanupExpiredSessions runs inside admin RLS context', async () => {
+      mockPrisma.session.deleteMany.mockResolvedValue({ count: 3 });
+
+      await authService.cleanupExpiredSessions();
+
+      expect(withRLSContext).toHaveBeenCalledWith(
+        null,
+        expect.any(Function),
+        { isAdmin: true }
+      );
+    });
+
+    it('revokeAllUserTokens runs inside user RLS context (no isAdmin)', async () => {
+      mockPrisma.session.deleteMany.mockResolvedValue({ count: 2 });
+
+      await authService.revokeAllUserTokens(MOCK_USER_ID);
+
+      expect(withRLSContext).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+        expect.any(Function)
+      );
     });
   });
 });

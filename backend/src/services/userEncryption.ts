@@ -4,10 +4,19 @@
  * Manages user-specific encryption salts for PHI encryption.
  * Each user gets a unique salt stored in the UserEncryptionKey table,
  * which is used to derive their personal encryption key from the master key.
+ *
+ * RLS context: all three functions use admin context. The
+ * user_encryption_keys RLS policies permit `user_id = current_user_id()
+ * OR is_admin_session()` for SELECT/INSERT/UPDATE, but callers of this
+ * service (controllers, authService) don't always own an RLS context at
+ * the call site — and forcing them to propagate one would mean every
+ * caller sprinkles withRLSContext around a salt lookup that's conceptually
+ * infrastructure, not user-scoped. Admin-context here keeps the service
+ * self-contained. See C-8 Part 2b-i.
  */
 
 import { getEncryptionService } from './encryption.js';
-import { getPrismaClient } from './database.js';
+import { withRLSContext } from './database.js';
 
 const KEY_TYPE = 'phi_encryption';
 
@@ -18,48 +27,48 @@ const KEY_TYPE = 'phi_encryption';
  * @returns The user's encryption salt (hex string)
  */
 export async function getUserEncryptionSalt(userId: string): Promise<string> {
-  const prisma = getPrismaClient();
+  return withRLSContext(
+    null,
+    async (tx) => {
+      const encryptionService = getEncryptionService();
 
-  // Try to find existing active encryption key
-  const existingKey = await prisma.userEncryptionKey.findFirst({
-    where: {
-      userId,
-      keyType: KEY_TYPE,
-      isActive: true,
+      // Try to find existing active encryption key
+      const existingKey = await tx.userEncryptionKey.findFirst({
+        where: {
+          userId,
+          keyType: KEY_TYPE,
+          isActive: true,
+        },
+        orderBy: {
+          version: 'desc',
+        },
+      });
+
+      if (existingKey) {
+        // The encryptedKey field stores the salt encrypted with master key
+        return encryptionService.decryptWithMasterKey(existingKey.encryptedKey);
+      }
+
+      // No key exists - create a new one
+      const newSalt = encryptionService.generateUserSalt();
+      const keyHash = newSalt.substring(0, 64);
+      const encryptedSalt = encryptionService.encryptWithMasterKey(newSalt);
+
+      await tx.userEncryptionKey.create({
+        data: {
+          userId,
+          keyType: KEY_TYPE,
+          keyHash,
+          encryptedKey: encryptedSalt,
+          version: 1,
+          isActive: true,
+        },
+      });
+
+      return newSalt;
     },
-    orderBy: {
-      version: 'desc',
-    },
-  });
-
-  if (existingKey) {
-    // The encryptedKey field stores the salt encrypted with master key
-    const encryptionService = getEncryptionService();
-    return encryptionService.decryptWithMasterKey(existingKey.encryptedKey);
-  }
-
-  // No key exists - create a new one
-  const encryptionService = getEncryptionService();
-  const newSalt = encryptionService.generateUserSalt();
-
-  // Create hash for verification (first 64 chars of salt for lookup)
-  const keyHash = newSalt.substring(0, 64);
-
-  // Encrypt the salt with master key before storing
-  const encryptedSalt = encryptionService.encryptWithMasterKey(newSalt);
-
-  await prisma.userEncryptionKey.create({
-    data: {
-      userId,
-      keyType: KEY_TYPE,
-      keyHash,
-      encryptedKey: encryptedSalt,
-      version: 1,
-      isActive: true,
-    },
-  });
-
-  return newSalt;
+    { isAdmin: true }
+  );
 }
 
 /**
@@ -74,58 +83,57 @@ export async function rotateUserEncryptionKey(userId: string): Promise<{
   newSalt: string;
   newVersion: number;
 }> {
-  const prisma = getPrismaClient();
   const encryptionService = getEncryptionService();
 
-  // Get current active key
-  const currentKey = await prisma.userEncryptionKey.findFirst({
-    where: {
-      userId,
-      keyType: KEY_TYPE,
-      isActive: true,
+  // The withRLSContext wrapper opens a single Prisma transaction, so the
+  // two writes below are atomic — equivalent to the previous explicit
+  // prisma.$transaction([...]) call, just with the RLS SET LOCAL applied.
+  return withRLSContext(
+    null,
+    async (tx) => {
+      const currentKey = await tx.userEncryptionKey.findFirst({
+        where: {
+          userId,
+          keyType: KEY_TYPE,
+          isActive: true,
+        },
+        orderBy: {
+          version: 'desc',
+        },
+      });
+
+      if (!currentKey) {
+        throw new Error('No active encryption key found for user');
+      }
+
+      const oldSalt = encryptionService.decryptWithMasterKey(currentKey.encryptedKey);
+      const newSalt = encryptionService.generateUserSalt();
+      const newVersion = currentKey.version + 1;
+      const keyHash = newSalt.substring(0, 64);
+      const encryptedNewSalt = encryptionService.encryptWithMasterKey(newSalt);
+
+      await tx.userEncryptionKey.update({
+        where: { id: currentKey.id },
+        data: {
+          isActive: false,
+          rotatedAt: new Date(),
+        },
+      });
+      await tx.userEncryptionKey.create({
+        data: {
+          userId,
+          keyType: KEY_TYPE,
+          keyHash,
+          encryptedKey: encryptedNewSalt,
+          version: newVersion,
+          isActive: true,
+        },
+      });
+
+      return { oldSalt, newSalt, newVersion };
     },
-    orderBy: {
-      version: 'desc',
-    },
-  });
-
-  if (!currentKey) {
-    throw new Error('No active encryption key found for user');
-  }
-
-  // Decrypt the old salt from storage
-  const oldSalt = encryptionService.decryptWithMasterKey(currentKey.encryptedKey);
-  const newSalt = encryptionService.generateUserSalt();
-  const newVersion = currentKey.version + 1;
-  const keyHash = newSalt.substring(0, 64);
-
-  // Encrypt the new salt before storing
-  const encryptedNewSalt = encryptionService.encryptWithMasterKey(newSalt);
-
-  // Use transaction to ensure atomic update
-  await prisma.$transaction([
-    // Mark old key as inactive
-    prisma.userEncryptionKey.update({
-      where: { id: currentKey.id },
-      data: {
-        isActive: false,
-        rotatedAt: new Date(),
-      },
-    }),
-    // Create new key with encrypted salt
-    prisma.userEncryptionKey.create({
-      data: {
-        userId,
-        keyType: KEY_TYPE,
-        keyHash,
-        encryptedKey: encryptedNewSalt,
-        version: newVersion,
-        isActive: true,
-      },
-    }),
-  ]);
-
-  return { oldSalt, newSalt, newVersion };
+    { isAdmin: true }
+  );
 }
 
 /**
@@ -135,15 +143,19 @@ export async function rotateUserEncryptionKey(userId: string): Promise<{
  * @returns True if user has an active encryption key
  */
 export async function hasUserEncryptionKey(userId: string): Promise<boolean> {
-  const prisma = getPrismaClient();
+  return withRLSContext(
+    null,
+    async (tx) => {
+      const key = await tx.userEncryptionKey.findFirst({
+        where: {
+          userId,
+          keyType: KEY_TYPE,
+          isActive: true,
+        },
+      });
 
-  const key = await prisma.userEncryptionKey.findFirst({
-    where: {
-      userId,
-      keyType: KEY_TYPE,
-      isActive: true,
+      return key !== null;
     },
-  });
-
-  return key !== null;
+    { isAdmin: true }
+  );
 }
