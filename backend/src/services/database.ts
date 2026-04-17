@@ -12,16 +12,18 @@
  * - Graceful shutdown handling
  *
  * RLS Usage:
- * - Call setRLSContext(userId) before database operations
- * - Call setAdminContext() for system/admin operations
- * - Call clearRLSContext() after operations complete
- * - Use withRLSContext(userId, fn) for automatic context management
+ * - Use withRLSContext(userId, (tx) => ...) for most reads/writes.
+ * - Use withRLSTransaction(userId, (tx) => ...) for multi-statement
+ *   transactions that must be atomic.
+ * - Both wrap the callback in a Prisma transaction and set the
+ *   `app.current_user_id` / `app.is_admin` session variables with
+ *   `SET LOCAL`, which is only valid inside a transaction.
  *
  * Exports:
  * - initializeDatabase() - Initialize all database services
  * - disconnectDatabase() - Gracefully close connections
- * - setRLSContext() - Set user context for RLS policies
- * - withRLSContext() - Execute function with RLS context
+ * - withRLSContext() - Execute function with RLS context (single statement-friendly)
+ * - withRLSTransaction() - Execute multi-statement transaction with RLS context
  *
  * @module services/database
  */
@@ -29,7 +31,7 @@
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { logger } from '../utils/logger.js';
-import { PrismaClient } from '../../generated/prisma';
+import { PrismaClient, Prisma } from '../../generated/prisma';
 import { getAuditLogService, AuditLogService } from './auditLog.js';
 import { getEncryptionService, EncryptionService } from './encryption.js';
 
@@ -235,116 +237,72 @@ export async function checkDatabaseHealth(): Promise<{
 // ============================================
 
 /**
- * UUID format validation regex
- * SECURITY: Prevents SQL injection in RLS context setting
+ * UUID format validation regex.
+ *
+ * With parameterized set_config() the userId is no longer interpolated
+ * into SQL, so this is defense-in-depth rather than the primary injection
+ * barrier — reject malformed input at the boundary anyway so callers get
+ * a clear error instead of a Postgres cast failure deep in the stack.
  */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Validate that a string is a valid UUID format
- * SECURITY: This is critical to prevent SQL injection in $executeRawUnsafe calls
- */
 function validateUUID(id: string): boolean {
   return UUID_REGEX.test(id);
 }
 
 /**
- * Set RLS context for the current user
+ * Apply RLS session variables to a Prisma transaction client.
  *
- * IMPORTANT: Call this before any database operation that should be
- * restricted by RLS policies. The context is set using PostgreSQL
- * session variables that the RLS policies check.
+ * Uses PostgreSQL's `set_config(name, value, is_local=true)` with
+ * parameterized queries via `$executeRaw` — no string interpolation,
+ * so the userId cannot alter SQL structure regardless of content.
  *
- * @param userId - The UUID of the current user
- * @param isAdmin - Whether this is an admin session (bypasses most RLS)
+ * Always sets BOTH `app.current_user_id` and `app.is_admin` explicitly
+ * (admin → empty-string user id, user → 'false' is_admin). This prevents
+ * a pooled connection from carrying a previous request's values into
+ * the new transaction — without the explicit write, `SET LOCAL` only
+ * overrides one variable per call and the other can linger.
  */
-export async function setRLSContext(userId: string, isAdmin = false): Promise<void> {
-  if (!prisma) {
-    throw new Error('Database not initialized. Call initializeDatabase() first.');
-  }
-
-  // SECURITY: Validate UUID format to prevent SQL injection
-  // The userId is used in $executeRawUnsafe, so we must validate it
-  if (!validateUUID(userId)) {
-    throw new Error('Invalid user ID format: must be a valid UUID');
-  }
-
-  try {
-    // Use SET LOCAL so the setting only applies to the current transaction
-    // This is safer than SET which persists for the connection
-    await prisma.$executeRawUnsafe(
-      `SET LOCAL app.current_user_id = '${userId}'`
-    );
-    await prisma.$executeRawUnsafe(
-      `SET LOCAL app.is_admin = '${isAdmin}'`
-    );
-  } catch (error) {
-    logger.error('Failed to set RLS context', {
-      data: { userId, error: error instanceof Error ? error.message : String(error) },
-      prefix: 'RLS',
-    });
-    throw error;
-  }
+async function applyRLSContext(
+  tx: Prisma.TransactionClient,
+  userId: string | null,
+  isAdmin: boolean
+): Promise<void> {
+  const userIdValue = userId ?? '';
+  const isAdminValue = isAdmin ? 'true' : 'false';
+  await tx.$executeRaw`SELECT set_config('app.current_user_id', ${userIdValue}, true)`;
+  await tx.$executeRaw`SELECT set_config('app.is_admin', ${isAdminValue}, true)`;
 }
 
 /**
- * Set admin context for system operations
+ * Execute a function with RLS context.
  *
- * Use this for operations that need to bypass RLS, such as:
- * - System maintenance tasks
- * - Admin dashboard queries
- * - Batch operations across users
+ * Wraps the callback in a Prisma transaction and issues `SET LOCAL
+ * app.current_user_id` / `SET LOCAL app.is_admin` on that transaction —
+ * `SET LOCAL` is scoped to the current transaction, so without this
+ * wrapping the setting is discarded before the callback's queries run
+ * and RLS policies evaluate against NULL.
  *
- * SECURITY: Only use this when absolutely necessary and ensure
- * proper authorization checks are done before calling this.
- */
-export async function setAdminContext(): Promise<void> {
-  if (!prisma) {
-    throw new Error('Database not initialized. Call initializeDatabase() first.');
-  }
-
-  try {
-    await prisma.$executeRawUnsafe(`SET LOCAL app.is_admin = 'true'`);
-  } catch (error) {
-    logger.error('Failed to set admin context', {
-      data: { error: error instanceof Error ? error.message : String(error) },
-      prefix: 'RLS',
-    });
-    throw error;
-  }
-}
-
-/**
- * Clear RLS context
+ * IMPORTANT: the callback receives a transaction client (`tx`). Every
+ * Prisma call inside MUST go through `tx` — calls against the
+ * module-level `prisma` singleton run on a different connection that
+ * does NOT carry the SET LOCAL and therefore bypass RLS.
  *
- * Call this after database operations complete to ensure the context
- * doesn't leak to subsequent operations on the same connection.
- */
-export async function clearRLSContext(): Promise<void> {
-  if (!prisma) return;
-
-  try {
-    await prisma.$executeRawUnsafe(`RESET app.current_user_id`);
-    await prisma.$executeRawUnsafe(`RESET app.is_admin`);
-  } catch {
-    // Ignore errors during cleanup
-  }
-}
-
-/**
- * Execute a function with RLS context
+ * For system/admin operations pass `userId = null` (or
+ * `options.isAdmin = true`); RLS policies check `is_admin_session()`.
  *
- * This is the recommended way to use RLS context. It automatically
- * sets the context before the operation and clears it afterward,
- * even if an error occurs.
- *
- * @param userId - The UUID of the current user (null for system operations)
- * @param fn - The async function to execute
- * @param options - Additional options
- * @returns The result of the function
+ * @param userId - UUID of the current user (null for system operations)
+ * @param fn - Async callback receiving the transaction client
+ * @param options - isAdmin / timeout / maxWait overrides
  *
  * @example
  * ```typescript
+ * // ✅ correct — queries go through tx
+ * const biomarkers = await withRLSContext(userId, async (tx) => {
+ *   return tx.biomarker.findMany();
+ * });
+ *
+ * // ❌ WRONG — prisma.* inside the callback bypasses RLS
  * const biomarkers = await withRLSContext(userId, async () => {
  *   return prisma.biomarker.findMany();
  * });
@@ -352,27 +310,29 @@ export async function clearRLSContext(): Promise<void> {
  */
 export async function withRLSContext<T>(
   userId: string | null,
-  fn: () => Promise<T>,
-  options: { isAdmin?: boolean } = {}
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  options: { isAdmin?: boolean; timeout?: number; maxWait?: number } = {}
 ): Promise<T> {
   if (!prisma) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
 
-  // For system operations (userId is null), use admin context
   const useAdmin = options.isAdmin || userId === null;
 
-  try {
-    if (useAdmin) {
-      await setAdminContext();
-    } else {
-      await setRLSContext(userId!, options.isAdmin);
-    }
-
-    return await fn();
-  } finally {
-    await clearRLSContext();
+  if (!useAdmin && !validateUUID(userId!)) {
+    throw new Error('Invalid user ID format: must be a valid UUID');
   }
+
+  return prisma.$transaction(
+    async (tx) => {
+      await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
+      return fn(tx);
+    },
+    {
+      maxWait: options.maxWait ?? 5_000,
+      timeout: options.timeout ?? 15_000,
+    }
+  );
 }
 
 /**
@@ -387,29 +347,21 @@ export async function withRLSContext<T>(
  */
 export async function withRLSTransaction<T>(
   userId: string | null,
-  fn: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => Promise<T>,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
   options: { isAdmin?: boolean } = {}
 ): Promise<T> {
   if (!prisma) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
 
-  // SECURITY: Validate UUID format to prevent SQL injection
-  // The userId is used in $executeRawUnsafe, so we must validate it
-  if (userId !== null && !validateUUID(userId)) {
+  const useAdmin = options.isAdmin || userId === null;
+
+  if (!useAdmin && !validateUUID(userId!)) {
     throw new Error('Invalid user ID format: must be a valid UUID');
   }
 
   return prisma.$transaction(async (tx) => {
-    const useAdmin = options.isAdmin || userId === null;
-
-    if (useAdmin) {
-      await tx.$executeRawUnsafe(`SET LOCAL app.is_admin = 'true'`);
-    } else {
-      await tx.$executeRawUnsafe(`SET LOCAL app.current_user_id = '${userId}'`);
-      await tx.$executeRawUnsafe(`SET LOCAL app.is_admin = '${options.isAdmin || false}'`);
-    }
-
+    await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
     return fn(tx);
   });
 }
@@ -424,9 +376,6 @@ export default {
   getAuditService,
   getEncryption,
   checkDatabaseHealth,
-  setRLSContext,
-  setAdminContext,
-  clearRLSContext,
   withRLSContext,
   withRLSTransaction,
 };
