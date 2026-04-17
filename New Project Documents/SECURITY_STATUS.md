@@ -10,7 +10,7 @@
 
 | Severity | Total | Open | In progress | Fixed |
 |---|---|---|---|---|
-| Critical | 8 | 8 | 0 | 0 |
+| Critical | 8 | 2 | 0 | 6 |
 | High | ~22 | ~22 | 0 | 0 |
 | Medium | ~37 | ~37 | 0 | 0 |
 | Low | ~27 | ~27 | 0 | 0 |
@@ -19,24 +19,26 @@
 (Counts aggregated from the three code-audit reports — `SECURITY_AUDIT_core.md`, `SECURITY_AUDIT_periphery.md`, `SECURITY_AUDIT_domain.md` — plus one infrastructure finding in `SECURITY_AUDIT_infrastructure.md` surfaced out-of-band during PR #30 regression testing.)
 
 ### Interpretation
-The codebase reflects a thoughtful security-first architecture — AES-256-GCM encryption, per-user keys, RLS, audit logging, CSRF, rate limiting, multi-layer RBAC, and PHI redaction are all present. But several implementations have **gaps or bypasses** that undermine the intent of the controls. The 8 Critical findings below are the gap between *designed* security posture and *operating* security posture. **They should be fixed before any production PHI ingress.**
+The codebase reflects a thoughtful security-first architecture — AES-256-GCM encryption, per-user keys, RLS, audit logging, CSRF, rate limiting, multi-layer RBAC, and PHI redaction are all present. Six of eight Critical findings (C-1 through C-6) were closed in the 2026-04-16 code-fix batch (PRs #30, #32, #33, #34, #36, #37). The remaining two — C-7 (PHI-to-Claude minimization) and C-8 (BYPASSRLS runtime role) — block production PHI ingress. C-7 is a code fix; C-8 is infrastructure work with a documented four-PR sequence.
 
 ---
 
 ## Critical findings (block production launch)
 
-| # | Finding | Evidence | Prompt |
-|---|---|---|---|
-| C-1 | **RLS unenforceable for most reads** — `setRLSContext` uses `SET LOCAL` outside transactions, so the user_id context is never actually set for non-transactional queries. | `backend/src/services/database.ts:275-280` | 01 |
-| C-2 | **Audit-log system salt stored plaintext** — the salt used to encrypt AuditLog PHI values lives in `system_config.value` with `isEncrypted=false`, defeating the purpose of encrypting audit PHI. | `backend/src/services/auditLog.ts:114-122` | 05 |
-| C-3 | **JWT secrets have hardcoded dev fallbacks** — `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` default to literal strings (`'access-secret-change-in-production'`); only production env gates this. Misconfigured staging signs tokens with publicly known values. | `backend/src/config/index.ts:16-25` | 03, 11 |
-| C-4 | **.env.example ships an insecure PHI_ENCRYPTION_KEY** — the `INSECURE_KEYS` check only triggers in production; any dev/staging pulling the example key encrypts real test PHI with a known key. | `backend/.env.example:77`, `backend/src/services/encryption.ts:115` | 11 |
-| C-5 | **jspdf 4.0.0 HTML/PDF injection (1 critical + 6 high CVEs)** — direct dependency. CVSS 9.6 HTML injection; PDF object injection enables arbitrary JS in generated PDFs. Fix in 4.2.0+. | `package.json` root | 13 |
-| C-6 | **GCS objects not deleted on account/data deletion** — `deleteAccount`/`deleteAllData` remove DB rows but never call `storageService.deleteFile`. All uploaded lab PDFs / SBCs remain in the bucket forever. HIPAA §164.524 violation. | `backend/src/controllers/settingsController.ts:231-236, 296-300` | 29 |
-| C-7 | **Raw PHI PDFs sent to Claude in biomarker + SBC extraction** — `extractBiomarkersWithClaude` and `extractInsuranceFromSBC` pass the unredacted PDF as base64 to Anthropic. Lab reports contain name/DOB/MRN/address. `stripPHIFromText` only runs on the response. Anthropic BAA signed 2026-04-16 provides legal cover, but the code still exceeds HIPAA's minimum-necessary standard — input-side PHI minimization required. | `backend/src/services/claudeExtraction.ts:110-140`, `sbcExtraction.ts:778-806` | 27 |
-| C-8 | **RLS policies inert at runtime** — every `CREATE POLICY` in `20260107_add_rls_policies` is silently bypassed because the app connects as a role with `rolbypassrls=true` (Cloud SQL `cloudsqlsuperuser` in dev; Railway vanilla `postgres` superuser in prod). Tenant isolation is carried by application-level `where: { userId }` filters only — any missed filter is a live cross-tenant bug. | `backend/.env`, `backend/.env.production.example`, `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, `backend/src/services/auditLog.ts:106,114` (blocker for remediation) | — (infra) |
+| # | Status | Finding | Evidence | Prompt |
+|---|---|---|---|---|
+| C-1 | ✅ **Fixed** (PR #30) | RLS unenforceable for most reads — `setRLSContext` used `SET LOCAL` outside transactions, so the user_id context was never actually set for non-transactional queries. | `backend/src/services/database.ts` | 01 |
+| C-2 | ✅ **Fixed** (PR #32) | Audit-log system salt stored plaintext — the salt used to encrypt AuditLog PHI values lived in `system_config.value` with `isEncrypted=false`. | `backend/src/services/auditLog.ts` | 05 |
+| C-3 | ✅ **Fixed** (PR #33) | JWT secrets had hardcoded dev fallbacks — `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` defaulted to literal strings; only production env gated this. Misconfigured staging signed tokens with publicly known values. | `backend/src/config/index.ts` | 03, 11 |
+| C-4 | ✅ **Fixed** (PR #34) | `.env.example` shipped an insecure `PHI_ENCRYPTION_KEY` — the `INSECURE_KEYS` check only triggered in production; any dev/staging pulling the example key encrypted real test PHI with a known key. | `backend/.env.example`, `backend/src/services/encryption.ts` | 11 |
+| C-5 | ✅ **Fixed** (PR #36) | jspdf 4.0.0 HTML/PDF injection (1 critical + 6 high CVEs) — direct dependency. CVSS 8.3 HTML injection. Fixed in 4.2.1. | `package.json` root | 13 |
+| C-6 | ✅ **Fixed** (PR #37) | GCS objects not deleted on account/data deletion — `deleteAccount`/`deleteAllData` removed DB rows but never called `storageService.deleteFile`. | `backend/src/controllers/settingsController.ts` | 29 |
+| C-7 | 🔴 **Open** | **Raw PHI PDFs sent to Claude in biomarker + SBC extraction** — `extractBiomarkersWithClaude` and `extractInsuranceFromSBC` pass the unredacted PDF as base64 to Anthropic. Lab reports contain name/DOB/MRN/address. `stripPHIFromText` only runs on the response. Anthropic BAA signed 2026-04-16 provides legal cover, but the code still exceeds HIPAA's minimum-necessary standard — input-side PHI minimization required. | `backend/src/services/claudeExtraction.ts:110-140`, `sbcExtraction.ts:778-806` | 27 |
+| C-8 | 🟡 **Filed** (PR #31) — **infra remediation pending** | **RLS policies inert at runtime** — every `CREATE POLICY` in `20260107_add_rls_policies` is silently bypassed because the app connects as a role with `rolbypassrls=true` (Cloud SQL `cloudsqlsuperuser` in dev; Railway vanilla `postgres` superuser in prod). Tenant isolation is carried by application-level `where: { userId }` filters only — any missed filter is a live cross-tenant bug. Four-PR remediation sequence documented below. | `backend/.env`, `backend/.env.production.example`, `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, `backend/src/services/auditLog.ts:106,114` (blocker for remediation) | — (infra) |
 
-**Remediation priority:** fix all 8 before any production PHI. C-2 and C-6 are HIPAA right-of-access/right-to-delete violations. C-1 fixes the application-side RLS wiring so it works correctly **once** the runtime role is changed, and C-8 is the infrastructure change that actually turns RLS on. Until C-8 lands, do not cite RLS as an enforced control — it is defense-in-depth on paper only. C-7 no longer turns on BAA (signed 2026-04-16) but remains open because the code still sends more PHI than the minimum-necessary standard allows.
+**Remediation priority for the two remaining Criticals:** C-7 is a self-contained code fix (strip PHI from PDF text before sending to Claude, or switch to text-only prompts after local PDF extraction). C-8 requires a four-PR infrastructure sequence (see below) — do NOT start the role cutover before the `auditService.initialize()` RLS-wrapping fix lands, or server startup will crash under the new role.
+
+Do not cite RLS as an enforced control in public compliance statements until C-8 lands — it is defense-in-depth on paper only.
 
 ---
 
@@ -164,15 +166,18 @@ Grouped by area. Full details in the per-area audit files.
 
 ## Remediation plan
 
-### Immediate (this week)
-1. **C-3, C-4:** Remove JWT and PHI_ENCRYPTION_KEY fallbacks in `config/index.ts`; fail fast at startup across all environments (not just production). Regenerate any dev keys that might have leaked via `.env.example`.
-2. **C-5:** `npm install jspdf@latest` + re-test PDF generation paths.
-3. **C-6:** Add `storageService.deleteFile` loop to `deleteAccount` and `deleteAllData` before DB cascade.
-4. **C-7:** Implement input-side PHI stripping for Claude calls — extract text from PDF with `pdf-parse`, run `stripPHIFromText` (widen regex to include name patterns), then send text-only prompt. Add `ANTHROPIC_BAA_ACTIVE` config gate that refuses the call if unset.
-5. **C-1:** Refactor `setRLSContext` to use a Prisma middleware or `$transaction` wrapper so `SET LOCAL` binds to a transaction. Migrate list/read endpoints to `withRLSTransaction`. **Shipped in PR #30 (2026-04-16).**
-6. **C-2:** Encrypt audit system salt — either store in GCP Secret Manager directly or encrypt the `system_config.value` row with the master key and flip `isEncrypted=true`.
-7. **C-8:** Staged infrastructure work — see dedicated plan below. Do NOT attempt before the `auditService.initialize()` fix lands, or server startup will crash under the new role.
-8. **Anthropic BAA:** Signed 2026-04-16 — done.
+### Done (2026-04-16 batch)
+1. ✅ **C-1** — `setRLSContext` refactored to wrap callback in `$transaction`, parameterized `set_config`. Shipped in PR #30.
+2. ✅ **C-2** — Audit system salt now encrypted under master key via `encryptWithMasterKey()`. Three-branch `initialize()` handles fresh install / normal boot / legacy-migration. Shipped in PR #32.
+3. ✅ **C-3** — JWT secrets now go through `requireEnv()` — no fallbacks in any environment. Blocked-placeholder + length checks apply universally. Legacy `jwt.secret` / `jwt.expiresIn` keys removed. Shipped in PR #33.
+4. ✅ **C-4** — `INSECURE_KEYS` check in `validateEncryptionKey()` now runs in every environment; `.env.example` placeholder rewritten as a non-hex failing string. Shipped in PR #34.
+5. ✅ **C-5** — `jspdf` bumped from `^4.0.0` to `^4.2.1`, closing the single critical advisory bundling nine jsPDF CVEs. No source changes. Shipped in PR #36.
+6. ✅ **C-6** — `deleteAllData` and `deleteAccount` now purge GCS objects before any DB deletion, fail-hard on GCS failure. New `storageService.deleteFiles` batch helper. Shipped in PR #37.
+7. ✅ **Anthropic BAA** — Signed 2026-04-16.
+
+### Remaining Criticals
+8. 🔴 **C-7** — Implement input-side PHI stripping for Claude calls: extract text from PDF with `pdf-parse`, run `stripPHIFromText` (widen regex to include name patterns), then send a text-only prompt. Add an `ANTHROPIC_BAA_ACTIVE` config gate as defense-in-depth. BAA no longer blocks (signed 2026-04-16); the code fix is now the sole remaining gate for production PHI through Claude.
+9. 🟡 **C-8** — Staged infrastructure work; see dedicated plan below. Do NOT attempt before the `auditService.initialize()` RLS-wrapping fix lands, or server startup will crash under the new role.
 
 ### C-8 staged rollout (separate PR sequence)
 The C-8 remediation is infrastructure work that must land in order:

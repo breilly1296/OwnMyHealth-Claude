@@ -243,7 +243,7 @@ These run in-process. **Implication:** if the only Cloud Run instance is idle, s
 ### Anthropic Claude API
 - Console: https://console.anthropic.com
 - Budget + alerts: set monthly hard cap. Cross-reference with `aiCostTracker.ts` counters in DB.
-- BAA status: **TBD** (see STRATEGY.md §AI Integration).
+- BAA status: ✅ Signed 2026-04-16. Residual risk: C-7 (input-side PHI minimization in `claudeExtraction.ts` / `sbcExtraction.ts`) — see SECURITY_STATUS.md.
 
 ### SendGrid
 - Dashboard: https://app.sendgrid.com
