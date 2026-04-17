@@ -11,6 +11,7 @@ import { getPrismaClient, withRLSContext, withRLSTransaction } from '../services
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
+import { storageService } from '../services/storageService.js';
 import { toNumber } from '../utils/numberConversion.js';
 import { processBatch } from '../utils/batchProcessor.js';
 import { UnauthorizedError } from '../middleware/errorHandler.js';
@@ -216,31 +217,72 @@ export async function deleteAllData(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
-  // Get counts before deletion for audit log (with RLS context)
-  const counts = await withRLSContext(userId, async (tx) => {
-    const [biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount] = await Promise.all([
-      tx.biomarker.count({ where: { userId } }),
-      tx.insurancePlan.count({ where: { userId } }),
-      tx.healthNeed.count({ where: { userId } }),
-      tx.healthGoal.count({ where: { userId } }),
-    ]);
-    return { biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount };
+  // Phase 1 — enumerate GCS-backed files before any deletion. RLS-scoped read.
+  const filesToDelete = await withRLSTransaction(userId, async (tx) => {
+    return tx.userFile.findMany({
+      where: { userId },
+      select: { id: true, storageKey: true, filename: true },
+    });
   });
 
-  // Delete all user data in a transaction with RLS context
-  await withRLSTransaction(userId, async (tx) => {
-    await tx.biomarker.deleteMany({ where: { userId } });
-    await tx.insurancePlan.deleteMany({ where: { userId } });
-    await tx.healthNeed.deleteMany({ where: { userId } });
-    await tx.healthGoal.deleteMany({ where: { userId } });
+  // Phase 2 — delete GCS objects first. See C-6 in SECURITY_STATUS:
+  // orphaned-DB-rows-pointing-at-missing-GCS-objects is self-healing on
+  // retry (signed URL 404s, app surfaces "file unavailable"), but
+  // orphaned-GCS-objects-with-no-DB-pointer is unrecoverable PHI leakage —
+  // no one will ever find them to clean up. So we delete GCS first and
+  // fail hard on any non-404 failure, leaving the DB intact for retry.
+  //
+  // NOTE: fileController.ts deleteFile() (single-file path) still uses
+  // log-and-continue semantics — see F-22 in the domain audit. That
+  // inconsistency is deliberate for now (bulk-delete is the HIPAA
+  // right-to-delete path; single-file delete is a foreground user
+  // action with easier manual recovery). F-22 migrates fileController
+  // to the same policy in a later PR.
+  const gcsResults = await storageService.deleteFiles(
+    filesToDelete.map((f) => f.storageKey)
+  );
+  const gcsFailures = gcsResults.filter((r) => !r.ok);
+
+  if (gcsFailures.length > 0) {
+    await auditService.logSystem('DELETE', 'UserData', {
+      action: 'DELETE_DATA_FAILED',
+      description: 'GCS deletion failed during deleteAllData; DB rows preserved for retry',
+      component: 'settingsController.deleteAllData',
+      count: gcsFailures.length,
+      error: gcsFailures
+        .slice(0, 5)
+        .map((f) => `${f.storageKey}: ${f.error}`)
+        .join('; '),
+    });
+
+    throw new Error(
+      `Failed to delete ${gcsFailures.length} of ${filesToDelete.length} files from storage. ` +
+      `No data was deleted. Please try again.`
+    );
+  }
+
+  // Phase 3 — delete DB rows in a single transaction. deleteMany returns
+  // `.count`, so we avoid a separate pre-count read.
+  const counts = await withRLSTransaction(userId, async (tx) => {
+    const [biomarkerCount, insurancePlanCount, healthNeedCount, healthGoalCount, userFileCount] =
+      await Promise.all([
+        tx.biomarker.deleteMany({ where: { userId } }).then((r) => r.count),
+        tx.insurancePlan.deleteMany({ where: { userId } }).then((r) => r.count),
+        tx.healthNeed.deleteMany({ where: { userId } }).then((r) => r.count),
+        tx.healthGoal.deleteMany({ where: { userId } }).then((r) => r.count),
+        tx.userFile.deleteMany({ where: { userId } }).then((r) => r.count),
+      ]);
+    return { biomarkerCount, insurancePlanCount, healthNeedCount, healthGoalCount, userFileCount };
   });
 
-  // Audit log: DELETE all user data
+  // Phase 4 — audit the success with the actual deletion counts.
   await auditService.logDelete('UserData', userId, {
     deletedBiomarkers: counts.biomarkerCount,
-    deletedInsurancePlans: counts.insuranceCount,
+    deletedInsurancePlans: counts.insurancePlanCount,
     deletedHealthNeeds: counts.healthNeedCount,
     deletedHealthGoals: counts.healthGoalCount,
+    deletedUserFiles: counts.userFileCount,
+    deletedGcsObjects: gcsResults.length,
   }, { req, userId });
 
   const response: ApiResponse = {
@@ -292,7 +334,40 @@ export async function deleteAccount(
     reason: 'user_requested',
   }, { req, userId });
 
-  // Delete user (cascade will delete all related data) - use admin context for user table
+  // Enumerate GCS-backed files BEFORE the cascade delete drops the UserFile
+  // rows. See C-6 — "GCS first, fail hard" policy. If we let the cascade
+  // run first we'd lose the storageKeys and orphan PHI in the bucket.
+  const filesToDelete = await withRLSTransaction(userId, async (tx) => {
+    return tx.userFile.findMany({
+      where: { userId },
+      select: { id: true, storageKey: true },
+    });
+  });
+
+  const gcsResults = await storageService.deleteFiles(
+    filesToDelete.map((f) => f.storageKey)
+  );
+  const gcsFailures = gcsResults.filter((r) => !r.ok);
+
+  if (gcsFailures.length > 0) {
+    await auditService.logSystem('DELETE', 'User', {
+      action: 'DELETE_ACCOUNT_FAILED',
+      description: 'GCS deletion failed during deleteAccount; account preserved for retry',
+      component: 'settingsController.deleteAccount',
+      count: gcsFailures.length,
+      error: gcsFailures
+        .slice(0, 5)
+        .map((f) => `${f.storageKey}: ${f.error}`)
+        .join('; '),
+    });
+
+    throw new Error(
+      `Failed to delete ${gcsFailures.length} of ${filesToDelete.length} files from storage. ` +
+      `Your account was not deleted. Please try again.`
+    );
+  }
+
+  // Only now run the cascade delete. admin context (userId=null).
   await withRLSContext(null, async (tx) => {
     await tx.user.delete({
       where: { id: userId },
