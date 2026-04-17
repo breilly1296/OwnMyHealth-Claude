@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import * as authService from './authService.js';
 import { config } from '../config/index.js';
+import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
 import { getPrismaClient, withRLSContext } from './database.js';
 import { logger } from '../utils/logger.js';
 import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
@@ -252,7 +253,7 @@ describe('authService', () => {
       expect(jwt.sign).toHaveBeenCalledWith(
         { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'access' },
         MOCK_ACCESS_SECRET,
-        { expiresIn: '15m' }
+        { ...JWT_SIGN_OPTIONS, expiresIn: '15m' }
       );
       expect(token).toBe('mock-jwt-token-access-15m');
     });
@@ -277,7 +278,7 @@ describe('authService', () => {
       expect(jwt.sign).toHaveBeenCalledWith(
         { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'mock-jti-regular' },
         MOCK_REFRESH_SECRET,
-        { expiresIn: '7d' }
+        { ...JWT_SIGN_OPTIONS, expiresIn: '7d' }
       );
       expect(mockPrisma.session.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -303,7 +304,7 @@ describe('authService', () => {
         expect(jwt.sign).toHaveBeenCalledWith(
             { id: demoUserForToken.id, email: MOCK_DEMO_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'mock-jti-demo' },
             MOCK_REFRESH_SECRET,
-            { expiresIn: '30d' }
+            { ...JWT_SIGN_OPTIONS, expiresIn: '30d' }
         );
         expect(mockPrisma.session.create).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -325,7 +326,7 @@ describe('authService', () => {
 
     it('verifyAccessToken should verify a valid access token', () => {
       const payload = authService.verifyAccessToken('mock-jwt-token-access-15m');
-      expect(jwt.verify).toHaveBeenCalledWith('mock-jwt-token-access-15m', MOCK_ACCESS_SECRET);
+      expect(jwt.verify).toHaveBeenCalledWith('mock-jwt-token-access-15m', MOCK_ACCESS_SECRET, JWT_VERIFY_OPTIONS);
       expect(payload).toEqual({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'access' });
     });
 
@@ -338,6 +339,24 @@ describe('authService', () => {
     it('verifyAccessToken should return null if token type is not access', () => {
         vi.mocked(jwt.verify).mockReturnValueOnce({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh' });
         const payload = authService.verifyAccessToken('mock-jwt-token-access-15m');
+        expect(payload).toBeNull();
+    });
+
+    it('verifyAccessToken rejects a token signed without issuer/audience claims', async () => {
+        // Real jsonwebtoken validates iss/aud when JWT_VERIFY_OPTIONS requires them.
+        // Simulate its behavior: a token missing those claims causes verify to throw.
+        const actualJwt = await vi.importActual<typeof import('jsonwebtoken')>('jsonwebtoken');
+        const tokenWithoutClaims = actualJwt.sign(
+            { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'access' },
+            MOCK_ACCESS_SECRET,
+            { algorithm: 'HS256', expiresIn: '15m' }
+        );
+
+        vi.mocked(jwt.verify).mockImplementationOnce((token, secret, options) => {
+            return actualJwt.verify(token as string, secret as string, options as jwt.VerifyOptions);
+        });
+
+        const payload = authService.verifyAccessToken(tokenWithoutClaims);
         expect(payload).toBeNull();
     });
 
@@ -354,7 +373,7 @@ describe('authService', () => {
       });
 
       const payload = await authService.verifyRefreshToken('mock-jwt-token-refresh-7d');
-      expect(jwt.verify).toHaveBeenCalledWith('mock-jwt-token-refresh-7d', MOCK_REFRESH_SECRET);
+      expect(jwt.verify).toHaveBeenCalledWith('mock-jwt-token-refresh-7d', MOCK_REFRESH_SECRET, JWT_VERIFY_OPTIONS);
       expect(payload).toEqual({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'mock-jti-123' });
     });
 

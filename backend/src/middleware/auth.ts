@@ -12,6 +12,7 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
 import { UnauthorizedError } from './errorHandler.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
@@ -60,7 +61,7 @@ export function authenticate(
     }
 
     // Verify token using access secret
-    const decoded = jwt.verify(token, config.jwt.accessSecret) as JwtPayload;
+    const decoded = jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;
 
     // Ensure it's an access token, not a refresh token
     if (decoded.type && decoded.type !== 'access') {
@@ -102,7 +103,7 @@ export function optionalAuth(
       return next();
     }
 
-    const decoded = jwt.verify(token, config.jwt.accessSecret) as JwtPayload;
+    const decoded = jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;
 
     // Ensure it's an access token
     if (decoded.type && decoded.type !== 'access') {
@@ -131,7 +132,7 @@ export function generateToken(payload: { id: string; email: string; role?: strin
   return jwt.sign(
     { ...payload, type: 'access' },
     config.jwt.accessSecret,
-    { expiresIn: config.jwt.accessExpiresIn }
+    { ...JWT_SIGN_OPTIONS, expiresIn: config.jwt.accessExpiresIn }
   );
 }
 
@@ -140,7 +141,7 @@ export function generateToken(payload: { id: string; email: string; role?: strin
  */
 export function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, config.jwt.accessSecret) as JwtPayload;
+    return jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;
   } catch {
     return null;
   }
