@@ -286,7 +286,7 @@ describe('validation middleware', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
 
-    it('should reject passwords shorter than 8 characters', () => {
+    it('should reject passwords shorter than 12 characters', () => {
       const req = createMockRequest({
         body: {
           email: 'test@example.com',
@@ -298,6 +298,34 @@ describe('validation middleware', () => {
       validate(schemas.auth.register)(req, res, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('should reject 11-character passwords at the boundary', () => {
+      const req = createMockRequest({
+        body: {
+          email: 'test@example.com',
+          password: 'Str0ng@Pa1!',
+        },
+      });
+      const res = createMockResponse();
+
+      validate(schemas.auth.register)(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('should accept 12-character passwords at the boundary', () => {
+      const req = createMockRequest({
+        body: {
+          email: 'test@example.com',
+          password: 'Str0ngP@ss1!',
+        },
+      });
+      const res = createMockResponse();
+
+      validate(schemas.auth.register)(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith();
     });
   });
 
