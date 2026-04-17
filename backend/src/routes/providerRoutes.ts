@@ -12,7 +12,7 @@ import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSContext } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -133,26 +133,12 @@ router.post(
       throw new ForbiddenError('Can only request access to patient accounts');
     }
 
-    // Check for existing relationship
-    const existing = await prisma.providerPatient.findUnique({
-      where: {
-        providerId_patientId: {
-          providerId,
-          patientId: patient.id,
-        },
-      },
-    });
-
-    if (existing) {
-      if (existing.status === 'ACTIVE') {
-        throw new ForbiddenError('You already have access to this patient');
-      }
-      if (existing.status === 'PENDING') {
-        throw new ForbiddenError('Access request already pending');
-      }
-    }
-
-    // Encrypt the message if provided (using provider's encryption salt)
+    // Encrypt the message if provided (using provider's encryption salt).
+    // NOTE: `getUserEncryptionSalt` is one of the Part 2b bare-prisma call
+    // sites (userEncryption.ts) and is not yet RLS-wrapped. Under the
+    // current superuser DATABASE_URL this is a no-op; under a
+    // NOBYPASSRLS role it will work because the salt belongs to the
+    // provider themselves. Flagged for Part 2b.
     let encryptedNotes: string | null = null;
     if (message && message.trim()) {
       const encryptionService = getEncryptionService();
@@ -160,29 +146,53 @@ router.post(
       encryptedNotes = encryptionService.encrypt(message, providerSalt);
     }
 
-    // Create or update the relationship
-    const relationship = await prisma.providerPatient.upsert({
-      where: {
-        providerId_patientId: {
+    // C-8 Part 2a — provider_patient writes go through withRLSContext.
+    // The policy permits providerId = current_user_id(), so the provider's
+    // own session is the correct RLS identity.
+    const relationship = await withRLSContext(providerId, async (tx) => {
+      const existing = await tx.providerPatient.findUnique({
+        where: {
+          providerId_patientId: {
+            providerId,
+            patientId: patient.id,
+          },
+        },
+      });
+
+      if (existing) {
+        if (existing.status === 'ACTIVE') {
+          throw new ForbiddenError('You already have access to this patient');
+        }
+        if (existing.status === 'PENDING') {
+          throw new ForbiddenError('Access request already pending');
+        }
+      }
+
+      return tx.providerPatient.upsert({
+        where: {
+          providerId_patientId: {
+            providerId,
+            patientId: patient.id,
+          },
+        },
+        create: {
           providerId,
           patientId: patient.id,
+          relationshipType: relationshipType || 'PRIMARY_CARE',
+          status: 'PENDING',
+          notesEncrypted: encryptedNotes,
         },
-      },
-      create: {
-        providerId,
-        patientId: patient.id,
-        relationshipType: relationshipType || 'PRIMARY_CARE',
-        status: 'PENDING',
-        notesEncrypted: encryptedNotes,
-      },
-      update: {
-        status: 'PENDING',
-        relationshipType: relationshipType || 'PRIMARY_CARE',
-        notesEncrypted: encryptedNotes,
-      },
+        update: {
+          status: 'PENDING',
+          relationshipType: relationshipType || 'PRIMARY_CARE',
+          notesEncrypted: encryptedNotes,
+        },
+      });
     });
 
-    // Audit log: Provider requested access to patient
+    // Audit log: Provider requested access to patient. Kept outside the
+    // RLS transaction because auditService internally uses the outer
+    // prisma singleton — Part 2b territory.
     await auditService.logCreate('provider_patient_request', relationship.id, {
       patientId: patient.id,
       relationshipType: relationship.relationshipType,
@@ -508,56 +518,67 @@ router.delete(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    const relationship = await prisma.providerPatient.findUnique({
-      where: {
-        providerId_patientId: {
-          providerId,
-          patientId,
-        },
-      },
-    });
-
     const auditService = getAuditLogService(prisma);
 
-    if (!relationship) {
-      // Audit log: Failed delete — relationship not found
-      await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
-        operation: 'DELETE',
-        success: false,
-        reason: 'relationship_not_found',
+    // C-8 Part 2a — wrap the read + delete in the provider's RLS context.
+    // The provider_patients_delete policy permits both providerId and
+    // patientId matches, so the provider's session is a valid RLS identity.
+    //
+    // F-23 note: this is a hard delete, inconsistent with patientRoutes.ts's
+    // soft-revoke pattern for the revoke endpoint. F-23 in the domain audit
+    // calls for migrating this to a soft-revoke to preserve audit joinability.
+    // Deliberately deferred — changing the semantics of "delete relationship"
+    // is a behavior change that deserves its own PR.
+    await withRLSContext(providerId, async (tx) => {
+      const relationship = await tx.providerPatient.findUnique({
+        where: {
+          providerId_patientId: {
+            providerId,
+            patientId,
+          },
+        },
       });
-      throw new NotFoundError('Relationship not found');
-    }
 
-    if (relationship.status !== 'ACTIVE') {
-      await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
-        operation: 'DELETE',
-        success: false,
-        reason: 'relationship_not_active',
+      if (!relationship) {
+        // Audit log: Failed delete — relationship not found
+        await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
+          operation: 'DELETE',
+          success: false,
+          reason: 'relationship_not_found',
+        });
+        throw new NotFoundError('Relationship not found');
+      }
+
+      if (relationship.status !== 'ACTIVE') {
+        await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
+          operation: 'DELETE',
+          success: false,
+          reason: 'relationship_not_active',
+        });
+        throw new ForbiddenError('You do not have active access to this patient');
+      }
+
+      // Check consent expiration
+      if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
+        await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
+          operation: 'DELETE',
+          success: false,
+          reason: 'consent_expired',
+          consentExpiresAt: relationship.consentExpiresAt.toISOString(),
+        });
+        throw new ForbiddenError('Provider consent has expired');
+      }
+
+      // Audit log: Provider removing patient relationship (log before deletion)
+      await auditService.logDelete('provider_patient_relationship', relationship.id, {
+        patientId,
+        relationshipType: relationship.relationshipType,
+        status: relationship.status,
+      }, { req, userId: providerId });
+
+      await tx.providerPatient.delete({
+        where: { id: relationship.id },
       });
-      throw new ForbiddenError('You do not have active access to this patient');
-    }
-
-    // Check consent expiration
-    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
-      await auditService.logAccess('provider_patient_relationship', patientId, { req, userId: providerId }, {
-        operation: 'DELETE',
-        success: false,
-        reason: 'consent_expired',
-        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
-      });
-      throw new ForbiddenError('Provider consent has expired');
-    }
-
-    // Audit log: Provider removing patient relationship (log before deletion)
-    await auditService.logDelete('provider_patient_relationship', relationship.id, {
-      patientId,
-      relationshipType: relationship.relationshipType,
-      status: relationship.status,
-    }, { req, userId: providerId });
-
-    await prisma.providerPatient.delete({
-      where: { id: relationship.id },
     });
 
     const response: ApiResponse<{ message: string }> = {
