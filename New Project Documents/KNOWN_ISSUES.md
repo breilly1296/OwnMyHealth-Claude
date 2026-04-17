@@ -4,7 +4,14 @@
 
 ## Critical (Blocks Core Functionality)
 
-None found. Grep across `backend/src/` and `src/` turned up no TODO/FIXME/HACK/XXX markers tagged as critical, no skipped tests, no `@ts-ignore` directives, and no production `console.log` debug statements that gate functionality.
+### RLS policies inert at runtime (C-8)
+**Symptom:** Database RLS policies defined in migration `20260107_add_rls_policies` are silently bypassed because the app connects as a DB superuser (BYPASSRLS). Tenant isolation is carried by application-level `where: { userId }` filters only.
+**Root Cause:** Runtime connection role has `rolbypassrls = true` in both dev (Cloud SQL `cloudsqlsuperuser`) and prod (Railway vanilla `postgres`).
+**Workaround:** None needed for correctness today (app-level filters carry it), but it's brittle — any missed filter is a live cross-tenant bug.
+**Fix Required:** Create non-superuser `omh_app` role on both DBs; migrate `DATABASE_URL` in Secret Manager; fix `auditService.initialize()` to use `withRLSContext(null, ..., { isAdmin: true })` before cutover; regression-test against the new role.
+**Files:** infrastructure (Cloud SQL, Railway); `backend/src/services/auditLog.ts:106,114`; `DATABASE_URL` in Secret Manager.
+
+(Pre-existing grep note: no TODO/FIXME/HACK/XXX markers tagged as critical, no skipped tests, no `@ts-ignore` directives, and no production `console.log` debug statements that gate functionality. C-8 was surfaced out-of-band during PR #30 regression testing, not by a code grep.)
 
 ---
 

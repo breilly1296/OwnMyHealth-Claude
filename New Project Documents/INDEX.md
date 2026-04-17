@@ -6,7 +6,7 @@
 
 ## Start here
 
-1. **[SECURITY_STATUS.md](./SECURITY_STATUS.md)** — **READ FIRST.** 7 Critical findings block production. Actionable remediation plan with owners and timelines.
+1. **[SECURITY_STATUS.md](./SECURITY_STATUS.md)** — **READ FIRST.** 8 Critical findings block production. Actionable remediation plan with owners and timelines.
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** — system overview, data flows, security architecture. Start here for anyone new to the codebase.
 3. **[CHANGELOG.md](./CHANGELOG.md)** — what shipped, organized by date and theme (derived from git log).
 
@@ -20,9 +20,10 @@
 | [SECURITY_AUDIT_core.md](./SECURITY_AUDIT_core.md) | 32 findings: schema, encryption, auth, CSRF, audit logging, API routes, frontend auth, secrets | 01, 02, 03, 04, 05, 06, 10, 11 |
 | [SECURITY_AUDIT_periphery.md](./SECURITY_AUDIT_periphery.md) | 45 findings: input validation, rate limiting, external APIs, CI/CD, deps, admin, logging, errors | 07, 08, 09, 12, 13, 30, 31, 32 |
 | [SECURITY_AUDIT_domain.md](./SECURITY_AUDIT_domain.md) | 33 findings: provider collaboration, AI integration, file storage, data portability | 26, 27, 28, 29 |
+| [SECURITY_AUDIT_infrastructure.md](./SECURITY_AUDIT_infrastructure.md) | 1 finding (C-8): DB role model, BYPASSRLS verification. Surfaced out-of-band during PR #30 regression testing. | — (infra review) |
 | [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) | §164.308/310/312 section-by-section status; BAA inventory | 22 |
 
-**Critical findings total: 7.** See SECURITY_STATUS.md for full remediation plan.
+**Critical findings total: 8.** See SECURITY_STATUS.md for full remediation plan.
 
 ---
 
@@ -70,13 +71,13 @@ These prompts were part of the library but weren't run as standalone docs:
 
 | Severity | Count | Notable (see SECURITY_STATUS.md for full list) |
 |---|---|---|
-| **Critical** | **7** | RLS `SET LOCAL` outside tx; audit salt plaintext; JWT dev fallbacks; insecure `.env.example` key; jspdf CVEs; GCS files not deleted on account deletion; raw PHI PDFs sent to Claude |
+| **Critical** | **8** | RLS `SET LOCAL` outside tx; audit salt plaintext; JWT dev fallbacks; insecure `.env.example` key; jspdf CVEs; GCS files not deleted on account deletion; raw PHI PDFs sent to Claude; RLS policies inert at runtime (app connects as BYPASSRLS role) |
 | **High** | ~22 | aiLimiter missing on 4 Claude endpoints; demo-protection middleware never attached; data export missing 8 of 11 PHI categories; password-policy mismatch (8 vs 12); provider cross-user RLS bypass; no password confirmation on destructive ops |
 | **Medium** | ~37 | Bare `console.*` leaking frontend auth state; Zod errors echoing PHI; CSRF readable from JS; session race conditions; narrow PHI regex; deprecated models still exposed |
 | **Low** | ~27 | Code quality, comments, UUID generation inconsistencies, old env var names |
 | **Info** | ~6 | Architecture notes, passing checks |
 
-Total: **~99 findings** across the 20 security prompts. The architecture is sound — the issues are implementation gaps, mostly fixable in a 2-3 week remediation sprint.
+Total: **~100 findings** across the 20 security prompts plus 1 infrastructure finding surfaced out-of-band. The architecture is sound — the issues are implementation gaps, mostly fixable in a 2-3 week remediation sprint. C-8 is the exception: it is an infrastructure/role-provisioning issue, not a code issue, and needs its own staged cutover plan.
 
 ---
 
