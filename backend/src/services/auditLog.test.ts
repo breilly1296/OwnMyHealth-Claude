@@ -23,6 +23,25 @@ vi.mock('../utils/logger.js', () => ({
   },
 }));
 
+// C-8 Part 1 — `auditService.initialize()` now wraps all system_config
+// access in withRLSContext(null, (tx) => ..., { isAdmin: true }). The
+// mock forwards the same mockPrisma object as `tx`, so existing tests
+// that set up `mockPrisma.systemConfig.findUnique/create/update` keep
+// working unchanged — just via tx.* inside the callback.
+//
+// FOR FUTURE TEST AUTHORS: any Prisma call inside a withRLSContext
+// callback must be wired through `mockPrismaForRLS` (which is the same
+// mockPrisma instance), not constructed independently. See the
+// beforeEach below.
+const mocks = vi.hoisted(() => ({
+  mockPrismaForRLS: null as unknown,
+  withRLSContext: vi.fn(),
+}));
+
+vi.mock('./database.js', () => ({
+  withRLSContext: mocks.withRLSContext,
+}));
+
 // Mock Prisma client
 interface MockPrismaClient {
   systemConfig: {
@@ -81,6 +100,13 @@ describe('AuditLogService', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockPrisma = createMockPrisma();
+    // Re-bind withRLSContext each test — vi.resetAllMocks() wipes the
+    // implementation. Point it at the same prisma instance so `tx.*`
+    // calls inside initialize() hit the same findUnique/create/update mocks.
+    mocks.mockPrismaForRLS = mockPrisma;
+    mocks.withRLSContext.mockImplementation(
+      async (_userId: unknown, fn: (tx: unknown) => Promise<unknown>) => fn(mocks.mockPrismaForRLS)
+    );
     auditService = new AuditLogService(mockPrisma as unknown as Parameters<typeof getAuditLogService>[0]);
   });
 
@@ -153,6 +179,19 @@ describe('AuditLogService', () => {
       });
 
       await expect(auditService.initialize()).rejects.toThrow('FATAL: Invalid audit encryption salt');
+    });
+
+    it('calls withRLSContext with isAdmin=true (C-8 Part 1)', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
+
+      await auditService.initialize();
+
+      expect(mocks.withRLSContext).toHaveBeenCalledTimes(1);
+      expect(mocks.withRLSContext).toHaveBeenCalledWith(
+        null,
+        expect.any(Function),
+        { isAdmin: true }
+      );
     });
   });
 

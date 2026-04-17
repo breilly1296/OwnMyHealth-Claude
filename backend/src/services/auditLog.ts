@@ -1,5 +1,6 @@
 import { PrismaClient, AuditAction, ActorType } from '../../generated/prisma';
 import { getEncryptionService } from './encryption.js';
+import { withRLSContext } from './database.js';
 import { Request } from 'express';
 import { logger } from '../utils/logger.js';
 
@@ -104,51 +105,68 @@ export class AuditLogService {
   async initialize(): Promise<void> {
     const encryptionService = getEncryptionService();
 
-    // Get or create system salt for encrypting audit log values
-    const config = await this.prisma.systemConfig.findUnique({
-      where: { key: 'audit_encryption_salt' },
-    });
+    // Run all system_config access inside an admin RLS context. This is the
+    // only pre-auth / boot-time code path that touches system_config, so it
+    // legitimately needs admin bypass — user context doesn't exist yet.
+    //
+    // Without this wrapper, a NOBYPASSRLS application role (see C-8) would
+    // see findUnique return null (admin-only SELECT policy) and the
+    // subsequent create/update would fail the INSERT policy. Today's
+    // superuser DATABASE_URL role bypasses RLS entirely so this is a no-op;
+    // after the C-8 infra cutover migrates DATABASE_URL to a NOBYPASSRLS
+    // role (omh_app), this wrapper becomes load-bearing.
+    await withRLSContext(
+      null,
+      async (tx) => {
+        const config = await tx.systemConfig.findUnique({
+          where: { key: 'audit_encryption_salt' },
+        });
 
-    if (!config) {
-      // First-time init: generate a fresh salt, encrypt it under the master
-      // key, and persist the ciphertext. The salt itself never hits disk in
-      // plaintext.
-      const freshSalt = encryptionService.generateUserSalt();
-      const encryptedSalt = encryptionService.encryptWithMasterKey(freshSalt);
+        if (!config) {
+          // First-time init: generate a fresh salt, encrypt it under the
+          // master key, and persist the ciphertext. The salt itself never
+          // hits disk in plaintext.
+          const freshSalt = encryptionService.generateUserSalt();
+          const encryptedSalt = encryptionService.encryptWithMasterKey(freshSalt);
 
-      await this.prisma.systemConfig.create({
-        data: {
-          key: 'audit_encryption_salt',
-          value: encryptedSalt,
-          description: 'Salt used for encrypting audit log values (encrypted under PHI_ENCRYPTION_KEY master key)',
-          isEncrypted: true,
-        },
-      });
+          await tx.systemConfig.create({
+            data: {
+              key: 'audit_encryption_salt',
+              value: encryptedSalt,
+              description: 'Salt used for encrypting audit log values (encrypted under PHI_ENCRYPTION_KEY master key)',
+              isEncrypted: true,
+            },
+          });
 
-      this.systemSalt = freshSalt;
-    } else if (config.isEncrypted) {
-      // Normal post-migration path: stored value is ciphertext, decrypt it.
-      this.systemSalt = encryptionService.decryptWithMasterKey(config.value);
-    } else {
-      // Legacy row from pre-C-2 code: plaintext salt already on disk. The
-      // value must be preserved exactly (rotating it would invalidate every
-      // existing audit log's PHI ciphertext). Re-encrypt in place so the next
-      // boot takes the normal path. Idempotent — no-op after first success.
-      this.systemSalt = config.value;
+          this.systemSalt = freshSalt;
+        } else if (config.isEncrypted) {
+          // Normal post-migration path: stored value is ciphertext, decrypt it.
+          this.systemSalt = encryptionService.decryptWithMasterKey(config.value);
+        } else {
+          // Legacy row from pre-C-2 code: plaintext salt already on disk.
+          // Value must be preserved exactly (rotating it would invalidate
+          // every existing audit log's PHI ciphertext). Re-encrypt in place
+          // so the next boot takes the normal path. Idempotent — no-op
+          // after first success.
+          this.systemSalt = config.value;
 
-      const encryptedSalt = encryptionService.encryptWithMasterKey(this.systemSalt);
-      await this.prisma.systemConfig.update({
-        where: { key: 'audit_encryption_salt' },
-        data: {
-          value: encryptedSalt,
-          isEncrypted: true,
-          description: 'Salt used for encrypting audit log values (encrypted under PHI_ENCRYPTION_KEY master key)',
-        },
-      });
-      logger.startup('✓ Audit encryption salt migrated from plaintext to encrypted storage');
-    }
+          const encryptedSalt = encryptionService.encryptWithMasterKey(this.systemSalt);
+          await tx.systemConfig.update({
+            where: { key: 'audit_encryption_salt' },
+            data: {
+              value: encryptedSalt,
+              isEncrypted: true,
+              description: 'Salt used for encrypting audit log values (encrypted under PHI_ENCRYPTION_KEY master key)',
+            },
+          });
+          logger.startup('✓ Audit encryption salt migrated from plaintext to encrypted storage');
+        }
+      },
+      { isAdmin: true }
+    );
 
-    // Validate the decrypted/plaintext salt, not the ciphertext.
+    // Validate the decrypted/plaintext salt, not the ciphertext. No DB
+    // access here — a plain string check; doesn't need the wrapper.
     if (!this.systemSalt || this.systemSalt.length < 16) {
       throw new Error(
         'FATAL: Invalid audit encryption salt. ' +
