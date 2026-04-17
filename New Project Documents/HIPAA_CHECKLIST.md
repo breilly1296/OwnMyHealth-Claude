@@ -13,10 +13,10 @@ Technical safeguards verified from code. Administrative, physical, and procedura
 | Vendor | Service used | BAA status | Date | Notes |
 |---|---|---|---|---|
 | Google Cloud (GCP) | Cloud Run, Cloud SQL, GCS, Document AI, Secret Manager, Cloud Logging | ✅ Signed (TBD — confirm) | TBD | Required for all GCP services handling PHI |
-| Anthropic | Claude API | **⏳ TBD — CRITICAL** | — | BAA required before production launch. Defense-in-depth: `stripPHIFromText()` scrubs common patterns pre-call, but structured PHI still transits. |
+| Anthropic | Claude API | ✅ Signed | 2026-04-16 | BAA executed. Defense-in-depth still required: `stripPHIFromText()` scrubs output; input-side PHI minimization (strip-before-send) remains open as C-7. |
 | SendGrid (Twilio) | Transactional email | TBD — check if needed | — | BAA only required if emails include PHI. Current emails (verification, password reset) should NOT include PHI — verify in `emailService.ts`. |
 
-**Blocker for production:** Anthropic BAA. Do not run production PHI through Claude API without a signed BAA.
+**Blocker for production:** C-7 — code-level PHI minimization for Claude calls. Anthropic BAA is now signed (2026-04-16), but the current code paths still send unredacted PHI to the API. Close C-7 before production PHI ingress.
 
 ---
 
@@ -74,7 +74,7 @@ N/A — solo founder. Revisit when hiring.
 ### §164.308(b) Business Associate Contracts
 | Requirement | Status | Notes |
 |---|---|---|
-| Written contract with BAs | 🟡 Partial | GCP BAA (assumed signed — confirm). Anthropic BAA pending. SendGrid TBD. |
+| Written contract with BAs | 🟡 Partial | GCP BAA (assumed signed — confirm). Anthropic BAA signed 2026-04-16. SendGrid TBD. |
 
 ---
 
@@ -145,7 +145,7 @@ N/A — solo founder. Revisit when hiring.
 | Breach Notification Plan | ⏳ TBD |
 | Privacy Policy (public) | ⏳ TBD |
 | Terms of Service (public) | ⏳ TBD |
-| BAAs (with vendors) | 🟡 Partial — GCP ✅ (confirm), Anthropic ⏳ |
+| BAAs (with vendors) | 🟡 Partial — GCP ✅ (confirm), Anthropic ✅ (2026-04-16) |
 | User consent (data use, AI processing) | ⏳ TBD |
 | Data retention & destruction policy | 🟡 Partial — audit logs 7y documented; others TBD |
 | Workforce training records | N/A (solo) |
@@ -177,7 +177,7 @@ See `prompts/_phi-inventory.md` for the authoritative list. Summary of coverage:
 - [x] Rate limiting + cost control.
 - [x] PHI redaction before external AI calls.
 - [x] GCP BAA (assumed signed — confirm).
-- [ ] **Anthropic BAA** ← blocker for production.
+- [x] **Anthropic BAA** signed 2026-04-16. (C-7 code fix now the remaining production gate.)
 
 ### Phase 2 — Documentation (before beta)
 - [ ] Written Risk Assessment.
