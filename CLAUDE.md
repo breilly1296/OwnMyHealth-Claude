@@ -145,20 +145,26 @@ Database-level access control ensures users can only access their own data.
 ```typescript
 import { withRLSContext, withRLSTransaction } from './services/database.js';
 
-// Simple query with RLS
-const biomarkers = await withRLSContext(userId, async () => {
-  return prisma.biomarker.findMany();
+// ✅ Correct — queries go through `tx`, which carries the SET LOCAL
+const biomarkers = await withRLSContext(userId, async (tx) => {
+  return tx.biomarker.findMany();
 });
 
-// Transaction with RLS
+// Transaction with RLS (atomic multi-statement)
 await withRLSTransaction(userId, async (tx) => {
   await tx.biomarker.create({ data: {...} });
   await tx.auditLog.create({ data: {...} });
 });
 
-// System operation (bypasses RLS)
-await withRLSContext(null, async () => {
-  return prisma.user.findMany(); // Admin access
+// System operation (admin context — RLS policies see `is_admin_session() = true`)
+await withRLSContext(null, async (tx) => {
+  return tx.user.findMany();
+});
+
+// ❌ WRONG — prisma.* inside the callback runs on a different connection
+// that does NOT carry the SET LOCAL, so RLS evaluates against NULL.
+const biomarkers = await withRLSContext(userId, async () => {
+  return prisma.biomarker.findMany();
 });
 ```
 

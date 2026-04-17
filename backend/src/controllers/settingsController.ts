@@ -81,8 +81,8 @@ export async function exportUserData(
   const auditService = getAuditLogService(prisma);
 
   // Fetch user info and data with RLS context
-  const { user, biomarkers, insurancePlans } = await withRLSContext(userId, async () => {
-    const user = await prisma.user.findUnique({
+  const { user, biomarkers, insurancePlans } = await withRLSContext(userId, async (tx) => {
+    const user = await tx.user.findUnique({
       where: { id: userId },
       select: { email: true, createdAt: true },
     });
@@ -92,14 +92,14 @@ export async function exportUserData(
     }
 
     // Fetch all biomarkers with history
-    const biomarkers = await prisma.biomarker.findMany({
+    const biomarkers = await tx.biomarker.findMany({
       where: { userId },
       include: { history: true },
       orderBy: { measurementDate: 'desc' },
     });
 
     // Fetch insurance plans
-    const insurancePlans = await prisma.insurancePlan.findMany({
+    const insurancePlans = await tx.insurancePlan.findMany({
       where: { userId },
       orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
     });
@@ -217,12 +217,12 @@ export async function deleteAllData(
   const auditService = getAuditLogService(prisma);
 
   // Get counts before deletion for audit log (with RLS context)
-  const counts = await withRLSContext(userId, async () => {
+  const counts = await withRLSContext(userId, async (tx) => {
     const [biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount] = await Promise.all([
-      prisma.biomarker.count({ where: { userId } }),
-      prisma.insurancePlan.count({ where: { userId } }),
-      prisma.healthNeed.count({ where: { userId } }),
-      prisma.healthGoal.count({ where: { userId } }),
+      tx.biomarker.count({ where: { userId } }),
+      tx.insurancePlan.count({ where: { userId } }),
+      tx.healthNeed.count({ where: { userId } }),
+      tx.healthGoal.count({ where: { userId } }),
     ]);
     return { biomarkerCount, insuranceCount, healthNeedCount, healthGoalCount };
   });
@@ -269,8 +269,8 @@ export async function deleteAccount(
   const auditService = getAuditLogService(prisma);
 
   // Fetch user to verify password (with RLS context)
-  const user = await withRLSContext(userId, async () => {
-    return prisma.user.findUnique({
+  const user = await withRLSContext(userId, async (tx) => {
+    return tx.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, passwordHash: true },
     });
@@ -293,8 +293,8 @@ export async function deleteAccount(
   }, { req, userId });
 
   // Delete user (cascade will delete all related data) - use admin context for user table
-  await withRLSContext(null, async () => {
-    await prisma.user.delete({
+  await withRLSContext(null, async (tx) => {
+    await tx.user.delete({
       where: { id: userId },
     });
   });

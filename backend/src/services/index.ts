@@ -19,10 +19,8 @@ export {
   getAuditService,
   getEncryption,
   checkDatabaseHealth,
-  // RLS context management
-  setRLSContext,
-  setAdminContext,
-  clearRLSContext,
+  // RLS context management — callbacks receive a Prisma transaction client
+  // (`tx`). Queries MUST go through `tx`, not the `prisma` singleton.
   withRLSContext,
   withRLSTransaction,
 } from './database.js';
