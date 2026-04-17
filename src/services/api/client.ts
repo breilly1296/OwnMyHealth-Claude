@@ -167,6 +167,15 @@ export async function apiFetch<T>(
     }
   }
 
+  // Auth-management endpoints must bypass the generic 401 retry path. When
+  // /auth/refresh returns 401 the refresh token is terminally invalid —
+  // calling attemptTokenRefresh() would hit the same endpoint recursively.
+  // When /auth/logout returns 401 the onAuthFailureCallback calls logout()
+  // which re-enters this code path. Both loops produced 10,000+ 401s in dev
+  // and prevented login from settling. /auth/login is intentionally NOT
+  // exempted — its 401 means wrong credentials, which the UI surfaces.
+  const isAuthMgmtEndpoint = endpoint === '/auth/refresh' || endpoint === '/auth/logout';
+
   const { controller, timeoutId } = createTimeoutController(timeoutMs);
 
   try {
@@ -184,7 +193,7 @@ export async function apiFetch<T>(
       data = await response.json();
     } catch {
       if (!response.ok) {
-        if (response.status === 401 && !isRetry) {
+        if (response.status === 401 && !isRetry && !isAuthMgmtEndpoint) {
           const refreshed = await attemptTokenRefresh();
           if (refreshed) {
             return apiFetch<T>(endpoint, options, timeoutMs, true);
@@ -203,7 +212,7 @@ export async function apiFetch<T>(
     }
 
     if (!response.ok) {
-      if (response.status === 401 && !isRetry) {
+      if (response.status === 401 && !isRetry && !isAuthMgmtEndpoint) {
         const refreshed = await attemptTokenRefresh();
         if (refreshed) {
           return apiFetch<T>(endpoint, options, timeoutMs, true);
