@@ -168,6 +168,40 @@ export async function deleteFile(storageKey: string): Promise<void> {
 }
 
 /**
+ * Delete multiple files from GCS in parallel.
+ *
+ * Returns an entry per input storage key, flagging per-file success/failure.
+ * Individual failures do NOT throw — the caller decides whether to abort
+ * the overall operation based on the results. A 404 (file already gone)
+ * counts as `ok: true` — matches single-file `deleteFile` semantics.
+ *
+ * Used by bulk-deletion paths (`settingsController.deleteAllData` and
+ * `deleteAccount`, see C-6) which treat any non-404 GCS failure as a
+ * hard abort — preserving DB rows so the user can retry and no PHI is
+ * orphaned in the bucket under a now-missing DB pointer.
+ */
+export async function deleteFiles(
+  storageKeys: string[]
+): Promise<Array<{ storageKey: string; ok: boolean; error?: string }>> {
+  if (storageKeys.length === 0) return [];
+
+  return Promise.all(
+    storageKeys.map(async (storageKey) => {
+      try {
+        await deleteFile(storageKey);
+        return { storageKey, ok: true };
+      } catch (error) {
+        return {
+          storageKey,
+          ok: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    })
+  );
+}
+
+/**
  * Check if a file exists in GCS
  *
  * @param storageKey - Path to file in GCS bucket
@@ -197,5 +231,6 @@ export const storageService = {
   uploadFile,
   getSignedUrl,
   deleteFile,
+  deleteFiles,
   fileExists,
 };
