@@ -15,6 +15,12 @@ import { biomarkersApi } from '../../services/api';
 interface BiomarkerAIGuidanceProps {
   biomarker: Biomarker;
   allBiomarkers: Biomarker[];
+  /**
+   * When true (default), fetch guidance on mount — preserves TrendsPage /
+   * TrendDetailModal behavior. When false, show a "Get AI insights" button
+   * unless a cached result already exists for this biomarker+value.
+   */
+  autoFetch?: boolean;
 }
 
 interface GuidanceSection {
@@ -178,15 +184,17 @@ function renderMarkdown(text: string): React.ReactNode {
   return <div className="space-y-1">{elements}</div>;
 }
 
-export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: BiomarkerAIGuidanceProps) {
-  const [guidance, setGuidance] = useState<string | null>(null);
+export default function BiomarkerAIGuidance({ biomarker, allBiomarkers, autoFetch = true }: BiomarkerAIGuidanceProps) {
+  const cacheKey = `${biomarker.id}-${biomarker.value}`;
+  // Seed from cache so on-demand callers show prior results instantly and
+  // skip the button when guidance already exists for this value.
+  const [guidance, setGuidance] = useState<string | null>(() => guidanceCache.get(cacheKey) ?? null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const isMountedRef = useRef(true);
 
   const fetchGuidance = useCallback(async (skipCache = false) => {
-    const cacheKey = `${biomarker.id}-${biomarker.value}`;
     if (!skipCache && guidanceCache.has(cacheKey)) {
       setGuidance(guidanceCache.get(cacheKey)!);
       return;
@@ -210,21 +218,26 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
         setIsLoading(false);
       }
     }
-  }, [biomarker, allBiomarkers]);
+  }, [biomarker, allBiomarkers, cacheKey]);
 
   useEffect(() => {
     isMountedRef.current = true;
-    fetchGuidance();
+    // On-demand mode: don't fetch if caller wants opt-in AND no cached
+    // value exists. If cache has it, we already seeded state via useState.
+    if (autoFetch || guidanceCache.has(cacheKey)) {
+      fetchGuidance();
+    }
     return () => { isMountedRef.current = false; };
-  }, [fetchGuidance]);
+  }, [fetchGuidance, autoFetch, cacheKey]);
 
   const handleRetry = () => {
-    const cacheKey = `${biomarker.id}-${biomarker.value}`;
     guidanceCache.delete(cacheKey);
     setGuidance(null);
     setError(null);
     fetchGuidance(true);
   };
+
+  const showManualTrigger = !autoFetch && !guidance && !isLoading && !error;
 
   // Parse guidance into sections
   const parseGuidance = (text: string): GuidanceSection[] => {
@@ -269,6 +282,22 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers }: Biomar
           Educational
         </span>
       </div>
+
+      {/* Manual Trigger (opt-in mode, no cached result) */}
+      {showManualTrigger && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Get educational context for this biomarker.
+          </p>
+          <button
+            onClick={() => fetchGuidance()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Get AI insights
+          </button>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (

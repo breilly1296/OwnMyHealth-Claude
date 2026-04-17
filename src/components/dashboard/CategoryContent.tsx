@@ -2,13 +2,27 @@
  * CategoryContent - Biomarker category detail view
  *
  * Displays biomarkers for a specific category with out-of-range items
- * highlighted, graph visualization, and AI guidance integration.
+ * highlighted, graph visualization, inline sparkline + range bar on each
+ * card, sort/filter controls, date grouping on the in-range list, and
+ * opt-in AI guidance.
  */
 
-import React, { Suspense, lazy } from 'react';
-import { LineChart, Activity, FileUp, Plus, Shield } from 'lucide-react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
+import {
+  LineChart,
+  Activity,
+  FileUp,
+  Plus,
+  Shield,
+  Search,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react';
 import type { Biomarker, BiomarkerCategory, InsurancePlan } from '../../types';
-import { BiomarkerSummary } from '../biomarkers';
+import { BiomarkerSummary, BiomarkerRangeBar } from '../biomarkers';
+import TrendSparkline from '../trends/TrendSparkline';
+import { calculateTrend, type TrendInfo } from '../../utils/biomarkers/trendCalculations';
 
 // Lazy-loaded components
 const BiomarkerGraph = lazy(() => import('../biomarkers/BiomarkerGraph'));
@@ -24,6 +38,8 @@ function LazyLoadSpinner() {
   );
 }
 
+type SortKey = 'recent' | 'az' | 'outlier';
+
 interface CategoryContentProps {
   selectedCategory: string;
   categories: BiomarkerCategory[];
@@ -38,24 +54,70 @@ interface CategoryContentProps {
   onOpenPDFUpload: () => void;
 }
 
-/**
- * Category content view showing biomarkers for a specific category
- *
- * @example
- * <CategoryContent
- *   selectedCategory="Blood"
- *   categories={categories}
- *   biomarkers={allBiomarkers}
- *   filteredBiomarkers={filteredBiomarkers}
- *   insurancePlans={insurancePlans}
- *   selectedBiomarker={selectedBiomarker}
- *   onSelectBiomarker={setSelectedBiomarker}
- *   onTrendClick={handleTrendClick}
- *   onInsuranceClick={handleInsuranceClick}
- *   onOpenAddMeasurement={() => modals.open('addMeasurement')}
- *   onOpenPDFUpload={() => modals.open('pdfUpload')}
- * />
- */
+// ---------- helpers ----------
+
+function distanceFromMidpoint(b: Biomarker): number {
+  const mid = (b.normalRange.min + b.normalRange.max) / 2;
+  return Math.abs(b.value - mid);
+}
+
+function formatDateHeader(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function sortBiomarkers(list: Biomarker[], key: SortKey): Biomarker[] {
+  const copy = [...list];
+  if (key === 'recent') {
+    copy.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  } else if (key === 'az') {
+    copy.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    copy.sort((a, b) => distanceFromMidpoint(b) - distanceFromMidpoint(a));
+  }
+  return copy;
+}
+
+function groupByDate(list: Biomarker[]): Array<{ date: string; biomarkers: Biomarker[] }> {
+  const map = new Map<string, Biomarker[]>();
+  for (const b of list) {
+    const key = b.date || 'unknown';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(b);
+  }
+  return Array.from(map.entries())
+    .map(([date, biomarkers]) => ({ date, biomarkers }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+// ---------- trend badge ----------
+
+function TrendBadge({ trend }: { trend: TrendInfo }) {
+  if (trend.direction === 'stable') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+        <Minus className="w-3 h-3" />
+        Stable
+      </span>
+    );
+  }
+  const improving = trend.isImproving === true;
+  const colorClass = improving
+    ? 'text-wellness-600 dark:text-wellness-400'
+    : 'text-red-600 dark:text-red-400';
+  const Arrow = trend.direction === 'up' ? TrendingUp : TrendingDown;
+  const label = improving ? 'improving' : trend.isImproving === false ? 'declining' : 'changed';
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs ${colorClass}`}>
+      <Arrow className="w-3 h-3" />
+      {trend.direction === 'up' ? '↑' : '↓'} {trend.change.toFixed(0)}% {label}
+    </span>
+  );
+}
+
+// ---------- main component ----------
+
 export function CategoryContent({
   selectedCategory,
   categories,
@@ -73,11 +135,33 @@ export function CategoryContent({
   const outOfRangeBiomarkers = safeFilteredBiomarkers.filter(
     (b) => b.value < b.normalRange.min || b.value > b.normalRange.max
   );
-  const inRangeBiomarkers = safeFilteredBiomarkers.filter(
+  const rawInRangeBiomarkers = safeFilteredBiomarkers.filter(
     (b) => b.value >= b.normalRange.min && b.value <= b.normalRange.max
   );
 
   const categoryDescription = categories.find((c) => c.name === selectedCategory)?.description;
+
+  const [sortBy, setSortBy] = useState<SortKey>('recent');
+  const [search, setSearch] = useState('');
+
+  const showFilter = safeFilteredBiomarkers.length > 6;
+
+  const inRangeBiomarkers = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const filtered = term
+      ? rawInRangeBiomarkers.filter((b) => b.name.toLowerCase().includes(term))
+      : rawInRangeBiomarkers;
+    return sortBiomarkers(filtered, sortBy);
+  }, [rawInRangeBiomarkers, search, sortBy]);
+
+  const inRangeGroups = useMemo(() => {
+    if (sortBy !== 'recent') {
+      return [{ date: '', biomarkers: inRangeBiomarkers }];
+    }
+    return groupByDate(inRangeBiomarkers);
+  }, [inRangeBiomarkers, sortBy]);
+
+  const shouldShowGroupHeaders = sortBy === 'recent' && inRangeGroups.length > 1;
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
@@ -130,6 +214,8 @@ export function CategoryContent({
               {outOfRangeBiomarkers.map((biomarker) => {
                 const isLow = biomarker.value < biomarker.normalRange.min;
                 const isSelected = selectedBiomarker?.id === biomarker.id;
+                const hasHistory = (biomarker.history?.length ?? 0) >= 1;
+                const trend = calculateTrend(biomarker);
 
                 return (
                   <div
@@ -158,6 +244,20 @@ export function CategoryContent({
                         </p>
                       </div>
 
+                      {hasHistory && (
+                        <div className="flex-shrink-0 hidden sm:block" aria-hidden="true">
+                          <TrendSparkline
+                            data={biomarker.history!}
+                            currentValue={biomarker.value}
+                            currentDate={biomarker.date}
+                            normalRange={biomarker.normalRange}
+                            width={80}
+                            height={32}
+                            isOutOfRange
+                          />
+                        </div>
+                      )}
+
                       <div className="text-right flex-shrink-0">
                         <div className="flex items-center gap-2 justify-end">
                           <span className="text-lg font-bold text-red-600 dark:text-red-400">
@@ -177,6 +277,7 @@ export function CategoryContent({
                         <button
                           onClick={(e) => onTrendClick(biomarker, e)}
                           className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                          aria-label="Open trend chart"
                         >
                           <LineChart className="w-4 h-4" />
                         </button>
@@ -184,6 +285,7 @@ export function CategoryContent({
                           <button
                             onClick={(e) => onInsuranceClick(biomarker, e)}
                             className="p-2 text-slate-400 dark:text-slate-500 hover:text-wellness-600 dark:hover:text-wellness-400 hover:bg-wellness-50 dark:hover:bg-wellness-900/30 rounded-lg transition-colors"
+                            aria-label="View insurance coverage"
                           >
                             <Shield className="w-4 h-4" />
                           </button>
@@ -191,10 +293,30 @@ export function CategoryContent({
                       </div>
                     </div>
 
+                    {/* Range bar + trend badge */}
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <BiomarkerRangeBar
+                          value={biomarker.value}
+                          min={biomarker.normalRange.min}
+                          max={biomarker.normalRange.max}
+                        />
+                      </div>
+                      {hasHistory && (
+                        <div className="flex-shrink-0">
+                          <TrendBadge trend={trend} />
+                        </div>
+                      )}
+                    </div>
+
                     {isSelected && (
                       <div className="mt-4 pt-4 border-t border-red-100 dark:border-red-800">
                         <Suspense fallback={<LazyLoadSpinner />}>
-                          <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
+                          <BiomarkerAIGuidance
+                            biomarker={biomarker}
+                            allBiomarkers={biomarkers}
+                            autoFetch={false}
+                          />
                           <BiomarkerActionPlan
                             biomarker={biomarker}
                             insurancePlans={insurancePlans}
@@ -210,70 +332,159 @@ export function CategoryContent({
         )}
 
         {/* In Range Section */}
-        {inRangeBiomarkers.length > 0 && (
+        {rawInRangeBiomarkers.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-wellness-500" />
-              In Range ({inRangeBiomarkers.length})
-            </h2>
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
-              {inRangeBiomarkers.map((biomarker) => {
-                const isSelected = selectedBiomarker?.id === biomarker.id;
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-wellness-500" />
+                In Range ({inRangeBiomarkers.length}
+                {inRangeBiomarkers.length !== rawInRangeBiomarkers.length
+                  ? ` of ${rawInRangeBiomarkers.length}`
+                  : ''}
+                )
+              </h2>
 
-                return (
-                  <div
-                    key={biomarker.id}
-                    onClick={() => onSelectBiomarker(isSelected ? null : biomarker)}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      isSelected
-                        ? 'bg-wellness-50/50 dark:bg-wellness-900/20'
-                        : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-2 h-2 rounded-full bg-wellness-400 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900 dark:text-white">
-                              {biomarker.name}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                            {biomarker.description}
-                          </p>
-                        </div>
-                      </div>
+              <div className="flex items-center gap-2 ml-auto">
+                {showFilter && (
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Filter"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-8 pr-3 py-1.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 w-40"
+                    />
+                  </div>
+                )}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortKey)}
+                  className="px-3 py-1.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="recent">Recent first</option>
+                  <option value="az">Name A-Z</option>
+                  <option value="outlier">Most out of range</option>
+                </select>
+              </div>
+            </div>
 
-                      <div className="flex items-center gap-4 flex-shrink-0">
-                        <div className="text-right">
-                          <span className="font-semibold text-slate-900 dark:text-white">
-                            {biomarker.value}
-                          </span>
-                          <span className="text-sm text-slate-400 dark:text-slate-500 ml-1">
-                            {biomarker.unit}
-                          </span>
-                        </div>
-                        <button
-                          onClick={(e) => onTrendClick(biomarker, e)}
-                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                        >
-                          <LineChart className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {isSelected && (
-                      <div className="mt-4 pt-4 border-t border-wellness-100 dark:border-wellness-800">
-                        <Suspense fallback={<LazyLoadSpinner />}>
-                          <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={biomarkers} />
-                        </Suspense>
+            {inRangeBiomarkers.length === 0 ? (
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                No biomarkers match “{search}”.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {inRangeGroups.map((group) => (
+                  <div key={group.date || 'ungrouped'}>
+                    {shouldShowGroupHeaders && group.date && (
+                      <div className="flex items-center gap-3 mb-2 text-xs text-slate-400 dark:text-slate-500">
+                        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                        <span>
+                          {formatDateHeader(group.date)} · {group.biomarkers.length} biomarker
+                          {group.biomarkers.length !== 1 ? 's' : ''}
+                        </span>
+                        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                       </div>
                     )}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
+                      {group.biomarkers.map((biomarker) => {
+                        const isSelected = selectedBiomarker?.id === biomarker.id;
+                        const hasHistory = (biomarker.history?.length ?? 0) >= 1;
+                        const trend = calculateTrend(biomarker);
+
+                        return (
+                          <div
+                            key={biomarker.id}
+                            onClick={() => onSelectBiomarker(isSelected ? null : biomarker)}
+                            className={`p-4 cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-wellness-50/50 dark:bg-wellness-900/20'
+                                : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/50'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="w-2 h-2 rounded-full bg-wellness-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-900 dark:text-white">
+                                      {biomarker.name}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                                    {biomarker.description}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {hasHistory && (
+                                <div className="flex-shrink-0 hidden sm:block" aria-hidden="true">
+                                  <TrendSparkline
+                                    data={biomarker.history!}
+                                    currentValue={biomarker.value}
+                                    currentDate={biomarker.date}
+                                    normalRange={biomarker.normalRange}
+                                    width={80}
+                                    height={32}
+                                  />
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-4 flex-shrink-0">
+                                <div className="text-right">
+                                  <span className="font-semibold text-slate-900 dark:text-white">
+                                    {biomarker.value}
+                                  </span>
+                                  <span className="text-sm text-slate-400 dark:text-slate-500 ml-1">
+                                    {biomarker.unit}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) => onTrendClick(biomarker, e)}
+                                  className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                                  aria-label="Open trend chart"
+                                >
+                                  <LineChart className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Range bar + trend badge */}
+                            <div className="mt-3 flex items-center gap-3">
+                              <div className="flex-1 min-w-0">
+                                <BiomarkerRangeBar
+                                  value={biomarker.value}
+                                  min={biomarker.normalRange.min}
+                                  max={biomarker.normalRange.max}
+                                />
+                              </div>
+                              {hasHistory && (
+                                <div className="flex-shrink-0">
+                                  <TrendBadge trend={trend} />
+                                </div>
+                              )}
+                            </div>
+
+                            {isSelected && (
+                              <div className="mt-4 pt-4 border-t border-wellness-100 dark:border-wellness-800">
+                                <Suspense fallback={<LazyLoadSpinner />}>
+                                  <BiomarkerAIGuidance
+                                    biomarker={biomarker}
+                                    allBiomarkers={biomarkers}
+                                    autoFetch={false}
+                                  />
+                                </Suspense>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
