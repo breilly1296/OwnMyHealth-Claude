@@ -13,8 +13,14 @@ env:
   FRONTEND_BUCKET: ownmyhealth-frontend
 
 jobs:
-  deploy-backend:
+  # Build the image and deploy to Cloud Run at 0% traffic with a tagged URL.
+  # If this job fails, nothing has shifted in production.
+  build-and-stage:
     runs-on: ubuntu-latest
+    outputs:
+      new_revision: ${{ steps.deploy.outputs.new_revision }}
+      staging_url: ${{ steps.deploy.outputs.staging_url }}
+      staging_tag: ${{ steps.deploy.outputs.staging_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,51 +45,129 @@ jobs:
           IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}"
           IMAGE_SHA="${IMAGE_BASE}:${{ github.sha }}"
           IMAGE_LATEST="${IMAGE_BASE}:latest"
-
-          echo "=========================================="
-          echo "Building Docker image..."
-          echo "Image with SHA: $IMAGE_SHA"
-          echo "Image latest: $IMAGE_LATEST"
-          echo "=========================================="
-
-          # Build the Docker image locally
+          echo "Building $IMAGE_SHA"
           cd backend
           docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
-
-          echo "=========================================="
-          echo "Pushing images to Artifact Registry..."
-          echo "=========================================="
-
-          # Push both tags
           docker push "$IMAGE_SHA"
           docker push "$IMAGE_LATEST"
 
-          echo "=========================================="
-          echo "Images pushed successfully!"
-          echo "SHA image: $IMAGE_SHA"
-          echo "Latest image: $IMAGE_LATEST"
-          echo "=========================================="
-
-      - name: Deploy to Cloud Run
+      - name: Deploy no-traffic tagged revision
+        id: deploy
         run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TAG="staging-${SHORT_SHA}"
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
-          echo "=========================================="
-          echo "Deploying to Cloud Run..."
-          echo "Service: ${{ env.SERVICE }}"
-          echo "Image: $IMAGE"
-          echo "Region: ${{ env.REGION }}"
-          echo "=========================================="
 
+          echo "Deploying revision tagged $TAG at 0% traffic"
           gcloud run deploy ${{ env.SERVICE }} \
             --image "$IMAGE" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
-            --platform managed
+            --platform managed \
+            --no-traffic \
+            --tag "$TAG"
 
-          echo "=========================================="
-          echo "Deployment complete!"
-          echo "Service URL: https://$(gcloud run services describe ${{ env.SERVICE }} --region ${{ env.REGION }} --format='value(status.url)' 2>/dev/null || echo 'api.ownmyhealth.io')"
-          echo "=========================================="
+          NEW_REV=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --format='value(status.latestCreatedRevisionName)')
+
+          STAGING_URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --format=json | jq -r --arg tag "$TAG" '.status.traffic[] | select(.tag == $tag) | .url')
+
+          if [ -z "$STAGING_URL" ] || [ "$STAGING_URL" = "null" ]; then
+            echo "ERROR: could not resolve staging URL for tag $TAG"
+            exit 1
+          fi
+
+          echo "new_revision=$NEW_REV"       | tee -a "$GITHUB_OUTPUT"
+          echo "staging_url=$STAGING_URL"    | tee -a "$GITHUB_OUTPUT"
+          echo "staging_tag=$TAG"            | tee -a "$GITHUB_OUTPUT"
+
+  # Smoke-test the staging revision via its tagged URL. /health exercises
+  # Cloud SQL connectivity, which was the failure mode behind the
+  # 2026-04-17 incident. Authenticated tests deliberately excluded —
+  # they would require test credentials in GitHub secrets.
+  smoke-test:
+    needs: build-and-stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Staging health probe
+        run: |
+          URL="${{ needs.build-and-stage.outputs.staging_url }}/api/v1/health"
+          echo "Probing $URL"
+          # Retry to absorb cold-start latency (Prisma migrate + Node boot).
+          for i in 1 2 3 4 5 6; do
+            STATUS=$(curl -sS -o /tmp/body.json -w "%{http_code}" --max-time 30 "$URL" || echo "000")
+            echo "  attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              BODY=$(cat /tmp/body.json)
+              if echo "$BODY" | grep -q '"success":true'; then
+                echo "PASS"
+                echo "  body: $BODY"
+                exit 0
+              else
+                echo "  200 but body missing success:true — $BODY"
+              fi
+            fi
+            sleep $((i * 5))
+          done
+          echo "FAIL: staging never returned 200 with success:true"
+          exit 1
+
+  # Shift 100% traffic to the new revision. Uses explicit --to-revisions
+  # (not --to-latest) so rollback is a deterministic, named-revision op.
+  #
+  # Tradeoff: this means env-only updates via `gcloud run services update`
+  # won't auto-shift traffic on subsequent deploys (they stay pinned to
+  # the latest promoted revision). That's intentional — forces every
+  # production traffic shift to go through a smoke-tested promotion.
+  # See cloud-run-env-update-pinning.md in the local memory notes.
+  promote:
+    needs: [build-and-stage, smoke-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Shift 100% traffic to new revision
+        run: |
+          NEW_REV="${{ needs.build-and-stage.outputs.new_revision }}"
+          echo "Promoting $NEW_REV to 100% traffic"
+          gcloud run services update-traffic ${{ env.SERVICE }} \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --to-revisions="$NEW_REV=100"
+
+      - name: Post-promote prod health probe
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 https://api.ownmyhealth.io/api/v1/health || echo "000")
+            echo "attempt $i: HTTP $STATUS"
+            if [ "$STATUS" != "200" ]; then
+              echo "FAIL: prod returned $STATUS after traffic shift — consider rolling back"
+              exit 1
+            fi
+          done
+          echo "Prod healthy on ${{ needs.build-and-stage.outputs.new_revision }}"
+
+      - name: Remove staging tag
+        run: |
+          TAG="${{ needs.build-and-stage.outputs.staging_tag }}"
+          gcloud run services update-traffic ${{ env.SERVICE }} \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --remove-tags="$TAG" || true
 
   deploy-frontend:
     runs-on: ubuntu-latest
