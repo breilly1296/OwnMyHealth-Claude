@@ -562,6 +562,65 @@ describe('AuditLogService', () => {
       });
     });
   });
+
+  describe('RLS context wrapping for runtime methods (C-8 Part 2b-ii)', () => {
+    it('log() runs inside admin RLS context', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
+      // Clear the withRLSContext history so we assert on log()'s call only,
+      // not on initialize()'s.
+      mocks.withRLSContext.mockClear();
+
+      await auditService.log({
+        actorType: 'USER',
+        action: 'READ',
+        resourceType: 'Biomarker',
+        userId: 'user-1',
+      });
+
+      expect(mocks.withRLSContext).toHaveBeenCalledWith(
+        null,
+        expect.any(Function),
+        { isAdmin: true }
+      );
+    });
+
+    it('queryLogs() runs findMany + count inside admin RLS context', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
+      await auditService.initialize();
+      mockPrisma.auditLog.findMany.mockResolvedValue([]);
+      mockPrisma.auditLog.count.mockResolvedValue(0);
+      mocks.withRLSContext.mockClear();
+
+      await auditService.queryLogs({ userId: 'user-1' });
+
+      expect(mocks.withRLSContext).toHaveBeenCalledWith(
+        null,
+        expect.any(Function),
+        { isAdmin: true }
+      );
+    });
+
+    it('cleanupOldLogs() wraps only the deleteMany in admin context; logSystem opens its own wrapper', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
+      await auditService.initialize();
+      mockPrisma.auditLog.deleteMany.mockResolvedValue({ count: 5 });
+      mockPrisma.auditLog.create.mockResolvedValue({ id: 'sys-log' });
+      mocks.withRLSContext.mockClear();
+
+      await auditService.cleanupOldLogs();
+
+      // Two withRLSContext calls expected: one for deleteMany, one inside
+      // logSystem → log().
+      expect(mocks.withRLSContext).toHaveBeenCalledTimes(2);
+      // Both with admin context.
+      for (const call of mocks.withRLSContext.mock.calls) {
+        expect(call[0]).toBeNull();
+        expect(call[2]).toEqual({ isAdmin: true });
+      }
+    });
+  });
 });
 
 describe('Audit cleanup scheduler', () => {
