@@ -114,6 +114,15 @@ export const config = {
     credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
   },
 
+  // Anthropic Claude API (see C-7 — BAA gate for PHI disclosure)
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+    // Explicit flag that asserts a signed Business Associate Agreement
+    // is in effect. Runtime callers in claudeExtraction / sbcExtraction
+    // check this before sending any PDF content.
+    baaActive: process.env.ANTHROPIC_BAA_ACTIVE === 'true',
+  },
+
   // API Versioning
   apiVersion: 'v1',
 
@@ -164,6 +173,26 @@ if (config.jwt.refreshSecret.length < MIN_JWT_SECRET_LENGTH) {
     `Current length: ${config.jwt.refreshSecret.length}. ` +
     `Generate with: openssl rand -base64 32`
   );
+}
+
+// C-7 — require explicit acknowledgment of Anthropic BAA coverage before
+// Claude calls are allowed. Production refuses to boot with API key set
+// but BAA flag unset; dev/staging log a prominent warning (the runtime
+// gates in claudeExtraction / sbcExtraction are the load-bearing check
+// there — see "Claude extraction is disabled" errors).
+if (config.anthropic.apiKey && !config.anthropic.baaActive) {
+  if (config.isProduction) {
+    throw new Error(
+      'ANTHROPIC_BAA_ACTIVE must be set to "true" in production when ANTHROPIC_API_KEY is configured. ' +
+      'This flag asserts that a signed Business Associate Agreement is in effect. ' +
+      'If no BAA is in place, unset ANTHROPIC_API_KEY to disable AI features.'
+    );
+  } else {
+    process.stderr.write(
+      '⚠️  ANTHROPIC_BAA_ACTIVE is not set to "true". Claude calls will be blocked by the runtime gate. ' +
+      'Set ANTHROPIC_BAA_ACTIVE=true after confirming BAA coverage.\n'
+    );
+  }
 }
 
 // Validate other critical configuration in production
