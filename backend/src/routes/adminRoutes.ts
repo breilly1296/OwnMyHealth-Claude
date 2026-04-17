@@ -14,7 +14,7 @@ import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { sensitiveLimiter } from '../middleware/rateLimiter.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSContext } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/index.js';
@@ -52,31 +52,40 @@ router.get(
       where.email = { contains: search, mode: 'insensitive' };
     }
 
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          isActive: true,
-          emailVerified: true,
-          createdAt: true,
-          lastLoginAt: true,
-          _count: {
+    // C-8 Part 2b-ii — admin context belt-and-suspenders on top of the
+    // requireRole('ADMIN') RBAC gate at router.use().
+    const { users, total } = await withRLSContext(
+      null,
+      async (tx) => {
+        const [users, total] = await Promise.all([
+          tx.user.findMany({
+            where,
             select: {
-              biomarkers: true,
-              insurancePlans: true,
-              healthNeeds: true,
+              id: true,
+              email: true,
+              role: true,
+              isActive: true,
+              emailVerified: true,
+              createdAt: true,
+              lastLoginAt: true,
+              _count: {
+                select: {
+                  biomarkers: true,
+                  insurancePlans: true,
+                  healthNeeds: true,
+                },
+              },
             },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.user.count({ where }),
-    ]);
+            orderBy: { createdAt: 'desc' },
+            skip: (page - 1) * limit,
+            take: limit,
+          }),
+          tx.user.count({ where }),
+        ]);
+        return { users, total };
+      },
+      { isAdmin: true }
+    );
 
     // Audit log: Admin listing users
     const auditService = getAuditLogService(prisma);
@@ -121,29 +130,35 @@ router.get(
     const prisma = getPrismaClient();
     const { id } = req.params;
 
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        isActive: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        lastLoginAt: true,
-        _count: {
+    const user = await withRLSContext(
+      null,
+      async (tx) => {
+        return tx.user.findUnique({
+          where: { id },
           select: {
-            biomarkers: true,
-            insurancePlans: true,
-            healthNeeds: true,
-            dnaData: true,
-            sessions: true,
-            auditLogs: true,
+            id: true,
+            email: true,
+            role: true,
+            isActive: true,
+            emailVerified: true,
+            createdAt: true,
+            updatedAt: true,
+            lastLoginAt: true,
+            _count: {
+              select: {
+                biomarkers: true,
+                insurancePlans: true,
+                healthNeeds: true,
+                dnaData: true,
+                sessions: true,
+                auditLogs: true,
+              },
+            },
           },
-        },
+        });
       },
-    });
+      { isAdmin: true }
+    );
 
     const auditService = getAuditLogService(prisma);
 
@@ -186,32 +201,38 @@ router.post(
     const prisma = getPrismaClient();
     const { email, password, role, isActive = true, emailVerified = false } = req.body;
 
-    // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      throw new BadRequestError('Email already registered');
-    }
-
-    // Hash password
+    // Hash password (CPU-only, outside transaction)
     const passwordHash = await bcrypt.hash(password, config.security.bcryptRounds);
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        role: role || 'PATIENT',
-        isActive,
-        emailVerified,
+    const user = await withRLSContext(
+      null,
+      async (tx) => {
+        // Check if email already exists — throws roll back the transaction.
+        const existing = await tx.user.findUnique({ where: { email } });
+        if (existing) {
+          throw new BadRequestError('Email already registered');
+        }
+
+        return tx.user.create({
+          data: {
+            email,
+            passwordHash,
+            role: role || 'PATIENT',
+            isActive,
+            emailVerified,
+          },
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isActive: true,
+            emailVerified: true,
+            createdAt: true,
+          },
+        });
       },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        isActive: true,
-        emailVerified: true,
-        createdAt: true,
-      },
-    });
+      { isAdmin: true }
+    );
 
     // Audit log: Admin created a new user
     const auditService = getAuditLogService(prisma);
@@ -254,10 +275,46 @@ router.patch(
       throw new ForbiddenError('Cannot modify your own role');
     }
 
-    const existing = await prisma.user.findUnique({ where: { id } });
     const auditService = getAuditLogService(prisma);
 
-    if (!existing) {
+    // Pre-hash password (CPU-only, outside tx)
+    const updateData: Record<string, unknown> = {};
+    if (role !== undefined) updateData.role = role;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (emailVerified !== undefined) updateData.emailVerified = emailVerified;
+    if (password) {
+      updateData.passwordHash = await bcrypt.hash(password, config.security.bcryptRounds);
+    }
+
+    // Existence check inside wrapper — throw rolls back; we return the not-found
+    // shape via a discriminated union so the audit-not-found log stays outside.
+    const result = await withRLSContext(
+      null,
+      async (tx) => {
+        const existing = await tx.user.findUnique({ where: { id } });
+        if (!existing) {
+          return { found: false as const };
+        }
+
+        const user = await tx.user.update({
+          where: { id },
+          data: updateData,
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isActive: true,
+            emailVerified: true,
+            updatedAt: true,
+          },
+        });
+
+        return { found: true as const, existing, user };
+      },
+      { isAdmin: true }
+    );
+
+    if (!result.found) {
       // Audit log: Failed user update — user not found
       await auditService.logAccess('admin_user', id, { req, userId: adminId }, {
         operation: 'UPDATE',
@@ -267,27 +324,7 @@ router.patch(
       });
       throw new NotFoundError('User not found');
     }
-
-    const updateData: Record<string, unknown> = {};
-    if (role !== undefined) updateData.role = role;
-    if (isActive !== undefined) updateData.isActive = isActive;
-    if (emailVerified !== undefined) updateData.emailVerified = emailVerified;
-    if (password) {
-      updateData.passwordHash = await bcrypt.hash(password, config.security.bcryptRounds);
-    }
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        isActive: true,
-        emailVerified: true,
-        updatedAt: true,
-      },
-    });
+    const { existing, user } = result;
 
     // Determine if this is a role/permission change (elevated audit significance)
     const isRoleChange = role !== undefined && role !== existing.role;
@@ -345,7 +382,14 @@ router.delete(
       throw new ForbiddenError('Cannot delete your own account');
     }
 
-    const existing = await prisma.user.findUnique({ where: { id } });
+    // Lookup first; audit log the found case outside the tx, then do the
+    // mutations atomically.
+    const existing = await withRLSContext(
+      null,
+      async (tx) => tx.user.findUnique({ where: { id } }),
+      { isAdmin: true }
+    );
+
     if (!existing) {
       // Audit log: Failed deactivation — user not found
       await auditService.logAccess('admin_user_status', id, { req, userId: adminId }, {
@@ -373,14 +417,18 @@ router.delete(
       targetRole: existing.role,
     });
 
-    // Soft delete by deactivating
-    await prisma.user.update({
-      where: { id },
-      data: { isActive: false },
-    });
-
-    // Also invalidate all sessions
-    await prisma.session.deleteMany({ where: { userId: id } });
+    // Soft delete + session invalidation share a transaction for atomicity.
+    await withRLSContext(
+      null,
+      async (tx) => {
+        await tx.user.update({
+          where: { id },
+          data: { isActive: false },
+        });
+        await tx.session.deleteMany({ where: { userId: id } });
+      },
+      { isAdmin: true }
+    );
 
     const response: ApiResponse<{ message: string }> = {
       success: true,
@@ -419,7 +467,11 @@ router.delete(
       throw new ForbiddenError('Cannot delete your own account');
     }
 
-    const existing = await prisma.user.findUnique({ where: { id } });
+    const existing = await withRLSContext(
+      null,
+      async (tx) => tx.user.findUnique({ where: { id } }),
+      { isAdmin: true }
+    );
     if (!existing) {
       // Audit log: Failed permanent delete — user not found
       await auditService.logAccess('admin_user_permanent', id, { req, userId: adminId }, {
@@ -459,7 +511,13 @@ router.delete(
     });
 
     // Permanently delete user (cascades to related data)
-    await prisma.user.delete({ where: { id } });
+    await withRLSContext(
+      null,
+      async (tx) => {
+        await tx.user.delete({ where: { id } });
+      },
+      { isAdmin: true }
+    );
 
     const response: ApiResponse<{ message: string }> = {
       success: true,
@@ -486,11 +544,15 @@ router.get(
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
 
-    const relationships = await prisma.providerPatient.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    });
+    const relationships = await withRLSContext(
+      null,
+      async (tx) => tx.providerPatient.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      { isAdmin: true }
+    );
 
     // Audit log: Admin listing provider-patient relationships
     const auditService = getAuditLogService(prisma);
@@ -524,9 +586,31 @@ router.patch(
 
     const auditService = getAuditLogService(prisma);
 
-    // Fetch existing relationship for audit trail
-    const existing = await prisma.providerPatient.findUnique({ where: { id } });
-    if (!existing) {
+    // Fetch + update inside a single admin transaction.
+    const result = await withRLSContext(
+      null,
+      async (tx) => {
+        const existing = await tx.providerPatient.findUnique({ where: { id } });
+        if (!existing) {
+          return { found: false as const };
+        }
+        const relationship = await tx.providerPatient.update({
+          where: { id },
+          data: {
+            ...(status && { status }),
+            ...(canViewBiomarkers !== undefined && { canViewBiomarkers }),
+            ...(canViewInsurance !== undefined && { canViewInsurance }),
+            ...(canViewDna !== undefined && { canViewDna }),
+            ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
+            ...(canEditData !== undefined && { canEditData }),
+          },
+        });
+        return { found: true as const, existing, relationship };
+      },
+      { isAdmin: true }
+    );
+
+    if (!result.found) {
       // Audit log: Failed relationship update — not found
       await auditService.logAccess('admin_provider_relationship', id, { req, userId: adminId }, {
         operation: 'UPDATE',
@@ -536,18 +620,7 @@ router.patch(
       });
       throw new NotFoundError('Provider-patient relationship not found');
     }
-
-    const relationship = await prisma.providerPatient.update({
-      where: { id },
-      data: {
-        ...(status && { status }),
-        ...(canViewBiomarkers !== undefined && { canViewBiomarkers }),
-        ...(canViewInsurance !== undefined && { canViewInsurance }),
-        ...(canViewDna !== undefined && { canViewDna }),
-        ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
-        ...(canEditData !== undefined && { canEditData }),
-      },
-    });
+    const { existing, relationship } = result;
 
     // Audit log: Admin updated provider-patient relationship
     await auditService.logUpdate('admin_provider_relationship', id, {
@@ -592,7 +665,8 @@ router.get(
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
 
-    const [
+    // All 7 count/groupBy queries share one admin transaction for consistency.
+    const {
       totalUsers,
       usersByRole,
       activeUsers,
@@ -600,21 +674,44 @@ router.get(
       totalInsurancePlans,
       totalHealthNeeds,
       recentLogins,
-    ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.groupBy({ by: ['role'], _count: true }),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.biomarker.count(),
-      prisma.insurancePlan.count(),
-      prisma.healthNeed.count(),
-      prisma.user.count({
-        where: {
-          lastLoginAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
-          },
-        },
-      }),
-    ]);
+    } = await withRLSContext(
+      null,
+      async (tx) => {
+        const [
+          totalUsers,
+          usersByRole,
+          activeUsers,
+          totalBiomarkers,
+          totalInsurancePlans,
+          totalHealthNeeds,
+          recentLogins,
+        ] = await Promise.all([
+          tx.user.count(),
+          tx.user.groupBy({ by: ['role'], _count: true }),
+          tx.user.count({ where: { isActive: true } }),
+          tx.biomarker.count(),
+          tx.insurancePlan.count(),
+          tx.healthNeed.count(),
+          tx.user.count({
+            where: {
+              lastLoginAt: {
+                gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+              },
+            },
+          }),
+        ]);
+        return {
+          totalUsers,
+          usersByRole,
+          activeUsers,
+          totalBiomarkers,
+          totalInsurancePlans,
+          totalHealthNeeds,
+          recentLogins,
+        };
+      },
+      { isAdmin: true }
+    );
 
     const stats = {
       users: {
@@ -679,20 +776,27 @@ router.get(
       if (endDate) (where.createdAt as Record<string, Date>).lte = new Date(endDate);
     }
 
-    const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          user: {
-            select: { id: true, email: true, role: true },
-          },
-        },
-      }),
-      prisma.auditLog.count({ where }),
-    ]);
+    const { logs, total } = await withRLSContext(
+      null,
+      async (tx) => {
+        const [logs, total] = await Promise.all([
+          tx.auditLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            skip: (page - 1) * limit,
+            take: limit,
+            include: {
+              user: {
+                select: { id: true, email: true, role: true },
+              },
+            },
+          }),
+          tx.auditLog.count({ where }),
+        ]);
+        return { logs, total };
+      },
+      { isAdmin: true }
+    );
 
     // Audit log: Admin viewed audit logs (meta-audit: who is watching the watchers)
     const auditService = getAuditLogService(prisma);

@@ -105,11 +105,23 @@ router.post(
     const providerId = req.user!.id;
     const { patientEmail, relationshipType, message } = req.body;
 
-    // Find patient by email
-    const patient = await prisma.user.findUnique({
-      where: { email: patientEmail },
-      select: { id: true, role: true },
-    });
+    // C-8 Part 2b-ii — admin context for the email→patient lookup. The
+    // users_select_own policy only permits `id = current_user_id() OR
+    // is_admin_session()`, which would deny a provider trying to resolve
+    // a patient's id by email. Admin wrap is the pragmatic fix; a
+    // narrower policy that permits PROVIDER role to SELECT {id, role}
+    // would be more correct long-term. F-21 (distinct error messages
+    // leaking existence/role) is adjacent but not addressed here.
+    const patient = await withRLSContext(
+      null,
+      async (tx) => {
+        return tx.user.findUnique({
+          where: { email: patientEmail },
+          select: { id: true, role: true },
+        });
+      },
+      { isAdmin: true }
+    );
 
     const auditService = getAuditLogService(prisma);
 

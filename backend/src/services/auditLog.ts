@@ -88,11 +88,18 @@ interface AuditContext {
  * - Configurable retention policies
  */
 export class AuditLogService {
-  private prisma: PrismaClient;
+  // All DB access now goes through withRLSContext (which uses the
+  // module-level prisma client from database.ts). The constructor
+  // parameter is kept for API compatibility with getAuditLogService(prisma)
+  // callers but the field is unused at runtime. Field retained (not
+  // deleted) so a future refactor has a place to reinstate per-instance
+  // prisma wiring without touching the factory signature.
+  private readonly _prisma: PrismaClient;
   private systemSalt: string = '';
 
   constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+    this._prisma = prisma;
+    void this._prisma; // Suppress unused-field warning
   }
 
   /**
@@ -227,21 +234,36 @@ export class AuditLogService {
    */
   async log(entry: AuditLogEntry): Promise<void> {
     try {
-      await this.prisma.auditLog.create({
-        data: {
-          userId: entry.userId,
-          actorType: entry.actorType,
-          action: entry.action,
-          resourceType: entry.resourceType,
-          resourceId: entry.resourceId,
-          previousValueEncrypted: this.encryptValue(entry.previousValue),
-          newValueEncrypted: this.encryptValue(entry.newValue),
-          ipAddress: entry.ipAddress,
-          userAgent: entry.userAgent,
-          sessionId: entry.sessionId,
-          metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+      // Encryption is CPU-only, outside the transaction.
+      const previousValueEncrypted = this.encryptValue(entry.previousValue);
+      const newValueEncrypted = this.encryptValue(entry.newValue);
+
+      // Admin context for consistency with the rest of the file. The
+      // audit_logs_insert policy is WITH CHECK (true) so wrapping isn't
+      // strictly required for RLS to pass — uniform wrapping here makes
+      // the file consistent and sidesteps any ambient current_user_id
+      // that might otherwise affect the transaction's SET LOCAL state.
+      await withRLSContext(
+        null,
+        async (tx) => {
+          await tx.auditLog.create({
+            data: {
+              userId: entry.userId,
+              actorType: entry.actorType,
+              action: entry.action,
+              resourceType: entry.resourceType,
+              resourceId: entry.resourceId,
+              previousValueEncrypted,
+              newValueEncrypted,
+              ipAddress: entry.ipAddress,
+              userAgent: entry.userAgent,
+              sessionId: entry.sessionId,
+              metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+            },
+          });
         },
-      });
+        { isAdmin: true }
+      );
     } catch (error) {
       // Never fail silently on audit logging - this is critical for compliance
       logger.error('CRITICAL: Failed to create audit log entry', {
@@ -473,17 +495,26 @@ export class AuditLogService {
       if (params.endDate) (where.createdAt as Record<string, Date>).lte = params.endDate;
     }
 
-    const [logs, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: params.limit || 100,
-        skip: params.offset || 0,
-      }),
-      this.prisma.auditLog.count({ where }),
-    ]);
-
-    return { logs, total };
+    // Admin context — queryLogs is called from adminRoutes /audit-logs,
+    // which is already RBAC-gated to ADMIN. The audit_logs_select policy
+    // permits `user_id = current_user_id() OR is_admin_session()`; admin
+    // wrapping is the correct path here.
+    return withRLSContext(
+      null,
+      async (tx) => {
+        const [logs, total] = await Promise.all([
+          tx.auditLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: params.limit || 100,
+            skip: params.offset || 0,
+          }),
+          tx.auditLog.count({ where }),
+        ]);
+        return { logs, total };
+      },
+      { isAdmin: true }
+    );
   }
 
   /**
@@ -494,19 +525,30 @@ export class AuditLogService {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
 
-    const result = await this.prisma.auditLog.deleteMany({
-      where: {
-        createdAt: { lt: cutoffDate },
+    // Wrap only the deleteMany — the system-log call below opens its own
+    // wrapper via this.log(), so keeping them as separate logical ops
+    // avoids nested transactions and a rollback of the delete if the
+    // follow-up audit entry fails for some reason.
+    const deletedCount = await withRLSContext(
+      null,
+      async (tx) => {
+        const result = await tx.auditLog.deleteMany({
+          where: {
+            createdAt: { lt: cutoffDate },
+          },
+        });
+        return result.count;
       },
-    });
+      { isAdmin: true }
+    );
 
     await this.logSystem('DELETE', 'AuditLog', {
       action: 'retention_cleanup',
-      deletedCount: result.count,
+      deletedCount,
       cutoffDate: cutoffDate.toISOString(),
     });
 
-    return result.count;
+    return deletedCount;
   }
 }
 
