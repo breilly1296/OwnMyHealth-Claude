@@ -33,10 +33,10 @@ The codebase reflects a thoughtful security-first architecture — AES-256-GCM e
 | C-4 | **.env.example ships an insecure PHI_ENCRYPTION_KEY** — the `INSECURE_KEYS` check only triggers in production; any dev/staging pulling the example key encrypts real test PHI with a known key. | `backend/.env.example:77`, `backend/src/services/encryption.ts:115` | 11 |
 | C-5 | **jspdf 4.0.0 HTML/PDF injection (1 critical + 6 high CVEs)** — direct dependency. CVSS 9.6 HTML injection; PDF object injection enables arbitrary JS in generated PDFs. Fix in 4.2.0+. | `package.json` root | 13 |
 | C-6 | **GCS objects not deleted on account/data deletion** — `deleteAccount`/`deleteAllData` remove DB rows but never call `storageService.deleteFile`. All uploaded lab PDFs / SBCs remain in the bucket forever. HIPAA §164.524 violation. | `backend/src/controllers/settingsController.ts:231-236, 296-300` | 29 |
-| C-7 | **Raw PHI PDFs sent to Claude in biomarker + SBC extraction** — `extractBiomarkersWithClaude` and `extractInsuranceFromSBC` pass the unredacted PDF as base64 to Anthropic. Lab reports contain name/DOB/MRN/address. `stripPHIFromText` only runs on the response. HIPAA §164.502 violation absent BAA. | `backend/src/services/claudeExtraction.ts:110-140`, `sbcExtraction.ts:778-806` | 27 |
+| C-7 | **Raw PHI PDFs sent to Claude in biomarker + SBC extraction** — `extractBiomarkersWithClaude` and `extractInsuranceFromSBC` pass the unredacted PDF as base64 to Anthropic. Lab reports contain name/DOB/MRN/address. `stripPHIFromText` only runs on the response. Anthropic BAA signed 2026-04-16 provides legal cover, but the code still exceeds HIPAA's minimum-necessary standard — input-side PHI minimization required. | `backend/src/services/claudeExtraction.ts:110-140`, `sbcExtraction.ts:778-806` | 27 |
 | C-8 | **RLS policies inert at runtime** — every `CREATE POLICY` in `20260107_add_rls_policies` is silently bypassed because the app connects as a role with `rolbypassrls=true` (Cloud SQL `cloudsqlsuperuser` in dev; Railway vanilla `postgres` superuser in prod). Tenant isolation is carried by application-level `where: { userId }` filters only — any missed filter is a live cross-tenant bug. | `backend/.env`, `backend/.env.production.example`, `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, `backend/src/services/auditLog.ts:106,114` (blocker for remediation) | — (infra) |
 
-**Remediation priority:** fix all 8 before any production PHI. C-2 and C-6 are HIPAA right-of-access/right-to-delete violations. C-1 fixes the application-side RLS wiring so it works correctly **once** the runtime role is changed, and C-8 is the infrastructure change that actually turns RLS on. Until C-8 lands, do not cite RLS as an enforced control — it is defense-in-depth on paper only. C-7 is a recurring disclosure to a third party without confirmed BAA.
+**Remediation priority:** fix all 8 before any production PHI. C-2 and C-6 are HIPAA right-of-access/right-to-delete violations. C-1 fixes the application-side RLS wiring so it works correctly **once** the runtime role is changed, and C-8 is the infrastructure change that actually turns RLS on. Until C-8 lands, do not cite RLS as an enforced control — it is defense-in-depth on paper only. C-7 no longer turns on BAA (signed 2026-04-16) but remains open because the code still sends more PHI than the minimum-necessary standard allows.
 
 ---
 
@@ -135,7 +135,7 @@ Grouped by area. Full details in the per-area audit files.
 | Control | Status | Notes |
 |---|---|---|
 | API key handling | ✅ | Env vars, no code hardcoding. |
-| Claude API — PHI in | 🟡 | Input-side PHI stripping missing (C-7); BAA status unverified. |
+| Claude API — PHI in | 🟡 | Input-side PHI stripping missing (C-7). BAA signed 2026-04-16. |
 | Claude API — cost | 🟡 | `aiCostTracker.ts` present, limiter gap on 4 endpoints (H). |
 | GCS — signed URLs | ✅ | TTL 15 min (infrastructure config to verify). |
 | GCS — bucket privacy | ⏳ | Code-only scope; bucket IAM / CORS / versioning unverified. |
@@ -157,7 +157,7 @@ Grouped by area. Full details in the per-area audit files.
 | Vendor | Service | BAA | Action |
 |---|---|---|---|
 | Google Cloud | Cloud Run, Cloud SQL, GCS, Document AI, Cloud Logging, Secret Manager | Assumed signed — confirm | Verify in GCP console. |
-| **Anthropic** | Claude API | **⏳ Pending** | **Block production. No production PHI through Claude without BAA.** |
+| **Anthropic** | Claude API | ✅ Signed 2026-04-16 | BAA in place. Production PHI through Claude still gated on C-7 (input-side PHI minimization). |
 | SendGrid | Transactional email | Not required (no PHI in emails) | Verify templates remain PHI-free. |
 
 ---
@@ -172,7 +172,7 @@ Grouped by area. Full details in the per-area audit files.
 5. **C-1:** Refactor `setRLSContext` to use a Prisma middleware or `$transaction` wrapper so `SET LOCAL` binds to a transaction. Migrate list/read endpoints to `withRLSTransaction`. **Shipped in PR #30 (2026-04-16).**
 6. **C-2:** Encrypt audit system salt — either store in GCP Secret Manager directly or encrypt the `system_config.value` row with the master key and flip `isEncrypted=true`.
 7. **C-8:** Staged infrastructure work — see dedicated plan below. Do NOT attempt before the `auditService.initialize()` fix lands, or server startup will crash under the new role.
-8. **Anthropic BAA:** Start legal process in parallel.
+8. **Anthropic BAA:** Signed 2026-04-16 — done.
 
 ### C-8 staged rollout (separate PR sequence)
 The C-8 remediation is infrastructure work that must land in order:
@@ -217,7 +217,7 @@ Full findings with file:line and quoted evidence:
 | Administrative safeguards (§164.308) | ⏳ Risk assessment + policies TBD |
 | Physical safeguards (§164.310) | 🟡 GCP-covered; workstation-level policy TBD |
 | Breach notification (§164.400) | ⏳ Written plan TBD |
-| BAAs | 🟡 GCP assumed ✅, Anthropic ⏳, SendGrid N/A |
+| BAAs | 🟡 GCP assumed ✅, Anthropic ✅ (2026-04-16), SendGrid N/A |
 
 ---
 

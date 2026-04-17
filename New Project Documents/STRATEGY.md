@@ -55,7 +55,7 @@ Separate repo at `C:\Users\breil\OneDrive\Desktop\HealthcareProviderDB`. Per use
 - **Use cases:** biomarker guidance (educational), cost analysis (optimization), SBC extraction (insurance docs), lab report extraction (PDF → biomarkers).
 - **Provider:** Anthropic Claude API (verify exact model IDs in `backend/src/services/claudeExtraction.ts`).
 - **PHI defense-in-depth:** `stripPHIFromText()` + data minimization + `aiLimiter` rate limiting + per-call cost tracking (`aiCostTracker.ts`).
-- **Anthropic BAA status:** **TBD — critical gate for HIPAA production launch.**
+- **Anthropic BAA status:** **Signed 2026-04-16.** C-7 (code-level PHI minimization for Claude calls — `stripPHIFromText` on input, not just output) is now the remaining gate for HIPAA production launch.
 - **Positioning:** AI is *educational differentiator*, not the core product. If Anthropic becomes unavailable, the core biomarker/insurance/expense flows still function.
 
 ### Provider Collaboration Strategy
@@ -115,7 +115,7 @@ Separate repo at `C:\Users\breil\OneDrive\Desktop\HealthcareProviderDB`. Per use
 
 ### Near-term (TBD — run prompt 14)
 - [ ] **Beta launch target date:** ?
-- [ ] **Anthropic BAA signed:** ?
+- [x] **Anthropic BAA signed:** 2026-04-16
 - [ ] **First validation cohort:** ? users
 - [ ] **Pricing page published:** ?
 
@@ -135,7 +135,7 @@ Separate repo at `C:\Users\breil\OneDrive\Desktop\HealthcareProviderDB`. Per use
 
 | Risk | Probability | Impact | Mitigation in place | Gap |
 |---|---|---|---|---|
-| Anthropic BAA never signed → cannot legally send PHI → feature loss | Medium | High | `stripPHIFromText` minimizes PHI exposure; core features work without AI | Need vendor alternative (BAA-capable LLM) scoped |
+| ~~Anthropic BAA never signed~~ — closed 2026-04-16 | — | — | BAA in place. Residual risk: C-7 (input-side PHI minimization still needed) tracked in SECURITY_STATUS. | — |
 | Claude API cost runs away | Medium | Medium | `aiLimiter`, `aiCostTracker.ts` | Budget alerts at GCP billing level — verify set |
 | Solo-founder bus factor | High | Critical | Audit logs + backups ensure continuity | Documentation, grant admin to trusted 2nd party |
 | OneDrive corruption of local dev state | High | Low | `patch-next-swc.js` workaround; node_modules issues noted | — |
