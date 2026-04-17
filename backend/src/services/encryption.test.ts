@@ -63,18 +63,34 @@ describe('encryption.ts', () => {
       expect(result.error).toContain('must contain only hexadecimal characters');
     });
 
-    it('should return invalid if key is an insecure placeholder in production', () => {
+    it('should reject insecure placeholder key in production', () => {
       process.env.NODE_ENV = 'production';
       const result = validateEncryptionKey(INSECURE_PHI_ENCRYPTION_KEY);
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('appears to be a placeholder/insecure key');
+      expect(result.error).toContain('placeholder/insecure');
     });
 
-    it('should return valid if key is an insecure placeholder in development', () => {
+    it('should reject insecure placeholder key in development (C-4)', () => {
       process.env.NODE_ENV = 'development';
       const result = validateEncryptionKey(INSECURE_PHI_ENCRYPTION_KEY);
-      expect(result.valid).toBe(true);
-      expect(result.error).toBeUndefined();
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('placeholder/insecure');
+    });
+
+    it('should reject insecure placeholder key when NODE_ENV is unset (C-4)', () => {
+      delete process.env.NODE_ENV;
+      const result = validateEncryptionKey(INSECURE_PHI_ENCRYPTION_KEY);
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('placeholder/insecure');
+    });
+
+    it('should reject the .env.example placeholder (C-4 regression guard)', () => {
+      process.env.NODE_ENV = 'development';
+      const result = validateEncryptionKey('REPLACE_WITH_openssl_rand_hex_32');
+      expect(result.valid).toBe(false);
+      // Placeholder is shorter than 64 chars AND contains non-hex underscores,
+      // so length or hex-format check fires first. Either failure mode works.
+      expect(result.error).toMatch(/hexadecimal|characters|placeholder/);
     });
   });
 
@@ -95,6 +111,12 @@ describe('encryption.ts', () => {
 
     it('should throw an error if PHI_ENCRYPTION_KEY is not set', () => {
       delete process.env.PHI_ENCRYPTION_KEY;
+      expect(() => new EncryptionService()).toThrow('FATAL: PHI Encryption Key Configuration Error');
+    });
+
+    it('should throw if PHI_ENCRYPTION_KEY is a known insecure placeholder, even in development (C-4)', () => {
+      process.env.NODE_ENV = 'development';
+      process.env.PHI_ENCRYPTION_KEY = INSECURE_PHI_ENCRYPTION_KEY;
       expect(() => new EncryptionService()).toThrow('FATAL: PHI Encryption Key Configuration Error');
     });
   });
