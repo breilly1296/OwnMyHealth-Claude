@@ -6,7 +6,11 @@ import { AuditLogService, getAuditLogService, startAuditCleanup, stopAuditCleanu
 vi.mock('./encryption.js', () => ({
   getEncryptionService: vi.fn(() => ({
     encrypt: vi.fn((value: string) => `encrypted:${value}`),
-    generateUserSalt: vi.fn(() => 'generated-salt-123'),
+    generateUserSalt: vi.fn(() => 'generated-salt-1234567890'),
+    encryptWithMasterKey: vi.fn((value: string) => `master-encrypted:${value}`),
+    decryptWithMasterKey: vi.fn((value: string) =>
+      value.startsWith('master-encrypted:') ? value.slice('master-encrypted:'.length) : value
+    ),
   })),
 }));
 
@@ -24,6 +28,7 @@ interface MockPrismaClient {
   systemConfig: {
     findUnique: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
   };
   auditLog: {
     create: ReturnType<typeof vi.fn>;
@@ -38,6 +43,7 @@ function createMockPrisma(): MockPrismaClient {
     systemConfig: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
     auditLog: {
       create: vi.fn(),
@@ -47,6 +53,13 @@ function createMockPrisma(): MockPrismaClient {
     },
   };
 }
+
+// Standard encrypted-row shape used by most tests (normal post-migration boot).
+const ENCRYPTED_SALT_ROW = {
+  key: 'audit_encryption_salt',
+  value: 'master-encrypted:valid-salt-1234567890',
+  isEncrypted: true,
+};
 
 // Helper to create mock request
 function createMockRequest(overrides: Partial<Request> = {}): Request {
@@ -72,11 +85,12 @@ describe('AuditLogService', () => {
   });
 
   describe('initialize()', () => {
-    it('should create new salt if none exists', async () => {
+    it('should create new encrypted salt if none exists (fresh-install branch)', async () => {
       mockPrisma.systemConfig.findUnique.mockResolvedValue(null);
       mockPrisma.systemConfig.create.mockResolvedValue({
         key: 'audit_encryption_salt',
-        value: 'generated-salt-123',
+        value: 'master-encrypted:generated-salt-1234567890',
+        isEncrypted: true,
       });
 
       await auditService.initialize();
@@ -84,24 +98,58 @@ describe('AuditLogService', () => {
       expect(mockPrisma.systemConfig.findUnique).toHaveBeenCalledWith({
         where: { key: 'audit_encryption_salt' },
       });
-      expect(mockPrisma.systemConfig.create).toHaveBeenCalled();
+      expect(mockPrisma.systemConfig.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          key: 'audit_encryption_salt',
+          value: 'master-encrypted:generated-salt-1234567890',
+          isEncrypted: true,
+        }),
+      });
+      expect(mockPrisma.systemConfig.update).not.toHaveBeenCalled();
     });
 
-    it('should use existing salt if present', async () => {
+    it('should decrypt existing salt when isEncrypted=true (normal-boot branch)', async () => {
       mockPrisma.systemConfig.findUnique.mockResolvedValue({
         key: 'audit_encryption_salt',
-        value: 'existing-salt-456',
+        value: 'master-encrypted:existing-salt-abcdef1234',
+        isEncrypted: true,
       });
 
       await auditService.initialize();
 
       expect(mockPrisma.systemConfig.create).not.toHaveBeenCalled();
+      expect(mockPrisma.systemConfig.update).not.toHaveBeenCalled();
     });
 
-    it('should throw error if salt is invalid', async () => {
+    it('should migrate legacy plaintext salt to encrypted storage (legacy branch)', async () => {
       mockPrisma.systemConfig.findUnique.mockResolvedValue({
         key: 'audit_encryption_salt',
-        value: 'short', // Less than 16 characters
+        value: 'legacy-plaintext-salt-999',
+        isEncrypted: false,
+      });
+      mockPrisma.systemConfig.update.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'master-encrypted:legacy-plaintext-salt-999',
+        isEncrypted: true,
+      });
+
+      await auditService.initialize();
+
+      expect(mockPrisma.systemConfig.create).not.toHaveBeenCalled();
+      expect(mockPrisma.systemConfig.update).toHaveBeenCalledWith({
+        where: { key: 'audit_encryption_salt' },
+        data: expect.objectContaining({
+          value: 'master-encrypted:legacy-plaintext-salt-999',
+          isEncrypted: true,
+        }),
+      });
+    });
+
+    it('should throw if decrypted salt is shorter than 16 chars', async () => {
+      mockPrisma.systemConfig.findUnique.mockResolvedValue({
+        key: 'audit_encryption_salt',
+        value: 'master-encrypted:short',
+        isEncrypted: true,
       });
 
       await expect(auditService.initialize()).rejects.toThrow('FATAL: Invalid audit encryption salt');
@@ -151,10 +199,7 @@ describe('AuditLogService', () => {
 
   describe('log()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
     });
 
@@ -192,10 +237,7 @@ describe('AuditLogService', () => {
 
   describe('logAccess()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
       mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
     });
@@ -231,10 +273,7 @@ describe('AuditLogService', () => {
 
   describe('logUpdate()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
       mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
     });
@@ -260,10 +299,7 @@ describe('AuditLogService', () => {
 
   describe('logDelete()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
       mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
     });
@@ -287,10 +323,7 @@ describe('AuditLogService', () => {
 
   describe('logAuth()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
       mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
     });
@@ -356,10 +389,7 @@ describe('AuditLogService', () => {
 
   describe('logExport()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
       mockPrisma.auditLog.create.mockResolvedValue({ id: 'log-1' });
     });
@@ -394,10 +424,7 @@ describe('AuditLogService', () => {
 
   describe('queryLogs()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
     });
 
@@ -462,10 +489,7 @@ describe('AuditLogService', () => {
 
   describe('cleanupOldLogs()', () => {
     beforeEach(async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'valid-salt-1234567890',
-      });
+      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
       await auditService.initialize();
     });
 
@@ -513,10 +537,7 @@ describe('Audit cleanup scheduler', () => {
 
   it('should start and stop cleanup scheduler', () => {
     const mockPrisma = createMockPrisma();
-    mockPrisma.systemConfig.findUnique.mockResolvedValue({
-      key: 'audit_encryption_salt',
-      value: 'valid-salt-1234567890',
-    });
+    mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
 
     startAuditCleanup(mockPrisma as unknown as Parameters<typeof startAuditCleanup>[0]);
     // Starting again should be idempotent
