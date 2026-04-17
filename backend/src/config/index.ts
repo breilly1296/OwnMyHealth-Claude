@@ -4,25 +4,45 @@ import path from 'path';
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
+/**
+ * Read a required environment variable. Throws immediately at module load
+ * if the value is missing or empty. Used for secrets that MUST NOT have
+ * fallbacks in any environment (dev, staging, preview, prod).
+ *
+ * Rationale: C-3 — prior to this change, JWT secrets had literal fallbacks
+ * like 'access-secret-change-in-production'. Production gates caught them
+ * only when NODE_ENV='production' was set explicitly. Staging / dev /
+ * preview deploys with NODE_ENV unset signed tokens with publicly-known
+ * repo strings.
+ */
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value || value.trim() === '') {
+    throw new Error(
+      `Missing required environment variable: ${key}. ` +
+      `This secret must be set in every environment (dev, staging, prod). ` +
+      `Generate with: openssl rand -base64 32`
+    );
+  }
+  return value;
+}
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
 
   // Security - JWT Configuration
-  // Note: expiresIn values are in seconds (number) for type compatibility with jsonwebtoken
+  // Note: expiresIn values are in seconds (number) for type compatibility with jsonwebtoken.
+  // accessSecret / refreshSecret go through requireEnv — no fallback in any environment.
   jwt: {
     // Access token - short lived (15 minutes = 900 seconds)
-    accessSecret: process.env.JWT_ACCESS_SECRET || 'access-secret-change-in-production',
+    accessSecret: requireEnv('JWT_ACCESS_SECRET'),
     accessExpiresIn: parseInt(process.env.JWT_ACCESS_EXPIRES_SECONDS || '900', 10),
 
     // Refresh token - longer lived (7 days = 604800 seconds)
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'refresh-secret-change-in-production',
+    refreshSecret: requireEnv('JWT_REFRESH_SECRET'),
     refreshExpiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_SECONDS || '604800', 10),
-
-    // Legacy support (15 minutes = 900 seconds)
-    secret: process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET || 'fallback-secret-change-in-production',
-    expiresIn: parseInt(process.env.JWT_EXPIRES_SECONDS || '900', 10),
   },
 
   // Cookie Configuration
@@ -102,11 +122,53 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
 } as const;
 
-// Validate critical configuration in production
+// Universal JWT-secret-quality checks — run in EVERY environment, not just prod.
+// The hardcoded-default strings no longer reach this code (the fallbacks were
+// removed in C-3 via requireEnv), but we still reject anyone who tries to set
+// them explicitly via a leaked .env.example. Length validation is also universal —
+// a short secret in dev is still a bad habit, and dev DBs often contain real-ish
+// PHI during testing.
+const BLOCKED_JWT_VALUES = new Set([
+  'access-secret-change-in-production',
+  'refresh-secret-change-in-production',
+  'fallback-secret-change-in-production',
+  'change-me',
+  'secret',
+  'jwt-secret',
+]);
+
+if (BLOCKED_JWT_VALUES.has(config.jwt.accessSecret)) {
+  throw new Error(
+    'JWT_ACCESS_SECRET is set to a known-weak placeholder value. ' +
+    'Generate a real secret with: openssl rand -base64 32'
+  );
+}
+if (BLOCKED_JWT_VALUES.has(config.jwt.refreshSecret)) {
+  throw new Error(
+    'JWT_REFRESH_SECRET is set to a known-weak placeholder value. ' +
+    'Generate a real secret with: openssl rand -base64 32'
+  );
+}
+
+const MIN_JWT_SECRET_LENGTH = 32;
+if (config.jwt.accessSecret.length < MIN_JWT_SECRET_LENGTH) {
+  throw new Error(
+    `JWT_ACCESS_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters. ` +
+    `Current length: ${config.jwt.accessSecret.length}. ` +
+    `Generate with: openssl rand -base64 32`
+  );
+}
+if (config.jwt.refreshSecret.length < MIN_JWT_SECRET_LENGTH) {
+  throw new Error(
+    `JWT_REFRESH_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters. ` +
+    `Current length: ${config.jwt.refreshSecret.length}. ` +
+    `Generate with: openssl rand -base64 32`
+  );
+}
+
+// Validate other critical configuration in production
 if (config.isProduction) {
   const requiredEnvVars = [
-    'JWT_ACCESS_SECRET',
-    'JWT_REFRESH_SECRET',
     'DATABASE_URL',
     'PHI_ENCRYPTION_KEY',
   ];
@@ -114,38 +176,6 @@ if (config.isProduction) {
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables for production: ${missing.join(', ')}`);
-  }
-
-  // Ensure secrets are changed from defaults
-  const defaultSecrets = [
-    'access-secret-change-in-production',
-    'refresh-secret-change-in-production',
-    'fallback-secret-change-in-production',
-  ];
-
-  if (defaultSecrets.includes(config.jwt.accessSecret)) {
-    throw new Error('JWT_ACCESS_SECRET must be changed in production');
-  }
-
-  if (defaultSecrets.includes(config.jwt.refreshSecret)) {
-    throw new Error('JWT_REFRESH_SECRET must be changed in production');
-  }
-
-  // Validate JWT secret minimum length (at least 32 characters for 256-bit security)
-  const MIN_JWT_SECRET_LENGTH = 32;
-
-  if (config.jwt.accessSecret.length < MIN_JWT_SECRET_LENGTH) {
-    throw new Error(
-      `JWT_ACCESS_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters. Current length: ${config.jwt.accessSecret.length}. ` +
-      `Generate with: openssl rand -base64 32`
-    );
-  }
-
-  if (config.jwt.refreshSecret.length < MIN_JWT_SECRET_LENGTH) {
-    throw new Error(
-      `JWT_REFRESH_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters. Current length: ${config.jwt.refreshSecret.length}. ` +
-      `Generate with: openssl rand -base64 32`
-    );
   }
 
   // Validate PHI_ENCRYPTION_KEY format and security
