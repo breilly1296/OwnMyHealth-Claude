@@ -329,8 +329,8 @@ export async function withRLSContext<T>(
       return fn(tx);
     },
     {
-      maxWait: options.maxWait ?? 5_000,
-      timeout: options.timeout ?? 15_000,
+      maxWait: options.maxWait ?? 20_000,
+      timeout: options.timeout ?? 30_000,
     }
   );
 }
