@@ -84,8 +84,6 @@ const INSECURE_KEYS = [
  * @returns Object with validation result and error message if invalid
  */
 export function validateEncryptionKey(key: string | undefined): { valid: boolean; error?: string } {
-  const isProduction = process.env.NODE_ENV === 'production';
-
   // Check if key is provided
   if (!key) {
     return {
@@ -111,11 +109,16 @@ export function validateEncryptionKey(key: string | undefined): { valid: boolean
     };
   }
 
-  // In production, check for known insecure/placeholder keys
-  if (isProduction && INSECURE_KEYS.includes(key.toLowerCase())) {
+  // Reject known insecure/placeholder keys in EVERY environment.
+  // Rationale: C-4 — `.env.example` historically shipped one of these values.
+  // A developer copying the template to `.env` without replacing the key
+  // would encrypt local PHI with a repo-readable value. The previous
+  // NODE_ENV='production' gate defeated the purpose in the exact
+  // environments (dev, staging, preview) most likely to use the template.
+  if (INSECURE_KEYS.includes(key.toLowerCase())) {
     return {
       valid: false,
-      error: 'PHI_ENCRYPTION_KEY appears to be a placeholder/insecure key. Generate a secure key with: openssl rand -hex 32',
+      error: 'PHI_ENCRYPTION_KEY is a known placeholder/insecure value. Generate a secure key with: openssl rand -hex 32',
     };
   }
 
