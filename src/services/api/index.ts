@@ -60,7 +60,7 @@ export type { AdminUser, SystemStats } from './admin';
 
 // Settings API
 export { settingsApi } from './settings';
-export type { ExportBiomarker, ExportInsurancePlan, UserExportData } from './settings';
+export type { ExportBiomarker, ExportInsurancePlan, UserExportData, NotificationPreferences, UserProfile } from './settings';
 
 // Files API
 export { filesApi } from './files';

@@ -131,6 +131,25 @@ export function demoProtection(
 }
 
 /**
+ * Middleware: Block demo users from modifying their own profile
+ *
+ * Apply to profile-mutation routes (e.g., PATCH /settings/profile,
+ * PATCH /settings/notifications) so demo state stays consistent across sessions.
+ */
+export function blockDemoProfileUpdate(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (isDemoAccount(req)) {
+    throw new ForbiddenError(
+      'Demo account cannot modify profile. Please create a real account.'
+    );
+  }
+  next();
+}
+
+/**
  * Middleware: Block demo users from AI features
  *
  * Prevents anonymous API cost generation via demo accounts.
