@@ -26,6 +26,7 @@ import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
 import { sanitizeForPrompt } from '../middleware/validation.js';
 import { trackAIUsage } from '../services/aiCostTracker.js';
+import { config } from '../config/index.js';
 
 /**
  * Anthropic client singleton — reuse across requests
@@ -291,6 +292,24 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     }
 
     const prisma = getPrismaClient();
+
+    // C-7 runtime gate — refuse to send anything to Claude unless the BAA flag
+    // is explicitly set. Matches claudeExtraction/sbcExtraction; graceful 503
+    // so the UI can show a user-facing message instead of a 500.
+    if (!config.anthropic.baaActive) {
+      const auditService = getAuditLogService(prisma);
+      await auditService.logAccess(RESOURCE_TYPE_ANALYSIS, planId, { req, userId }, {
+        operation: 'ANALYZE_BLOCKED_NO_BAA',
+      });
+      res.status(503).json({
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Cost analysis is disabled: ANTHROPIC_BAA_ACTIVE must be "true". See SECURITY_STATUS.md C-7.',
+        },
+      });
+      return;
+    }
+
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
@@ -467,8 +486,10 @@ interface PlanForAnalysis {
   oopMaxFamily: unknown;
   oopMetIndividual: unknown;
   coinsuranceRate: unknown;
-  planName: unknown;
-  insurerName: unknown;
+  // C-7 minimum-necessary: planName and insurerName are HIPAA insurance
+  // information and aren't needed to compute OOP projections. They are
+  // intentionally omitted from this type so the prompt builder cannot
+  // regress and interpolate them.
   planType: unknown;
   copayPrimaryCare: unknown;
   copaySpecialist: unknown;

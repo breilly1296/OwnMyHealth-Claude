@@ -22,15 +22,19 @@
 
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { validate, schemas } from '../middleware/validation.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { validate, schemas, sanitizeForPrompt } from '../middleware/validation.js';
+import { asyncHandler, NotFoundError } from '../middleware/errorHandler.js';
 import { bulkOperationLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
-import { getPrismaClient } from '../services/database.js';
+import { getPrismaClient, withRLSTransaction } from '../services/database.js';
+import { getEncryptionService } from '../services/encryption.js';
+import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
 import { trackAIUsage } from '../services/aiCostTracker.js';
+import { toNumber } from '../utils/numberConversion.js';
+import { config } from '../config/index.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -105,33 +109,93 @@ router.delete(
 // POST /api/v1/biomarkers/:id/guidance - Get AI-powered educational guidance
 // Uses Anthropic Claude API via fetch (no SDK) to provide educational health information
 // Rate limited to 10 AI requests/hour per user to control API costs
+//
+// C-7: BAA gate blocks the call unless ANTHROPIC_BAA_ACTIVE=true.
+// F-3: Biomarker data is loaded from the DB under RLS, not read from req.body,
+//      so one user cannot request another user's biomarker by guessing an id.
 router.post(
   '/:id/guidance',
   aiLimiter,
   blockDemoAI,
   validate(schemas.uuidParam, 'params'),
-  validate(schemas.biomarker.guidance),
   asyncHandler(async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user!.id;
+    const { id } = req.params;
+    const prisma = getPrismaClient();
+    const auditService = getAuditLogService(prisma);
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
-    if (!apiKey) {
-      logger.warn('ANTHROPIC_API_KEY not configured, AI guidance unavailable');
+    // C-7 BAA gate — refuse before any DB decryption or network call.
+    if (!apiKey || !config.anthropic.baaActive) {
+      logger.warn('Biomarker AI guidance blocked by BAA gate', {
+        data: { hasApiKey: !!apiKey, baaActive: config.anthropic.baaActive },
+      });
+      await auditService.logAccess('biomarker_ai_guidance', id, { req, userId }, {
+        operation: 'GUIDANCE_BLOCKED_NO_BAA',
+      });
       return res.status(503).json({
         success: false,
-        error: 'AI guidance service not configured',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'AI guidance is disabled: ANTHROPIC_BAA_ACTIVE must be "true". See SECURITY_STATUS.md C-7.',
+        },
       });
     }
 
-    const { biomarker } = req.body;
+    // F-3 IDOR fix — load the biomarker (and its recent history) under RLS
+    // and verify ownership. Null result is treated as 404 regardless of
+    // whether it doesn't exist or belongs to a different user, to avoid
+    // enumeration via timing/status.
+    const userSalt = await getUserEncryptionSalt(userId);
+    const encryption = getEncryptionService();
+
+    const { biomarker, historyRows } = await withRLSTransaction(userId, async (tx) => {
+      const biomarker = await tx.biomarker.findFirst({
+        where: { id, userId },
+      });
+      if (!biomarker) return { biomarker: null, historyRows: [] };
+      const historyRows = await tx.biomarkerHistory.findMany({
+        where: { biomarkerId: id },
+        orderBy: { measurementDate: 'desc' },
+        take: 3,
+      });
+      return { biomarker, historyRows };
+    });
+
+    if (!biomarker) {
+      await auditService.logAccess('biomarker_ai_guidance', id, { req, userId }, {
+        operation: 'GUIDANCE_NOT_FOUND',
+      });
+      throw new NotFoundError('Biomarker not found');
+    }
+
+    const decryptedValue = parseFloat(encryption.decrypt(biomarker.valueEncrypted, userSalt));
+    const normalMin = toNumber(biomarker.normalRangeMin);
+    const normalMax = toNumber(biomarker.normalRangeMax);
+    const status = biomarker.isOutOfRange ? 'out-of-range' : 'in-range';
+    const safeName = sanitizeForPrompt(biomarker.name);
+    const safeUnit = sanitizeForPrompt(biomarker.unit);
+
+    const decryptedHistory = historyRows.map((h) => ({
+      value: parseFloat(encryption.decrypt(h.valueEncrypted, userSalt)),
+      date: h.measurementDate.toISOString().split('T')[0],
+    }));
+
+    const historyLine =
+      decryptedHistory.length > 0
+        ? `History: ${decryptedHistory.map((h) => `${h.value} (${h.date})`).join(', ')}`
+        : '';
 
     const prompt = `You are a health education assistant. Be concise and specific.
 
 <biomarker_data>
-Name: ${biomarker.name}
-Value: ${biomarker.value} ${biomarker.unit}
-Reference Range: ${biomarker.normalRange?.min ?? '?'}-${biomarker.normalRange?.max ?? '?'}
-Status: ${biomarker.status}
-${biomarker.history?.length > 1 ? `History: ${biomarker.history.slice(0, 3).map((h: { value: number; date: string }) => `${h.value} (${h.date})`).join(', ')}` : ''}
+Name: ${safeName}
+Value: ${decryptedValue} ${safeUnit}
+Reference Range: ${Number.isFinite(normalMin) ? normalMin : '?'}-${Number.isFinite(normalMax) ? normalMax : '?'}
+Status: ${status}
+${historyLine}
 </biomarker_data>
 
 Respond with these sections (use exact headers):
@@ -186,22 +250,18 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
       const guidance = data.content?.[0]?.text || 'Unable to generate guidance';
 
       // Track AI usage for cost monitoring
-      const authReqForCost = req as AuthenticatedRequest;
       if (data.usage) {
         trackAIUsage({
           endpoint: 'biomarker-guidance',
           model: data.model || 'claude-haiku-4-5-20251001',
           inputTokens: data.usage.input_tokens,
           outputTokens: data.usage.output_tokens,
-          userId: authReqForCost.user!.id,
+          userId,
         });
       }
 
       // Audit log: PHI disclosed to external AI API for guidance
-      const prisma = getPrismaClient();
-      const auditService = getAuditLogService(prisma);
-      const authReq = req as AuthenticatedRequest;
-      await auditService.logAccess('biomarker_ai_guidance', req.params.id, { req, userId: authReq.user!.id }, {
+      await auditService.logAccess('biomarker_ai_guidance', id, { req, userId }, {
         operation: 'PHI_ACCESS',
         externalApiCall: true,
         provider: 'anthropic',
