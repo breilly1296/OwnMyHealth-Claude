@@ -10,6 +10,7 @@
 
 import { Router, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { blockDemoAdminAccess } from '../middleware/demoProtection.js';
 import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError, ForbiddenError, BadRequestError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
@@ -22,8 +23,11 @@ import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 
 const router = Router();
 
-// All routes require authentication and ADMIN role
+// All routes require authentication and ADMIN role.
+// blockDemoAdminAccess runs between auth and RBAC so demo accounts are rejected
+// before any role check, even if a demo user's role were ever elevated (F-5).
 router.use(authenticate);
+router.use(blockDemoAdminAccess);
 router.use(requireRole('ADMIN'));
 
 // ============================================

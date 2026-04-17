@@ -18,6 +18,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
+import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
 import { withRLSContext } from './database.js';
 import { logger } from '../utils/logger.js';
 import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
@@ -172,6 +173,7 @@ export function generateAccessToken(user: User): string {
   };
 
   return jwt.sign(payload, config.jwt.accessSecret, {
+    ...JWT_SIGN_OPTIONS,
     expiresIn: config.jwt.accessExpiresIn,
   });
 }
@@ -218,6 +220,7 @@ export async function generateRefreshToken(user: User, metadata?: SessionMetadat
   };
 
   const token = jwt.sign(payload, config.jwt.refreshSecret, {
+    ...JWT_SIGN_OPTIONS,
     expiresIn: tokenExpiry,
   });
 
@@ -260,7 +263,7 @@ export function verifyAccessToken(token: string): TokenPayload | null {
       return null;
     }
 
-    const payload = jwt.verify(token, config.jwt.accessSecret) as TokenPayload;
+    const payload = jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as TokenPayload;
 
     if (payload.type !== 'access') {
       return null;
@@ -277,7 +280,7 @@ export function verifyAccessToken(token: string): TokenPayload | null {
  */
 export async function verifyRefreshToken(token: string): Promise<(TokenPayload & { jti: string }) | null> {
   try {
-    const payload = jwt.verify(token, config.jwt.refreshSecret) as TokenPayload & { jti: string };
+    const payload = jwt.verify(token, config.jwt.refreshSecret, JWT_VERIFY_OPTIONS) as TokenPayload & { jti: string };
 
     if (payload.type !== 'refresh') {
       return null;

@@ -55,18 +55,14 @@ function getAuditService() {
 // ============================================
 
 /**
- * Extract session metadata from request (IP address and user agent)
+ * Extract session metadata from request (IP address and user agent).
+ * Uses req.ip, which respects app.set('trust proxy') — prevents X-Forwarded-For
+ * header spoofing of session IP addresses.
  */
-function getSessionMetadata(req: Request): SessionMetadata {
-  // Get IP address - handle proxies
-  const forwarded = req.headers['x-forwarded-for'];
-  const ipAddress = typeof forwarded === 'string'
-    ? forwarded.split(',')[0].trim()
-    : req.socket.remoteAddress || req.ip;
-
+export function getSessionMetadata(req: Request): SessionMetadata {
   return {
-    ipAddress: ipAddress?.substring(0, 45), // Limit to 45 chars (IPv6 max)
-    userAgent: req.headers['user-agent']?.substring(0, 500), // Limit user agent length
+    ipAddress: req.ip?.substring(0, 45),
+    userAgent: req.get('user-agent')?.substring(0, 500),
   };
 }
 

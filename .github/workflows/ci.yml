@@ -26,7 +26,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run linter
         run: npm run lint
@@ -65,7 +65,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run linter
         run: npm run lint
@@ -104,9 +104,7 @@ jobs:
 
       - name: Audit frontend dependencies
         run: npm audit --audit-level=high
-        continue-on-error: true
 
       - name: Audit backend dependencies
         run: npm audit --audit-level=high
         working-directory: backend
-        continue-on-error: true
