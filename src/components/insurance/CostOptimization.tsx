@@ -7,7 +7,7 @@
  * - Get AI-powered cost analysis and optimization recommendations
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DollarSign,
   Plus,
@@ -19,7 +19,21 @@ import {
   AlertCircle,
   Calendar,
   CheckCircle,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  type LucideIcon,
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ReferenceLine,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
 import {
   expensesApi,
   ExpenseProjectionData,
@@ -28,6 +42,68 @@ import {
 } from '../../services/api';
 import ExpenseProjectionModal from './ExpenseProjectionModal';
 import DeductibleProgressBar from './DeductibleProgressBar';
+
+// ---------- Helpers: timeline + AI section parsing ----------
+
+interface TimelinePoint {
+  month: string;
+  projected: number;
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function buildTimeline(projections: ExpenseProjectionData[]): TimelinePoint[] {
+  const totalAnnual = projections.reduce(
+    (sum, p) => sum + p.estimatedCost * p.frequencyPerYear,
+    0
+  );
+  const perMonth = totalAnnual / 12;
+  return MONTH_LABELS.map((month, idx) => ({
+    month,
+    projected: Math.round(perMonth * (idx + 1)),
+  }));
+}
+
+interface AnalysisSection {
+  title: string;
+  content: string;
+  Icon: LucideIcon;
+}
+
+const SECTION_ICONS: Array<{ match: RegExp; Icon: LucideIcon }> = [
+  { match: /out[-\s]?of[-\s]?pocket|oop|projection/i, Icon: DollarSign },
+  { match: /timeline|milestone/i, Icon: Calendar },
+  { match: /strategic|timing|schedule/i, Icon: Clock },
+  { match: /optimization|tip|saving/i, Icon: Sparkles },
+  { match: /action|next step|to[-\s]?do/i, Icon: CheckCircle },
+];
+
+function iconFor(title: string): LucideIcon {
+  for (const { match, Icon } of SECTION_ICONS) {
+    if (match.test(title)) return Icon;
+  }
+  return Sparkles;
+}
+
+/**
+ * Split a Claude analysis response into `### N. Title` sections. Returns
+ * an empty array when no numbered headings are found — callers fall back
+ * to rendering the raw markdown.
+ */
+function parseAnalysisSections(markdown: string): AnalysisSection[] {
+  if (!markdown) return [];
+  // Match at line start: "### 1. Title" (allow optional ** wrapping).
+  const pattern = /(?:^|\n)#{2,3}\s*\d+\.\s*\**(.+?)\**\s*\n([\s\S]*?)(?=\n#{2,3}\s*\d+\.|\n?$)/g;
+  const sections: AnalysisSection[] = [];
+  for (const match of markdown.matchAll(pattern)) {
+    const title = match[1].trim();
+    const content = match[2].trim();
+    if (title && content) {
+      sections.push({ title, content, Icon: iconFor(title) });
+    }
+  }
+  return sections;
+}
 
 interface CostOptimizationProps {
   plan: InsurancePlanData;
@@ -175,6 +251,9 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
     0
   );
 
+  const timeline = useMemo(() => buildTimeline(projections || []), [projections]);
+  const hasProjectionData = totalProjectedAnnual > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -209,6 +288,101 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
           <p className="text-sm text-green-800 dark:text-green-200">{successMessage}</p>
         </div>
       )}
+
+      {/* Spending Timeline */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Spending Timeline</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+              Projected cumulative spend over the plan year
+            </p>
+          </div>
+        </div>
+        {hasProjectionData ? (
+          <>
+            <div style={{ height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeline} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="projectedFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-slate-700" opacity={0.35} />
+                  <XAxis
+                    dataKey="month"
+                    stroke="currentColor"
+                    className="text-gray-500 dark:text-slate-400"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="currentColor"
+                    className="text-gray-500 dark:text-slate-400"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                  />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: '1px solid rgba(148,163,184,0.3)',
+                      fontSize: 12,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="projected"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    fill="url(#projectedFill)"
+                    name="Projected"
+                  />
+                  {plan.deductibleIndividual > 0 && (
+                    <ReferenceLine
+                      y={plan.deductibleIndividual}
+                      stroke="#f59e0b"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: `Deductible ${formatCurrency(plan.deductibleIndividual)}`,
+                        position: 'insideTopLeft',
+                        fill: '#f59e0b',
+                        fontSize: 10,
+                      }}
+                    />
+                  )}
+                  {plan.oopMaxIndividual > 0 && (
+                    <ReferenceLine
+                      y={plan.oopMaxIndividual}
+                      stroke="#ef4444"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: `OOP max ${formatCurrency(plan.oopMaxIndividual)}`,
+                        position: 'insideTopLeft',
+                        fill: '#ef4444',
+                        fontSize: 10,
+                      }}
+                    />
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-xs text-center text-gray-500 dark:text-slate-500 mt-2">
+              Add expense actuals to see your real spending trend.
+            </p>
+          </>
+        ) : (
+          <div className="text-center py-8 text-sm text-gray-500 dark:text-slate-400">
+            Add an expense projection to see a projected spending timeline.
+          </div>
+        )}
+      </div>
 
       {/* Deductible & OOP Progress */}
       <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
@@ -399,11 +573,7 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
                   </button>
                   {expandedAnalysisId === analysis.id && (
                     <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <div className="whitespace-pre-wrap text-gray-700 dark:text-slate-300">
-                          {analysis.claudeResponse}
-                        </div>
-                      </div>
+                      <AnalysisBody markdown={analysis.claudeResponse} />
                     </div>
                   )}
                 </div>
@@ -421,6 +591,73 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
         planId={plan.id}
         projection={editingProjection}
       />
+    </div>
+  );
+}
+
+// ---------- Analysis rendering ----------
+
+/**
+ * Renders a Claude cost analysis response as collapsible sections.
+ * Falls back to the original whitespace-pre-wrap rendering when the
+ * response doesn't use numbered `### N.` headers (older format).
+ */
+function AnalysisBody({ markdown }: { markdown: string }) {
+  const sections = useMemo(() => parseAnalysisSections(markdown), [markdown]);
+  // First two sections expanded by default.
+  const [openIds, setOpenIds] = useState<Set<number>>(() => new Set([0, 1]));
+
+  if (sections.length === 0) {
+    return (
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="whitespace-pre-wrap text-gray-700 dark:text-slate-300">{markdown}</div>
+      </div>
+    );
+  }
+
+  const toggle = (idx: number) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      {sections.map((section, idx) => {
+        const isOpen = openIds.has(idx);
+        const Icon = section.Icon;
+        return (
+          <div
+            key={idx}
+            className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden"
+          >
+            <button
+              onClick={() => toggle(idx)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-slate-700/50 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Icon className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {section.title}
+                </span>
+              </div>
+              {isOpen ? (
+                <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              )}
+            </button>
+            {isOpen && (
+              <div className="px-4 py-3 whitespace-pre-wrap text-sm text-gray-700 dark:text-slate-300">
+                {section.content}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
