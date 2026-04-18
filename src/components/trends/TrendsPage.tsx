@@ -312,7 +312,6 @@ export default function TrendsPage({ biomarkers }: TrendsPageProps) {
           isOpen={!!selectedBiomarker}
           onClose={() => setSelectedBiomarker(null)}
           biomarker={selectedBiomarker}
-          allBiomarkers={biomarkers}
         />
       )}
     </div>

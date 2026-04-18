@@ -36,6 +36,7 @@ import { settingsApi } from '../../services/api';
 import type { NotificationPreferences } from '../../services/api/settings';
 import ChangePasswordModal from './ChangePasswordModal';
 import HealthProfileSection from './HealthProfileSection';
+import LabConnectionsSection from './LabConnectionsSection';
 
 const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   emailNotifications: true,
@@ -178,11 +179,16 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
   };
 
   const handleDeleteData = async () => {
+    if (!deletePassword) {
+      setDeleteError('Please enter your password');
+      return;
+    }
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await settingsApi.deleteAllData();
+      await settingsApi.deleteAllData(deletePassword);
       setDeleteType(null);
+      setDeletePassword('');
       setToast({ message: 'All health data deleted', type: 'success' });
       // Redirect to dashboard after showing toast
       setTimeout(() => {
@@ -535,29 +541,27 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
                 </div>
               )}
 
-              {deleteType === 'account' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Enter your password to confirm
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showDeletePassword ? 'text' : 'password'}
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      placeholder="Your password"
-                      className="w-full px-4 py-2.5 pr-10 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowDeletePassword(!showDeletePassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      {showDeletePassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Enter your password to confirm
+                </label>
+                <div className="relative">
+                  <input
+                    type={showDeletePassword ? 'text' : 'password'}
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Your password"
+                    className="w-full px-4 py-2.5 pr-10 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDeletePassword(!showDeletePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showDeletePassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
-              )}
+              </div>
 
               <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
                 <button

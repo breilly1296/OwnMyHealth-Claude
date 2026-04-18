@@ -51,8 +51,9 @@ export default function ResetPasswordPage({
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
-    if (!hasUppercase || !hasLowercase || !hasNumber) {
-      setError('Password must contain uppercase, lowercase, and a number');
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+      setError('Password must contain uppercase, lowercase, number, and special character');
       return;
     }
 
@@ -166,7 +167,7 @@ export default function ResetPasswordPage({
                   </button>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  At least 12 characters with uppercase, lowercase, and number
+                  At least 12 characters with uppercase, lowercase, number, and special character
                 </p>
               </div>
 

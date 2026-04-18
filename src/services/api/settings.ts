@@ -4,6 +4,11 @@
 
 import { apiFetch } from './client';
 
+export interface ExportBiomarkerHistoryEntry {
+  value: number;
+  date: string;
+}
+
 export interface ExportBiomarker {
   name: string;
   standardName: string;
@@ -18,6 +23,8 @@ export interface ExportBiomarker {
     source?: string;
   };
   source: string;
+  notes?: string;
+  history: ExportBiomarkerHistoryEntry[];
 }
 
 export interface ExportInsurancePlan {
@@ -32,21 +39,132 @@ export interface ExportInsurancePlan {
   deductibleFamily: number;
   oopMaxIndividual: number;
   oopMaxFamily: number;
+  memberId?: string;
+  groupId?: string;
+}
+
+export interface ExportHealthGoal {
+  name: string;
+  description?: string;
+  category: string;
+  targetValue: number;
+  currentValue?: number;
+  startValue?: number;
+  unit: string;
+  direction: string;
+  startDate: string;
+  targetDate: string;
+  status: string;
+  progress: number;
+  milestones?: string;
+  reminderFrequency?: string;
+  progressHistory: Array<{
+    value: number;
+    progress: number;
+    note?: string;
+    recordedAt: string;
+  }>;
+}
+
+export interface ExportHealthNeed {
+  name: string;
+  needType: string;
+  description: string;
+  urgency: string;
+  status: string;
+  relatedBiomarkerIds: string[];
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface ExportExpenseProjection {
+  serviceType: string;
+  estimatedCost: number | null;
+  frequencyPerYear: number;
+  isInNetwork: boolean;
+  notes?: string;
+  planId: string;
+}
+
+export interface ExportExpenseActual {
+  serviceType: string;
+  providerName?: string;
+  billedAmount: number | null;
+  insurancePaid: number | null;
+  patientPaid: number | null;
+  appliedToDeductible: number | null;
+  appliedToOop: number | null;
+  dateOfService?: string;
+  isInNetwork: boolean | null;
+  claimStatus: string;
+  notes?: string;
+}
+
+export interface ExportCostAnalysis {
+  claudeResponse: string;
+  totalProjectedOop: number | null;
+  analysisDate: string;
+}
+
+export interface ExportUserFile {
+  originalFilename: string;
+  fileType: string;
+  fileSize: number;
+  labName?: string;
+  labDate?: string;
+  biomarkersExtracted: number;
+  createdAt: string;
+}
+
+export interface ExportProviderRelationship {
+  relationshipType: string;
+  status: string;
+  role: 'patient' | 'provider';
+  canViewBiomarkers: boolean;
+  canViewInsurance: boolean;
+  canViewDna: boolean;
+  canViewHealthNeeds: boolean;
+  canEditData: boolean;
+  consentGrantedAt?: string;
+  consentExpiresAt?: string;
+  notes?: string;
 }
 
 export interface UserExportData {
   exportDate: string;
   user: {
     email: string;
+    role: string;
     createdAt: string;
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    phone?: string;
+    address?: string;
   };
   biomarkers: ExportBiomarker[];
   insurancePlans: ExportInsurancePlan[];
+  healthGoals: ExportHealthGoal[];
+  healthNeeds: ExportHealthNeed[];
+  expenseProjections: ExportExpenseProjection[];
+  expenseActuals: ExportExpenseActual[];
+  costAnalyses: ExportCostAnalysis[];
+  files: ExportUserFile[];
+  providerRelationships: ExportProviderRelationship[];
+  filesNote: string;
   summary: {
     totalBiomarkers: number;
     byCategory: Record<string, number>;
     abnormalCount: number;
     normalCount: number;
+    totalInsurancePlans: number;
+    totalHealthGoals: number;
+    totalHealthNeeds: number;
+    totalExpenseProjections: number;
+    totalExpenseActuals: number;
+    totalCostAnalyses: number;
+    totalFiles: number;
+    totalProviderRelationships: number;
   };
 }
 
@@ -153,8 +271,11 @@ export const settingsApi = {
     return response.data;
   },
 
-  async deleteAllData(): Promise<void> {
-    await apiFetch('/settings/delete-data', { method: 'DELETE' });
+  async deleteAllData(password: string): Promise<void> {
+    await apiFetch('/settings/delete-data', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
   },
 
   async deleteAccount(password: string): Promise<void> {

@@ -27,8 +27,6 @@ interface TrendDetailModalProps {
   onClose: () => void;
   /** The biomarker to display trends for */
   biomarker: Biomarker;
-  /** All biomarkers for context (used by AI guidance) */
-  allBiomarkers?: Biomarker[];
 }
 
 interface TrendStats {
@@ -41,7 +39,7 @@ interface TrendStats {
   isImproving: boolean | null;
 }
 
-export default function TrendDetailModal({ isOpen, onClose, biomarker, allBiomarkers = [] }: TrendDetailModalProps) {
+export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDetailModalProps) {
   // Calculate comprehensive statistics
   const stats = useMemo<TrendStats>(() => {
     const history = biomarker.history || [];
@@ -269,7 +267,7 @@ export default function TrendDetailModal({ isOpen, onClose, biomarker, allBiomar
 
           {/* AI Guidance Section */}
           <div className="px-4 md:px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-            <BiomarkerAIGuidance biomarker={biomarker} allBiomarkers={allBiomarkers} />
+            <BiomarkerAIGuidance biomarker={biomarker} />
           </div>
 
           {/* History Table */}

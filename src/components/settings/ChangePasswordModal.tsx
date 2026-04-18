@@ -36,8 +36,8 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   };
 
   const validatePassword = (password: string): string | null => {
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+    if (password.length < 12) {
+      return 'Password must be at least 12 characters';
     }
     if (!/[A-Z]/.test(password)) {
       return 'Password must contain at least one uppercase letter';
@@ -47,6 +47,9 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     }
     if (!/[0-9]/.test(password)) {
       return 'Password must contain at least one number';
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return 'Password must contain at least one special character';
     }
     return null;
   };
@@ -175,7 +178,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Minimum 8 characters with uppercase, lowercase, and number
+                  Minimum 12 characters with uppercase, lowercase, number, and special character
                 </p>
               </div>
 

@@ -123,6 +123,24 @@ export const config = {
     baaActive: process.env.ANTHROPIC_BAA_ACTIVE === 'true',
   },
 
+  // Quest Diagnostics SMART on FHIR integration.
+  // Credentials are optional — the feature is disabled unless clientId is set.
+  // In development without sandbox credentials, set QUEST_FHIR_BASE_URL to the
+  // mock server path (e.g. http://localhost:3001/api/v1/mock-fhir/r4) to
+  // exercise the full flow locally.
+  quest: {
+    clientId: process.env.QUEST_FHIR_CLIENT_ID || '',
+    clientSecret: process.env.QUEST_FHIR_CLIENT_SECRET || '',
+    fhirBaseUrl:
+      process.env.QUEST_FHIR_BASE_URL || 'https://api.questdiagnostics.com/fhir/r4',
+    redirectUri:
+      process.env.QUEST_FHIR_REDIRECT_URI ||
+      'https://api.ownmyhealth.io/api/v1/fhir/callback',
+    frontendSuccessRedirect:
+      process.env.QUEST_FHIR_SUCCESS_REDIRECT ||
+      'http://localhost:5173/settings?labConnected=quest',
+  },
+
   // API Versioning
   apiVersion: 'v1',
 

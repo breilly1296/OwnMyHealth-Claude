@@ -1,0 +1,499 @@
+/**
+ * Lab Sync Service — pulls lab results from a FHIR server and imports
+ * them into the user's biomarker list.
+ *
+ * Flow per sync:
+ *  1. Load LabConnection, decrypt tokens
+ *  2. Refresh access token if expired
+ *  3. Query Observations (category=laboratory) since lastSyncAt
+ *  4. Map LOINC code → OwnMyHealth biomarker, fall back to FHIR display
+ *     name + category 'Other' for unmapped codes
+ *  5. Dedupe against existing biomarkers by (name, measurementDate, value)
+ *  6. Encrypt values + create biomarkers
+ *  7. Update LabConnection.lastSyncAt + counts
+ *
+ * All PHI (observation values) is encrypted in flight through the same
+ * per-user encryption pipeline as manual entry.
+ */
+
+import { withRLSContext, withRLSTransaction } from '../database.js';
+import { getEncryptionService } from '../encryption.js';
+import { getUserEncryptionSalt } from '../userEncryption.js';
+import { getAuditLogService, type AuditMetadata } from '../auditLog.js';
+import { getPrismaClient } from '../database.js';
+import { config } from '../../config/index.js';
+import { logger } from '../../utils/logger.js';
+import {
+  discoverEndpoints,
+  exchangeCodeForToken,
+  refreshAccessToken,
+  stashChallenge,
+  consumeChallenge,
+  generatePKCE,
+  buildAuthorizationUrl,
+  revokeToken,
+  type SMARTConfig,
+  type TokenSet,
+} from './smartAuth.js';
+import { FHIRClient } from './fhirClient.js';
+import { findLOINCMapping, extractLOINCCoding } from './loincMapper.js';
+import type { FHIRObservation } from './types.js';
+
+export interface SyncResult {
+  imported: number;
+  skipped: number;
+  unmappedCodes: string[];
+  errors: string[];
+}
+
+const RESOURCE_TYPE = 'LabConnection';
+
+// ============================================
+// Provider config
+// ============================================
+
+function questSMARTConfig(): SMARTConfig {
+  if (!config.quest.clientId) {
+    throw new Error('Quest FHIR integration is not configured: QUEST_FHIR_CLIENT_ID missing');
+  }
+  return {
+    clientId: config.quest.clientId,
+    clientSecret: config.quest.clientSecret || undefined,
+    redirectUri: config.quest.redirectUri,
+    fhirBaseUrl: config.quest.fhirBaseUrl,
+    scopes: [
+      'launch/patient',
+      'patient/Observation.read',
+      'patient/DiagnosticReport.read',
+      'patient/Patient.read',
+      'offline_access',
+    ],
+  };
+}
+
+function smartConfigForProvider(provider: string): SMARTConfig {
+  if (provider === 'quest') return questSMARTConfig();
+  throw new Error(`Unknown lab provider: ${provider}`);
+}
+
+async function resolveEndpoints(smart: SMARTConfig): Promise<SMARTConfig> {
+  if (smart.authorizeUrl && smart.tokenUrl) return smart;
+  const { authorizeUrl, tokenUrl } = await discoverEndpoints(smart.fhirBaseUrl);
+  return { ...smart, authorizeUrl, tokenUrl };
+}
+
+// ============================================
+// Connect flow (OAuth initiation)
+// ============================================
+
+/**
+ * Build an authorize URL the frontend should redirect the user to.
+ * Stashes the PKCE verifier keyed by state so the callback can
+ * complete the exchange.
+ */
+export async function buildConnectRedirect(
+  userId: string,
+  provider: string
+): Promise<string> {
+  const smart = await resolveEndpoints(smartConfigForProvider(provider));
+  const challenge = generatePKCE();
+  stashChallenge(challenge.state, challenge.codeVerifier, userId);
+  return buildAuthorizationUrl(smart, challenge);
+}
+
+export interface CallbackResult {
+  userId: string;
+  provider: string;
+  tokenSet: TokenSet;
+}
+
+/**
+ * Handle the OAuth callback — consume the PKCE verifier, exchange the
+ * code for tokens, and return both the tokens and the userId that
+ * started the flow. Caller is responsible for persisting the
+ * LabConnection.
+ */
+export async function handleOAuthCallback(
+  provider: string,
+  code: string,
+  state: string
+): Promise<CallbackResult> {
+  const stashed = consumeChallenge(state);
+  if (!stashed) {
+    throw new Error('Invalid or expired OAuth state — please retry the connection');
+  }
+  const smart = await resolveEndpoints(smartConfigForProvider(provider));
+  const tokenSet = await exchangeCodeForToken(smart, code, stashed.codeVerifier);
+  return { userId: stashed.userId, provider, tokenSet };
+}
+
+/**
+ * Persist the LabConnection with encrypted tokens. Used after a
+ * successful callback exchange.
+ */
+export async function persistConnection(
+  userId: string,
+  provider: string,
+  tokenSet: TokenSet
+): Promise<void> {
+  const encryption = getEncryptionService();
+  const salt = await getUserEncryptionSalt(userId);
+  const accessEnc = encryption.encrypt(tokenSet.accessToken, salt);
+  const refreshEnc = tokenSet.refreshToken ? encryption.encrypt(tokenSet.refreshToken, salt) : null;
+
+  await withRLSContext(userId, async (tx) => {
+    await tx.labConnection.upsert({
+      where: { userId_provider: { userId, provider } },
+      create: {
+        userId,
+        provider,
+        fhirPatientId: tokenSet.patientId,
+        accessTokenEncrypted: accessEnc,
+        refreshTokenEncrypted: refreshEnc,
+        tokenExpiresAt: tokenSet.expiresAt,
+        scopeGranted: tokenSet.scope,
+        syncStatus: 'idle',
+        isActive: true,
+      },
+      update: {
+        fhirPatientId: tokenSet.patientId,
+        accessTokenEncrypted: accessEnc,
+        refreshTokenEncrypted: refreshEnc,
+        tokenExpiresAt: tokenSet.expiresAt,
+        scopeGranted: tokenSet.scope,
+        syncStatus: 'idle',
+        syncError: null,
+        isActive: true,
+      },
+    });
+  });
+
+  const auditService = getAuditLogService(getPrismaClient());
+  await auditService.logAccess(RESOURCE_TYPE, undefined, { userId }, {
+    operation: 'CONNECT',
+    externalApiCall: true,
+    provider,
+  });
+}
+
+// ============================================
+// Sync
+// ============================================
+
+export async function syncLabResults(
+  userId: string,
+  provider: string
+): Promise<SyncResult> {
+  const prisma = getPrismaClient();
+  const auditService = getAuditLogService(prisma);
+  const errors: string[] = [];
+  const unmappedCodes: string[] = [];
+
+  // Fetch connection + mark syncing
+  const connection = await withRLSContext(userId, async (tx) => {
+    return tx.labConnection.findUnique({
+      where: { userId_provider: { userId, provider } },
+    });
+  });
+  if (!connection || !connection.isActive) {
+    throw new Error('Lab connection not found or inactive');
+  }
+
+  await withRLSContext(userId, async (tx) => {
+    await tx.labConnection.update({
+      where: { id: connection.id },
+      data: { syncStatus: 'syncing', syncError: null },
+    });
+  });
+
+  try {
+    const encryption = getEncryptionService();
+    const salt = await getUserEncryptionSalt(userId);
+    const accessTokenPlain = encryption.decrypt(connection.accessTokenEncrypted, salt);
+    const refreshTokenPlain = connection.refreshTokenEncrypted
+      ? encryption.decrypt(connection.refreshTokenEncrypted, salt)
+      : null;
+
+    // Refresh if expired
+    let effectiveAccessToken = accessTokenPlain;
+    const smartBase = smartConfigForProvider(provider);
+    if (
+      connection.tokenExpiresAt &&
+      connection.tokenExpiresAt.getTime() < Date.now() + 60_000
+    ) {
+      if (!refreshTokenPlain) {
+        throw new Error('Access token expired and no refresh token available');
+      }
+      const smart = await resolveEndpoints(smartBase);
+      const refreshed = await refreshAccessToken(smart, refreshTokenPlain);
+      const newAccessEnc = encryption.encrypt(refreshed.accessToken, salt);
+      const newRefreshEnc = refreshed.refreshToken
+        ? encryption.encrypt(refreshed.refreshToken, salt)
+        : connection.refreshTokenEncrypted;
+      await withRLSContext(userId, async (tx) => {
+        await tx.labConnection.update({
+          where: { id: connection.id },
+          data: {
+            accessTokenEncrypted: newAccessEnc,
+            refreshTokenEncrypted: newRefreshEnc,
+            tokenExpiresAt: refreshed.expiresAt,
+          },
+        });
+      });
+      effectiveAccessToken = refreshed.accessToken;
+    }
+
+    if (!connection.fhirPatientId) {
+      throw new Error('Connection has no FHIR patient ID');
+    }
+
+    const client = new FHIRClient(smartBase.fhirBaseUrl, effectiveAccessToken);
+    const dateFrom = connection.lastSyncAt
+      ? connection.lastSyncAt.toISOString().split('T')[0]
+      : undefined;
+    const observations = await client.getLabResults(connection.fhirPatientId, { dateFrom });
+
+    // Pre-fetch existing biomarkers once for in-memory dedupe.
+    const existing = await withRLSContext(userId, async (tx) => {
+      return tx.biomarker.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          name: true,
+          measurementDate: true,
+          valueEncrypted: true,
+        },
+      });
+    });
+    const existingKeys = new Set<string>();
+    for (const b of existing) {
+      try {
+        const v = encryption.decrypt(b.valueEncrypted, salt);
+        existingKeys.add(dedupeKey(b.name, b.measurementDate, v));
+      } catch {
+        // skip undecryptable rows — dedupe will err on the side of importing
+      }
+    }
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (const obs of observations) {
+      try {
+        const row = mapObservation(obs);
+        if (!row) {
+          // Can't derive a value — skip (qualitative results etc. not yet supported).
+          skipped++;
+          continue;
+        }
+        if (row.unmapped && !unmappedCodes.includes(row.loincCode)) {
+          unmappedCodes.push(row.loincCode);
+        }
+        const key = dedupeKey(row.name, row.measurementDate, String(row.value));
+        if (existingKeys.has(key)) {
+          skipped++;
+          continue;
+        }
+
+        const valueEncrypted = encryption.encrypt(String(row.value), salt);
+        const isOutOfRange =
+          (row.normalRangeMin !== null && row.value < row.normalRangeMin) ||
+          (row.normalRangeMax !== null && row.value > row.normalRangeMax);
+
+        await withRLSTransaction(userId, async (tx) => {
+          await tx.biomarker.create({
+            data: {
+              userId,
+              category: row.category,
+              name: row.name,
+              unit: row.unit,
+              valueEncrypted,
+              normalRangeMin: row.normalRangeMin ?? 0,
+              normalRangeMax: row.normalRangeMax ?? 0,
+              normalRangeSource: `${provider.toUpperCase()} FHIR`,
+              measurementDate: row.measurementDate,
+              sourceType: 'API_IMPORT',
+              sourceFile: `fhir:${provider}:${obs.id}`,
+              isOutOfRange,
+              isAcknowledged: false,
+            },
+          });
+        });
+        existingKeys.add(key);
+        imported++;
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message.slice(0, 200) : 'unknown');
+        skipped++;
+      }
+    }
+
+    await withRLSContext(userId, async (tx) => {
+      await tx.labConnection.update({
+        where: { id: connection.id },
+        data: {
+          syncStatus: 'idle',
+          syncError: null,
+          lastSyncAt: new Date(),
+          lastImportedCount: imported,
+        },
+      });
+    });
+
+    const auditMeta: AuditMetadata = {
+      operation: 'SYNC',
+      externalApiCall: true,
+      provider,
+      imported,
+      skipped,
+      unmappedCount: unmappedCodes.length,
+    };
+    await auditService.logAccess(RESOURCE_TYPE, undefined, { userId }, auditMeta);
+
+    if (unmappedCodes.length > 0) {
+      logger.info('FHIR sync encountered unmapped LOINC codes', {
+        prefix: 'LabSync',
+        data: { userId, provider, unmappedCodes },
+      });
+    }
+
+    return { imported, skipped, unmappedCodes, errors };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown error';
+    await withRLSContext(userId, async (tx) => {
+      await tx.labConnection.update({
+        where: { id: connection.id },
+        data: { syncStatus: 'error', syncError: msg.slice(0, 500) },
+      });
+    });
+    await auditService.logAccess(RESOURCE_TYPE, undefined, { userId }, {
+      operation: 'SYNC_FAILED',
+      externalApiCall: true,
+      provider,
+      error: msg.slice(0, 200),
+    });
+    throw err;
+  }
+}
+
+// ============================================
+// Disconnect
+// ============================================
+
+export async function disconnectConnection(
+  userId: string,
+  connectionId: string
+): Promise<void> {
+  const prisma = getPrismaClient();
+  const auditService = getAuditLogService(prisma);
+
+  const connection = await withRLSContext(userId, async (tx) => {
+    return tx.labConnection.findFirst({
+      where: { id: connectionId, userId },
+    });
+  });
+  if (!connection) {
+    throw new Error('Connection not found');
+  }
+
+  // Best-effort token revocation — never blocks disconnect on failure.
+  try {
+    const encryption = getEncryptionService();
+    const salt = await getUserEncryptionSalt(userId);
+    const accessToken = encryption.decrypt(connection.accessTokenEncrypted, salt);
+    const smart = await resolveEndpoints(smartConfigForProvider(connection.provider));
+    await revokeToken(smart, accessToken, 'access_token');
+  } catch (err) {
+    logger.warn('Token revocation during disconnect failed (continuing)', {
+      data: { userId, connectionId, error: err instanceof Error ? err.message : 'unknown' },
+    });
+  }
+
+  await withRLSContext(userId, async (tx) => {
+    await tx.labConnection.delete({ where: { id: connection.id } });
+  });
+
+  await auditService.logAccess(RESOURCE_TYPE, undefined, { userId }, {
+    operation: 'DISCONNECT',
+    externalApiCall: true,
+    provider: connection.provider,
+  });
+}
+
+/**
+ * Called from the account-deletion flow so tokens get revoked before
+ * the LabConnection cascade-deletes.
+ */
+export async function revokeAllUserConnections(userId: string): Promise<void> {
+  const connections = await withRLSContext(userId, async (tx) => {
+    return tx.labConnection.findMany({ where: { userId } });
+  });
+  for (const c of connections) {
+    try {
+      await disconnectConnection(userId, c.id);
+    } catch (err) {
+      logger.warn('Skipped disconnect during account deletion', {
+        data: { connectionId: c.id, error: err instanceof Error ? err.message : 'unknown' },
+      });
+    }
+  }
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+interface MappedObservation {
+  name: string;
+  category: string;
+  unit: string;
+  value: number;
+  normalRangeMin: number | null;
+  normalRangeMax: number | null;
+  measurementDate: Date;
+  loincCode: string;
+  unmapped: boolean;
+}
+
+function mapObservation(obs: FHIRObservation): MappedObservation | null {
+  // Only handle numeric quantity observations for now. Qualitative
+  // results (valueString / valueCodeableConcept) are skipped — mapping
+  // them cleanly requires per-code logic.
+  if (!obs.valueQuantity?.value && obs.valueQuantity?.value !== 0) return null;
+
+  const loinc = extractLOINCCoding(obs.code);
+  if (!loinc) return null;
+
+  const mapping = findLOINCMapping(obs.code);
+  const name = mapping?.biomarkerName ?? loinc.display;
+  const category = mapping?.category ?? 'Other';
+  const unit = obs.valueQuantity.unit ?? mapping?.defaultUnit ?? '';
+  const value = obs.valueQuantity.value;
+
+  const refRange = obs.referenceRange?.[0];
+  const normalRangeMin =
+    refRange?.low?.value !== undefined ? refRange.low.value : null;
+  const normalRangeMax =
+    refRange?.high?.value !== undefined ? refRange.high.value : null;
+
+  const dateStr = obs.effectiveDateTime ?? obs.issued;
+  const measurementDate = dateStr ? new Date(dateStr) : new Date();
+
+  return {
+    name,
+    category,
+    unit,
+    value,
+    normalRangeMin,
+    normalRangeMax,
+    measurementDate,
+    loincCode: loinc.code,
+    unmapped: !mapping,
+  };
+}
+
+function dedupeKey(name: string, date: Date, value: string): string {
+  // Dates normalize to YYYY-MM-DD so a FHIR datetime and a manually
+  // entered date on the same day match.
+  const day = new Date(date).toISOString().split('T')[0];
+  return `${name.toLowerCase()}|${day}|${value}`;
+}
