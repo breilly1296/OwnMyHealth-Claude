@@ -182,6 +182,18 @@ app.use(requireJsonContentType);
 // API routes
 app.use(`/api/${config.apiVersion}`, routes);
 
+// Dev-only mock FHIR server — lets the Quest SMART-on-FHIR integration
+// be exercised end-to-end locally without real sandbox credentials.
+// Never mounted in production; the service's mountMockFhirServer also
+// double-checks NODE_ENV as a belt-and-suspenders guard.
+if (config.isDevelopment) {
+  // Lazy import so production builds don't carry the mock data.
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+  import('./services/fhir/mockFhirServer.js').then(({ mountMockFhirServer }) => {
+    mountMockFhirServer(app);
+  });
+}
+
 // CSRF token endpoint - allows SPA to fetch a fresh CSRF token
 app.get(`/api/${config.apiVersion}/csrf-token`, csrfTokenHandler);
 
