@@ -620,6 +620,42 @@ export const schemas = {
     analysesQuery: z.object({
       planId: uuid.optional(),
     }),
+
+    // --- Expense Actuals ---
+    createActual: z.object({
+      planId: uuid,
+      projectionId: uuid.optional(),
+      serviceType: sanitizedString(1, 100),
+      serviceDate: dateString.optional(),
+      providerName: optionalSanitizedString(200),
+      billedAmount: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      insurancePaid: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      patientPaid: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      appliedToDeductible: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      appliedToOop: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      isInNetwork: z.boolean().optional(),
+      claimStatus: z.enum(['pending', 'processed', 'denied', 'appealed']).optional(),
+      notes: optionalSanitizedString(2000),
+    }),
+
+    updateActual: z.object({
+      projectionId: uuid.nullable().optional(),
+      serviceType: sanitizedString(1, 100).optional(),
+      serviceDate: dateString.optional(),
+      providerName: optionalSanitizedString(200),
+      billedAmount: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      insurancePaid: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      patientPaid: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      appliedToDeductible: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      appliedToOop: finiteNumber.pipe(z.number().min(0).max(999999.99)).optional(),
+      isInNetwork: z.boolean().optional(),
+      claimStatus: z.enum(['pending', 'processed', 'denied', 'appealed']).optional(),
+      notes: optionalSanitizedString(2000),
+    }),
+
+    actualsQuery: z.object({
+      planId: uuid.optional(),
+    }),
   },
 
   // ============================================

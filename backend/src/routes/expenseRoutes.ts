@@ -16,6 +16,10 @@ import {
   getProjections,
   updateProjection,
   deleteProjection,
+  createActual,
+  getActuals,
+  updateActual,
+  deleteActual,
   analyzeCosts,
   getAnalyses,
 } from '../controllers/expenseController.js';
@@ -59,6 +63,42 @@ router.delete(
   csrfProtection,
   validate(schemas.uuidParam, 'params'),
   asyncHandler(deleteProjection)
+);
+
+// ============================================
+// EXPENSE ACTUALS (Real Claims / EOBs)
+// ============================================
+
+// GET /api/expenses/actuals?planId=xxx
+router.get(
+  '/actuals',
+  validate(schemas.expense.actualsQuery, 'query'),
+  asyncHandler(getActuals)
+);
+
+// POST /api/expenses/actuals
+router.post(
+  '/actuals',
+  csrfProtection,
+  validate(schemas.expense.createActual),
+  asyncHandler(createActual)
+);
+
+// PUT /api/expenses/actuals/:id
+router.put(
+  '/actuals/:id',
+  csrfProtection,
+  validate(schemas.uuidParam, 'params'),
+  validate(schemas.expense.updateActual),
+  asyncHandler(updateActual)
+);
+
+// DELETE /api/expenses/actuals/:id
+router.delete(
+  '/actuals/:id',
+  csrfProtection,
+  validate(schemas.uuidParam, 'params'),
+  asyncHandler(deleteActual)
 );
 
 // ============================================
