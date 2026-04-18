@@ -1,7 +1,6 @@
 import type {
   Biomarker,
   InsurancePlan,
-  HealthNeedsAnalysis,
   InsuranceTermExplanation,
   InsuranceEducationModule,
   InsuranceScenario,
@@ -13,6 +12,28 @@ import type {
 
 // Type for user profile used in insurance education
 type UserProfile = PersonalizedInsuranceGuide['userProfile'];
+
+// Local shape of the health-needs analysis this module consumes. Not exported
+// from ../../types because no call site actually produces it yet — this module
+// is currently only invoked via a mocked test. When a real producer lands,
+// consider promoting this to src/types.
+interface DetectedCondition {
+  condition: { name: string };
+  riskFactors: string[];
+}
+interface RecommendedServiceEntry {
+  service: { name: string };
+}
+interface EstimatedCost {
+  serviceName: string;
+  annualEstimate: number;
+  planComparison: Array<{ estimatedAnnualCost: number }>;
+}
+interface HealthNeedsAnalysis {
+  detectedConditions: DetectedCondition[];
+  recommendedServices: RecommendedServiceEntry[];
+  estimatedCosts: EstimatedCost[];
+}
 
 // Core insurance terms with contextual explanations
 const INSURANCE_TERMS: Record<string, Omit<InsuranceTermExplanation, 'userSpecificExample'>> = {
@@ -147,7 +168,7 @@ const INSURANCE_TERMS: Record<string, Omit<InsuranceTermExplanation, 'userSpecif
 };
 
 export function generatePersonalizedInsuranceGuide(
-  biomarkers: Biomarker[],
+  _biomarkers: Biomarker[],
   insurancePlans: InsurancePlan[],
   healthNeeds: HealthNeedsAnalysis
 ): PersonalizedInsuranceGuide {
@@ -331,7 +352,7 @@ function generateCostScenarios(
 }
 
 function generateNetworkTerms(
-  userProfile: UserProfile,
+  _userProfile: UserProfile,
   insurancePlans: InsurancePlan[]
 ): InsuranceTermExplanation[] {
   const terms: InsuranceTermExplanation[] = [];
@@ -480,7 +501,7 @@ function generatePrescriptionScenarios(
 }
 
 function generateCostProjections(
-  userProfile: UserProfile,
+  _userProfile: UserProfile,
   insurancePlans: InsurancePlan[],
   healthNeeds: HealthNeedsAnalysis
 ): AnnualCostProjection[] {
@@ -543,7 +564,7 @@ function generateCostProjections(
 
 function generateOptimizationTips(
   userProfile: UserProfile,
-  insurancePlans: InsurancePlan[],
+  _insurancePlans: InsurancePlan[],
   healthNeeds: HealthNeedsAnalysis
 ): InsuranceOptimizationTip[] {
   const tips: InsuranceOptimizationTip[] = [];
@@ -600,7 +621,7 @@ function generateOptimizationTips(
 }
 
 function generatePersonalizedGlossary(
-  userProfile: UserProfile,
+  _userProfile: UserProfile,
   insurancePlans: InsurancePlan[],
   healthNeeds: HealthNeedsAnalysis
 ): InsuranceTermExplanation[] {

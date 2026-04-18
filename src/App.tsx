@@ -25,7 +25,7 @@
  * @module App
  */
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { ErrorBoundary } from './components/common';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -96,7 +96,7 @@ function navigateToLogin() {
  * Main application wrapper that handles authentication state
  */
 function AppContent() {
-  const { user, isAuthenticated, isLoading, login, register, logout, error, clearError } = useAuth();
+  const { isAuthenticated, isLoading, login, register, error, setError, clearError } = useAuth();
   const [authView, setAuthView] = useState<AuthView>('login');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [specialRoute, setSpecialRoute] = useState<SpecialRoute | null>(getSpecialRoute);
@@ -268,7 +268,7 @@ function AppContent() {
   // Authenticated - show dashboard
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Dashboard user={user} onLogout={logout} />
+      <Dashboard />
     </Suspense>
   );
 }

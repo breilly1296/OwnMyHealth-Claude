@@ -24,6 +24,7 @@ vi.mock('../../contexts/AuthContext', () => ({
     register: vi.fn(),
     logout: mockLogout,
     error: null,
+    setError: vi.fn(),
     clearError: vi.fn(),
   })),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -138,6 +139,7 @@ describe('Dashboard', () => {
       register: vi.fn(),
       logout: mockLogout,
       error: null,
+      setError: vi.fn(),
       clearError: vi.fn(),
     });
   });
@@ -249,6 +251,7 @@ describe('Dashboard', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
+        setError: vi.fn(),
         clearError: vi.fn(),
       });
 
@@ -270,6 +273,7 @@ describe('Dashboard', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
+        setError: vi.fn(),
         clearError: vi.fn(),
       });
 

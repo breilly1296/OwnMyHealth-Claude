@@ -62,6 +62,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   /** Current error message (null if no error) */
   error: string | null;
+  /** Set an error message (pass null to clear) */
+  setError: (message: string | null) => void;
   /** Clear any existing error */
   clearError: () => void;
 }
@@ -184,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     register,
     logout,
     error,
+    setError,
     clearError,
   };
 

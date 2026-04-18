@@ -4,7 +4,6 @@
  * Tests the modal for manually entering biomarker measurements.
  */
 
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -53,7 +52,7 @@ describe('AddMeasurementModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock crypto.randomUUID for consistent test IDs
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid-123');
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-0000-0000-000000000123');
   });
 
   describe('Rendering', () => {

@@ -4,7 +4,7 @@
  * Premium dark-themed page for email verification.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Heart, CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import { authApi } from '../../services/api';
 

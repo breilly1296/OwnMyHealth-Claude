@@ -14,7 +14,7 @@
  * @module components/biomarkers/BiomarkerChart
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Line,
   XAxis,
@@ -24,9 +24,9 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Area,
-  ComposedChart,
-  TooltipProps
+  ComposedChart
 } from 'recharts';
+import type { TooltipContentProps } from 'recharts';
 import type { Biomarker } from '../../types';
 
 interface BiomarkerChartProps {
@@ -57,7 +57,7 @@ const CustomTooltip = ({
   active,
   payload,
   biomarker
-}: TooltipProps<number, string> & { biomarker: Biomarker }) => {
+}: Partial<TooltipContentProps<number, string>> & { biomarker: Biomarker }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload as ChartDataPoint;

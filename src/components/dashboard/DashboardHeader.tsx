@@ -5,7 +5,7 @@
  * Handles logout and navigation to account settings.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Heart, LogOut, User, ChevronDown, Settings, Menu } from 'lucide-react';
 
 interface DashboardHeaderProps {

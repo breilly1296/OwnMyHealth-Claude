@@ -14,7 +14,7 @@
  * @module components/trends/TrendDetailModal
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Activity, Target, Calendar, BarChart2 } from 'lucide-react';
 import type { Biomarker } from '../../types';
 import { BiomarkerChart } from '../biomarkers';

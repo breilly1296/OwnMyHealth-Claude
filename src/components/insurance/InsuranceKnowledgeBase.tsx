@@ -5,7 +5,6 @@
  * browsing, comparison, and insights capabilities.
  */
 
-import React from 'react';
 import {
   Search, Database, Filter, Shield, DollarSign,
   CheckCircle, XCircle, ChevronRight, FileText,

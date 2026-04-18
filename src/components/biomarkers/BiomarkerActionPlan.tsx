@@ -14,7 +14,7 @@
  * @module components/biomarkers/BiomarkerActionPlan
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   AlertCircle,
   TrendingDown,

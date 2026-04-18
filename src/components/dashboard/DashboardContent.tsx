@@ -5,7 +5,6 @@
  * and category overview cards.
  */
 
-import React from 'react';
 import {
   Activity,
   Plus,
@@ -266,11 +265,8 @@ export function DashboardContent({
                   className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-lg transition-all text-left group"
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${category.color}20` }}
-                    >
-                      {React.cloneElement(icon, { style: { color: category.color } })}
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
+                      {icon}
                     </div>
                     {count > 0 && (
                       <span

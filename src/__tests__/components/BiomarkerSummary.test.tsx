@@ -4,7 +4,6 @@
  * Tests the biomarker summary panel that displays statistics for a health category.
  */
 
-import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BiomarkerSummary from '../../components/biomarkers/BiomarkerSummary';

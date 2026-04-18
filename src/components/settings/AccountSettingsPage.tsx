@@ -9,7 +9,7 @@
  * 5. Health Focus Areas - Placeholder for future features
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   User,

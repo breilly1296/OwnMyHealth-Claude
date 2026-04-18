@@ -5,7 +5,6 @@
  * out-of-pocket maximum has been met for the year.
  */
 
-import React from 'react';
 import { TrendingUp, CheckCircle } from 'lucide-react';
 
 interface DeductibleProgressBarProps {

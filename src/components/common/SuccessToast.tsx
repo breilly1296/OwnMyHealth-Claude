@@ -5,7 +5,6 @@
  * Uses fixed positioning to overlay content.
  */
 
-import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
 
 interface SuccessToastProps {

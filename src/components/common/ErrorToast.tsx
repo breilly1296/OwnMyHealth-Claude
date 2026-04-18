@@ -5,7 +5,6 @@
  * Uses fixed positioning to overlay content.
  */
 
-import React from 'react';
 import { AlertCircle, X } from 'lucide-react';
 
 interface ErrorToastProps {

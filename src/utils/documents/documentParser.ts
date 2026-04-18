@@ -323,7 +323,7 @@ const INSURANCE_KEY_TERMS = {
     importance: 'high',
     category: 'coverage'
   }
-};
+} as const;
 
 // Enhanced text extraction with OCR fallback
 export async function extractTextFromDocument(file: File): Promise<string> {
