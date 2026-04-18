@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Activity,
   Droplets,
@@ -34,7 +33,8 @@ import {
   Bone, // Bone Health
   Timer, // Coagulation
   // New diagnostic category icons
-  Target, // Tumor Markers
+  Target, // Tumor Markers / Goals
+  ActivitySquare, // Health Needs
   Cherry, // Pancreatic
   TestTube, // Urinalysis
   Bug, // Infectious Disease
@@ -85,6 +85,7 @@ export function getIcon(iconName: string): JSX.Element {
     Timer: <Timer className="w-5 h-5" />,
     // New diagnostic category icons
     Target: <Target className="w-5 h-5" />,
+    ActivitySquare: <ActivitySquare className="w-5 h-5" />,
     Cherry: <Cherry className="w-5 h-5" />,
     TestTube: <TestTube className="w-5 h-5" />,
     Bug: <Bug className="w-5 h-5" />,
