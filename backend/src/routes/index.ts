@@ -31,6 +31,7 @@ import settingsRoutes from './settingsRoutes.js';
 import fileRoutes from './fileRoutes.js';
 import expenseRoutes from './expenseRoutes.js';
 import aiRoutes from './aiRoutes.js';
+import fhirRoutes from './fhirRoutes.js';
 import type { ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -97,5 +98,8 @@ router.use('/settings', settingsRoutes);  // Data export, account deletion
 
 // AI Health Guide (conversational)
 router.use('/ai', aiRoutes);
+
+// FHIR / SMART on FHIR (Quest, Labcorp, etc.)
+router.use('/fhir', fhirRoutes);
 
 export default router;

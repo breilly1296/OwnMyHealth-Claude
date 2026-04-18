@@ -21,6 +21,7 @@ import {
   saveHealthProfile,
   type UserHealthProfile,
 } from '../services/healthProfileService.js';
+import { revokeAllUserConnections } from '../services/fhir/labSyncService.js';
 
 const DECRYPT_BATCH_SIZE = 20;
 
@@ -373,6 +374,12 @@ export async function deleteAccount(
     email: user.email,
     reason: 'user_requested',
   }, { req, userId });
+
+  // Revoke OAuth tokens on any active lab connections BEFORE the
+  // cascade delete drops the LabConnection rows — otherwise the tokens
+  // stay valid at the provider even though we've lost the ability to
+  // call revoke. Best-effort; each disconnect swallows its own errors.
+  await revokeAllUserConnections(userId);
 
   // Enumerate GCS-backed files BEFORE the cascade delete drops the UserFile
   // rows. See C-6 — "GCS first, fail hard" policy. If we let the cascade
