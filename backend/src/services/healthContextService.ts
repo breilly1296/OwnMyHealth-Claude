@@ -503,6 +503,17 @@ export function serializeHealthContext(ctx: HealthContext): string {
 }
 
 /**
+ * Rough token-count estimator. Claude's tokenizer is ~4 characters per
+ * token on average English prose; we use that for budget math without
+ * pulling in the anthropic tokenizer (which would require an additional
+ * async call and package). Good enough for ±20% accuracy — we keep the
+ * total budget conservative.
+ */
+export function estimateContextTokens(ctx: HealthContext): number {
+  return Math.ceil(serializeHealthContext(ctx).length / 4);
+}
+
+/**
  * Human-friendly audit category breakdown for logging.
  */
 export function summarizeContextCategories(ctx: HealthContext): Record<string, number> {
