@@ -27,6 +27,7 @@ model User {
   lockedUntil              DateTime?           @map("locked_until") @db.Timestamptz(6)
   lastFailedLogin          DateTime?           @map("last_failed_login") @db.Timestamptz(6)
   notificationPreferences  Json                @default("{}") @map("notification_preferences")
+  healthProfileEncrypted   String?             @map("health_profile_encrypted")
   createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastLoginAt              DateTime?           @map("last_login_at") @db.Timestamptz(6)

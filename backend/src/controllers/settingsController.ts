@@ -16,6 +16,11 @@ import { toNumber } from '../utils/numberConversion.js';
 import { processBatch } from '../utils/batchProcessor.js';
 import { UnauthorizedError } from '../middleware/errorHandler.js';
 import { verifyPassword } from '../services/authService.js';
+import {
+  getDecryptedHealthProfile,
+  saveHealthProfile,
+  type UserHealthProfile,
+} from '../services/healthProfileService.js';
 
 const DECRYPT_BATCH_SIZE = 20;
 
@@ -598,5 +603,85 @@ export async function updateNotifications(
     data: prefs,
   };
 
+  res.json(response);
+}
+
+/**
+ * GET /api/v1/settings/health-profile
+ * Returns the user's decrypted self-reported health profile.
+ */
+export async function getHealthProfile(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+  const prisma = getPrismaClient();
+  const auditService = getAuditLogService(prisma);
+
+  const profile = await getDecryptedHealthProfile(userId);
+
+  await auditService.logAccess('UserHealthProfile', userId, { req, userId }, {
+    operation: 'PHI_ACCESS',
+    conditionCount: profile.conditions.length,
+    medicationCount: profile.medications.length,
+  });
+
+  const response: ApiResponse<UserHealthProfile> = {
+    success: true,
+    data: profile,
+  };
+  res.json(response);
+}
+
+/**
+ * PATCH /api/v1/settings/health-profile
+ * Partial update. Undefined fields in the body leave the existing value
+ * untouched; arrays (conditions/medications/familyHistory) are fully
+ * replaced when present in the body, per the usual REST partial-update
+ * convention for array fields.
+ */
+export async function updateHealthProfile(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+  const input = req.body as Partial<UserHealthProfile>;
+
+  const prisma = getPrismaClient();
+  const auditService = getAuditLogService(prisma);
+
+  const existing = await getDecryptedHealthProfile(userId);
+
+  // Merge: undefined fields inherit from existing, defined fields overwrite.
+  const merged: UserHealthProfile = {
+    biologicalSex: input.biologicalSex ?? existing.biologicalSex,
+    ageRange: input.ageRange ?? existing.ageRange,
+    conditions: input.conditions ?? existing.conditions,
+    medications: input.medications ?? existing.medications,
+    familyHistory: input.familyHistory ?? existing.familyHistory,
+    smokingStatus: input.smokingStatus ?? existing.smokingStatus,
+    exerciseLevel: input.exerciseLevel ?? existing.exerciseLevel,
+    additionalContext: input.additionalContext ?? existing.additionalContext,
+  };
+
+  const saved = await saveHealthProfile(userId, merged);
+
+  await auditService.logUpdate(
+    'UserHealthProfile',
+    userId,
+    null,
+    null,
+    { req, userId },
+    {
+      fieldsUpdated: Object.keys(input),
+      conditionCount: saved.conditions.length,
+      medicationCount: saved.medications.length,
+    }
+  );
+
+  const response: ApiResponse<UserHealthProfile> = {
+    success: true,
+    data: saved,
+  };
   res.json(response);
 }

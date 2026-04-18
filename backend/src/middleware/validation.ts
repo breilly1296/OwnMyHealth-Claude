@@ -696,6 +696,34 @@ export const schemas = {
       (data) => Object.keys(data).length > 0,
       { message: 'At least one notification preference must be provided' }
     ),
+
+    updateHealthProfile: z.object({
+      biologicalSex: z.enum(['male', 'female']).optional(),
+      ageRange: z.enum(['18-29', '30-39', '40-49', '50-59', '60-69', '70+']).optional(),
+      conditions: z
+        .array(
+          z.object({
+            name: sanitizedString(1, 100),
+            status: z.enum(['active', 'managed', 'resolved']),
+            diagnosedYear: z.number().int().min(1950).max(2030).optional(),
+          })
+        )
+        .max(20)
+        .optional(),
+      medications: z
+        .array(
+          z.object({
+            name: sanitizedString(1, 100),
+            purpose: optionalSanitizedString(100),
+          })
+        )
+        .max(30)
+        .optional(),
+      familyHistory: z.array(sanitizedString(1, 100)).max(10).optional(),
+      smokingStatus: z.enum(['never', 'former', 'current']).optional(),
+      exerciseLevel: z.enum(['sedentary', 'light', 'moderate', 'active']).optional(),
+      additionalContext: optionalSanitizedString(500),
+    }),
   },
 
   // ============================================

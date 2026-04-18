@@ -196,11 +196,49 @@ function lcSet(values: string[]): Set<string> {
   return new Set(values.map((v) => v.toLowerCase()));
 }
 
+/**
+ * Extract lowercase alpha tokens from a free-text string (condition name,
+ * medication label). Used to match profile entries against doc keywords.
+ */
+function tokenizeFreeText(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length > 1 && !STOP_WORDS.has(t))
+  );
+}
+
+/**
+ * Build a single token bag from the user's active conditions + medications
+ * so we can boost knowledge docs whose keywords align with what the user
+ * has self-reported. Caller pre-filters resolved conditions.
+ */
+function profileTokenBag(healthContext: HealthContext): {
+  conditionTokens: Set<string>;
+  medicationTokens: Set<string>;
+} {
+  const conditionTokens = new Set<string>();
+  for (const c of healthContext.healthProfile.conditions) {
+    if (c.status === 'resolved') continue;
+    for (const t of tokenizeFreeText(c.name)) conditionTokens.add(t);
+  }
+  const medicationTokens = new Set<string>();
+  for (const m of healthContext.healthProfile.medications) {
+    for (const t of tokenizeFreeText(m.name)) medicationTokens.add(t);
+    if (m.purpose) {
+      for (const t of tokenizeFreeText(m.purpose)) medicationTokens.add(t);
+    }
+  }
+  return { conditionTokens, medicationTokens };
+}
+
 function scoreDocument(
   doc: KnowledgeDocument,
   questionTokens: Set<string>,
   healthContext: HealthContext,
-  intent: Intent
+  intent: Intent,
+  profileTokens: { conditionTokens: Set<string>; medicationTokens: Set<string> }
 ): number {
   let score = 0;
 
@@ -211,6 +249,26 @@ function scoreDocument(
     const parts = lc.split(/\s+/).filter(Boolean);
     const allPresent = parts.every((part) => questionTokens.has(part));
     if (allPresent) score += 3;
+  }
+
+  // (+4) per keyword match with an active condition — condition context
+  // should pull in reference docs even when the user didn't mention the
+  // topic in this turn ("my calcium?" when they have osteoporosis).
+  for (const kw of doc.keywords) {
+    const lc = kw.toLowerCase();
+    const parts = lc.split(/\s+/).filter(Boolean);
+    if (parts.every((part) => profileTokens.conditionTokens.has(part))) {
+      score += 4;
+    }
+  }
+
+  // (+2) per keyword match with a current medication label / purpose.
+  for (const kw of doc.keywords) {
+    const lc = kw.toLowerCase();
+    const parts = lc.split(/\s+/).filter(Boolean);
+    if (parts.every((part) => profileTokens.medicationTokens.has(part))) {
+      score += 2;
+    }
   }
 
   // Biomarker-based relevance against the user's actual data.
@@ -249,10 +307,11 @@ export function retrieveKnowledge(
   const tokens = tokenizeQuestion(question);
   const tokenSet = new Set(tokens);
   const intent = detectIntent(tokens);
+  const profileTokens = profileTokenBag(healthContext);
 
   const scored = ALL_DOCUMENTS.map((doc) => ({
     doc,
-    score: scoreDocument(doc, tokenSet, healthContext, intent),
+    score: scoreDocument(doc, tokenSet, healthContext, intent, profileTokens),
   }))
     .filter((s) => s.score > 0)
     .sort((a, b) => {
