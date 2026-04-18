@@ -58,6 +58,10 @@ export type { PatientProviderRelationship, PendingProviderRequest } from './pati
 export { adminApi } from './admin';
 export type { AdminUser, SystemStats } from './admin';
 
+// AI Health Guide
+export { aiApi } from './ai';
+export type { ConversationMessage, ChatUsage, ChatStreamCallbacks } from './ai';
+
 // Settings API
 export { settingsApi } from './settings';
 export type { ExportBiomarker, ExportInsurancePlan, UserExportData, NotificationPreferences, UserProfile } from './settings';

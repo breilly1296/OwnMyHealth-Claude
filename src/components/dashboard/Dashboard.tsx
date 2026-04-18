@@ -44,6 +44,7 @@ const TrendsPage = lazy(() => import('../trends/TrendsPage'));
 const AccountSettingsPage = lazy(() => import('../settings/AccountSettingsPage'));
 const GoalTrackerPanel = lazy(() => import('../analytics/GoalTrackerPanel'));
 const HealthNeedsPage = lazy(() => import('../health/HealthNeedsPage'));
+const HealthGuidePage = lazy(() => import('../health/HealthGuidePage'));
 
 // Data (for demo mode / fallback)
 import { initialBiomarkers as sampleBiomarkers, navGroups, categories } from '../../data/sampleData';
@@ -176,6 +177,12 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
             <TrendsPage biomarkers={biomarkers} />
           </Suspense>
         );
+      case 'Health Guide':
+        return (
+          <Suspense fallback={<PageLoadSpinner />}>
+            <HealthGuidePage biomarkers={biomarkers} insurancePlans={insurancePlans} />
+          </Suspense>
+        );
       case 'Goals':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
@@ -200,7 +207,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   };
 
   // Determine if showing a special page or biomarker content
-  const specialPages = ['Insurance', 'Knowledge Base', 'Files', 'Trends', 'Goals', 'Needs', 'Account Settings'];
+  const specialPages = ['Insurance', 'Knowledge Base', 'Files', 'Trends', 'Goals', 'Needs', 'Health Guide', 'Account Settings'];
   const isSpecialPage = specialPages.includes(selectedCategory);
 
   // Loading state

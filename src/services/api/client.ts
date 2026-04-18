@@ -94,7 +94,7 @@ function createTimeoutController(timeoutMs: number = DEFAULT_TIMEOUT_MS): { cont
   return { controller, timeoutId };
 }
 
-function getCsrfToken(): string {
+export function getCsrfToken(): string {
   const cookies = document.cookie;
   const match = cookies.match(/csrf[_-]?token=([^;]+)/i);
   const token = match ? decodeURIComponent(match[1]) : '';
