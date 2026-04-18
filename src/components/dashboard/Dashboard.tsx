@@ -180,7 +180,11 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       case 'Health Guide':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <HealthGuidePage biomarkers={biomarkers} insurancePlans={insurancePlans} />
+            <HealthGuidePage
+              biomarkers={biomarkers}
+              insurancePlans={insurancePlans}
+              onNavigateToSettings={() => handleCategorySelect('Account Settings')}
+            />
           </Suspense>
         );
       case 'Goals':

@@ -14,14 +14,38 @@ import {
   AlertCircle,
   User,
   Loader2,
+  Stethoscope,
+  ArrowRight,
 } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
-import { aiApi, type ConversationMessage } from '../../services/api';
+import {
+  aiApi,
+  settingsApi,
+  type ConversationMessage,
+  type UserHealthProfile,
+} from '../../services/api';
 import { renderMarkdown } from '../../utils/renderMarkdown';
 
 interface HealthGuidePageProps {
   biomarkers?: Biomarker[];
   insurancePlans?: InsurancePlan[];
+  /** Optional — when provided, the "set up" banner links here. */
+  onNavigateToSettings?: () => void;
+}
+
+function summarizeProfile(profile: UserHealthProfile | null): string | null {
+  if (!profile) return null;
+  const activeConditions = profile.conditions.filter((c) => c.status !== 'resolved');
+  const bits: string[] = [];
+  if (activeConditions.length > 0) {
+    const names = activeConditions.slice(0, 2).map((c) => c.name).join(', ');
+    const extra = activeConditions.length > 2 ? ` +${activeConditions.length - 2}` : '';
+    bits.push(`${names}${extra}`);
+  }
+  if (profile.medications.length > 0) {
+    bits.push(`${profile.medications.length} medication${profile.medications.length === 1 ? '' : 's'}`);
+  }
+  return bits.length > 0 ? bits.join(' · ') : null;
 }
 
 type MessageRole = 'user' | 'assistant';
@@ -60,14 +84,36 @@ function buildContextualSuggestions(
 export default function HealthGuidePage({
   biomarkers,
   insurancePlans,
+  onNavigateToSettings,
 }: HealthGuidePageProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [healthProfile, setHealthProfile] = useState<UserHealthProfile | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  // Pull the self-reported profile so we can surface a subtle indicator
+  // of what context is active (or prompt to set one up). Silent fail —
+  // the chat still works without profile data.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await settingsApi.getHealthProfile();
+        if (!cancelled) setHealthProfile(profile);
+      } catch {
+        // swallow — the profile indicator is a nice-to-have
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const profileSummary = summarizeProfile(healthProfile);
 
   const suggestions = useMemo(
     () => buildContextualSuggestions(biomarkers, insurancePlans),
@@ -215,6 +261,28 @@ export default function HealthGuidePage({
           </button>
         )}
       </div>
+
+      {/* Health profile indicator (active context chip or set-up prompt) */}
+      {profileSummary ? (
+        <button
+          type="button"
+          onClick={onNavigateToSettings}
+          className="inline-flex items-center gap-1.5 self-start mb-3 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full border border-slate-200/60 dark:border-slate-700 transition-colors"
+        >
+          <Stethoscope className="w-3.5 h-3.5 text-wellness-600 dark:text-wellness-400" />
+          <span>Profile: {profileSummary}</span>
+        </button>
+      ) : healthProfile !== null && (
+        <button
+          type="button"
+          onClick={onNavigateToSettings}
+          className="inline-flex items-center justify-between gap-2 self-start mb-3 px-3 py-2 text-xs text-slate-600 dark:text-slate-300 bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/30 rounded-lg border border-brand-200 dark:border-brand-800 transition-colors w-full sm:w-auto"
+        >
+          <Stethoscope className="w-3.5 h-3.5 text-brand-500 dark:text-brand-400 flex-shrink-0" />
+          <span className="flex-1 text-left">Set up your health profile for personalized insights.</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {/* Messages area */}
       <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 mb-4 overflow-y-auto min-h-[60vh] max-h-[70vh]">
