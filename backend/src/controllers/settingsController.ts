@@ -61,6 +61,11 @@ function normalizeNotificationPreferences(raw: unknown): NotificationPreferences
 }
 
 // Export data response types
+interface ExportBiomarkerHistoryEntry {
+  value: number;
+  date: string;
+}
+
 interface ExportBiomarker {
   name: string;
   standardName: string;
@@ -75,6 +80,8 @@ interface ExportBiomarker {
     source?: string;
   };
   source: string;
+  notes?: string;
+  history: ExportBiomarkerHistoryEntry[];
 }
 
 interface ExportInsurancePlan {
@@ -89,22 +96,145 @@ interface ExportInsurancePlan {
   deductibleFamily: number;
   oopMaxIndividual: number;
   oopMaxFamily: number;
+  memberId?: string;
+  groupId?: string;
+}
+
+interface ExportHealthGoal {
+  name: string;
+  description?: string;
+  category: string;
+  targetValue: number;
+  currentValue?: number;
+  startValue?: number;
+  unit: string;
+  direction: string;
+  startDate: string;
+  targetDate: string;
+  status: string;
+  progress: number;
+  milestones?: string;
+  reminderFrequency?: string;
+  progressHistory: Array<{
+    value: number;
+    progress: number;
+    note?: string;
+    recordedAt: string;
+  }>;
+}
+
+interface ExportHealthNeed {
+  name: string;
+  needType: string;
+  description: string;
+  urgency: string;
+  status: string;
+  relatedBiomarkerIds: string[];
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+interface ExportExpenseProjection {
+  serviceType: string;
+  estimatedCost: number | null;
+  frequencyPerYear: number;
+  isInNetwork: boolean;
+  notes?: string;
+  planId: string;
+}
+
+interface ExportExpenseActual {
+  serviceType: string;
+  providerName?: string;
+  billedAmount: number | null;
+  insurancePaid: number | null;
+  patientPaid: number | null;
+  appliedToDeductible: number | null;
+  appliedToOop: number | null;
+  dateOfService?: string;
+  isInNetwork: boolean | null;
+  claimStatus: string;
+  notes?: string;
+}
+
+interface ExportCostAnalysis {
+  claudeResponse: string;
+  totalProjectedOop: number | null;
+  analysisDate: string;
+}
+
+interface ExportUserFile {
+  originalFilename: string;
+  fileType: string;
+  fileSize: number;
+  labName?: string;
+  labDate?: string;
+  biomarkersExtracted: number;
+  createdAt: string;
+}
+
+interface ExportProviderRelationship {
+  relationshipType: string;
+  status: string;
+  role: 'patient' | 'provider';
+  canViewBiomarkers: boolean;
+  canViewInsurance: boolean;
+  canViewDna: boolean;
+  canViewHealthNeeds: boolean;
+  canEditData: boolean;
+  consentGrantedAt?: string;
+  consentExpiresAt?: string;
+  notes?: string;
+}
+
+interface ExportUserProfile {
+  email: string;
+  role: string;
+  createdAt: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  phone?: string;
+  address?: string;
 }
 
 interface ExportData {
   exportDate: string;
-  user: {
-    email: string;
-    createdAt: string;
-  };
+  user: ExportUserProfile;
   biomarkers: ExportBiomarker[];
   insurancePlans: ExportInsurancePlan[];
+  healthGoals: ExportHealthGoal[];
+  healthNeeds: ExportHealthNeed[];
+  expenseProjections: ExportExpenseProjection[];
+  expenseActuals: ExportExpenseActual[];
+  costAnalyses: ExportCostAnalysis[];
+  files: ExportUserFile[];
+  providerRelationships: ExportProviderRelationship[];
+  filesNote: string;
   summary: {
     totalBiomarkers: number;
     byCategory: Record<string, number>;
     abnormalCount: number;
     normalCount: number;
+    totalInsurancePlans: number;
+    totalHealthGoals: number;
+    totalHealthNeeds: number;
+    totalExpenseProjections: number;
+    totalExpenseActuals: number;
+    totalCostAnalyses: number;
+    totalFiles: number;
+    totalProviderRelationships: number;
   };
+}
+
+function tryDecryptNumber(
+  encrypted: string | null | undefined,
+  salt: string,
+  decrypt: (cipher: string, salt: string) => string
+): number | null {
+  if (!encrypted) return null;
+  const parsed = parseFloat(decrypt(encrypted, salt));
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -122,40 +252,120 @@ export async function exportUserData(
   const userSalt = await getUserEncryptionSalt(userId);
   const auditService = getAuditLogService(prisma);
 
-  // Fetch user info and data with RLS context
-  const { user, biomarkers, insurancePlans } = await withRLSContext(userId, async (tx) => {
+  // Fetch user info and every PHI category under RLS
+  const {
+    user,
+    biomarkers,
+    insurancePlans,
+    healthGoals,
+    healthNeeds,
+    expenseProjections,
+    expenseActuals,
+    costAnalyses,
+    userFiles,
+    providerRelationships,
+  } = await withRLSContext(userId, async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { email: true, createdAt: true },
+      select: {
+        email: true,
+        createdAt: true,
+        role: true,
+        firstNameEncrypted: true,
+        lastNameEncrypted: true,
+        dateOfBirthEncrypted: true,
+        phoneEncrypted: true,
+        addressEncrypted: true,
+      },
     });
 
     if (!user) {
       throw new UnauthorizedError('User not found');
     }
 
-    // Fetch all biomarkers with history
-    const biomarkers = await tx.biomarker.findMany({
-      where: { userId },
-      include: { history: true },
-      orderBy: { measurementDate: 'desc' },
-    });
+    const [
+      biomarkers,
+      insurancePlans,
+      healthGoals,
+      healthNeeds,
+      expenseProjections,
+      expenseActuals,
+      costAnalyses,
+      userFiles,
+      providerRelationships,
+    ] = await Promise.all([
+      tx.biomarker.findMany({
+        where: { userId },
+        include: { history: { orderBy: { measurementDate: 'desc' } } },
+        orderBy: { measurementDate: 'desc' },
+      }),
+      tx.insurancePlan.findMany({
+        where: { userId },
+        orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
+      }),
+      tx.healthGoal.findMany({
+        where: { userId },
+        include: { progressHistory: { orderBy: { recordedAt: 'desc' } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      tx.healthNeed.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      tx.expenseProjection.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      tx.expenseActual.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      tx.costAnalysis.findMany({
+        where: { userId },
+        orderBy: { analysisDate: 'desc' },
+      }),
+      tx.userFile.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      tx.providerPatient.findMany({
+        where: { OR: [{ patientId: userId }, { providerId: userId }] },
+      }),
+    ]);
 
-    // Fetch insurance plans
-    const insurancePlans = await tx.insurancePlan.findMany({
-      where: { userId },
-      orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
-    });
-
-    return { user, biomarkers, insurancePlans };
+    return {
+      user,
+      biomarkers,
+      insurancePlans,
+      healthGoals,
+      healthNeeds,
+      expenseProjections,
+      expenseActuals,
+      costAnalyses,
+      userFiles,
+      providerRelationships,
+    };
   });
 
-  // Decrypt biomarkers with controlled concurrency
+  const decrypt = (cipher: string, salt: string) => encryptionService.decrypt(cipher, salt);
+
+  const userProfile: ExportUserProfile = {
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt.toISOString(),
+    firstName: user.firstNameEncrypted ? decrypt(user.firstNameEncrypted, userSalt) : undefined,
+    lastName: user.lastNameEncrypted ? decrypt(user.lastNameEncrypted, userSalt) : undefined,
+    dateOfBirth: user.dateOfBirthEncrypted ? decrypt(user.dateOfBirthEncrypted, userSalt) : undefined,
+    phone: user.phoneEncrypted ? decrypt(user.phoneEncrypted, userSalt) : undefined,
+    address: user.addressEncrypted ? decrypt(user.addressEncrypted, userSalt) : undefined,
+  };
+
+  // Decrypt biomarkers (and each biomarker's history) with controlled concurrency
   const decryptedBiomarkers = await processBatch(
     biomarkers,
     async (biomarker) => {
-      const value = parseFloat(encryptionService.decrypt(biomarker.valueEncrypted, userSalt));
+      const value = parseFloat(decrypt(biomarker.valueEncrypted, userSalt));
 
-      // Determine source description
       let source = 'Manual Entry';
       if (biomarker.sourceType === 'LAB_UPLOAD') {
         source = biomarker.labName || biomarker.sourceFile || 'Lab Upload';
@@ -166,6 +376,11 @@ export async function exportUserData(
       } else if (biomarker.sourceType === 'API_IMPORT') {
         source = 'API Import';
       }
+
+      const history: ExportBiomarkerHistoryEntry[] = biomarker.history.map((h) => ({
+        value: parseFloat(decrypt(h.valueEncrypted, userSalt)),
+        date: h.measurementDate.toISOString().split('T')[0],
+      }));
 
       return {
         name: biomarker.name,
@@ -181,6 +396,8 @@ export async function exportUserData(
           source: biomarker.normalRangeSource ?? undefined,
         },
         source,
+        notes: biomarker.notesEncrypted ? decrypt(biomarker.notesEncrypted, userSalt) : undefined,
+        history,
       };
     },
     DECRYPT_BATCH_SIZE
@@ -198,9 +415,121 @@ export async function exportUserData(
     deductibleFamily: toNumber(plan.deductibleFamily),
     oopMaxIndividual: toNumber(plan.oopMaxIndividual),
     oopMaxFamily: toNumber(plan.oopMaxFamily),
+    memberId: plan.memberIdEncrypted ? decrypt(plan.memberIdEncrypted, userSalt) : undefined,
+    groupId: plan.groupIdEncrypted ? decrypt(plan.groupIdEncrypted, userSalt) : undefined,
   }));
 
-  // Calculate summary statistics
+  const exportHealthGoals: ExportHealthGoal[] = await processBatch(
+    healthGoals,
+    async (goal) => ({
+      name: goal.name,
+      description: goal.descriptionEncrypted ? decrypt(goal.descriptionEncrypted, userSalt) : undefined,
+      category: goal.category,
+      targetValue: toNumber(goal.targetValue),
+      currentValue: goal.currentValue !== null && goal.currentValue !== undefined ? toNumber(goal.currentValue) : undefined,
+      startValue: goal.startValue !== null && goal.startValue !== undefined ? toNumber(goal.startValue) : undefined,
+      unit: goal.unit,
+      direction: goal.direction,
+      startDate: goal.startDate.toISOString().split('T')[0],
+      targetDate: goal.targetDate.toISOString().split('T')[0],
+      status: goal.status,
+      progress: toNumber(goal.progress),
+      milestones: goal.milestones ?? undefined,
+      reminderFrequency: goal.reminderFrequency ?? undefined,
+      progressHistory: goal.progressHistory.map((entry) => ({
+        value: toNumber(entry.value),
+        progress: toNumber(entry.progress),
+        note: entry.noteEncrypted ? decrypt(entry.noteEncrypted, userSalt) : undefined,
+        recordedAt: entry.recordedAt.toISOString(),
+      })),
+    }),
+    DECRYPT_BATCH_SIZE
+  );
+
+  const exportHealthNeeds: ExportHealthNeed[] = await processBatch(
+    healthNeeds,
+    async (need) => ({
+      name: need.name,
+      needType: need.needType,
+      description: decrypt(need.descriptionEncrypted, userSalt),
+      urgency: need.urgency,
+      status: need.status,
+      relatedBiomarkerIds: need.relatedBiomarkerIds,
+      createdAt: need.createdAt.toISOString(),
+      resolvedAt: need.resolvedAt?.toISOString(),
+    }),
+    DECRYPT_BATCH_SIZE
+  );
+
+  const exportExpenseProjections: ExportExpenseProjection[] = await processBatch(
+    expenseProjections,
+    async (projection) => ({
+      serviceType: decrypt(projection.serviceTypeEncrypted, userSalt),
+      estimatedCost: tryDecryptNumber(projection.estimatedCostEncrypted, userSalt, decrypt),
+      frequencyPerYear: projection.frequencyPerYear,
+      isInNetwork: projection.isInNetwork,
+      notes: projection.notesEncrypted ? decrypt(projection.notesEncrypted, userSalt) : undefined,
+      planId: projection.planId,
+    }),
+    DECRYPT_BATCH_SIZE
+  );
+
+  const exportExpenseActuals: ExportExpenseActual[] = await processBatch(
+    expenseActuals,
+    async (actual) => ({
+      serviceType: decrypt(actual.serviceTypeEncrypted, userSalt),
+      providerName: actual.providerNameEncrypted ? decrypt(actual.providerNameEncrypted, userSalt) : undefined,
+      billedAmount: tryDecryptNumber(actual.billedAmountEncrypted, userSalt, decrypt),
+      insurancePaid: tryDecryptNumber(actual.insurancePaidEncrypted, userSalt, decrypt),
+      patientPaid: tryDecryptNumber(actual.patientPaidEncrypted, userSalt, decrypt),
+      appliedToDeductible: tryDecryptNumber(actual.appliedToDeductibleEncrypted, userSalt, decrypt),
+      appliedToOop: tryDecryptNumber(actual.appliedToOopEncrypted, userSalt, decrypt),
+      dateOfService: actual.dateOfService?.toISOString().split('T')[0],
+      isInNetwork: actual.isInNetwork,
+      claimStatus: actual.claimStatus,
+      notes: actual.notesEncrypted ? decrypt(actual.notesEncrypted, userSalt) : undefined,
+    }),
+    DECRYPT_BATCH_SIZE
+  );
+
+  const exportCostAnalyses: ExportCostAnalysis[] = await processBatch(
+    costAnalyses,
+    async (analysis) => ({
+      claudeResponse: decrypt(analysis.claudeResponse, userSalt),
+      totalProjectedOop: tryDecryptNumber(analysis.totalProjectedOopEncrypted, userSalt, decrypt),
+      analysisDate: analysis.analysisDate.toISOString(),
+    }),
+    DECRYPT_BATCH_SIZE
+  );
+
+  const exportUserFiles: ExportUserFile[] = userFiles.map((file) => ({
+    originalFilename: file.originalFilename,
+    fileType: file.fileType,
+    fileSize: file.fileSize,
+    labName: file.labName ?? undefined,
+    labDate: file.labDate?.toISOString().split('T')[0],
+    biomarkersExtracted: file.biomarkersExtracted,
+    createdAt: file.createdAt.toISOString(),
+  }));
+
+  const exportProviderRelationships: ExportProviderRelationship[] = await processBatch(
+    providerRelationships,
+    async (rel) => ({
+      relationshipType: rel.relationshipType,
+      status: rel.status,
+      role: rel.patientId === userId ? 'patient' : 'provider',
+      canViewBiomarkers: rel.canViewBiomarkers,
+      canViewInsurance: rel.canViewInsurance,
+      canViewDna: rel.canViewDna,
+      canViewHealthNeeds: rel.canViewHealthNeeds,
+      canEditData: rel.canEditData,
+      consentGrantedAt: rel.consentGrantedAt?.toISOString(),
+      consentExpiresAt: rel.consentExpiresAt?.toISOString(),
+      notes: rel.notesEncrypted ? decrypt(rel.notesEncrypted, userSalt) : undefined,
+    }),
+    DECRYPT_BATCH_SIZE
+  );
+
   const byCategory: Record<string, number> = {};
   let abnormalCount = 0;
   let normalCount = 0;
@@ -216,25 +545,45 @@ export async function exportUserData(
 
   const exportData: ExportData = {
     exportDate: new Date().toISOString(),
-    user: {
-      email: user.email,
-      createdAt: user.createdAt.toISOString(),
-    },
+    user: userProfile,
     biomarkers: decryptedBiomarkers,
     insurancePlans: exportInsurancePlans,
+    healthGoals: exportHealthGoals,
+    healthNeeds: exportHealthNeeds,
+    expenseProjections: exportExpenseProjections,
+    expenseActuals: exportExpenseActuals,
+    costAnalyses: exportCostAnalyses,
+    files: exportUserFiles,
+    providerRelationships: exportProviderRelationships,
+    filesNote: 'File metadata only — original file bytes can be downloaded individually from the Files section.',
     summary: {
       totalBiomarkers: decryptedBiomarkers.length,
       byCategory,
       abnormalCount,
       normalCount,
+      totalInsurancePlans: exportInsurancePlans.length,
+      totalHealthGoals: exportHealthGoals.length,
+      totalHealthNeeds: exportHealthNeeds.length,
+      totalExpenseProjections: exportExpenseProjections.length,
+      totalExpenseActuals: exportExpenseActuals.length,
+      totalCostAnalyses: exportCostAnalyses.length,
+      totalFiles: exportUserFiles.length,
+      totalProviderRelationships: exportProviderRelationships.length,
     },
   };
 
-  // Audit log: EXPORT user data
+  // Audit log: EXPORT user data with per-category counts (§164.524 right-of-access)
   await auditService.logAccess('UserData', userId, { req, userId }, {
     operation: 'EXPORT',
     biomarkerCount: decryptedBiomarkers.length,
     insurancePlanCount: exportInsurancePlans.length,
+    healthGoalCount: exportHealthGoals.length,
+    healthNeedCount: exportHealthNeeds.length,
+    expenseProjectionCount: exportExpenseProjections.length,
+    expenseActualCount: exportExpenseActuals.length,
+    costAnalysisCount: exportCostAnalyses.length,
+    fileCount: exportUserFiles.length,
+    providerRelationshipCount: exportProviderRelationships.length,
   });
 
   const response: ApiResponse<ExportData> = {
@@ -246,7 +595,10 @@ export async function exportUserData(
 }
 
 /**
- * Delete all user health data (biomarkers, insurance, health needs, goals)
+ * Delete all user health data (biomarkers, insurance, health needs, goals,
+ * expenses, cost analyses, files, provider relationships).
+ * Requires password confirmation — this is an equally destructive operation
+ * as deleteAccount and must not rely solely on session auth.
  * DELETE /api/v1/settings/delete-data
  */
 export async function deleteAllData(
@@ -254,9 +606,27 @@ export async function deleteAllData(
   res: Response
 ): Promise<void> {
   const userId = req.user!.id;
+  const { password } = req.body as { password: string };
 
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
+
+  // Verify password before touching any data.
+  const user = await withRLSContext(userId, async (tx) => {
+    return tx.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true },
+    });
+  });
+
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  const isValidPassword = await verifyPassword(password, user.passwordHash);
+  if (!isValidPassword) {
+    throw new UnauthorizedError('Invalid password');
+  }
 
   // Phase 1 — enumerate GCS-backed files before any deletion. RLS-scoped read.
   const filesToDelete = await withRLSTransaction(userId, async (tx) => {
@@ -302,27 +672,62 @@ export async function deleteAllData(
     );
   }
 
-  // Phase 3 — delete DB rows in a single transaction. deleteMany returns
-  // `.count`, so we avoid a separate pre-count read.
+  // Phase 3 — delete DB rows in FK dependency order within a single RLS
+  // transaction. deleteMany returns `.count`, so we avoid a separate
+  // pre-count read.
+  //
+  // Order: cost analyses → expense actuals → expense projections →
+  // provider relationships → user files → biomarkers/insurance/goals/needs.
+  // Cost analyses and expense actuals reference expense projections and
+  // insurance plans, so they must be removed first.
   const counts = await withRLSTransaction(userId, async (tx) => {
-    const [biomarkerCount, insurancePlanCount, healthNeedCount, healthGoalCount, userFileCount] =
-      await Promise.all([
-        tx.biomarker.deleteMany({ where: { userId } }).then((r) => r.count),
-        tx.insurancePlan.deleteMany({ where: { userId } }).then((r) => r.count),
-        tx.healthNeed.deleteMany({ where: { userId } }).then((r) => r.count),
-        tx.healthGoal.deleteMany({ where: { userId } }).then((r) => r.count),
-        tx.userFile.deleteMany({ where: { userId } }).then((r) => r.count),
-      ]);
-    return { biomarkerCount, insurancePlanCount, healthNeedCount, healthGoalCount, userFileCount };
+    const costAnalysisCount = (await tx.costAnalysis.deleteMany({ where: { userId } })).count;
+    const expenseActualCount = (await tx.expenseActual.deleteMany({ where: { userId } })).count;
+    const expenseProjectionCount = (await tx.expenseProjection.deleteMany({ where: { userId } })).count;
+    const providerRelationshipCount = (
+      await tx.providerPatient.deleteMany({
+        where: { OR: [{ patientId: userId }, { providerId: userId }] },
+      })
+    ).count;
+
+    const [
+      biomarkerCount,
+      insurancePlanCount,
+      healthNeedCount,
+      healthGoalCount,
+      userFileCount,
+    ] = await Promise.all([
+      tx.biomarker.deleteMany({ where: { userId } }).then((r) => r.count),
+      tx.insurancePlan.deleteMany({ where: { userId } }).then((r) => r.count),
+      tx.healthNeed.deleteMany({ where: { userId } }).then((r) => r.count),
+      tx.healthGoal.deleteMany({ where: { userId } }).then((r) => r.count),
+      tx.userFile.deleteMany({ where: { userId } }).then((r) => r.count),
+    ]);
+
+    return {
+      biomarkerCount,
+      insurancePlanCount,
+      healthNeedCount,
+      healthGoalCount,
+      userFileCount,
+      costAnalysisCount,
+      expenseActualCount,
+      expenseProjectionCount,
+      providerRelationshipCount,
+    };
   });
 
-  // Phase 4 — audit the success with the actual deletion counts.
+  // Phase 4 — audit the success with the actual deletion counts per category.
   await auditService.logDelete('UserData', userId, {
     deletedBiomarkers: counts.biomarkerCount,
     deletedInsurancePlans: counts.insurancePlanCount,
     deletedHealthNeeds: counts.healthNeedCount,
     deletedHealthGoals: counts.healthGoalCount,
     deletedUserFiles: counts.userFileCount,
+    deletedCostAnalyses: counts.costAnalysisCount,
+    deletedExpenseActuals: counts.expenseActualCount,
+    deletedExpenseProjections: counts.expenseProjectionCount,
+    deletedProviderRelationships: counts.providerRelationshipCount,
     deletedGcsObjects: gcsResults.length,
   }, { req, userId });
 

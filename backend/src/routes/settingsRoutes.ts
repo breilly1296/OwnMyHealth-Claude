@@ -81,6 +81,7 @@ router.get(
 router.delete(
   '/delete-data',
   sensitiveLimiter,
+  validate(schemas.settings.deleteData),
   asyncHandler(settingsController.deleteAllData)
 );
 

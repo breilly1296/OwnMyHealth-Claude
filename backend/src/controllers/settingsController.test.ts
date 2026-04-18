@@ -22,6 +22,11 @@ const mockTx = {
   insurancePlan: { deleteMany: vi.fn() },
   healthNeed: { deleteMany: vi.fn() },
   healthGoal: { deleteMany: vi.fn() },
+  costAnalysis: { deleteMany: vi.fn() },
+  expenseActual: { deleteMany: vi.fn() },
+  expenseProjection: { deleteMany: vi.fn() },
+  providerPatient: { deleteMany: vi.fn() },
+  labConnection: { findMany: vi.fn() },
   user: { findUnique: vi.fn(), delete: vi.fn() },
 };
 
@@ -86,6 +91,10 @@ describe('deleteAllData (C-6)', () => {
     // still invoke the fn arg). resetAllMocks would wipe them.
     vi.clearAllMocks();
 
+    mockTx.user.findUnique.mockResolvedValue({
+      id: 'user-123',
+      passwordHash: '$hash',
+    });
     mockTx.userFile.findMany.mockResolvedValue([
       { id: 'f1', storageKey: 'user-123/f1.pdf', filename: 'labs.pdf' },
       { id: 'f2', storageKey: 'user-123/f2.pdf', filename: 'sbc.pdf' },
@@ -95,6 +104,10 @@ describe('deleteAllData (C-6)', () => {
     mockTx.healthNeed.deleteMany.mockResolvedValue({ count: 2 });
     mockTx.healthGoal.deleteMany.mockResolvedValue({ count: 4 });
     mockTx.userFile.deleteMany.mockResolvedValue({ count: 2 });
+    mockTx.costAnalysis.deleteMany.mockResolvedValue({ count: 0 });
+    mockTx.expenseActual.deleteMany.mockResolvedValue({ count: 0 });
+    mockTx.expenseProjection.deleteMany.mockResolvedValue({ count: 0 });
+    mockTx.providerPatient.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   afterEach(() => {
@@ -107,7 +120,7 @@ describe('deleteAllData (C-6)', () => {
       { storageKey: 'user-123/f2.pdf', ok: true },
     ]);
 
-    const req = mockReq('user-123');
+    const req = mockReq('user-123', { password: 'correct-horse' });
     const res = mockRes();
 
     await deleteAllData(req, res);
@@ -137,7 +150,7 @@ describe('deleteAllData (C-6)', () => {
       { storageKey: 'user-123/f2.pdf', ok: false, error: 'GCS 500' },
     ]);
 
-    const req = mockReq('user-123');
+    const req = mockReq('user-123', { password: 'correct-horse' });
     const res = mockRes();
 
     await expect(deleteAllData(req, res)).rejects.toThrow(/Failed to delete 1 of 2 files/);
@@ -164,7 +177,7 @@ describe('deleteAllData (C-6)', () => {
     mockTx.userFile.findMany.mockResolvedValue([]);
     vi.mocked(storageService.deleteFiles).mockResolvedValue([]);
 
-    const req = mockReq('user-123');
+    const req = mockReq('user-123', { password: 'correct-horse' });
     const res = mockRes();
 
     await deleteAllData(req, res);
@@ -188,6 +201,7 @@ describe('deleteAccount (C-6)', () => {
     mockTx.userFile.findMany.mockResolvedValue([
       { id: 'f1', storageKey: 'user-123/f1.pdf' },
     ]);
+    mockTx.labConnection.findMany.mockResolvedValue([]);
     mockTx.user.delete.mockResolvedValue({ id: 'user-123' });
   });
 

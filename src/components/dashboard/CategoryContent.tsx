@@ -314,7 +314,6 @@ export function CategoryContent({
                         <Suspense fallback={<LazyLoadSpinner />}>
                           <BiomarkerAIGuidance
                             biomarker={biomarker}
-                            allBiomarkers={biomarkers}
                             autoFetch={false}
                           />
                           <BiomarkerActionPlan
@@ -471,7 +470,6 @@ export function CategoryContent({
                                 <Suspense fallback={<LazyLoadSpinner />}>
                                   <BiomarkerAIGuidance
                                     biomarker={biomarker}
-                                    allBiomarkers={biomarkers}
                                     autoFetch={false}
                                   />
                                 </Suspense>

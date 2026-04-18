@@ -15,7 +15,6 @@ import { renderMarkdown } from '../../utils/renderMarkdown';
 
 interface BiomarkerAIGuidanceProps {
   biomarker: Biomarker;
-  allBiomarkers: Biomarker[];
   /**
    * When true (default), fetch guidance on mount — preserves TrendsPage /
    * TrendDetailModal behavior. When false, show a "Get AI insights" button
@@ -34,7 +33,7 @@ interface GuidanceSection {
 // Cache for guidance to avoid re-fetching
 const guidanceCache = new Map<string, string>();
 
-export default function BiomarkerAIGuidance({ biomarker, allBiomarkers, autoFetch = true }: BiomarkerAIGuidanceProps) {
+export default function BiomarkerAIGuidance({ biomarker, autoFetch = true }: BiomarkerAIGuidanceProps) {
   const cacheKey = `${biomarker.id}-${biomarker.value}`;
   // Seed from cache so on-demand callers show prior results instantly and
   // skip the button when guidance already exists for this value.
@@ -54,7 +53,7 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers, autoFetc
     setError(null);
 
     try {
-      const result = await biomarkersApi.getGuidance(biomarker.id, biomarker, allBiomarkers);
+      const result = await biomarkersApi.getGuidance(biomarker.id);
       if (isMountedRef.current) {
         guidanceCache.set(cacheKey, result.guidance);
         setGuidance(result.guidance);
@@ -68,7 +67,7 @@ export default function BiomarkerAIGuidance({ biomarker, allBiomarkers, autoFetc
         setIsLoading(false);
       }
     }
-  }, [biomarker, allBiomarkers, cacheKey]);
+  }, [biomarker.id, cacheKey]);
 
   useEffect(() => {
     isMountedRef.current = true;

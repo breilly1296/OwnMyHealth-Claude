@@ -697,6 +697,10 @@ export const schemas = {
       { message: 'At least one notification preference must be provided' }
     ),
 
+    deleteData: z.object({
+      password: z.string().min(1, 'Password is required'),
+    }),
+
     updateHealthProfile: z.object({
       biologicalSex: z.enum(['male', 'female']).optional(),
       ageRange: z.enum(['18-29', '30-39', '40-49', '50-59', '60-69', '70+']).optional(),
