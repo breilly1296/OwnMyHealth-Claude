@@ -659,6 +659,24 @@ export const schemas = {
   },
 
   // ============================================
+  // AI Chat (Health Guide)
+  // ============================================
+  ai: {
+    chat: z.object({
+      message: z.string().min(1).max(2000),
+      conversationHistory: z
+        .array(
+          z.object({
+            role: z.enum(['user', 'assistant']),
+            content: z.string().max(5000),
+          })
+        )
+        .max(20)
+        .optional(),
+    }),
+  },
+
+  // ============================================
   // Settings Schemas
   // ============================================
   settings: {

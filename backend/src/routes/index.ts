@@ -30,6 +30,7 @@ import uploadRoutes from './uploadRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
 import fileRoutes from './fileRoutes.js';
 import expenseRoutes from './expenseRoutes.js';
+import aiRoutes from './aiRoutes.js';
 import type { ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -65,6 +66,7 @@ router.get('/', (_req: Request, res: Response) => {
         '/api/v1/upload',
         '/api/v1/files',
         '/api/v1/settings',
+        '/api/v1/ai',
       ],
     },
   };
@@ -92,5 +94,8 @@ router.use('/files', fileRoutes);         // User file management (list, downloa
 
 // User settings routes
 router.use('/settings', settingsRoutes);  // Data export, account deletion
+
+// AI Health Guide (conversational)
+router.use('/ai', aiRoutes);
 
 export default router;
