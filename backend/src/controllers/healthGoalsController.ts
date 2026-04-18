@@ -59,6 +59,21 @@ interface Milestone {
 }
 
 /**
+ * Parse a JSON milestones blob from the DB. Returns null on any failure
+ * (missing input, invalid JSON, non-array) — matches the prior inline
+ * try/catch semantics.
+ */
+function parseMilestones(raw: string | null | undefined): Milestone[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Milestone[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Converts Prisma HealthGoal to response format with decrypted description
  */
 function toResponse(
@@ -72,14 +87,7 @@ function toResponse(
     description = encryptionService.decrypt(goal.descriptionEncrypted, userSalt);
   }
 
-  let milestones: Milestone[] | null = null;
-  if (goal.milestones) {
-    try {
-      milestones = JSON.parse(goal.milestones);
-    } catch {
-      milestones = null;
-    }
-  }
+  const milestones = parseMilestones(goal.milestones);
 
   const response: HealthGoalResponse = {
     id: goal.id,
@@ -467,27 +475,20 @@ export async function updateGoalProgress(
       completedAt = new Date();
     }
 
-    // Update milestones
-    let milestones: Milestone[] | null = null;
-    if (foundGoal.milestones) {
-      try {
-        milestones = JSON.parse(foundGoal.milestones);
-        if (milestones) {
-          milestones = milestones.map((m) => {
-            const achieved = foundGoal.direction === 'DECREASE'
-              ? value <= m.value
-              : value >= m.value;
-            return {
-              ...m,
-              achieved: m.achieved || achieved,
-              achievedAt: (m.achieved || achieved) ? (m.achievedAt || new Date().toISOString()) : undefined,
-            };
-          });
-        }
-      } catch {
-        milestones = null;
-      }
-    }
+    // Update milestones — re-evaluate "achieved" using the new value.
+    const parsed = parseMilestones(foundGoal.milestones);
+    const milestones: Milestone[] | null = parsed
+      ? parsed.map((m) => {
+          const achieved =
+            foundGoal.direction === 'DECREASE' ? value <= m.value : value >= m.value;
+          const nowAchieved = m.achieved || achieved;
+          return {
+            ...m,
+            achieved: nowAchieved,
+            achievedAt: nowAchieved ? m.achievedAt || new Date().toISOString() : undefined,
+          };
+        })
+      : null;
 
     // Update goal
     await tx.healthGoal.update({

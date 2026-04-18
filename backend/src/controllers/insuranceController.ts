@@ -208,6 +208,13 @@ function parseJsonArray<T>(jsonStr: string | null | undefined): T[] | undefined 
 }
 
 /**
+ * Falsy-or-nullish numeric field → undefined, otherwise toNumber(field).
+ * Collapses the ~60 identical ternaries in the plan response below.
+ */
+const optNum = (v: unknown): number | undefined =>
+  v ? toNumber(v) : undefined;
+
+/**
  * Converts Prisma InsurancePlan to response format with decrypted values
  */
 function toResponse(
@@ -216,28 +223,19 @@ function toResponse(
 ): InsurancePlanResponse {
   const encryptionService = getEncryptionService();
 
-  // Decrypt PHI fields with error handling
-  // If decryption fails (e.g., key mismatch), return undefined instead of crashing
-  let memberId: string | undefined;
-  let groupNumber: string | undefined;
-
-  if (plan.memberIdEncrypted) {
+  // Decrypt PHI fields with error handling. If decryption fails (e.g., key
+  // mismatch), warn and return undefined instead of crashing.
+  const tryDecrypt = (ciphertext: string | null, field: string): string | undefined => {
+    if (!ciphertext) return undefined;
     try {
-      memberId = encryptionService.decrypt(plan.memberIdEncrypted, userSalt);
+      return encryptionService.decrypt(ciphertext, userSalt);
     } catch {
-      logger.warn('Failed to decrypt memberId for insurance plan', { data: { planId: plan.id } });
-      memberId = undefined;
+      logger.warn(`Failed to decrypt ${field} for insurance plan`, { data: { planId: plan.id } });
+      return undefined;
     }
-  }
-
-  if (plan.groupIdEncrypted) {
-    try {
-      groupNumber = encryptionService.decrypt(plan.groupIdEncrypted, userSalt);
-    } catch {
-      logger.warn('Failed to decrypt groupId for insurance plan', { data: { planId: plan.id } });
-      groupNumber = undefined;
-    }
-  }
+  };
+  const memberId = tryDecrypt(plan.memberIdEncrypted, 'memberId');
+  const groupNumber = tryDecrypt(plan.groupIdEncrypted, 'groupId');
 
   // Convert benefits
   const benefits: InsuranceBenefitResponse[] = (plan.benefits || []).map((b) => ({
@@ -246,14 +244,14 @@ function toResponse(
     serviceCategory: b.serviceCategory,
     inNetworkCoverage: {
       covered: b.inNetworkCovered,
-      copay: b.inNetworkCopay ? toNumber(b.inNetworkCopay) : undefined,
-      coinsurance: b.inNetworkCoinsurance ? toNumber(b.inNetworkCoinsurance) : undefined,
+      copay: optNum(b.inNetworkCopay),
+      coinsurance: optNum(b.inNetworkCoinsurance),
       deductibleApplies: b.inNetworkDeductible,
     },
     outNetworkCoverage: {
       covered: b.outNetworkCovered,
-      copay: b.outNetworkCopay ? toNumber(b.outNetworkCopay) : undefined,
-      coinsurance: b.outNetworkCoinsurance ? toNumber(b.outNetworkCoinsurance) : undefined,
+      copay: optNum(b.outNetworkCopay),
+      coinsurance: optNum(b.outNetworkCoinsurance),
       deductibleApplies: b.outNetworkDeductible,
     },
     limitations: b.limitations ?? undefined,
@@ -273,123 +271,123 @@ function toResponse(
     terminationDate: plan.terminationDate
       ? plan.terminationDate.toISOString().split('T')[0]
       : undefined,
-    premium: plan.premiumMonthly ? toNumber(plan.premiumMonthly) : undefined,
+    premium: optNum(plan.premiumMonthly),
     deductibleIndividual: toNumber(plan.deductibleIndividual),
     deductibleFamily: toNumber(plan.deductibleFamily),
     oopMaxIndividual: toNumber(plan.oopMaxIndividual),
     oopMaxFamily: toNumber(plan.oopMaxFamily),
 
     // Tracking fields
-    deductibleMetIndividual: plan.deductibleMetIndividual ? toNumber(plan.deductibleMetIndividual) : undefined,
-    deductibleMetFamily: plan.deductibleMetFamily ? toNumber(plan.deductibleMetFamily) : undefined,
-    oopMetIndividual: plan.oopMetIndividual ? toNumber(plan.oopMetIndividual) : undefined,
-    oopMetFamily: plan.oopMetFamily ? toNumber(plan.oopMetFamily) : undefined,
+    deductibleMetIndividual: optNum(plan.deductibleMetIndividual),
+    deductibleMetFamily: optNum(plan.deductibleMetFamily),
+    oopMetIndividual: optNum(plan.oopMetIndividual),
+    oopMetFamily: optNum(plan.oopMetFamily),
 
     // Core copay amounts
-    copayPrimaryCare: plan.copayPrimaryCare ? toNumber(plan.copayPrimaryCare) : undefined,
-    copaySpecialist: plan.copaySpecialist ? toNumber(plan.copaySpecialist) : undefined,
-    copayUrgentCare: plan.copayUrgentCare ? toNumber(plan.copayUrgentCare) : undefined,
-    copayEmergency: plan.copayEmergency ? toNumber(plan.copayEmergency) : undefined,
-    copayTelehealth: plan.copayTelehealth ? toNumber(plan.copayTelehealth) : undefined,
-    copayLabWork: plan.copayLabWork ? toNumber(plan.copayLabWork) : undefined,
-    copayXray: plan.copayXray ? toNumber(plan.copayXray) : undefined,
-    copayAdvancedImaging: plan.copayAdvancedImaging ? toNumber(plan.copayAdvancedImaging) : undefined,
-    coinsuranceRate: plan.coinsuranceRate ? toNumber(plan.coinsuranceRate) : undefined,
+    copayPrimaryCare: optNum(plan.copayPrimaryCare),
+    copaySpecialist: optNum(plan.copaySpecialist),
+    copayUrgentCare: optNum(plan.copayUrgentCare),
+    copayEmergency: optNum(plan.copayEmergency),
+    copayTelehealth: optNum(plan.copayTelehealth),
+    copayLabWork: optNum(plan.copayLabWork),
+    copayXray: optNum(plan.copayXray),
+    copayAdvancedImaging: optNum(plan.copayAdvancedImaging),
+    coinsuranceRate: optNum(plan.coinsuranceRate),
     // Per-service coinsurance
-    coinsurancePrimaryCare: plan.coinsurancePrimaryCare ? toNumber(plan.coinsurancePrimaryCare) : undefined,
-    coinsuranceSpecialist: plan.coinsuranceSpecialist ? toNumber(plan.coinsuranceSpecialist) : undefined,
-    coinsuranceUrgentCare: plan.coinsuranceUrgentCare ? toNumber(plan.coinsuranceUrgentCare) : undefined,
-    coinsuranceEmergency: plan.coinsuranceEmergency ? toNumber(plan.coinsuranceEmergency) : undefined,
-    coinsuranceTelehealth: plan.coinsuranceTelehealth ? toNumber(plan.coinsuranceTelehealth) : undefined,
-    coinsuranceLabWork: plan.coinsuranceLabWork ? toNumber(plan.coinsuranceLabWork) : undefined,
-    coinsuranceXray: plan.coinsuranceXray ? toNumber(plan.coinsuranceXray) : undefined,
-    coinsuranceAdvancedImaging: plan.coinsuranceAdvancedImaging ? toNumber(plan.coinsuranceAdvancedImaging) : undefined,
+    coinsurancePrimaryCare: optNum(plan.coinsurancePrimaryCare),
+    coinsuranceSpecialist: optNum(plan.coinsuranceSpecialist),
+    coinsuranceUrgentCare: optNum(plan.coinsuranceUrgentCare),
+    coinsuranceEmergency: optNum(plan.coinsuranceEmergency),
+    coinsuranceTelehealth: optNum(plan.coinsuranceTelehealth),
+    coinsuranceLabWork: optNum(plan.coinsuranceLabWork),
+    coinsuranceXray: optNum(plan.coinsuranceXray),
+    coinsuranceAdvancedImaging: optNum(plan.coinsuranceAdvancedImaging),
 
     // Inpatient coverage
-    inpatientHospitalCopay: plan.inpatientHospitalCopay ? toNumber(plan.inpatientHospitalCopay) : undefined,
-    inpatientHospitalCoinsurance: plan.inpatientHospitalCoinsurance ? toNumber(plan.inpatientHospitalCoinsurance) : undefined,
-    inpatientMentalHealthCopay: plan.inpatientMentalHealthCopay ? toNumber(plan.inpatientMentalHealthCopay) : undefined,
-    inpatientMentalCoinsurance: plan.inpatientMentalCoinsurance ? toNumber(plan.inpatientMentalCoinsurance) : undefined,
-    maternityCopay: plan.maternityCopay ? toNumber(plan.maternityCopay) : undefined,
-    maternityCoinsurance: plan.maternityCoinsurance ? toNumber(plan.maternityCoinsurance) : undefined,
-    skilledNursingCopay: plan.skilledNursingCopay ? toNumber(plan.skilledNursingCopay) : undefined,
-    skilledNursingCoinsurance: plan.skilledNursingCoinsurance ? toNumber(plan.skilledNursingCoinsurance) : undefined,
+    inpatientHospitalCopay: optNum(plan.inpatientHospitalCopay),
+    inpatientHospitalCoinsurance: optNum(plan.inpatientHospitalCoinsurance),
+    inpatientMentalHealthCopay: optNum(plan.inpatientMentalHealthCopay),
+    inpatientMentalCoinsurance: optNum(plan.inpatientMentalCoinsurance),
+    maternityCopay: optNum(plan.maternityCopay),
+    maternityCoinsurance: optNum(plan.maternityCoinsurance),
+    skilledNursingCopay: optNum(plan.skilledNursingCopay),
+    skilledNursingCoinsurance: optNum(plan.skilledNursingCoinsurance),
     skilledNursingDaysLimit: plan.skilledNursingDaysLimit ?? undefined,
 
     // Outpatient coverage
-    outpatientSurgeryCopay: plan.outpatientSurgeryCopay ? toNumber(plan.outpatientSurgeryCopay) : undefined,
-    outpatientSurgeryCoinsurance: plan.outpatientSurgeryCoinsurance ? toNumber(plan.outpatientSurgeryCoinsurance) : undefined,
-    outpatientMentalHealthCopay: plan.outpatientMentalHealthCopay ? toNumber(plan.outpatientMentalHealthCopay) : undefined,
-    outpatientMentalCoinsurance: plan.outpatientMentalCoinsurance ? toNumber(plan.outpatientMentalCoinsurance) : undefined,
+    outpatientSurgeryCopay: optNum(plan.outpatientSurgeryCopay),
+    outpatientSurgeryCoinsurance: optNum(plan.outpatientSurgeryCoinsurance),
+    outpatientMentalHealthCopay: optNum(plan.outpatientMentalHealthCopay),
+    outpatientMentalCoinsurance: optNum(plan.outpatientMentalCoinsurance),
 
     // Therapy/Rehab coverage
-    physicalTherapyCopay: plan.physicalTherapyCopay ? toNumber(plan.physicalTherapyCopay) : undefined,
+    physicalTherapyCopay: optNum(plan.physicalTherapyCopay),
     physicalTherapyVisitsLimit: plan.physicalTherapyVisitsLimit ?? undefined,
-    occupationalTherapyCopay: plan.occupationalTherapyCopay ? toNumber(plan.occupationalTherapyCopay) : undefined,
+    occupationalTherapyCopay: optNum(plan.occupationalTherapyCopay),
     occupationalTherapyVisitsLimit: plan.occupationalTherapyVisitsLimit ?? undefined,
-    speechTherapyCopay: plan.speechTherapyCopay ? toNumber(plan.speechTherapyCopay) : undefined,
+    speechTherapyCopay: optNum(plan.speechTherapyCopay),
     speechTherapyVisitsLimit: plan.speechTherapyVisitsLimit ?? undefined,
-    chiropracticCopay: plan.chiropracticCopay ? toNumber(plan.chiropracticCopay) : undefined,
+    chiropracticCopay: optNum(plan.chiropracticCopay),
     chiropracticVisitsLimit: plan.chiropracticVisitsLimit ?? undefined,
-    acupunctureCopay: plan.acupunctureCopay ? toNumber(plan.acupunctureCopay) : undefined,
+    acupunctureCopay: optNum(plan.acupunctureCopay),
     acupunctureVisitsLimit: plan.acupunctureVisitsLimit ?? undefined,
-    cardiacRehabCopay: plan.cardiacRehabCopay ? toNumber(plan.cardiacRehabCopay) : undefined,
+    cardiacRehabCopay: optNum(plan.cardiacRehabCopay),
     cardiacRehabVisitsLimit: plan.cardiacRehabVisitsLimit ?? undefined,
-    pulmonaryRehabCopay: plan.pulmonaryRehabCopay ? toNumber(plan.pulmonaryRehabCopay) : undefined,
+    pulmonaryRehabCopay: optNum(plan.pulmonaryRehabCopay),
     pulmonaryRehabVisitsLimit: plan.pulmonaryRehabVisitsLimit ?? undefined,
 
     // Prescription (Rx) benefits
-    rxTier1Copay: plan.rxTier1Copay ? toNumber(plan.rxTier1Copay) : undefined,
-    rxTier2Copay: plan.rxTier2Copay ? toNumber(plan.rxTier2Copay) : undefined,
-    rxTier3Copay: plan.rxTier3Copay ? toNumber(plan.rxTier3Copay) : undefined,
-    rxTier4Copay: plan.rxTier4Copay ? toNumber(plan.rxTier4Copay) : undefined,
-    rxTier1Coinsurance: plan.rxTier1Coinsurance ? toNumber(plan.rxTier1Coinsurance) : undefined,
-    rxTier2Coinsurance: plan.rxTier2Coinsurance ? toNumber(plan.rxTier2Coinsurance) : undefined,
-    rxTier3Coinsurance: plan.rxTier3Coinsurance ? toNumber(plan.rxTier3Coinsurance) : undefined,
-    rxTier4Coinsurance: plan.rxTier4Coinsurance ? toNumber(plan.rxTier4Coinsurance) : undefined,
+    rxTier1Copay: optNum(plan.rxTier1Copay),
+    rxTier2Copay: optNum(plan.rxTier2Copay),
+    rxTier3Copay: optNum(plan.rxTier3Copay),
+    rxTier4Copay: optNum(plan.rxTier4Copay),
+    rxTier1Coinsurance: optNum(plan.rxTier1Coinsurance),
+    rxTier2Coinsurance: optNum(plan.rxTier2Coinsurance),
+    rxTier3Coinsurance: optNum(plan.rxTier3Coinsurance),
+    rxTier4Coinsurance: optNum(plan.rxTier4Coinsurance),
     rxRetailDaysSupply: plan.rxRetailDaysSupply ?? undefined,
     rxMailOrderDaysSupply: plan.rxMailOrderDaysSupply ?? undefined,
-    rxDeductibleIndividual: plan.rxDeductibleIndividual ? toNumber(plan.rxDeductibleIndividual) : undefined,
-    rxDeductibleFamily: plan.rxDeductibleFamily ? toNumber(plan.rxDeductibleFamily) : undefined,
-    rxOopMaxIndividual: plan.rxOopMaxIndividual ? toNumber(plan.rxOopMaxIndividual) : undefined,
-    rxOopMaxFamily: plan.rxOopMaxFamily ? toNumber(plan.rxOopMaxFamily) : undefined,
+    rxDeductibleIndividual: optNum(plan.rxDeductibleIndividual),
+    rxDeductibleFamily: optNum(plan.rxDeductibleFamily),
+    rxOopMaxIndividual: optNum(plan.rxOopMaxIndividual),
+    rxOopMaxFamily: optNum(plan.rxOopMaxFamily),
 
     // Emergency/Ambulance coverage
-    ambulanceGroundCopay: plan.ambulanceGroundCopay ? toNumber(plan.ambulanceGroundCopay) : undefined,
-    ambulanceGroundCoinsurance: plan.ambulanceGroundCoinsurance ? toNumber(plan.ambulanceGroundCoinsurance) : undefined,
-    ambulanceAirCopay: plan.ambulanceAirCopay ? toNumber(plan.ambulanceAirCopay) : undefined,
-    ambulanceAirCoinsurance: plan.ambulanceAirCoinsurance ? toNumber(plan.ambulanceAirCoinsurance) : undefined,
+    ambulanceGroundCopay: optNum(plan.ambulanceGroundCopay),
+    ambulanceGroundCoinsurance: optNum(plan.ambulanceGroundCoinsurance),
+    ambulanceAirCopay: optNum(plan.ambulanceAirCopay),
+    ambulanceAirCoinsurance: optNum(plan.ambulanceAirCoinsurance),
 
     // Vision coverage
-    visionExamCopay: plan.visionExamCopay ? toNumber(plan.visionExamCopay) : undefined,
+    visionExamCopay: optNum(plan.visionExamCopay),
     visionExamFrequency: plan.visionExamFrequency ?? undefined,
-    visionLensesAllowance: plan.visionLensesAllowance ? toNumber(plan.visionLensesAllowance) : undefined,
-    visionFramesAllowance: plan.visionFramesAllowance ? toNumber(plan.visionFramesAllowance) : undefined,
-    visionContactsAllowance: plan.visionContactsAllowance ? toNumber(plan.visionContactsAllowance) : undefined,
+    visionLensesAllowance: optNum(plan.visionLensesAllowance),
+    visionFramesAllowance: optNum(plan.visionFramesAllowance),
+    visionContactsAllowance: optNum(plan.visionContactsAllowance),
 
     // Dental coverage
-    dentalPreventiveCoinsurance: plan.dentalPreventiveCoinsurance ? toNumber(plan.dentalPreventiveCoinsurance) : undefined,
-    dentalBasicCoinsurance: plan.dentalBasicCoinsurance ? toNumber(plan.dentalBasicCoinsurance) : undefined,
-    dentalMajorCoinsurance: plan.dentalMajorCoinsurance ? toNumber(plan.dentalMajorCoinsurance) : undefined,
-    dentalAnnualMax: plan.dentalAnnualMax ? toNumber(plan.dentalAnnualMax) : undefined,
-    dentalDeductible: plan.dentalDeductible ? toNumber(plan.dentalDeductible) : undefined,
-    dentalOrthodontiaCoinsurance: plan.dentalOrthodontiaCoinsurance ? toNumber(plan.dentalOrthodontiaCoinsurance) : undefined,
-    dentalOrthodontiaLifetimeMax: plan.dentalOrthodontiaLifetimeMax ? toNumber(plan.dentalOrthodontiaLifetimeMax) : undefined,
+    dentalPreventiveCoinsurance: optNum(plan.dentalPreventiveCoinsurance),
+    dentalBasicCoinsurance: optNum(plan.dentalBasicCoinsurance),
+    dentalMajorCoinsurance: optNum(plan.dentalMajorCoinsurance),
+    dentalAnnualMax: optNum(plan.dentalAnnualMax),
+    dentalDeductible: optNum(plan.dentalDeductible),
+    dentalOrthodontiaCoinsurance: optNum(plan.dentalOrthodontiaCoinsurance),
+    dentalOrthodontiaLifetimeMax: optNum(plan.dentalOrthodontiaLifetimeMax),
 
     // DME coverage
-    dmeCopay: plan.dmeCopay ? toNumber(plan.dmeCopay) : undefined,
-    dmeCoinsurance: plan.dmeCoinsurance ? toNumber(plan.dmeCoinsurance) : undefined,
+    dmeCopay: optNum(plan.dmeCopay),
+    dmeCoinsurance: optNum(plan.dmeCoinsurance),
 
     // Home Health coverage
-    homeHealthVisitCopay: plan.homeHealthVisitCopay ? toNumber(plan.homeHealthVisitCopay) : undefined,
-    homeHealthVisitCoinsurance: plan.homeHealthVisitCoinsurance ? toNumber(plan.homeHealthVisitCoinsurance) : undefined,
+    homeHealthVisitCopay: optNum(plan.homeHealthVisitCopay),
+    homeHealthVisitCoinsurance: optNum(plan.homeHealthVisitCoinsurance),
     homeHealthVisitLimit: plan.homeHealthVisitLimit ?? undefined,
 
     // Hospice coverage
-    hospiceInpatientCopay: plan.hospiceInpatientCopay ? toNumber(plan.hospiceInpatientCopay) : undefined,
-    hospiceInpatientCoinsurance: plan.hospiceInpatientCoinsurance ? toNumber(plan.hospiceInpatientCoinsurance) : undefined,
-    hospiceRespiteCopay: plan.hospiceRespiteCopay ? toNumber(plan.hospiceRespiteCopay) : undefined,
-    hospiceRespiteCoinsurance: plan.hospiceRespiteCoinsurance ? toNumber(plan.hospiceRespiteCoinsurance) : undefined,
+    hospiceInpatientCopay: optNum(plan.hospiceInpatientCopay),
+    hospiceInpatientCoinsurance: optNum(plan.hospiceInpatientCoinsurance),
+    hospiceRespiteCopay: optNum(plan.hospiceRespiteCopay),
+    hospiceRespiteCoinsurance: optNum(plan.hospiceRespiteCoinsurance),
     hospiceRespiteDayLimit: plan.hospiceRespiteDayLimit ?? undefined,
 
     // JSON list fields (parsed from strings)
@@ -400,7 +398,7 @@ function toResponse(
 
     // Source tracking
     extractedFromSbc: plan.extractedFromSbc,
-    sbcExtractionConfidence: plan.sbcExtractionConfidence ? toNumber(plan.sbcExtractionConfidence) : undefined,
+    sbcExtractionConfidence: optNum(plan.sbcExtractionConfidence),
     isActive: plan.isActive,
     isPrimary: plan.isPrimary,
     benefits,

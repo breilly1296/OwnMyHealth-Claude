@@ -46,6 +46,30 @@ const RESOURCE_TYPE_PROJECTION = 'expense_projection';
 const RESOURCE_TYPE_ACTUAL = 'expense_actual';
 const RESOURCE_TYPE_ANALYSIS = 'cost_analysis';
 
+/**
+ * Encrypt-if-present helpers. Distinguish undefined (field absent in
+ * update payload → leave alone) from null (explicit clear).
+ * - `encIfProvided`: undefined → undefined, null/empty → null, else encrypt.
+ * - `encNumIfProvided`: same, but for numeric inputs (toString before enc).
+ */
+function encIfProvided(
+  v: string | undefined | null,
+  encrypt: (plaintext: string, salt: string) => string,
+  salt: string
+): string | null | undefined {
+  if (v === undefined) return undefined;
+  return v ? encrypt(v, salt) : null;
+}
+
+function encNumIfProvided(
+  v: number | undefined | null,
+  encrypt: (plaintext: string, salt: string) => string,
+  salt: string
+): string | null | undefined {
+  if (v === undefined) return undefined;
+  return v === null ? null : encrypt(v.toString(), salt);
+}
+
 // ============================================
 // EXPENSE PROJECTIONS (Planned Expenses)
 // ============================================
@@ -311,7 +335,8 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const maybeEncrypt = (v: number | undefined | null) =>
+    // Create path: undefined/null both collapse to null (no prior value to preserve).
+    const encNum = (v: number | undefined | null) =>
       v === undefined || v === null ? null : encryption.encrypt(v.toString(), userSalt);
 
     const actual = await withRLSTransaction(userId, async (tx) => {
@@ -323,11 +348,11 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
           serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
           dateOfService: serviceDate ? new Date(serviceDate) : null,
           providerNameEncrypted: providerName ? encryption.encrypt(providerName, userSalt) : null,
-          billedAmountEncrypted: maybeEncrypt(billedAmount),
-          insurancePaidEncrypted: maybeEncrypt(insurancePaid),
-          patientPaidEncrypted: maybeEncrypt(patientPaid),
-          appliedToDeductibleEncrypted: maybeEncrypt(appliedToDeductible),
-          appliedToOopEncrypted: maybeEncrypt(appliedToOop),
+          billedAmountEncrypted: encNum(billedAmount),
+          insurancePaidEncrypted: encNum(insurancePaid),
+          patientPaidEncrypted: encNum(patientPaid),
+          appliedToDeductibleEncrypted: encNum(appliedToDeductible),
+          appliedToOopEncrypted: encNum(appliedToOop),
           isInNetwork: isInNetwork ?? true,
           claimStatus: claimStatus ?? 'processed',
           notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
@@ -415,10 +440,10 @@ export async function updateActual(req: AuthenticatedRequest, res: Response): Pr
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const maybeEncrypt = (v: number | undefined | null) =>
-      v === undefined ? undefined : v === null ? null : encryption.encrypt(v.toString(), userSalt);
-    const maybeEncryptStr = (v: string | undefined | null) =>
-      v === undefined ? undefined : v ? encryption.encrypt(v, userSalt) : null;
+    const encNum = (v: number | undefined | null) =>
+      encNumIfProvided(v, encryption.encrypt.bind(encryption), userSalt);
+    const encStr = (v: string | undefined | null) =>
+      encIfProvided(v, encryption.encrypt.bind(encryption), userSalt);
 
     const updateData: Record<string, unknown> = {};
     if (projectionId !== undefined) updateData.projectionId = projectionId;
@@ -426,15 +451,15 @@ export async function updateActual(req: AuthenticatedRequest, res: Response): Pr
     if (serviceDate !== undefined) {
       updateData.dateOfService = serviceDate ? new Date(serviceDate) : null;
     }
-    if (providerName !== undefined) updateData.providerNameEncrypted = maybeEncryptStr(providerName);
-    if (billedAmount !== undefined) updateData.billedAmountEncrypted = maybeEncrypt(billedAmount);
-    if (insurancePaid !== undefined) updateData.insurancePaidEncrypted = maybeEncrypt(insurancePaid);
-    if (patientPaid !== undefined) updateData.patientPaidEncrypted = maybeEncrypt(patientPaid);
-    if (appliedToDeductible !== undefined) updateData.appliedToDeductibleEncrypted = maybeEncrypt(appliedToDeductible);
-    if (appliedToOop !== undefined) updateData.appliedToOopEncrypted = maybeEncrypt(appliedToOop);
+    if (providerName !== undefined) updateData.providerNameEncrypted = encStr(providerName);
+    if (billedAmount !== undefined) updateData.billedAmountEncrypted = encNum(billedAmount);
+    if (insurancePaid !== undefined) updateData.insurancePaidEncrypted = encNum(insurancePaid);
+    if (patientPaid !== undefined) updateData.patientPaidEncrypted = encNum(patientPaid);
+    if (appliedToDeductible !== undefined) updateData.appliedToDeductibleEncrypted = encNum(appliedToDeductible);
+    if (appliedToOop !== undefined) updateData.appliedToOopEncrypted = encNum(appliedToOop);
     if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
     if (claimStatus !== undefined) updateData.claimStatus = claimStatus;
-    if (notes !== undefined) updateData.notesEncrypted = maybeEncryptStr(notes);
+    if (notes !== undefined) updateData.notesEncrypted = encStr(notes);
 
     const updated = await withRLSTransaction(userId, async (tx) => {
       return tx.expenseActual.update({
