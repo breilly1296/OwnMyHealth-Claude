@@ -17,7 +17,7 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
-import { uploadLabReport, uploadSBC, uploadLabResultOCR } from '../controllers/uploadController.js';
+import { uploadLabReport, uploadSBC, uploadLabResultOCR } from '../controllers/upload/index.js';
 
 const router = Router();
 
