@@ -74,6 +74,9 @@ export type {
   CostAnalysisData,
   CreateExpenseProjectionData,
   UpdateExpenseProjectionData,
+  CreateExpenseActualData,
+  UpdateExpenseActualData,
+  ClaimStatus,
   AnalyzeCostsRequest,
   UpdateCurrentSpendingData,
 } from './expenses';

@@ -43,6 +43,7 @@ function getAnthropicClient(): Anthropic {
 }
 
 const RESOURCE_TYPE_PROJECTION = 'expense_projection';
+const RESOURCE_TYPE_ACTUAL = 'expense_actual';
 const RESOURCE_TYPE_ANALYSIS = 'cost_analysis';
 
 // ============================================
@@ -225,6 +226,258 @@ export async function deleteProjection(req: AuthenticatedRequest, res: Response)
   } catch (error) {
     logger.error('Operation failed:', { data: { error } });
     res.status(500).json({ error: 'Failed to delete expense projection' });
+  }
+}
+
+// ============================================
+// EXPENSE ACTUALS (Real Claims / EOBs)
+// ============================================
+
+/**
+ * Decrypt an ExpenseActual record's PHI fields into a client-facing shape.
+ * Keeps the {dateOfService → serviceDate} rename consistent with the
+ * existing ExpenseActualData type in src/services/api/expenses.ts.
+ */
+function decryptActual(
+  a: {
+    id: string;
+    userId: string;
+    planId: string;
+    projectionId: string | null;
+    serviceTypeEncrypted: string;
+    providerNameEncrypted: string | null;
+    dateOfService: Date | null;
+    billedAmountEncrypted: string | null;
+    insurancePaidEncrypted: string | null;
+    patientPaidEncrypted: string | null;
+    appliedToDeductibleEncrypted: string | null;
+    appliedToOopEncrypted: string | null;
+    claimStatus: string;
+    isInNetwork: boolean | null;
+    notesEncrypted: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  encryption: ReturnType<typeof getEncryptionService>,
+  userSalt: string
+) {
+  const decryptNumber = (v: string | null) =>
+    v ? parseFloat(encryption.decrypt(v, userSalt)) : null;
+  return {
+    id: a.id,
+    userId: a.userId,
+    planId: a.planId,
+    projectionId: a.projectionId,
+    serviceType: encryption.decrypt(a.serviceTypeEncrypted, userSalt),
+    serviceDate: a.dateOfService ? a.dateOfService.toISOString().split('T')[0] : null,
+    providerName: a.providerNameEncrypted ? encryption.decrypt(a.providerNameEncrypted, userSalt) : null,
+    billedAmount: decryptNumber(a.billedAmountEncrypted),
+    insurancePaid: decryptNumber(a.insurancePaidEncrypted),
+    patientPaid: decryptNumber(a.patientPaidEncrypted),
+    appliedToDeductible: decryptNumber(a.appliedToDeductibleEncrypted),
+    appliedToOop: decryptNumber(a.appliedToOopEncrypted),
+    isInNetwork: a.isInNetwork ?? true,
+    claimStatus: a.claimStatus,
+    notes: a.notesEncrypted ? encryption.decrypt(a.notesEncrypted, userSalt) : null,
+    createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
+  };
+}
+
+/**
+ * POST /api/expenses/actuals
+ * Create a new expense actual (real claim/EOB entry)
+ */
+export async function createActual(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  const {
+    planId,
+    projectionId,
+    serviceType,
+    serviceDate,
+    providerName,
+    billedAmount,
+    insurancePaid,
+    patientPaid,
+    appliedToDeductible,
+    appliedToOop,
+    isInNetwork,
+    claimStatus,
+    notes,
+  } = req.body;
+
+  try {
+    const prisma = getPrismaClient();
+    const userSalt = await getUserEncryptionSalt(userId);
+    const encryption = getEncryptionService();
+
+    const maybeEncrypt = (v: number | undefined | null) =>
+      v === undefined || v === null ? null : encryption.encrypt(v.toString(), userSalt);
+
+    const actual = await withRLSTransaction(userId, async (tx) => {
+      return tx.expenseActual.create({
+        data: {
+          userId,
+          planId,
+          projectionId: projectionId ?? null,
+          serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
+          dateOfService: serviceDate ? new Date(serviceDate) : null,
+          providerNameEncrypted: providerName ? encryption.encrypt(providerName, userSalt) : null,
+          billedAmountEncrypted: maybeEncrypt(billedAmount),
+          insurancePaidEncrypted: maybeEncrypt(insurancePaid),
+          patientPaidEncrypted: maybeEncrypt(patientPaid),
+          appliedToDeductibleEncrypted: maybeEncrypt(appliedToDeductible),
+          appliedToOopEncrypted: maybeEncrypt(appliedToOop),
+          isInNetwork: isInNetwork ?? true,
+          claimStatus: claimStatus ?? 'processed',
+          notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
+        },
+      });
+    });
+
+    const auditService = getAuditLogService(prisma);
+    await auditService.logCreate(RESOURCE_TYPE_ACTUAL, actual.id, {
+      planId,
+      serviceType,
+      claimStatus: claimStatus ?? 'processed',
+    }, { req, userId });
+
+    res.status(201).json(decryptActual(actual, encryption, userSalt));
+  } catch (error) {
+    logger.error('Operation failed:', { data: { error } });
+    res.status(500).json({ error: 'Failed to create expense actual' });
+  }
+}
+
+/**
+ * GET /api/expenses/actuals?planId=xxx
+ * List expense actuals for a plan, sorted by service date descending.
+ */
+export async function getActuals(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  const { planId } = req.query;
+
+  try {
+    const prisma = getPrismaClient();
+    const userSalt = await getUserEncryptionSalt(userId);
+    const encryption = getEncryptionService();
+
+    const actuals = await withRLSTransaction(userId, async (tx) => {
+      return tx.expenseActual.findMany({
+        where: {
+          userId,
+          ...(planId && { planId: planId as string }),
+        },
+        orderBy: [{ dateOfService: 'desc' }, { createdAt: 'desc' }],
+      });
+    });
+
+    const decrypted = actuals.map((a) => decryptActual(a, encryption, userSalt));
+
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess(RESOURCE_TYPE_ACTUAL, undefined, { req, userId }, {
+      operation: 'LIST',
+      count: decrypted.length,
+      planId: (planId as string) || 'all',
+    });
+
+    res.json(decrypted);
+  } catch (error) {
+    logger.error('Operation failed:', { data: { error } });
+    res.status(500).json({ error: 'Failed to fetch expense actuals' });
+  }
+}
+
+/**
+ * PUT /api/expenses/actuals/:id
+ * Update an existing expense actual. Accepts partial updates.
+ */
+export async function updateActual(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  const { id } = req.params;
+  const {
+    projectionId,
+    serviceType,
+    serviceDate,
+    providerName,
+    billedAmount,
+    insurancePaid,
+    patientPaid,
+    appliedToDeductible,
+    appliedToOop,
+    isInNetwork,
+    claimStatus,
+    notes,
+  } = req.body;
+
+  try {
+    const prisma = getPrismaClient();
+    const userSalt = await getUserEncryptionSalt(userId);
+    const encryption = getEncryptionService();
+
+    const maybeEncrypt = (v: number | undefined | null) =>
+      v === undefined ? undefined : v === null ? null : encryption.encrypt(v.toString(), userSalt);
+    const maybeEncryptStr = (v: string | undefined | null) =>
+      v === undefined ? undefined : v ? encryption.encrypt(v, userSalt) : null;
+
+    const updateData: Record<string, unknown> = {};
+    if (projectionId !== undefined) updateData.projectionId = projectionId;
+    if (serviceType !== undefined) updateData.serviceTypeEncrypted = encryption.encrypt(serviceType, userSalt);
+    if (serviceDate !== undefined) {
+      updateData.dateOfService = serviceDate ? new Date(serviceDate) : null;
+    }
+    if (providerName !== undefined) updateData.providerNameEncrypted = maybeEncryptStr(providerName);
+    if (billedAmount !== undefined) updateData.billedAmountEncrypted = maybeEncrypt(billedAmount);
+    if (insurancePaid !== undefined) updateData.insurancePaidEncrypted = maybeEncrypt(insurancePaid);
+    if (patientPaid !== undefined) updateData.patientPaidEncrypted = maybeEncrypt(patientPaid);
+    if (appliedToDeductible !== undefined) updateData.appliedToDeductibleEncrypted = maybeEncrypt(appliedToDeductible);
+    if (appliedToOop !== undefined) updateData.appliedToOopEncrypted = maybeEncrypt(appliedToOop);
+    if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
+    if (claimStatus !== undefined) updateData.claimStatus = claimStatus;
+    if (notes !== undefined) updateData.notesEncrypted = maybeEncryptStr(notes);
+
+    const updated = await withRLSTransaction(userId, async (tx) => {
+      return tx.expenseActual.update({
+        where: { id, userId },
+        data: updateData,
+      });
+    });
+
+    const auditService = getAuditLogService(prisma);
+    await auditService.logUpdate(RESOURCE_TYPE_ACTUAL, id, {}, {
+      fieldsUpdated: Object.keys(updateData),
+    }, { req, userId });
+
+    res.json(decryptActual(updated, encryption, userSalt));
+  } catch (error) {
+    logger.error('Operation failed:', { data: { error } });
+    res.status(500).json({ error: 'Failed to update expense actual' });
+  }
+}
+
+/**
+ * DELETE /api/expenses/actuals/:id
+ */
+export async function deleteActual(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  try {
+    const prisma = getPrismaClient();
+
+    await withRLSTransaction(userId, async (tx) => {
+      await tx.expenseActual.delete({
+        where: { id, userId },
+      });
+    });
+
+    const auditService = getAuditLogService(prisma);
+    await auditService.logDelete(RESOURCE_TYPE_ACTUAL, id, {}, { req, userId });
+
+    res.status(204).send();
+  } catch (error) {
+    logger.error('Operation failed:', { data: { error } });
+    res.status(500).json({ error: 'Failed to delete expense actual' });
   }
 }
 

@@ -37,31 +37,62 @@ import {
 import {
   expensesApi,
   ExpenseProjectionData,
+  ExpenseActualData,
   CostAnalysisData,
   InsurancePlanData,
 } from '../../services/api';
 import ExpenseProjectionModal from './ExpenseProjectionModal';
 import DeductibleProgressBar from './DeductibleProgressBar';
+import ExpenseActualsList from './ExpenseActualsList';
 
 // ---------- Helpers: timeline + AI section parsing ----------
 
 interface TimelinePoint {
   month: string;
   projected: number;
+  actual: number | null;
 }
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function buildTimeline(projections: ExpenseProjectionData[]): TimelinePoint[] {
+/**
+ * Build 12-month timeline series.
+ * - projected: cumulative evenly-distributed total (total_annual / 12 × month).
+ * - actual:    cumulative sum of actuals.patientPaid grouped by month of
+ *              serviceDate. Null for months past the latest actual (so the
+ *              area fill ends where the data does instead of flatlining).
+ */
+function buildTimeline(
+  projections: ExpenseProjectionData[],
+  actuals: ExpenseActualData[]
+): TimelinePoint[] {
   const totalAnnual = projections.reduce(
     (sum, p) => sum + p.estimatedCost * p.frequencyPerYear,
     0
   );
   const perMonth = totalAnnual / 12;
-  return MONTH_LABELS.map((month, idx) => ({
-    month,
-    projected: Math.round(perMonth * (idx + 1)),
-  }));
+
+  // Sum patientPaid per calendar month of serviceDate.
+  const monthlyActual = new Array<number>(12).fill(0);
+  let latestMonthWithActual = -1;
+  for (const a of actuals) {
+    if (!a.serviceDate || a.patientPaid === null) continue;
+    const d = new Date(a.serviceDate);
+    if (Number.isNaN(d.getTime())) continue;
+    const m = d.getMonth();
+    monthlyActual[m] += a.patientPaid;
+    if (m > latestMonthWithActual) latestMonthWithActual = m;
+  }
+
+  let cumulative = 0;
+  return MONTH_LABELS.map((month, idx) => {
+    cumulative += monthlyActual[idx];
+    return {
+      month,
+      projected: Math.round(perMonth * (idx + 1)),
+      actual: idx <= latestMonthWithActual ? Math.round(cumulative) : null,
+    };
+  });
 }
 
 interface AnalysisSection {
@@ -112,6 +143,7 @@ interface CostOptimizationProps {
 
 export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: CostOptimizationProps) {
   const [projections, setProjections] = useState<ExpenseProjectionData[]>([]);
+  const [actuals, setActuals] = useState<ExpenseActualData[]>([]);
   const [analyses, setAnalyses] = useState<CostAnalysisData[]>([]);
   const [isLoadingProjections, setIsLoadingProjections] = useState(true);
   const [isLoadingAnalyses, setIsLoadingAnalyses] = useState(true);
@@ -251,8 +283,43 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
     0
   );
 
-  const timeline = useMemo(() => buildTimeline(projections || []), [projections]);
+  const timeline = useMemo(
+    () => buildTimeline(projections || [], actuals || []),
+    [projections, actuals]
+  );
   const hasProjectionData = totalProjectedAnnual > 0;
+  const hasActualData = actuals.some((a) => a.patientPaid !== null);
+
+  // Projection-vs-actual comparison: match actuals to projections by
+  // projectionId when set, else by normalized-serviceType.
+  const comparison = useMemo(() => {
+    const normalize = (s: string) => s.trim().toLowerCase();
+    const byProjection = new Map<string, ExpenseActualData[]>();
+    const unplanned: ExpenseActualData[] = [];
+
+    for (const a of actuals) {
+      let match: ExpenseProjectionData | undefined;
+      if (a.projectionId) {
+        match = projections.find((p) => p.id === a.projectionId);
+      }
+      if (!match) {
+        match = projections.find((p) => normalize(p.serviceType) === normalize(a.serviceType));
+      }
+      if (match) {
+        const list = byProjection.get(match.id) ?? [];
+        list.push(a);
+        byProjection.set(match.id, list);
+      } else {
+        unplanned.push(a);
+      }
+    }
+
+    return {
+      byProjection,
+      unplanned,
+      unplannedTotal: unplanned.reduce((sum, a) => sum + (a.patientPaid ?? 0), 0),
+    };
+  }, [projections, actuals]);
 
   return (
     <div className="space-y-6">
@@ -306,8 +373,12 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
                 <AreaChart data={timeline} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="projectedFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="actualFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.55} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-slate-700" opacity={0.35} />
@@ -344,6 +415,17 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
                     fill="url(#projectedFill)"
                     name="Projected"
                   />
+                  {hasActualData && (
+                    <Area
+                      type="monotone"
+                      dataKey="actual"
+                      stroke="#059669"
+                      strokeWidth={2}
+                      fill="url(#actualFill)"
+                      name="Actual"
+                      connectNulls={false}
+                    />
+                  )}
                   {plan.deductibleIndividual > 0 && (
                     <ReferenceLine
                       y={plan.deductibleIndividual}
@@ -374,7 +456,9 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
               </ResponsiveContainer>
             </div>
             <p className="text-xs text-center text-gray-500 dark:text-slate-500 mt-2">
-              Add expense actuals to see your real spending trend.
+              {hasActualData
+                ? 'Solid area = actuals to date. Dashed line = full-year projection.'
+                : 'Add expense actuals below to see your real spending trend.'}
             </p>
           </>
         ) : (
@@ -528,6 +612,83 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
           </div>
         )}
       </div>
+
+      {/* Expense Actuals (recorded claims / EOBs) */}
+      <ExpenseActualsList planId={plan.id} onActualsChange={setActuals} />
+
+      {/* Projection vs Actual Comparison */}
+      {projections.length > 0 && (actuals.length > 0 || comparison.unplanned.length > 0) && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Projection vs Actual
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {projections.map((p) => {
+              const annualProjected = p.estimatedCost * p.frequencyPerYear;
+              const matches = comparison.byProjection.get(p.id) ?? [];
+              const actualTotal = matches.reduce((sum, a) => sum + (a.patientPaid ?? 0), 0);
+              const hasActuals = matches.length > 0;
+              const variance = annualProjected - actualTotal;
+              const underBudget = variance >= 0;
+              return (
+                <div
+                  key={p.id}
+                  className="p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600"
+                >
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <h4 className="font-medium text-gray-900 dark:text-white truncate">{p.serviceType}</h4>
+                    {hasActuals ? (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 ${
+                          underBudget
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                        }`}
+                      >
+                        {underBudget ? 'Under' : 'Over'} by {formatCurrency(Math.abs(variance))}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 dark:text-slate-500 italic flex-shrink-0">
+                        No actuals recorded
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                      <span>Projected</span>
+                      <span>
+                        {formatCurrency(p.estimatedCost)} × {p.frequencyPerYear}/yr ={' '}
+                        {formatCurrency(annualProjected)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-gray-900 dark:text-white font-medium">
+                      <span>Actual to date</span>
+                      <span>{hasActuals ? formatCurrency(actualTotal) : '--'}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {comparison.unplanned.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Unplanned expenses</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                    {comparison.unplanned.length} claim
+                    {comparison.unplanned.length === 1 ? '' : 's'} with no matching projection
+                  </p>
+                </div>
+                <span className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                  {formatCurrency(comparison.unplannedTotal)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* AI Analyses History */}
       {analyses && analyses.length > 0 && (
