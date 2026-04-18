@@ -219,6 +219,8 @@ export const categories: BiomarkerCategory[] = [
   // Overview - Always visible
   { name: 'Dashboard', description: 'Track your biomarkers and health data', icon: 'BarChart3', group: 'overview' },
   { name: 'Trends', description: 'View biomarker trends over time', icon: 'TrendingUp', group: 'overview' },
+  { name: 'Goals', description: 'Set and track personalized health goals', icon: 'Target', group: 'overview' },
+  { name: 'Needs', description: 'Conditions, follow-ups, and recommended services', icon: 'ActivitySquare', group: 'overview' },
 
   // My Reports - File repository
   { name: 'Files', description: 'View and manage uploaded lab reports', icon: 'FileText', group: 'files' },
