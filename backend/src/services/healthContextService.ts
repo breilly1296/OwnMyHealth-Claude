@@ -17,7 +17,13 @@ import { withRLSContext } from './database.js';
 import { getEncryptionService } from './encryption.js';
 import { getUserEncryptionSalt } from './userEncryption.js';
 import { stripPHIFromText } from '../utils/phiRedaction.js';
+import { sanitizeForPrompt } from '../middleware/validation.js';
 import { logger } from '../utils/logger.js';
+import {
+  getDecryptedHealthProfile,
+  isEmptyProfile,
+  type UserHealthProfile,
+} from './healthProfileService.js';
 
 interface BiomarkerContextEntry {
   name: string;
@@ -104,6 +110,12 @@ export interface HealthContext {
     biomarkerCount: number;
     planCount: number;
   };
+  /**
+   * User-reported health profile (conditions, medications, demographics,
+   * lifestyle). Always present — empty object shape when the user hasn't
+   * set one, so callers don't need to null-check.
+   */
+  healthProfile: UserHealthProfile;
 }
 
 const BIOMARKER_DETAIL_LIMIT = 10;
@@ -152,7 +164,13 @@ export async function assembleHealthContext(userId: string): Promise<HealthConte
   const encryption = getEncryptionService();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  return withRLSContext(userId, async (tx) => {
+  // Fetch the health profile in parallel with the main RLS transaction.
+  // getDecryptedHealthProfile opens its own withRLSContext internally
+  // so we keep them as separate calls rather than racing two transactions
+  // on the same Prisma client.
+  const healthProfilePromise = getDecryptedHealthProfile(userId);
+
+  const contextResult = await withRLSContext(userId, async (tx) => {
     const [user, biomarkers, insurancePlans, projections, actuals, goals, needs] = await Promise.all([
       tx.user.findUnique({
         where: { id: userId },
@@ -372,6 +390,13 @@ export async function assembleHealthContext(userId: string): Promise<HealthConte
       },
     };
   });
+
+  const healthProfile = await healthProfilePromise;
+
+  return {
+    ...contextResult,
+    healthProfile,
+  };
 }
 
 /**
@@ -385,6 +410,45 @@ export function serializeHealthContext(ctx: HealthContext): string {
   lines.push(`=== USER'S HEALTH PROFILE ===`);
   lines.push(`Member since: ${ctx.profile.memberSince || 'unknown'}`);
   lines.push('');
+
+  // Self-reported profile (demographics + conditions + meds + lifestyle).
+  // Free-text fields pass through sanitizeForPrompt as an additional
+  // prompt-injection guard on top of the Zod validation.
+  if (!isEmptyProfile(ctx.healthProfile)) {
+    const hp = ctx.healthProfile;
+    lines.push(`SELF-REPORTED HEALTH PROFILE:`);
+    if (hp.biologicalSex) lines.push(`  Biological sex: ${hp.biologicalSex}`);
+    if (hp.ageRange) lines.push(`  Age range: ${hp.ageRange}`);
+    if (hp.smokingStatus) lines.push(`  Smoking: ${hp.smokingStatus}`);
+    if (hp.exerciseLevel) lines.push(`  Exercise: ${hp.exerciseLevel}`);
+    const activeConditions = hp.conditions.filter((c) => c.status !== 'resolved');
+    if (activeConditions.length > 0) {
+      const entries = activeConditions.map((c) => {
+        const name = sanitizeForPrompt(c.name);
+        const yr = c.diagnosedYear ? `, dx ${c.diagnosedYear}` : '';
+        return `${name} (${c.status}${yr})`;
+      });
+      lines.push(`  Active conditions: ${entries.join('; ')}`);
+    }
+    if (hp.medications.length > 0) {
+      const meds = hp.medications.map((m) => {
+        const name = sanitizeForPrompt(m.name);
+        return m.purpose ? `${name} (${sanitizeForPrompt(m.purpose)})` : name;
+      });
+      lines.push(`  Medications: ${meds.join('; ')}`);
+    }
+    if (hp.familyHistory.length > 0) {
+      lines.push(`  Family history: ${hp.familyHistory.map(sanitizeForPrompt).join(', ')}`);
+    }
+    if (hp.additionalContext?.trim()) {
+      lines.push(`  Additional context: ${sanitizeForPrompt(hp.additionalContext)}`);
+    }
+    lines.push('');
+    lines.push(
+      `IMPORTANT: Interpret biomarker results in the context of these conditions, medications, and demographics. Medication effects on lab values should be noted when relevant. Do not diagnose — always recommend consulting a healthcare provider.`
+    );
+    lines.push('');
+  }
 
   // Biomarkers
   if (ctx.biomarkers.total === 0) {
@@ -524,5 +588,7 @@ export function summarizeContextCategories(ctx: HealthContext): Record<string, n
     actuals: ctx.expenses.actualsCount,
     goals: ctx.goals.total,
     needs: ctx.needs.total,
+    profileConditions: ctx.healthProfile.conditions.length,
+    profileMedications: ctx.healthProfile.medications.length,
   };
 }

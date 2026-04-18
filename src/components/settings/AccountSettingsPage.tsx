@@ -35,6 +35,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { settingsApi } from '../../services/api';
 import type { NotificationPreferences } from '../../services/api/settings';
 import ChangePasswordModal from './ChangePasswordModal';
+import HealthProfileSection from './HealthProfileSection';
 
 const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   emailNotifications: true,
@@ -403,6 +404,11 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
             ))}
           </div>
         </section>
+
+        {/* Health Profile Section */}
+        <HealthProfileSection
+          onError={(message) => showToast(message, 'error')}
+        />
 
         {/* Data & Privacy Section */}
         <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">

@@ -54,6 +54,22 @@ router.patch(
   asyncHandler(settingsController.updateNotifications)
 );
 
+// GET /api/v1/settings/health-profile - Fetch self-reported health profile
+router.get(
+  '/health-profile',
+  sensitiveLimiter,
+  asyncHandler(settingsController.getHealthProfile)
+);
+
+// PATCH /api/v1/settings/health-profile - Partial update of health profile
+router.patch(
+  '/health-profile',
+  sensitiveLimiter,
+  blockDemoProfileUpdate,
+  validate(schemas.settings.updateHealthProfile),
+  asyncHandler(settingsController.updateHealthProfile)
+);
+
 // GET /api/v1/settings/export-data - Export all user data
 router.get(
   '/export-data',

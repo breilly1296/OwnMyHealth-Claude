@@ -64,7 +64,22 @@ export type { ConversationMessage, ChatUsage, ChatStreamCallbacks } from './ai';
 
 // Settings API
 export { settingsApi } from './settings';
-export type { ExportBiomarker, ExportInsurancePlan, UserExportData, NotificationPreferences, UserProfile } from './settings';
+export type {
+  ExportBiomarker,
+  ExportInsurancePlan,
+  UserExportData,
+  NotificationPreferences,
+  UserProfile,
+  UserHealthProfile,
+  UpdateHealthProfileData,
+  HealthCondition,
+  Medication,
+  BiologicalSex,
+  AgeRange,
+  ConditionStatus,
+  SmokingStatus,
+  ExerciseLevel,
+} from './settings';
 
 // Files API
 export { filesApi } from './files';
