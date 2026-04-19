@@ -64,27 +64,43 @@ const HARDCODED_PRODUCTION_ORIGINS = [
   'https://ownmyhealth.io',
 ];
 
-// SECURITY: Get safe CORS origins for the environment
+// SECURITY: Get safe CORS origins for the environment.
+//
+// Always parses CORS_ORIGIN as comma-separated and unions with the
+// hardcoded production hosts. This runs in every environment — NOT
+// gated on config.isProduction — because Cloud Run revisions have been
+// observed to run with NODE_ENV=development, which would previously
+// bypass the union entirely and break browser requests from the real
+// frontend. Localhost-in-production guard is still scoped to the
+// production branch.
 function getSafeCorsOrigins(): string | string[] {
-  // In production, reject localhost origins
+  const envValue = process.env.CORS_ORIGIN;
+
   if (config.isProduction) {
-    const origin = process.env.CORS_ORIGIN;
-    if (!origin) {
+    if (!envValue) {
       throw new Error('CORS_ORIGIN must be set in production');
     }
-    // Parse comma-separated list if provided
-    const envOrigins = origin.split(',').map(o => o.trim()).filter(Boolean);
-    // Validate no localhost in production
+    const envOrigins = envValue.split(',').map(o => o.trim()).filter(Boolean);
     if (envOrigins.some(o => o.includes('localhost') || o.includes('127.0.0.1'))) {
       throw new Error('CORS_ORIGIN cannot contain localhost in production');
     }
-    // Union with hardcoded production origins, deduplicated. Guarantees the
-    // real frontend hosts stay allowed even if CORS_ORIGIN is misconfigured.
     const origins = Array.from(new Set([...envOrigins, ...HARDCODED_PRODUCTION_ORIGINS]));
     return origins.length === 1 ? origins[0] : origins;
   }
-  // Development: allow localhost ports
-  return config.cors.origin;
+
+  // Non-production: allow whatever CORS_ORIGIN specifies (parsed as
+  // comma-separated) plus the hardcoded production hosts plus the
+  // localhost fallback when env is unset.
+  const envOrigins = envValue
+    ? envValue.split(',').map(o => o.trim()).filter(Boolean)
+    : [];
+  const localDefaults = Array.isArray(config.cors.origin) ? config.cors.origin : [];
+  const origins = Array.from(new Set([
+    ...envOrigins,
+    ...HARDCODED_PRODUCTION_ORIGINS,
+    ...localDefaults,
+  ]));
+  return origins.length === 1 ? origins[0] : origins;
 }
 
 // Create Express app
