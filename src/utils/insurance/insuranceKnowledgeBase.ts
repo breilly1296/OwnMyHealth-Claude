@@ -794,8 +794,9 @@ export class InsuranceKnowledgeBase {
   private calculatePlanScore(plan: NormalizedInsurancePlan, criteria: PlanSearchCriteria): number {
     let score = 0;
 
-    // Plan type preference
-    if (criteria.preferredPlanTypes?.includes(plan.planType)) {
+    // Plan type preference. 'Other' is excluded — preferredPlanTypes only covers
+    // the five standard plan types, so 'Other' can never match.
+    if (plan.planType !== 'Other' && criteria.preferredPlanTypes?.includes(plan.planType)) {
       score += 20;
     }
 
@@ -828,7 +829,7 @@ export class InsuranceKnowledgeBase {
   private getMatchedCriteria(plan: NormalizedInsurancePlan, criteria: PlanSearchCriteria): string[] {
     const matched: string[] = [];
 
-    if (criteria.preferredPlanTypes?.includes(plan.planType)) {
+    if (plan.planType !== 'Other' && criteria.preferredPlanTypes?.includes(plan.planType)) {
       matched.push(`Plan Type: ${plan.planType}`);
     }
 
@@ -846,14 +847,16 @@ export class InsuranceKnowledgeBase {
 
   // Calculate estimated costs
   private calculateEstimatedCosts(plan: NormalizedInsurancePlan, usage?: 'low' | 'medium' | 'high'): EstimatedCosts {
-    const usageLevel = usage || 'medium';
+    const usageKeys = { low: 'lowUsage', medium: 'mediumUsage', high: 'highUsage' } as const;
+    const key = usageKeys[usage || 'medium'];
+    const annual = plan.keyMetrics.estimatedAnnualCost[key];
     return {
-      annual: plan.keyMetrics.estimatedAnnualCost[usageLevel],
-      monthly: plan.keyMetrics.estimatedAnnualCost[usageLevel] / 12,
+      annual,
+      monthly: annual / 12,
       breakdown: {
         premium: plan.normalizedCosts.find(c => c.costType === 'premium')?.amount || 0,
         deductible: plan.normalizedCosts.find(c => c.costType === 'deductible')?.amount || 0,
-        estimatedOutOfPocket: plan.keyMetrics.estimatedAnnualCost[usageLevel] * 0.3
+        estimatedOutOfPocket: annual * 0.3
       }
     };
   }

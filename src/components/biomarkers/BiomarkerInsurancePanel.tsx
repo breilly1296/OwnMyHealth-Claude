@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, AlertCircle, CheckCircle, DollarSign, Calendar, Clock, FileText, ExternalLink } from 'lucide-react';
 import type { Biomarker, InsurancePlan, CoverageDetails } from '../../types';
 
@@ -485,7 +484,7 @@ function getRecommendedServices(biomarker: Biomarker, isHigh: boolean, isLow: bo
       
     default:
       // Generic recommendations for other categories
-      if (isOutOfRange) {
+      if (isHigh || isLow) {
         services.push({
           name: 'Primary Care Follow-up',
           description: `Evaluation of abnormal ${biomarker.name} level`,

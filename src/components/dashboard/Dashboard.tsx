@@ -162,13 +162,13 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       case 'Knowledge Base':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <InsuranceKnowledgeBase />
+            <InsuranceKnowledgeBase plans={insurancePlans} />
           </Suspense>
         );
       case 'Files':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <FilesPage />
+            <FilesPage onUploadClick={() => modals.open('pdfUpload')} />
           </Suspense>
         );
       case 'Trends':
@@ -202,7 +202,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       case 'Account Settings':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <AccountSettingsPage />
+            <AccountSettingsPage onBack={() => handleCategorySelect('Overview')} />
           </Suspense>
         );
       default:

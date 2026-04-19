@@ -13,7 +13,6 @@
  * @module components/biomarkers/TrendModal
  */
 
-import React from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Activity, Target } from 'lucide-react';
 import { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';

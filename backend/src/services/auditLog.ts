@@ -214,6 +214,22 @@ export class AuditLogService {
   }
 
   /**
+   * Build the request-derived fields (ip, user-agent, session) shared by
+   * every public log* method.
+   */
+  private contextFields(context: AuditContext): {
+    ipAddress?: string;
+    userAgent?: string;
+    sessionId?: string;
+  } {
+    return {
+      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
+      userAgent: context.req?.get('user-agent')?.substring(0, 500),
+      sessionId: context.sessionId,
+    };
+  }
+
+  /**
    * Encrypt sensitive values before storing in audit log
    */
   private encryptValue(value: unknown): string | null {
@@ -299,9 +315,7 @@ export class AuditLogService {
       action: 'READ',
       resourceType,
       resourceId: resourceId || undefined,
-      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
-      userAgent: context.req?.get('user-agent')?.substring(0, 500),
-      sessionId: context.sessionId,
+      ...this.contextFields(context),
       metadata,
     });
   }
@@ -323,9 +337,7 @@ export class AuditLogService {
       resourceType,
       resourceId,
       newValue,
-      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
-      userAgent: context.req?.get('user-agent')?.substring(0, 500),
-      sessionId: context.sessionId,
+      ...this.contextFields(context),
       metadata,
     });
   }
@@ -349,9 +361,7 @@ export class AuditLogService {
       resourceId,
       previousValue,
       newValue,
-      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
-      userAgent: context.req?.get('user-agent')?.substring(0, 500),
-      sessionId: context.sessionId,
+      ...this.contextFields(context),
       metadata,
     });
   }
@@ -373,9 +383,7 @@ export class AuditLogService {
       resourceType,
       resourceId,
       previousValue,
-      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
-      userAgent: context.req?.get('user-agent')?.substring(0, 500),
-      sessionId: context.sessionId,
+      ...this.contextFields(context),
       metadata,
     });
   }
@@ -397,31 +405,23 @@ export class AuditLogService {
     context: AuditContext,
     metadata?: AuditMetadata
   ): Promise<void> {
-    // Map auth events to AuditAction enum
-    let auditAction: AuditAction;
-    switch (action) {
-      case 'LOGIN':
-      case 'LOGIN_FAILED':
-        auditAction = 'LOGIN';
-        break;
-      case 'LOGOUT':
-        auditAction = 'LOGOUT';
-        break;
-      case 'REGISTER':
-        auditAction = 'CREATE';
-        break;
-      default:
-        auditAction = 'UPDATE';
-    }
+    // Map auth events to AuditAction enum (default UPDATE covers
+    // PASSWORD_CHANGE / PASSWORD_RESET_* / EMAIL_VERIFICATION /
+    // ACCOUNT_LOCKOUT).
+    const AUTH_ACTION_MAP: Partial<Record<typeof action, AuditAction>> = {
+      LOGIN: 'LOGIN',
+      LOGIN_FAILED: 'LOGIN',
+      LOGOUT: 'LOGOUT',
+      REGISTER: 'CREATE',
+    };
+    const auditAction: AuditAction = AUTH_ACTION_MAP[action] ?? 'UPDATE';
 
     await this.log({
       userId: context.userId,
       actorType: context.userId ? 'USER' : 'ANONYMOUS',
       action: auditAction,
       resourceType: 'Authentication',
-      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
-      userAgent: context.req?.get('user-agent')?.substring(0, 500),
-      sessionId: context.sessionId,
+      ...this.contextFields(context),
       metadata: { ...metadata, authAction: action },
     });
   }
@@ -441,9 +441,7 @@ export class AuditLogService {
       actorType: context.userId ? 'USER' : 'SYSTEM',
       action: 'EXPORT',
       resourceType,
-      ipAddress: context.req ? this.getClientIp(context.req) : undefined,
-      userAgent: context.req?.get('user-agent')?.substring(0, 500),
-      sessionId: context.sessionId,
+      ...this.contextFields(context),
       metadata: {
         ...metadata,
         exportFormat: format,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Upload, Loader2, AlertCircle, FileText } from 'lucide-react';
 import FileCard from './FileCard';
 import { filesApi } from '../../services/api';

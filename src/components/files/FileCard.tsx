@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, Image, Download, Eye, Trash2, Calendar, Building2, FlaskConical } from 'lucide-react';
 import type { UserFile } from '../../types';
 

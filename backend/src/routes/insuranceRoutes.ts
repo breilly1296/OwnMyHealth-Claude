@@ -27,7 +27,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import * as insuranceController from '../controllers/insuranceController.js';
-import { uploadSBC, reanalyzePlan } from '../controllers/uploadController.js';
+import { uploadSBC, reanalyzePlan } from '../controllers/upload/index.js';
 import { updateCurrentSpending } from '../controllers/expenseController.js';
 
 const router = Router();

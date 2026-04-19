@@ -14,7 +14,6 @@
  * @module components/biomarkers/BiomarkerGraph
  */
 
-import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';
@@ -27,14 +26,15 @@ interface BiomarkerGraphProps {
 }
 
 export default function BiomarkerGraph({ biomarker, compact = false }: BiomarkerGraphProps) {
-  if (!biomarker.history || biomarker.history.length === 0) return null;
+  const history = biomarker.history;
+  if (!history || history.length === 0) return null;
 
   // Calculate trend
   const getTrend = () => {
-    if (biomarker.history.length < 2) return { direction: 'stable', change: 0 };
+    if (history.length < 2) return { direction: 'stable', change: 0 };
 
-    const recent = biomarker.history[biomarker.history.length - 1].value;
-    const previous = biomarker.history[biomarker.history.length - 2].value;
+    const recent = history[history.length - 1].value;
+    const previous = history[history.length - 2].value;
     const change = ((recent - previous) / previous) * 100;
 
     if (Math.abs(change) < 2) return { direction: 'stable', change: 0 };
@@ -107,7 +107,7 @@ export default function BiomarkerGraph({ biomarker, compact = false }: Biomarker
           </div>
           <div>
             <p className="text-xs text-slate-500 mb-1">Data Points</p>
-            <p className="text-sm font-medium text-slate-900">{biomarker.history.length}</p>
+            <p className="text-sm font-medium text-slate-900">{history.length}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 mb-1">Status</p>

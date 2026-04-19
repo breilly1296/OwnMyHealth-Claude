@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Props for the CategoryTab component.
  * @property category - The display name of the category (e.g., "Blood Sugar", "Lipids")

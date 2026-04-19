@@ -17,9 +17,16 @@ import { getAuditLogService } from '../services/auditLog.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { toNumber } from '../utils/numberConversion.js';
 import { logger } from '../utils/logger.js';
-import type { Biomarker as PrismaBiomarker, DataSourceType } from '../../generated/prisma/index.js';
+import type { Biomarker as PrismaBiomarker, DataSourceType, Prisma } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
+const VALID_SOURCE_TYPES: readonly DataSourceType[] = [
+  'MANUAL',
+  'LAB_UPLOAD',
+  'EHR_IMPORT',
+  'DEVICE_SYNC',
+  'API_IMPORT',
+];
 
 // Response type for biomarkers (with decrypted values)
 interface BiomarkerResponse {
@@ -461,35 +468,12 @@ export async function bulkCreateBiomarkers(
   const auditService = getAuditLogService(prisma);
 
   // Track succeeded and failed items
-  interface FailedItem {
-    index: number;
-    name: string;
-    error: string;
-  }
-  const failedItems: FailedItem[] = [];
-  const validBiomarkerData: Array<{
-    userId: string;
-    category: string;
-    name: string;
-    unit: string;
-    valueEncrypted: string;
-    notesEncrypted: string | null;
-    normalRangeMin: number;
-    normalRangeMax: number;
-    normalRangeSource?: string;
-    measurementDate: Date;
-    sourceType: DataSourceType;
-    sourceFile?: string;
-    extractionConfidence?: number;
-    labName?: string;
-    isOutOfRange: boolean;
-    isAcknowledged: boolean;
-  }> = [];
+  const failedItems: { index: number; name: string; error: string }[] = [];
+  const validBiomarkerData: Prisma.BiomarkerCreateManyInput[] = [];
 
   // Prepare and validate each biomarker
   inputs.forEach((input, index) => {
     try {
-      // Validate required fields
       if (!input.name || !input.category || !input.unit) {
         throw new Error('Missing required fields: name, category, or unit');
       }
@@ -500,16 +484,7 @@ export async function bulkCreateBiomarkers(
         throw new Error('Missing normal range min/max');
       }
 
-      const valueEncrypted = encryptionService.encrypt(String(input.value), userSalt);
-      const notesEncrypted = input.notes
-        ? encryptionService.encrypt(input.notes, userSalt)
-        : null;
-      const isOutOfRange =
-        input.value < input.normalRange.min || input.value > input.normalRange.max;
-
-      // Validate sourceType against allowed enum values
-      const validSourceTypes: DataSourceType[] = ['MANUAL', 'LAB_UPLOAD', 'EHR_IMPORT', 'DEVICE_SYNC', 'API_IMPORT'];
-      const sourceType: DataSourceType = validSourceTypes.includes(input.sourceType as DataSourceType)
+      const sourceType: DataSourceType = VALID_SOURCE_TYPES.includes(input.sourceType as DataSourceType)
         ? (input.sourceType as DataSourceType)
         : 'MANUAL';
 
@@ -518,8 +493,8 @@ export async function bulkCreateBiomarkers(
         category: input.category,
         name: input.name,
         unit: input.unit,
-        valueEncrypted,
-        notesEncrypted,
+        valueEncrypted: encryptionService.encrypt(String(input.value), userSalt),
+        notesEncrypted: input.notes ? encryptionService.encrypt(input.notes, userSalt) : null,
         normalRangeMin: input.normalRange.min,
         normalRangeMax: input.normalRange.max,
         normalRangeSource: input.normalRange.source,
@@ -528,7 +503,7 @@ export async function bulkCreateBiomarkers(
         sourceFile: input.sourceFile,
         extractionConfidence: input.extractionConfidence,
         labName: input.labName,
-        isOutOfRange,
+        isOutOfRange: input.value < input.normalRange.min || input.value > input.normalRange.max,
         isAcknowledged: false,
       });
     } catch (error) {

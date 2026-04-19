@@ -27,10 +27,18 @@ import { Upload, X, FileText, Shield, DollarSign, Loader2, CheckCircle, AlertCir
 import type { InsurancePlan, InsuranceBenefit, InsuranceCost, InsuranceLimitation } from '../../types';
 import { insuranceApi } from '../../services/api/insurance';
 
-// Legacy types for compatibility with existing UI
+// Legacy types kept local — these describe the shape this component builds
+// from `insuranceApi.uploadSBC()` responses, not the richer parser output in
+// utils/documents/documentParser.ts. Fields are marked optional where the
+// producer may leave them unset.
 interface ExtractedTerm {
   term: string;
-  value: string;
+  // Either `value` (producer-populated today) or `definition`/`context`
+  // (canonical parser shape, read by the UI). Both optional so the type
+  // covers both producers without forcing a migration.
+  value?: string;
+  definition?: string;
+  context?: string;
   importance: 'high' | 'medium' | 'low';
   category: string;
 }
@@ -47,6 +55,8 @@ interface ExtractedInsuranceData {
     amount: number;
     frequency?: string;
     category: string;
+    description?: string;
+    percentage?: number;
   }>;
   benefits?: Array<{
     serviceName: string;
@@ -55,20 +65,32 @@ interface ExtractedInsuranceData {
       covered: boolean;
       copay?: number;
       coinsurance?: number;
+      deductibleApplies?: boolean;
+      coveragePercentage?: number;
     };
-    outNetworkCoverage?: {
+    outOfNetworkCoverage?: {
       covered: boolean;
       copay?: number;
       coinsurance?: number;
+      coveragePercentage?: number;
     };
-    preAuthRequired?: boolean;
+    rawText?: string;
+    priorAuthRequired?: boolean;
+    referralRequired?: boolean;
   }>;
   limitations?: Array<{
-    category: string;
+    service: string;
     description: string;
-    limitType: string;
-    limitValue?: number;
+    type: string;
+    value?: number;
   }>;
+  network?: {
+    providerCount?: number;
+    hospitalCount?: number;
+    geographicCoverage?: string[];
+    providerNetworkName?: string;
+  };
+  keyTerms?: ExtractedTerm[];
   extractedTerms?: ExtractedTerm[];
 }
 
@@ -298,7 +320,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
           coinsurance: benefit.outOfNetworkCoverage.coinsurance,
           coveragePercentage: benefit.outOfNetworkCoverage.coveragePercentage
         } : undefined,
-        description: benefit.rawText,
+        description: benefit.rawText ?? '',
         priorAuthRequired: benefit.priorAuthRequired,
         referralRequired: benefit.referralRequired
       })) || [],
@@ -307,7 +329,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
         type: mapCostType(cost.type),
         amount: cost.amount || 0,
         frequency: mapFrequency(cost.frequency),
-        description: cost.description,
+        description: cost.description ?? '',
         appliesTo: mapAppliesTo(cost.category)
       })) || [],
       limitations: extractedData.limitations?.map(limitation => ({
@@ -372,9 +394,10 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
     }
     
     if (searchTerm) {
-      filtered = filtered.filter(term => 
-        term.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        term.context.toLowerCase().includes(searchTerm.toLowerCase())
+      const needle = searchTerm.toLowerCase();
+      filtered = filtered.filter(term =>
+        term.term.toLowerCase().includes(needle) ||
+        (term.context?.toLowerCase().includes(needle) ?? false)
       );
     }
     
@@ -610,7 +633,9 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                                     </div>
                                   </div>
                                   <p className="text-xs text-gray-600 mb-2">{term.definition}</p>
-                                  <p className="text-xs text-gray-500 italic">"{term.context.substring(0, 100)}..."</p>
+                                  {term.context && (
+                                    <p className="text-xs text-gray-500 italic">"{term.context.substring(0, 100)}..."</p>
+                                  )}
                                 </div>
                               ))}
                             </div>

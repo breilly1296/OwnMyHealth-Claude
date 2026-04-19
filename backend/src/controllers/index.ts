@@ -9,4 +9,4 @@ export * as biomarkerController from './biomarkerController.js';
 export * as healthGoalsController from './healthGoalsController.js';
 export * as healthNeedsController from './healthNeedsController.js';
 export * as insuranceController from './insuranceController.js';
-export * as uploadController from './uploadController.js';
+export * as uploadController from './upload/index.js';

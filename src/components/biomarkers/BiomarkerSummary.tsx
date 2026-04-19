@@ -14,7 +14,6 @@
  * @module components/biomarkers/BiomarkerSummary
  */
 
-import React from 'react';
 import { CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import type { Biomarker } from '../../types';
 

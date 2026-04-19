@@ -104,33 +104,30 @@ export class ExternalServiceError extends AppError {
 // Generic error message for production (never expose internal details)
 const GENERIC_ERROR_MESSAGE = 'An unexpected error occurred. Please try again later.';
 
-// Handle Prisma-specific errors
-function handlePrismaError(err: Error & { code?: string; meta?: unknown }): { statusCode: number; code: string; message: string } {
-  const prismaCode = err.code;
+type ErrorShape = { statusCode: number; code: string; message: string };
 
-  switch (prismaCode) {
-    case 'P2002': // Unique constraint violation
-      return { statusCode: 409, code: 'CONFLICT', message: 'A record with this data already exists' };
-    case 'P2025': // Record not found
-      return { statusCode: 404, code: 'NOT_FOUND', message: 'The requested resource was not found' };
-    case 'P2003': // Foreign key constraint failed
-      return { statusCode: 400, code: 'BAD_REQUEST', message: 'Invalid reference to related resource' };
-    case 'P2014': // Required relation violation
-      return { statusCode: 400, code: 'BAD_REQUEST', message: 'Required relation is missing' };
-    default:
-      return { statusCode: 500, code: 'DATABASE_ERROR', message: GENERIC_ERROR_MESSAGE };
-  }
+const PRISMA_ERROR_MAP: Record<string, ErrorShape> = {
+  P2002: { statusCode: 409, code: 'CONFLICT', message: 'A record with this data already exists' },
+  P2025: { statusCode: 404, code: 'NOT_FOUND', message: 'The requested resource was not found' },
+  P2003: { statusCode: 400, code: 'BAD_REQUEST', message: 'Invalid reference to related resource' },
+  P2014: { statusCode: 400, code: 'BAD_REQUEST', message: 'Required relation is missing' },
+};
+
+const PRISMA_DEFAULT: ErrorShape = { statusCode: 500, code: 'DATABASE_ERROR', message: GENERIC_ERROR_MESSAGE };
+
+function handlePrismaError(err: Error & { code?: string; meta?: unknown }): ErrorShape {
+  return (err.code && PRISMA_ERROR_MAP[err.code]) || PRISMA_DEFAULT;
 }
 
-// Handle JWT-specific errors
-function handleJWTError(err: Error): { statusCode: number; code: string; message: string } {
-  if (err.name === 'JsonWebTokenError') {
-    return { statusCode: 401, code: 'INVALID_TOKEN', message: 'Invalid authentication token' };
-  }
-  if (err.name === 'TokenExpiredError') {
-    return { statusCode: 401, code: 'TOKEN_EXPIRED', message: 'Authentication token has expired' };
-  }
-  return { statusCode: 401, code: 'UNAUTHORIZED', message: 'Authentication failed' };
+const JWT_ERROR_MAP: Record<string, ErrorShape> = {
+  JsonWebTokenError: { statusCode: 401, code: 'INVALID_TOKEN', message: 'Invalid authentication token' },
+  TokenExpiredError: { statusCode: 401, code: 'TOKEN_EXPIRED', message: 'Authentication token has expired' },
+};
+
+const JWT_DEFAULT: ErrorShape = { statusCode: 401, code: 'UNAUTHORIZED', message: 'Authentication failed' };
+
+function handleJWTError(err: Error): ErrorShape {
+  return JWT_ERROR_MAP[err.name] || JWT_DEFAULT;
 }
 
 // Global error handler middleware
@@ -147,35 +144,24 @@ export function errorHandler(
   let message = config.isDevelopment ? err.message : GENERIC_ERROR_MESSAGE;
   let details: unknown = undefined;
 
-  // Handle known error types
-  if (err instanceof AppError) {
-    statusCode = err.statusCode;
-    code = err.code;
-    message = err.message; // AppError messages are safe to expose
+  const apply = (shape: ErrorShape) => {
+    statusCode = shape.statusCode;
+    code = shape.code;
+    message = shape.message;
+  };
 
+  if (err instanceof AppError) {
+    // AppError messages are safe to expose
+    apply({ statusCode: err.statusCode, code: err.code, message: err.message });
     if (err instanceof ValidationError) {
       details = err.details;
     }
-  }
-  // Handle Prisma errors
-  else if (err.name === 'PrismaClientKnownRequestError' || err.name === 'PrismaClientValidationError') {
-    const prismaResult = handlePrismaError(err as Error & { code?: string });
-    statusCode = prismaResult.statusCode;
-    code = prismaResult.code;
-    message = prismaResult.message;
-  }
-  // Handle JWT errors
-  else if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-    const jwtResult = handleJWTError(err);
-    statusCode = jwtResult.statusCode;
-    code = jwtResult.code;
-    message = jwtResult.message;
-  }
-  // Handle syntax errors (malformed JSON)
-  else if (err instanceof SyntaxError && 'body' in err) {
-    statusCode = 400;
-    code = 'INVALID_JSON';
-    message = 'Request body contains invalid JSON';
+  } else if (err.name === 'PrismaClientKnownRequestError' || err.name === 'PrismaClientValidationError') {
+    apply(handlePrismaError(err as Error & { code?: string }));
+  } else if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    apply(handleJWTError(err));
+  } else if (err instanceof SyntaxError && 'body' in err) {
+    apply({ statusCode: 400, code: 'INVALID_JSON', message: 'Request body contains invalid JSON' });
   }
 
   // Always log errors (with different levels based on severity)

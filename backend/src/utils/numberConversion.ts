@@ -25,21 +25,14 @@
  * ```
  */
 export function toNumber(value: unknown): number {
-  if (typeof value === 'number') {
-    return value;
+  if (typeof value === 'number') return value;
+  if (value === null || value === undefined) return 0;
+
+  // Prisma Decimal and similar objects with a toNumber method
+  if (typeof value === 'object' && value !== null && 'toNumber' in value) {
+    return (value as { toNumber: () => number }).toNumber();
   }
 
-  if (value === null || value === undefined) {
-    return 0;
-  }
-
-  // Handle Prisma Decimal and similar objects with toNumber method
-  if (value && typeof value === 'object' && 'toNumber' in value) {
-    const decimalLike = value as { toNumber: () => number };
-    return decimalLike.toNumber();
-  }
-
-  // Handle string conversion
   if (typeof value === 'string') {
     const parsed = parseFloat(value);
     return isNaN(parsed) ? 0 : parsed;
@@ -49,13 +42,15 @@ export function toNumber(value: unknown): number {
 }
 
 /**
- * Safely convert to number with a default value for invalid inputs
+ * Safely convert to number with a default value for invalid inputs.
  *
- * @param value - Value to convert
- * @param defaultValue - Value to return if conversion fails
- * @returns Converted number or default value
+ * The toNumber() default is 0 for both invalid input and legitimate zero,
+ * so we re-check explicitly: if the input literally represented zero,
+ * return 0; otherwise treat the converted-to-zero case as "conversion
+ * failed" and fall back to defaultValue.
  */
 export function toNumberOrDefault(value: unknown, defaultValue: number): number {
   const result = toNumber(value);
-  return result === 0 && value !== 0 && value !== '0' ? defaultValue : result;
+  if (result !== 0) return result;
+  return value === 0 || value === '0' ? 0 : defaultValue;
 }

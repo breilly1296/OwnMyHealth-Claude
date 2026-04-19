@@ -17,7 +17,7 @@
  * @module components/insurance/InsuranceGuide
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   BookOpen,
   DollarSign,
@@ -240,7 +240,7 @@ export default function InsuranceEducationPanel({ guide }: InsuranceEducationPan
                             )}
                             {term.tips.length > 0 && (
                               <div className="mt-3">
-                                <h7 className="text-xs font-medium text-gray-600 uppercase tracking-wide">Tips</h7>
+                                <h6 className="text-xs font-medium text-gray-600 uppercase tracking-wide">Tips</h6>
                                 <ul className="mt-1 space-y-1">
                                   {term.tips.map((tip, tipIndex) => (
                                     <li key={tipIndex} className="text-xs text-gray-600 flex items-start">
@@ -281,7 +281,7 @@ export default function InsuranceEducationPanel({ guide }: InsuranceEducationPan
                                     
                                     {/* Cost Breakdown */}
                                     <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                      <h7 className="font-medium text-gray-900 mb-3">Cost Breakdown</h7>
+                                      <h6 className="font-medium text-gray-900 mb-3">Cost Breakdown</h6>
                                       <div className="space-y-2">
                                         {scenario.costBreakdown.map((item, itemIndex) => (
                                           <div key={itemIndex} className="flex justify-between items-center text-sm">
@@ -304,7 +304,7 @@ export default function InsuranceEducationPanel({ guide }: InsuranceEducationPan
 
                                     {/* Key Learnings */}
                                     <div className="mb-4">
-                                      <h7 className="font-medium text-gray-900 mb-2">Key Learnings</h7>
+                                      <h6 className="font-medium text-gray-900 mb-2">Key Learnings</h6>
                                       <ul className="space-y-1">
                                         {scenario.keyLearnings.map((learning, learningIndex) => (
                                           <li key={learningIndex} className="text-sm text-gray-700 flex items-start">
@@ -317,7 +317,7 @@ export default function InsuranceEducationPanel({ guide }: InsuranceEducationPan
 
                                     {/* Action Items */}
                                     <div>
-                                      <h7 className="font-medium text-gray-900 mb-2">Action Items</h7>
+                                      <h6 className="font-medium text-gray-900 mb-2">Action Items</h6>
                                       <ul className="space-y-1">
                                         {scenario.actionItems.map((action, actionIndex) => (
                                           <li key={actionIndex} className="text-sm text-gray-700 flex items-start">

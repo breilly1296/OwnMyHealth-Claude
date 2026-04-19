@@ -5,7 +5,7 @@
  * Reduces complexity in the main Dashboard component.
  */
 
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
 import type { ModalName } from '../../hooks/useModals';

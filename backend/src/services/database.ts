@@ -100,6 +100,28 @@ function createPrismaClient(): PrismaClient {
 }
 
 /**
+ * Run a startup step that must succeed. On failure, logs a FATAL entry and
+ * rethrows with a context-rich message that bubbles up to the process entry
+ * point — intentional for a HIPAA-compliant server where partial startup is
+ * never acceptable.
+ */
+async function initStep(
+  label: string,
+  hint: string,
+  fn: () => void | Promise<void>
+): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`FATAL: ${label} failed`, { data: { error: errorMessage } });
+    throw new Error(
+      `FATAL: Cannot start server - ${label}.\n${hint}\nError: ${errorMessage}`
+    );
+  }
+}
+
+/**
  * Initialize database connection and related services
  *
  * CRITICAL: Server will NOT start if database is unavailable.
@@ -112,47 +134,32 @@ export async function initializeDatabase(): Promise<void> {
   prisma = createPrismaClient();
   logger.startup('✓ Prisma client created');
 
-  // Test database connection - MUST succeed
-  try {
-    await prisma.$connect();
-    logger.startup('✓ Database connected');
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('FATAL: Database connection failed', { data: { error: errorMessage } });
-    throw new Error(
-      `FATAL: Cannot start server - database is unavailable.\n` +
-      `Ensure DATABASE_URL is correct and PostgreSQL is running.\n` +
-      `Error: ${errorMessage}`
-    );
-  }
+  await initStep(
+    'database connection',
+    'Ensure DATABASE_URL is correct and PostgreSQL is running.',
+    async () => {
+      await prisma!.$connect();
+      logger.startup('✓ Database connected');
+    }
+  );
 
-  // Initialize encryption service - MUST succeed
-  try {
-    encryptionService = getEncryptionService();
-    logger.startup('✓ Encryption service initialized');
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('FATAL: Encryption service initialization failed', { data: { error: errorMessage } });
-    throw new Error(
-      `FATAL: Cannot start server - encryption service failed to initialize.\n` +
-      `Ensure PHI_ENCRYPTION_KEY is set and valid.\n` +
-      `Error: ${errorMessage}`
-    );
-  }
+  await initStep(
+    'encryption service initialization',
+    'Ensure PHI_ENCRYPTION_KEY is set and valid.',
+    () => {
+      encryptionService = getEncryptionService();
+      logger.startup('✓ Encryption service initialized');
+    }
+  );
 
-  // Initialize audit logging service - MUST succeed for HIPAA compliance
-  try {
-    auditService = getAuditLogService(prisma);
-    await auditService.initialize();
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('FATAL: Audit logging service initialization failed', { data: { error: errorMessage } });
-    throw new Error(
-      `FATAL: Cannot start server - audit logging service failed.\n` +
-      `HIPAA compliance requires audit logging to be operational.\n` +
-      `Error: ${errorMessage}`
-    );
-  }
+  await initStep(
+    'audit logging service',
+    'HIPAA compliance requires audit logging to be operational.',
+    async () => {
+      auditService = getAuditLogService(prisma!);
+      await auditService.initialize();
+    }
+  );
 
   isInitialized = true;
   logger.startup('✓ All database services initialized');
@@ -308,31 +315,49 @@ async function applyRLSContext(
  * });
  * ```
  */
-export async function withRLSContext<T>(
+interface RLSOptions {
+  isAdmin?: boolean;
+  timeout?: number;
+  maxWait?: number;
+}
+
+/**
+ * Shared implementation for withRLSContext / withRLSTransaction. Keeps the
+ * two named exports (and their distinct defaults/semantics for callers)
+ * while centralizing the init check, UUID validation, and SET LOCAL.
+ */
+async function runWithRLS<T>(
   userId: string | null,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { isAdmin?: boolean; timeout?: number; maxWait?: number } = {}
+  options: RLSOptions,
+  txOptions: { maxWait: number; timeout: number } | undefined
 ): Promise<T> {
   if (!prisma) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
 
   const useAdmin = options.isAdmin || userId === null;
-
   if (!useAdmin && !validateUUID(userId!)) {
     throw new Error('Invalid user ID format: must be a valid UUID');
   }
 
-  return prisma.$transaction(
-    async (tx) => {
-      await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
-      return fn(tx);
-    },
-    {
-      maxWait: options.maxWait ?? 20_000,
-      timeout: options.timeout ?? 30_000,
-    }
-  );
+  const run = async (tx: Prisma.TransactionClient): Promise<T> => {
+    await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
+    return fn(tx);
+  };
+
+  return txOptions ? prisma.$transaction(run, txOptions) : prisma.$transaction(run);
+}
+
+export async function withRLSContext<T>(
+  userId: string | null,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  options: RLSOptions = {}
+): Promise<T> {
+  return runWithRLS(userId, fn, options, {
+    maxWait: options.maxWait ?? 20_000,
+    timeout: options.timeout ?? 30_000,
+  });
 }
 
 /**
@@ -350,20 +375,7 @@ export async function withRLSTransaction<T>(
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
   options: { isAdmin?: boolean } = {}
 ): Promise<T> {
-  if (!prisma) {
-    throw new Error('Database not initialized. Call initializeDatabase() first.');
-  }
-
-  const useAdmin = options.isAdmin || userId === null;
-
-  if (!useAdmin && !validateUUID(userId!)) {
-    throw new Error('Invalid user ID format: must be a valid UUID');
-  }
-
-  return prisma.$transaction(async (tx) => {
-    await applyRLSContext(tx, useAdmin ? null : userId, useAdmin);
-    return fn(tx);
-  });
+  return runWithRLS(userId, fn, options, undefined);
 }
 
 // Export prisma getter for lazy initialization

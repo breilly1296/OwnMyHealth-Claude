@@ -5,7 +5,7 @@
  * along with future predictions and confidence intervals.
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   ComposedChart,
   Line,
@@ -258,12 +258,12 @@ export default function PredictiveTrendChart({
                 borderRadius: '8px',
                 padding: '8px 12px',
               }}
-              formatter={(value: number, name: string) => {
+              formatter={(value, name) => {
                 const label = name === 'value' ? 'Actual' :
                               name === 'predicted' ? 'Predicted' :
                               name === 'upperBound' ? 'Upper Bound' :
-                              name === 'lowerBound' ? 'Lower Bound' : name;
-                return [`${value} ${biomarker.unit}`, label];
+                              name === 'lowerBound' ? 'Lower Bound' : String(name);
+                return [`${value ?? '--'} ${biomarker.unit}`, label];
               }}
             />
 

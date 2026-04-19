@@ -247,7 +247,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                       value={searchCriteria.preferredPlanTypes || []}
                       onChange={(e) => setSearchCriteria(prev => ({
                         ...prev,
-                        preferredPlanTypes: Array.from(e.target.selectedOptions, option => option.value as PlanSearchCriteria['preferredPlanTypes'][number])
+                        preferredPlanTypes: Array.from(e.target.selectedOptions, option => option.value as NonNullable<PlanSearchCriteria['preferredPlanTypes']>[number])
                       }))}
                       className="w-full border border-gray-300 rounded-md shadow-sm p-2"
                     >

@@ -14,6 +14,7 @@ import {
   Clock,
   Loader2,
   PlayCircle,
+  Plus,
   Sparkles,
   Trash2,
   X,
@@ -84,9 +85,14 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
   const [error, setError] = useState<string | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
 
+  const [statusFilter, setStatusFilter] = useState<'' | NeedStatus>('');
+  const [urgencyFilter, setUrgencyFilter] = useState<'' | Urgency>('');
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [suggestions, setSuggestions] = useState<HealthNeedData[] | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const biomarkerNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -98,7 +104,10 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
     setIsLoading(true);
     setError(null);
     try {
-      const data = await healthNeedsApi.getAll();
+      const data = await healthNeedsApi.getAll({
+        status: statusFilter || undefined,
+        urgency: urgencyFilter || undefined,
+      });
       setNeeds(data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load health needs');
@@ -106,7 +115,7 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [statusFilter, urgencyFilter]);
 
   useEffect(() => {
     load();
@@ -189,6 +198,12 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
 
   const handleDismissAllSuggestions = () => setSuggestions(null);
 
+  const handleCreate = async (payload: CreateHealthNeedData) => {
+    const created = await healthNeedsApi.create(payload);
+    setNeeds((prev) => [created, ...prev]);
+    setShowCreateModal(false);
+  };
+
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
       {/* Header */}
@@ -202,23 +217,75 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
             Track conditions, recommended services, and follow-ups
           </p>
         </div>
-        <button
-          onClick={handleAnalyze}
-          disabled={isAnalyzing}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all"
-        >
-          {isAnalyzing ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Analyzing…
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              Analyze from Biomarkers
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Need
+          </button>
+          <button
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Analyzing…
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Analyze from Biomarkers
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <label className="text-sm text-slate-500 dark:text-slate-400">
+          Status
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as '' | NeedStatus)}
+            className="ml-2 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+          >
+            <option value="">All</option>
+            <option value="PENDING">Pending</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="DISMISSED">Dismissed</option>
+          </select>
+        </label>
+        <label className="text-sm text-slate-500 dark:text-slate-400">
+          Urgency
+          <select
+            value={urgencyFilter}
+            onChange={(e) => setUrgencyFilter(e.target.value as '' | Urgency)}
+            className="ml-2 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+          >
+            <option value="">All</option>
+            <option value="IMMEDIATE">Immediate</option>
+            <option value="URGENT">Urgent</option>
+            <option value="FOLLOW_UP">Follow-up</option>
+            <option value="ROUTINE">Routine</option>
+          </select>
+        </label>
+        {(statusFilter || urgencyFilter) && (
+          <button
+            onClick={() => {
+              setStatusFilter('');
+              setUrgencyFilter('');
+            }}
+            className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Error banner */}
@@ -324,20 +391,32 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
         <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700">
           <ActivitySquare className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            No health needs tracked yet
+            {statusFilter || urgencyFilter
+              ? 'No needs match these filters'
+              : 'No health needs tracked yet'}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
-            Run an analysis on your biomarkers to get started — we'll suggest conditions and
-            follow-ups based on what's out of range.
+            {statusFilter || urgencyFilter
+              ? 'Try clearing your filters, or add a new need.'
+              : 'Run an analysis on your biomarkers to get started, or add a need manually.'}
           </p>
-          <button
-            onClick={handleAnalyze}
-            disabled={isAnalyzing}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all"
-          >
-            <Sparkles className="w-4 h-4" />
-            Analyze from Biomarkers
-          </button>
+          <div className="inline-flex items-center gap-2 flex-wrap justify-center">
+            <button
+              onClick={handleAnalyze}
+              disabled={isAnalyzing}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all"
+            >
+              <Sparkles className="w-4 h-4" />
+              Analyze from Biomarkers
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Need
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
@@ -446,6 +525,154 @@ export default function HealthNeedsPage({ biomarkers = [] }: HealthNeedsPageProp
         </div>
       )}
 
+      {showCreateModal && (
+        <CreateNeedModal
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreate}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- create modal ----------
+
+interface CreateNeedModalProps {
+  onClose: () => void;
+  onSubmit: (data: CreateHealthNeedData) => Promise<void>;
+}
+
+function CreateNeedModal({ onClose, onSubmit }: CreateNeedModalProps) {
+  const [needType, setNeedType] = useState<NeedType>('CONDITION');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [urgency, setUrgency] = useState<Urgency>('ROUTINE');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !description.trim()) {
+      setFormError('Name and description are required');
+      return;
+    }
+    setIsSubmitting(true);
+    setFormError(null);
+    try {
+      await onSubmit({
+        needType,
+        name: name.trim(),
+        description: description.trim(),
+        urgency,
+      });
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create need');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Add health need</h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Follow up on cholesterol"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:bg-slate-700 dark:text-white"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                Type *
+              </label>
+              <select
+                value={needType}
+                onChange={(e) => setNeedType(e.target.value as NeedType)}
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:bg-slate-700 dark:text-white"
+              >
+                <option value="CONDITION">Condition</option>
+                <option value="ACTION">Action</option>
+                <option value="SERVICE">Service</option>
+                <option value="FOLLOW_UP">Follow-up</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                Urgency *
+              </label>
+              <select
+                value={urgency}
+                onChange={(e) => setUrgency(e.target.value as Urgency)}
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:bg-slate-700 dark:text-white"
+              >
+                <option value="IMMEDIATE">Immediate</option>
+                <option value="URGENT">Urgent</option>
+                <option value="FOLLOW_UP">Follow-up</option>
+                <option value="ROUTINE">Routine</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              Description *
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              placeholder="What is this need, and what should happen next?"
+              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:bg-slate-700 dark:text-white"
+              required
+            />
+          </div>
+
+          {formError && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-800 dark:text-red-200">{formError}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-brand-500 text-white rounded-lg font-medium hover:bg-brand-600 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add need'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
