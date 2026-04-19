@@ -11,7 +11,7 @@
  * streaming progress without a full Promise-based wait.
  */
 
-import { API_BASE_URL, getAuthToken, getCsrfToken } from './client';
+import { API_BASE_URL, getAuthToken } from './client';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -76,8 +76,6 @@ export const aiApi = {
       };
       const authToken = getAuthToken();
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-      const csrfToken = getCsrfToken();
-      if (csrfToken) headers['x-csrf-token'] = csrfToken;
 
       const response = await fetch(`${API_BASE_URL}/ai/chat`, {
         method: 'POST',
