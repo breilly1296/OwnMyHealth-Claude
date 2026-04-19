@@ -130,6 +130,7 @@ export function validateCsrfToken(
   // automatically include them in cross-origin requests, making CSRF protection redundant
   const bearerProtectedRoutes = [
     '/guidance', // POST /biomarkers/:id/guidance - AI guidance endpoint
+    '/ai/chat',  // POST /ai/chat - Health Guide streaming chat
   ];
 
   // Skip CSRF for DELETE operations on user-owned resources
@@ -158,14 +159,7 @@ export function validateCsrfToken(
     req.path.includes(route)
   );
 
-  // Skip CSRF for the AI chat / Health Guide routes — Bearer-auth only.
-  // The cross-origin GCS frontend + Cloud Run backend deployment drops the
-  // csrf_token cookie in some browsers, so relying on the double-submit
-  // pattern here produces false 403s. JWT Bearer auth is sufficient: the
-  // browser never attaches it automatically on cross-site requests.
-  const isAIRoute = req.path.startsWith('/ai/');
-
-  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute || isBearerProtectedRoute || isDeleteRoute || isAIRoute) {
+  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute || isBearerProtectedRoute || isDeleteRoute) {
     return next();
   }
 
