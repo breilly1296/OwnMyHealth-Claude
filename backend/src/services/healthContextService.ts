@@ -154,11 +154,20 @@ function classifyTrend(
 }
 
 /**
- * Assemble the user's health context. Runs entirely inside withRLSContext
- * and decrypts PHI fields for the requested minimum-necessary slice.
+ * Assemble the user's health context.
  *
- * The returned value is safe to serialize into a system prompt — no
- * identifiers, encrypted-field raw text, provider names, or member IDs.
+ * Two-phase design:
+ *   1. Inside withRLSContext: run the Prisma queries in parallel and
+ *      return the raw rows (with encrypted fields still encrypted).
+ *   2. After the transaction commits: decrypt PHI fields and map the
+ *      raw rows into the context shape.
+ *
+ * PBKDF2-SHA512 key derivation inside encryption.decrypt is CPU-heavy,
+ * and doing ~30 decrypts inside the transaction was blowing past
+ * Prisma's 5s interactive-transaction timeout on Cloud Run (observed
+ * 14s wall-clock). Moving the crypto outside the transaction keeps
+ * the DB-scoped window small and deterministic — RLS is still enforced
+ * by withRLSContext during the queries.
  */
 export async function assembleHealthContext(userId: string): Promise<HealthContext> {
   const encryption = getEncryptionService();
@@ -170,7 +179,8 @@ export async function assembleHealthContext(userId: string): Promise<HealthConte
   // on the same Prisma client.
   const healthProfilePromise = getDecryptedHealthProfile(userId);
 
-  const contextResult = await withRLSContext(userId, async (tx) => {
+  // ----- Phase 1: DB queries only, inside the RLS transaction -----
+  const raw = await withRLSContext(userId, async (tx) => {
     const [user, biomarkers, insurancePlans, projections, actuals, goals, needs] = await Promise.all([
       tx.user.findUnique({
         where: { id: userId },
@@ -188,213 +198,208 @@ export async function assembleHealthContext(userId: string): Promise<HealthConte
         include: { benefits: { select: { id: true } } },
         orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
       }),
-      tx.expenseProjection.findMany({
-        where: { userId },
-      }),
-      tx.expenseActual.findMany({
-        where: { userId },
-      }),
+      tx.expenseProjection.findMany({ where: { userId } }),
+      tx.expenseActual.findMany({ where: { userId } }),
       tx.healthGoal.findMany({
         where: { userId },
         orderBy: { updatedAt: 'desc' },
       }),
-      tx.healthNeed.findMany({
-        where: { userId },
-      }),
+      tx.healthNeed.findMany({ where: { userId } }),
     ]);
 
-    // ----- biomarkers -----
-    const outOfRangeBiomarkers = biomarkers.filter((b) => b.isOutOfRange);
-    const inRangeBiomarkers = biomarkers.filter((b) => !b.isOutOfRange);
+    return { user, biomarkers, insurancePlans, projections, actuals, goals, needs };
+  });
 
-    // Take out-of-range first (most relevant), then fill with recent in-range.
-    const biomarkerDetailSource = [
-      ...outOfRangeBiomarkers,
-      ...inRangeBiomarkers,
-    ].slice(0, BIOMARKER_DETAIL_LIMIT);
+  // ----- Phase 2: decrypt + map, outside the transaction -----
+  const { user, biomarkers, insurancePlans, projections, actuals, goals, needs } = raw;
 
-    const biomarkerDetail: BiomarkerContextEntry[] = biomarkerDetailSource.map((b) => {
-      let value = 0;
-      try {
-        value = parseFloat(encryption.decrypt(b.valueEncrypted, userSalt));
-      } catch {
-        logger.warn('Failed to decrypt biomarker for context', { data: { biomarkerId: b.id } });
-      }
-      return {
-        name: b.name,
-        category: b.category,
-        value: Number.isFinite(value) ? value : 0,
-        unit: b.unit,
-        normalRange: {
-          min: Number(b.normalRangeMin),
-          max: Number(b.normalRangeMax),
-        },
-        isOutOfRange: b.isOutOfRange,
-        measurementDate: b.measurementDate.toISOString().split('T')[0],
-        trend: classifyTrend(value, b.history, encryption, userSalt),
-      };
-    });
+  // Biomarkers
+  const outOfRangeBiomarkers = biomarkers.filter((b) => b.isOutOfRange);
+  const inRangeBiomarkers = biomarkers.filter((b) => !b.isOutOfRange);
 
-    const categoriesCount = new Map<string, { total: number; outOfRange: number }>();
-    for (const b of biomarkers) {
-      const slot = categoriesCount.get(b.category) ?? { total: 0, outOfRange: 0 };
-      slot.total += 1;
-      if (b.isOutOfRange) slot.outOfRange += 1;
-      categoriesCount.set(b.category, slot);
+  // Out-of-range first (most clinically relevant), then fill with recent in-range.
+  const biomarkerDetailSource = [
+    ...outOfRangeBiomarkers,
+    ...inRangeBiomarkers,
+  ].slice(0, BIOMARKER_DETAIL_LIMIT);
+
+  const biomarkerDetail: BiomarkerContextEntry[] = biomarkerDetailSource.map((b) => {
+    let value = 0;
+    try {
+      value = parseFloat(encryption.decrypt(b.valueEncrypted, userSalt));
+    } catch {
+      logger.warn('Failed to decrypt biomarker for context', { data: { biomarkerId: b.id } });
     }
-
-    // ----- insurance -----
-    const primaryPlan = insurancePlans[0];
-    const insuranceEntry: InsuranceContextEntry | null = primaryPlan
-      ? {
-          planName: primaryPlan.planName,
-          planType: primaryPlan.planType,
-          deductibleIndividual: primaryPlan.deductibleIndividual
-            ? Number(primaryPlan.deductibleIndividual)
-            : null,
-          deductibleMetIndividual: primaryPlan.deductibleMetIndividual
-            ? Number(primaryPlan.deductibleMetIndividual)
-            : null,
-          oopMaxIndividual: primaryPlan.oopMaxIndividual
-            ? Number(primaryPlan.oopMaxIndividual)
-            : null,
-          oopMetIndividual: primaryPlan.oopMetIndividual
-            ? Number(primaryPlan.oopMetIndividual)
-            : null,
-          premiumMonthly: primaryPlan.premiumMonthly ? Number(primaryPlan.premiumMonthly) : null,
-          copayPrimaryCare: primaryPlan.copayPrimaryCare
-            ? Number(primaryPlan.copayPrimaryCare)
-            : null,
-          copaySpecialist: primaryPlan.copaySpecialist
-            ? Number(primaryPlan.copaySpecialist)
-            : null,
-          copayEmergency: primaryPlan.copayEmergency
-            ? Number(primaryPlan.copayEmergency)
-            : null,
-          coinsuranceRate: primaryPlan.coinsuranceRate
-            ? Number(primaryPlan.coinsuranceRate)
-            : null,
-          benefitsCount: primaryPlan.benefits.length,
-        }
-      : null;
-
-    // ----- expenses -----
-    let projectionsAnnualTotal = 0;
-    const projectedServiceTypesSet = new Set<string>();
-    for (const p of projections) {
-      try {
-        const cost = parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt));
-        projectionsAnnualTotal += cost * p.frequencyPerYear;
-        const serviceType = encryption.decrypt(p.serviceTypeEncrypted, userSalt);
-        projectedServiceTypesSet.add(serviceType);
-      } catch {
-        // swallow — a stale record shouldn't break the whole context assembly
-      }
-    }
-
-    let actualsTotalPatientPaid = 0;
-    for (const a of actuals) {
-      if (!a.patientPaidEncrypted) continue;
-      try {
-        actualsTotalPatientPaid += parseFloat(encryption.decrypt(a.patientPaidEncrypted, userSalt));
-      } catch {
-        // swallow
-      }
-    }
-
-    const expensesContext: ExpenseContext = {
-      projectionsAnnualTotal: Math.round(projectionsAnnualTotal),
-      projectionsCount: projections.length,
-      actualsTotalPatientPaid: Math.round(actualsTotalPatientPaid),
-      actualsCount: actuals.length,
-      projectedServiceTypes: Array.from(projectedServiceTypesSet).slice(0, PROJECTION_SERVICE_TYPE_LIMIT),
-    };
-
-    // ----- goals -----
-    const activeGoals = goals.filter((g) => g.status === 'ACTIVE');
-    const completedGoals = goals.filter((g) => g.status === 'ACHIEVED');
-    const goalDetailSource = activeGoals.slice(0, GOAL_DETAIL_LIMIT);
-    const goalDetail: GoalContextEntry[] = goalDetailSource.map((g) => {
-      const daysRemaining = Math.ceil(
-        (g.targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      );
-      return {
-        name: g.name,
-        category: g.category,
-        direction: g.direction,
-        targetValue: Number(g.targetValue),
-        currentValue: g.currentValue !== null ? Number(g.currentValue) : null,
-        unit: g.unit,
-        progress: Number(g.progress),
-        status: g.status,
-        daysRemaining,
-      };
-    });
-
-    // ----- needs -----
-    const byUrgency: Record<string, number> = {
-      IMMEDIATE: 0,
-      URGENT: 0,
-      FOLLOW_UP: 0,
-      ROUTINE: 0,
-    };
-    for (const n of needs) {
-      byUrgency[n.urgency] = (byUrgency[n.urgency] ?? 0) + 1;
-    }
-    const pendingNeeds = needs.filter((n) => n.status !== 'COMPLETED' && n.status !== 'DISMISSED');
-    const needDetailSource = [...pendingNeeds]
-      .sort((a, b) => (URGENCY_RANK[a.urgency] ?? 99) - (URGENCY_RANK[b.urgency] ?? 99))
-      .slice(0, NEED_DETAIL_LIMIT);
-    const needDetail: NeedContextEntry[] = needDetailSource.map((n) => ({
-      name: n.name,
-      needType: n.needType,
-      urgency: n.urgency,
-      status: n.status,
-      relatedBiomarkerCount: n.relatedBiomarkerIds.length,
-    }));
-
     return {
-      biomarkers: {
-        total: biomarkers.length,
-        inRange: inRangeBiomarkers.length,
-        outOfRange: outOfRangeBiomarkers.length,
-        detail: biomarkerDetail,
-        categoriesSummary: Array.from(categoriesCount.entries()).map(([category, counts]) => ({
-          category,
-          total: counts.total,
-          outOfRange: counts.outOfRange,
-        })),
+      name: b.name,
+      category: b.category,
+      value: Number.isFinite(value) ? value : 0,
+      unit: b.unit,
+      normalRange: {
+        min: Number(b.normalRangeMin),
+        max: Number(b.normalRangeMax),
       },
-      insurance: {
-        totalPlans: insurancePlans.length,
-        primary: insuranceEntry,
-        additionalCount: Math.max(0, insurancePlans.length - 1),
-      },
-      expenses: expensesContext,
-      goals: {
-        total: goals.length,
-        active: activeGoals.length,
-        completed: completedGoals.length,
-        detail: goalDetail,
-      },
-      needs: {
-        total: needs.length,
-        pending: pendingNeeds.length,
-        byUrgency,
-        detail: needDetail,
-      },
-      profile: {
-        memberSince: user?.createdAt.toISOString().split('T')[0] ?? '',
-        biomarkerCount: biomarkers.length,
-        planCount: insurancePlans.length,
-      },
+      isOutOfRange: b.isOutOfRange,
+      measurementDate: b.measurementDate.toISOString().split('T')[0],
+      trend: classifyTrend(value, b.history, encryption, userSalt),
     };
   });
+
+  const categoriesCount = new Map<string, { total: number; outOfRange: number }>();
+  for (const b of biomarkers) {
+    const slot = categoriesCount.get(b.category) ?? { total: 0, outOfRange: 0 };
+    slot.total += 1;
+    if (b.isOutOfRange) slot.outOfRange += 1;
+    categoriesCount.set(b.category, slot);
+  }
+
+  // Insurance
+  const primaryPlan = insurancePlans[0];
+  const insuranceEntry: InsuranceContextEntry | null = primaryPlan
+    ? {
+        planName: primaryPlan.planName,
+        planType: primaryPlan.planType,
+        deductibleIndividual: primaryPlan.deductibleIndividual
+          ? Number(primaryPlan.deductibleIndividual)
+          : null,
+        deductibleMetIndividual: primaryPlan.deductibleMetIndividual
+          ? Number(primaryPlan.deductibleMetIndividual)
+          : null,
+        oopMaxIndividual: primaryPlan.oopMaxIndividual
+          ? Number(primaryPlan.oopMaxIndividual)
+          : null,
+        oopMetIndividual: primaryPlan.oopMetIndividual
+          ? Number(primaryPlan.oopMetIndividual)
+          : null,
+        premiumMonthly: primaryPlan.premiumMonthly ? Number(primaryPlan.premiumMonthly) : null,
+        copayPrimaryCare: primaryPlan.copayPrimaryCare
+          ? Number(primaryPlan.copayPrimaryCare)
+          : null,
+        copaySpecialist: primaryPlan.copaySpecialist
+          ? Number(primaryPlan.copaySpecialist)
+          : null,
+        copayEmergency: primaryPlan.copayEmergency
+          ? Number(primaryPlan.copayEmergency)
+          : null,
+        coinsuranceRate: primaryPlan.coinsuranceRate
+          ? Number(primaryPlan.coinsuranceRate)
+          : null,
+        benefitsCount: primaryPlan.benefits.length,
+      }
+    : null;
+
+  // Expenses
+  let projectionsAnnualTotal = 0;
+  const projectedServiceTypesSet = new Set<string>();
+  for (const p of projections) {
+    try {
+      const cost = parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt));
+      projectionsAnnualTotal += cost * p.frequencyPerYear;
+      const serviceType = encryption.decrypt(p.serviceTypeEncrypted, userSalt);
+      projectedServiceTypesSet.add(serviceType);
+    } catch {
+      // swallow — a stale record shouldn't break the whole context assembly
+    }
+  }
+
+  let actualsTotalPatientPaid = 0;
+  for (const a of actuals) {
+    if (!a.patientPaidEncrypted) continue;
+    try {
+      actualsTotalPatientPaid += parseFloat(encryption.decrypt(a.patientPaidEncrypted, userSalt));
+    } catch {
+      // swallow
+    }
+  }
+
+  const expensesContext: ExpenseContext = {
+    projectionsAnnualTotal: Math.round(projectionsAnnualTotal),
+    projectionsCount: projections.length,
+    actualsTotalPatientPaid: Math.round(actualsTotalPatientPaid),
+    actualsCount: actuals.length,
+    projectedServiceTypes: Array.from(projectedServiceTypesSet).slice(0, PROJECTION_SERVICE_TYPE_LIMIT),
+  };
+
+  // Goals
+  const activeGoals = goals.filter((g) => g.status === 'ACTIVE');
+  const completedGoals = goals.filter((g) => g.status === 'ACHIEVED');
+  const goalDetailSource = activeGoals.slice(0, GOAL_DETAIL_LIMIT);
+  const goalDetail: GoalContextEntry[] = goalDetailSource.map((g) => {
+    const daysRemaining = Math.ceil(
+      (g.targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    return {
+      name: g.name,
+      category: g.category,
+      direction: g.direction,
+      targetValue: Number(g.targetValue),
+      currentValue: g.currentValue !== null ? Number(g.currentValue) : null,
+      unit: g.unit,
+      progress: Number(g.progress),
+      status: g.status,
+      daysRemaining,
+    };
+  });
+
+  // Needs
+  const byUrgency: Record<string, number> = {
+    IMMEDIATE: 0,
+    URGENT: 0,
+    FOLLOW_UP: 0,
+    ROUTINE: 0,
+  };
+  for (const n of needs) {
+    byUrgency[n.urgency] = (byUrgency[n.urgency] ?? 0) + 1;
+  }
+  const pendingNeeds = needs.filter((n) => n.status !== 'COMPLETED' && n.status !== 'DISMISSED');
+  const needDetailSource = [...pendingNeeds]
+    .sort((a, b) => (URGENCY_RANK[a.urgency] ?? 99) - (URGENCY_RANK[b.urgency] ?? 99))
+    .slice(0, NEED_DETAIL_LIMIT);
+  const needDetail: NeedContextEntry[] = needDetailSource.map((n) => ({
+    name: n.name,
+    needType: n.needType,
+    urgency: n.urgency,
+    status: n.status,
+    relatedBiomarkerCount: n.relatedBiomarkerIds.length,
+  }));
 
   const healthProfile = await healthProfilePromise;
 
   return {
-    ...contextResult,
+    biomarkers: {
+      total: biomarkers.length,
+      inRange: inRangeBiomarkers.length,
+      outOfRange: outOfRangeBiomarkers.length,
+      detail: biomarkerDetail,
+      categoriesSummary: Array.from(categoriesCount.entries()).map(([category, counts]) => ({
+        category,
+        total: counts.total,
+        outOfRange: counts.outOfRange,
+      })),
+    },
+    insurance: {
+      totalPlans: insurancePlans.length,
+      primary: insuranceEntry,
+      additionalCount: Math.max(0, insurancePlans.length - 1),
+    },
+    expenses: expensesContext,
+    goals: {
+      total: goals.length,
+      active: activeGoals.length,
+      completed: completedGoals.length,
+      detail: goalDetail,
+    },
+    needs: {
+      total: needs.length,
+      pending: pendingNeeds.length,
+      byUrgency,
+      detail: needDetail,
+    },
+    profile: {
+      memberSince: user?.createdAt.toISOString().split('T')[0] ?? '',
+      biomarkerCount: biomarkers.length,
+      planCount: insurancePlans.length,
+    },
     healthProfile,
   };
 }
