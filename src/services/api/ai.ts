@@ -11,7 +11,7 @@
  * streaming progress without a full Promise-based wait.
  */
 
-import { API_BASE_URL, getAuthToken, ensureCsrfToken } from './client';
+import { API_BASE_URL, getAuthToken } from './client';
 
 export interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -76,11 +76,6 @@ export const aiApi = {
       };
       const authToken = getAuthToken();
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-      // Seed the csrf_token cookie via /csrf-token if it isn't already
-      // present — otherwise the first chat of a session will 403 because
-      // the streaming fetch can't use the generic apiFetch retry path.
-      const csrfToken = await ensureCsrfToken();
-      if (csrfToken) headers['x-csrf-token'] = csrfToken;
 
       const response = await fetch(`${API_BASE_URL}/ai/chat`, {
         method: 'POST',

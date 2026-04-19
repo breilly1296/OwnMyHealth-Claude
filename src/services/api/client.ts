@@ -106,34 +106,6 @@ export function getCsrfToken(): string {
   return token;
 }
 
-/**
- * Fetch /csrf-token to seed the `csrf_token` cookie if it's missing.
- * The endpoint's response sets the cookie via Set-Cookie, and because this
- * fetch runs with `credentials: 'include'`, the browser persists it for
- * subsequent requests.
- *
- * Returns the token string (empty if the warmup failed — caller should
- * tolerate missing CSRF; the backend will reject the follow-up request
- * with 403, which is better than a silent inconsistency).
- */
-export async function ensureCsrfToken(): Promise<string> {
-  const existing = getCsrfToken();
-  if (existing) return existing;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/csrf-token`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    if (!response.ok) return '';
-    // The Set-Cookie header is applied by the browser before this resolves;
-    // re-read document.cookie to surface it to the caller.
-    return getCsrfToken();
-  } catch {
-    return '';
-  }
-}
-
 export async function attemptTokenRefresh(): Promise<boolean> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
