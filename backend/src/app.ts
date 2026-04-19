@@ -55,6 +55,15 @@ import { initializeDemoUser, startSessionCleanup, stopSessionCleanup } from './s
 import { startAuditCleanup, stopAuditCleanup } from './services/auditLog.js';
 import { logger } from './utils/logger.js';
 
+// Production frontend origins that are always allowed, independent of the
+// CORS_ORIGIN env var. Baked into the image so a misconfigured env var on
+// Cloud Run can't silently break browser requests from the real frontend.
+// Add to this list if you stand up a new frontend host.
+const HARDCODED_PRODUCTION_ORIGINS = [
+  'https://app.ownmyhealth.io',
+  'https://ownmyhealth.io',
+];
+
 // SECURITY: Get safe CORS origins for the environment
 function getSafeCorsOrigins(): string | string[] {
   // In production, reject localhost origins
@@ -64,11 +73,14 @@ function getSafeCorsOrigins(): string | string[] {
       throw new Error('CORS_ORIGIN must be set in production');
     }
     // Parse comma-separated list if provided
-    const origins = origin.split(',').map(o => o.trim());
+    const envOrigins = origin.split(',').map(o => o.trim()).filter(Boolean);
     // Validate no localhost in production
-    if (origins.some(o => o.includes('localhost') || o.includes('127.0.0.1'))) {
+    if (envOrigins.some(o => o.includes('localhost') || o.includes('127.0.0.1'))) {
       throw new Error('CORS_ORIGIN cannot contain localhost in production');
     }
+    // Union with hardcoded production origins, deduplicated. Guarantees the
+    // real frontend hosts stay allowed even if CORS_ORIGIN is misconfigured.
+    const origins = Array.from(new Set([...envOrigins, ...HARDCODED_PRODUCTION_ORIGINS]));
     return origins.length === 1 ? origins[0] : origins;
   }
   // Development: allow localhost ports
