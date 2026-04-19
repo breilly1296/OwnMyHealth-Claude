@@ -36,7 +36,6 @@ import { settingsApi } from '../../services/api';
 import type { NotificationPreferences } from '../../services/api/settings';
 import ChangePasswordModal from './ChangePasswordModal';
 import HealthProfileSection from './HealthProfileSection';
-import LabConnectionsSection from './LabConnectionsSection';
 
 const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   emailNotifications: true,
