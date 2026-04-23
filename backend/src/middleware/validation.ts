@@ -99,17 +99,6 @@ const promptSafeString = (minLength = 0, maxLength = 200) =>
 // ============================================
 
 /**
- * DNA rsid format validation
- * Valid formats: rs followed by digits (e.g., rs12345, rs1234567890)
- * Prevents injection attacks through rsid parameter
- */
-const rsidRegex = /^rs\d{1,12}$/;
-
-const dnaRsid = z.string()
-  .regex(rsidRegex, 'Invalid rsid format. Must be "rs" followed by 1-12 digits (e.g., rs12345)')
-  .transform((val) => val.toLowerCase());
-
-/**
  * Email validation with sanitization
  */
 const email = z.string()
@@ -454,33 +443,6 @@ export const schemas = {
   },
 
   // ============================================
-  // DNA Schemas
-  // ============================================
-  dna: {
-    upload: z.object({
-      filename: sanitizedString(1, 255),
-      source: z.enum(['23andMe', 'AncestryDNA', 'MyHeritage', 'FamilyTreeDNA', 'Other']),
-      fileData: z.string().min(1, 'File data is required'), // Base64 encoded
-    }),
-
-    variantQuery: z.object({
-      rsid: dnaRsid.optional(),
-      chromosome: z.string().regex(/^(chr)?([1-9]|1[0-9]|2[0-2]|X|Y|MT)$/i, 'Invalid chromosome').optional(),
-      page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
-      limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '50', 10)), 500)),
-    }),
-
-    rsidParam: z.object({
-      rsid: dnaRsid,
-    }),
-
-    traitQuery: z.object({
-      category: z.string().optional(),
-      riskLevel: z.enum(['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']).optional(),
-    }),
-  },
-
-  // ============================================
   // Health Needs Schemas
   // ============================================
   healthNeed: {
@@ -820,4 +782,3 @@ export type HealthNeedCreateInput = z.infer<typeof schemas.healthNeed.create>;
 export type HealthNeedUpdateInput = z.infer<typeof schemas.healthNeed.update>;
 export type HealthGoalCreateInput = z.infer<typeof schemas.healthGoal.create>;
 export type HealthGoalUpdateInput = z.infer<typeof schemas.healthGoal.update>;
-export type DNAUploadInput = z.infer<typeof schemas.dna.upload>;

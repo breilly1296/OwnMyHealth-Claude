@@ -106,22 +106,6 @@ export interface InsuranceBenefit {
   preAuthRequired: boolean;
 }
 
-// DNA types
-export interface DNAVariant {
-  rsid: string;
-  chromosome: string;
-  position: number;
-  genotype: string;
-}
-
-export interface DNAFileInfo {
-  filename: string;
-  source: string;
-  uploadDate: string;
-  totalVariants: number;
-  validVariants: number;
-}
-
 // Health needs types
 export interface HealthNeed {
   id: string;
