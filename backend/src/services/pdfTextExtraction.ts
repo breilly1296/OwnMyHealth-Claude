@@ -14,6 +14,7 @@
  * @module services/pdfTextExtraction
  */
 
+// @ts-expect-error — pdf-parse has no @types package
 import pdfParse from 'pdf-parse';
 import { logger } from '../utils/logger.js';
 
@@ -35,7 +36,7 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<PDFTextExtract
   try {
     const result = await pdfParse(buffer);
     const text = result.text ?? '';
-    const lineCount = text.split('\n').filter((l) => l.trim().length > 0).length;
+    const lineCount = text.split('\n').filter((l: string) => l.trim().length > 0).length;
     const usable = text.length >= MIN_USABLE_CHARS && lineCount >= MIN_USABLE_LINES;
     const isLikelyScanned = text.length < MIN_USABLE_CHARS;
 

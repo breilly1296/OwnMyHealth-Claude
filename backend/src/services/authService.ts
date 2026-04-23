@@ -19,12 +19,25 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
 import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
-import { withRLSContext } from './database.js';
+import { withRLSContext, withRLSTransaction } from './database.js';
 import { logger } from '../utils/logger.js';
 import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
 
 // Email verification token expiration (24 hours)
 const EMAIL_VERIFICATION_EXPIRATION_HOURS = 24;
+
+/**
+ * SHA-256 hash used for email-verification and password-reset tokens.
+ *
+ * Tokens are 256-bit random values and don't need key-stretching — we use
+ * SHA-256 to keep the DB column size compact and the lookup fast. The
+ * unhashed token goes into the email link; the hash goes into the DB.
+ * A DB breach then exposes only the hashes, which are unusable without
+ * the (unretained) preimage.
+ */
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 // ============================================
 // Types
@@ -49,12 +62,16 @@ export interface User {
   failedLoginAttempts: number;
   lockedUntil: Date | null;
   lastFailedLogin: Date | null;
+  // Subscription plan (FREE | PRO | TEAM). Coerced via normalizePlan at the
+  // request boundary, so the string type here is intentional.
+  plan: string;
 }
 
 export interface TokenPayload {
   id: string;
   email: string;
   role: string;
+  plan: string;
   type: 'access' | 'refresh';
 }
 
@@ -104,15 +121,31 @@ function prismaUserToUser(prismaUser: PrismaUser): User {
     failedLoginAttempts: prismaUser.failedLoginAttempts,
     lockedUntil: prismaUser.lockedUntil,
     lastFailedLogin: prismaUser.lastFailedLogin,
+    plan: prismaUser.plan,
   };
 }
 
 // ============================================
 // In-Memory Token Blacklist (for access token revocation)
-// Note: For production at scale, use Redis instead
+//
+// In-memory only — won't survive a server restart or scale to more than
+// one instance. The 15-min access token expiry is the real safety net; this
+// Set just closes the window for the current instance (a logged-out user's
+// access token stops working immediately on THIS node, even though another
+// replica may still accept it until the JWT expires). Replace with Redis
+// when the deployment fans out beyond one Cloud Run instance at a time.
 // ============================================
 
 const revokedTokens: Set<string> = new Set();
+
+/**
+ * Add an access token to the in-memory revocation set. Called from the
+ * logout controller so the current instance's `verifyAccessToken` rejects
+ * it immediately rather than waiting for natural JWT expiry.
+ */
+export function revokeAccessToken(token: string): void {
+  if (token) revokedTokens.add(token);
+}
 
 // ============================================
 // Password Hashing
@@ -169,6 +202,7 @@ export function generateAccessToken(user: User): string {
     id: user.id,
     email: user.email,
     role: user.role,
+    plan: user.plan || 'FREE',
     type: 'access',
   };
 
@@ -183,15 +217,23 @@ export const DEMO_SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days for
 
 /**
  * Check if a user is the demo account
+ *
+ * SECURITY: If DEMO_EMAIL is unset (config.demo.email === ''), this always
+ * returns false. Without the guard an empty configured email would match any
+ * user whose email was somehow empty, or the comparison would trivially match
+ * during edge cases.
  */
 export function isDemoUser(user: User): boolean {
+  if (!config.demo.email || config.demo.email.trim() === '') return false;
   return user.email.toLowerCase() === config.demo.email.toLowerCase();
 }
 
 /**
- * Check if an email is the demo account (for use before user lookup)
+ * Check if an email is the demo account (for use before user lookup).
+ * Returns false when DEMO_EMAIL is not configured (see isDemoUser).
  */
 export function isDemoEmail(email: string): boolean {
+  if (!config.demo.email || config.demo.email.trim() === '') return false;
   return email.toLowerCase().trim() === config.demo.email.toLowerCase();
 }
 
@@ -215,6 +257,7 @@ export async function generateRefreshToken(user: User, metadata?: SessionMetadat
     id: user.id,
     email: user.email,
     role: user.role,
+    plan: user.plan || 'FREE',
     type: 'refresh',
     jti: tokenId, // JWT ID for revocation
   };
@@ -352,30 +395,83 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
 }
 
 /**
- * Refresh tokens - issue new access token using refresh token
- * Returns tokens and isDemo flag to preserve demo session duration
+ * Refresh tokens — issue a new access/refresh pair using the incoming
+ * refresh token. Atomic: the old session row is locked with
+ * `SELECT ... FOR UPDATE`, deleted, and replaced inside a single
+ * transaction so two concurrent refresh requests with the same token
+ * can't both succeed. The second one finds the row already gone and
+ * returns null, forcing the client to re-authenticate.
+ *
+ * Returns tokens and isDemo flag to preserve demo session duration.
  */
 export async function refreshTokens(refreshToken: string, metadata?: SessionMetadata): Promise<RefreshResult | null> {
-  const payload = await verifyRefreshToken(refreshToken);
-  if (!payload) {
+  // JWT signature + type check happens outside the transaction. If the
+  // token is malformed there's no reason to open a DB connection at all.
+  let payload: (TokenPayload & { jti: string }) | null;
+  try {
+    const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret, JWT_VERIFY_OPTIONS) as TokenPayload & { jti: string };
+    if (decoded.type !== 'refresh') return null;
+    payload = decoded;
+  } catch {
     return null;
   }
 
-  const user = await findUserById(payload.id);
-  if (!user || !user.isActive) {
-    return null;
-  }
+  // Admin context — refresh flow runs before the request has a user context.
+  // The session-row lock + user lookup + new-session insert all live in one
+  // transaction so concurrent refresh attempts serialize on the row lock.
+  const result = await withRLSTransaction(
+    null,
+    async (tx) => {
+      // Lock the session row for the duration of this transaction. A parallel
+      // refresh attempt for the same JTI will block on this until we commit
+      // or roll back; by the time it unblocks the row is gone and the lookup
+      // below returns nothing.
+      //
+      // Parameterized — payload.jti is a UUID generated on our side, but
+      // $queryRaw still prevents any SQL-level surprise.
+      const locked = await tx.$queryRaw<Array<{ id: string; userId: string; expiresAt: Date }>>`
+        SELECT id, user_id AS "userId", expires_at AS "expiresAt"
+        FROM sessions
+        WHERE id = ${payload!.jti}::uuid
+        FOR UPDATE
+      `;
 
-  // Revoke old refresh token (token rotation)
-  await revokeRefreshToken(refreshToken);
+      const session = locked[0];
+      if (!session || session.expiresAt < new Date()) {
+        // Either the row was already consumed by a racing refresh, or it
+        // expired between JWT verification and the lock. Either way: no
+        // new tokens issued.
+        if (session) {
+          await tx.session.delete({ where: { id: payload!.jti } });
+        }
+        return null;
+      }
 
-  // Generate new tokens with session metadata
-  const tokens = await generateTokens(user, metadata);
+      const prismaUser = await tx.user.findUnique({ where: { id: session.userId } });
+      if (!prismaUser || !prismaUser.isActive) {
+        return null;
+      }
 
-  // Return tokens with isDemo flag to preserve cookie duration
+      // Delete the old session row — the caller's refresh token is now
+      // single-use. The generateTokens call below will insert a fresh
+      // session row for the new refresh token, all inside this tx.
+      await tx.session.delete({ where: { id: payload!.jti } });
+
+      return { user: prismaUserToUser(prismaUser) };
+    }
+  );
+
+  if (!result) return null;
+
+  // Token rotation: new refresh token gets a new JTI and a new session row.
+  // Runs outside the locking transaction because generateRefreshToken opens
+  // its own withRLSContext to insert the session — nesting transactions
+  // would deadlock.
+  const tokens = await generateTokens(result.user, metadata);
+
   return {
     tokens,
-    isDemo: isDemoUser(user),
+    isDemo: isDemoUser(result.user),
   };
 }
 
@@ -481,8 +577,11 @@ export async function createUser(
 ): Promise<{ user: User; verificationToken: string }> {
   const passwordHash = await hashPassword(password);
 
-  // Generate verification token
+  // Generate verification token. The caller gets the unhashed value for the
+  // email link; the DB only ever sees the hash. A DB breach leaks hashes,
+  // not usable verification links.
   const verificationToken = generateEmailVerificationToken();
+  const verificationTokenHash = hashToken(verificationToken);
   const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRATION_HOURS * 60 * 60 * 1000);
 
   // Registration — pre-auth, admin context (the users_insert_system policy
@@ -497,7 +596,7 @@ export async function createUser(
           role: role as UserRole,
           failedLoginAttempts: 0,
           emailVerified: false,
-          emailVerificationToken: verificationToken,
+          emailVerificationToken: verificationTokenHash,
           emailVerificationExpires: verificationExpires,
         },
       });
@@ -583,9 +682,14 @@ export async function attemptLogin(
 ): Promise<LoginAttemptResult> {
   const user = await findUserByEmail(email);
 
-  // DEMO ACCOUNT: Zero restrictions - only works when demo mode is enabled (development only)
+  // DEMO ACCOUNT: Zero restrictions — only works when demo mode is enabled
+  // AND we're in a true development environment. Staging/preview deploys
+  // that set DEMO_ACCOUNT_ENABLED=true would otherwise let an attacker
+  // brute-force the demo password indefinitely (no lockout, no failed-
+  // attempt tracking). Gating on `isDevelopment` — not just `demo.enabled` —
+  // means the demo bypass can't be enabled outside a developer workstation.
   const isDemoAccount = isDemoEmail(email);
-  if (isDemoAccount && config.demo.enabled) {
+  if (isDemoAccount && config.demo.enabled && config.isDevelopment) {
     if (!user) {
       // Demo user doesn't exist yet - will be created by initializeDemoUser
       return {
@@ -721,15 +825,17 @@ export interface VerifyEmailResult {
 }
 
 /**
- * Verify user's email using verification token
+ * Verify user's email using verification token. Hashes the incoming token
+ * before querying — the DB only ever stores hashes (see `hashToken`).
  */
 export async function verifyEmail(token: string): Promise<VerifyEmailResult> {
+  const tokenHash = hashToken(token);
   // Pre-auth: verification token is the only identifier. Admin context.
   return withRLSContext(
     null,
     async (tx): Promise<VerifyEmailResult> => {
       const prismaUser = await tx.user.findUnique({
-        where: { emailVerificationToken: token },
+        where: { emailVerificationToken: tokenHash },
       });
 
       if (!prismaUser) {
@@ -781,8 +887,10 @@ export async function verifyEmail(token: string): Promise<VerifyEmailResult> {
 export async function resendVerificationEmail(email: string): Promise<{ success: boolean; token?: string; error?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Generate new token (CPU-only; doesn't need to be inside the tx)
+  // Generate new token (CPU-only; doesn't need to be inside the tx).
+  // Caller gets the unhashed token for the email link; DB stores the hash.
   const verificationToken = generateEmailVerificationToken();
+  const verificationTokenHash = hashToken(verificationToken);
   const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRATION_HOURS * 60 * 60 * 1000);
 
   // Pre-auth lookup + update under admin context.
@@ -808,7 +916,7 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
       await tx.user.update({
         where: { id: prismaUser.id },
         data: {
-          emailVerificationToken: verificationToken,
+          emailVerificationToken: verificationTokenHash,
           emailVerificationExpires: verificationExpires,
         },
       });
@@ -823,15 +931,17 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
 }
 
 /**
- * Find user by verification token
+ * Find user by verification token. Hashes the incoming token to match the
+ * stored hash (tokens are never stored in plaintext).
  */
 export async function findUserByVerificationToken(token: string): Promise<User | null> {
+  const tokenHash = hashToken(token);
   // Token-keyed, pre-auth. Admin context.
   const prismaUser = await withRLSContext(
     null,
     async (tx) => {
       return tx.user.findUnique({
-        where: { emailVerificationToken: token },
+        where: { emailVerificationToken: tokenHash },
       });
     },
     { isAdmin: true }
@@ -871,7 +981,10 @@ export function generatePasswordResetToken(): string {
  */
 export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
   const normalizedEmail = email.toLowerCase().trim();
+  // Caller (password-reset email) gets the unhashed token; DB stores the
+  // SHA-256 hash so a DB breach doesn't leak working reset links.
   const resetToken = generatePasswordResetToken();
+  const resetTokenHash = hashToken(resetToken);
   const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRATION_HOURS * 60 * 60 * 1000);
 
   // Pre-auth (email-keyed lookup + token-stamp update). Admin context.
@@ -895,7 +1008,7 @@ export async function forgotPassword(email: string): Promise<ForgotPasswordResul
       await tx.user.update({
         where: { id: prismaUser.id },
         data: {
-          passwordResetToken: resetToken,
+          passwordResetToken: resetTokenHash,
           passwordResetExpires: resetExpires,
         },
       });
@@ -918,12 +1031,17 @@ export async function resetPassword(token: string, newPassword: string): Promise
   // for atomicity the hash and the update run inside the same transaction,
   // but password validation happens before the wrapper to fail fast.
   //
+  // Tokens are stored as SHA-256 hashes — hash the incoming token before
+  // querying. The link in the user's inbox carries the plaintext token;
+  // the DB only ever sees the hash.
+  const tokenHash = hashToken(token);
+
   // Step 1: look up by token under admin context to decide what to do.
   const lookupResult = await withRLSContext(
     null,
     async (tx): Promise<{ userId: string } | ResetPasswordResult> => {
       const prismaUser = await tx.user.findUnique({
-        where: { passwordResetToken: token },
+        where: { passwordResetToken: tokenHash },
       });
 
       if (!prismaUser) {
@@ -994,15 +1112,17 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 /**
- * Find user by password reset token
+ * Find user by password reset token. Hashes the incoming token to match
+ * the stored hash (tokens are never stored in plaintext).
  */
 export async function findUserByResetToken(token: string): Promise<User | null> {
+  const tokenHash = hashToken(token);
   // Token-keyed, pre-auth. Admin context.
   const prismaUser = await withRLSContext(
     null,
     async (tx) => {
       return tx.user.findUnique({
-        where: { passwordResetToken: token },
+        where: { passwordResetToken: tokenHash },
       });
     },
     { isAdmin: true }

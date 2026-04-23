@@ -40,7 +40,13 @@ interface DashboardContentProps {
   onOpenPDFUpload: () => void;
   onOpenLabUpload: () => void;
   onOpenClinicalUpload: () => void;
+  /** ISO timestamp of the most recent upload, or null. Drives the "it's
+   *  been a while" nudge — only shown when the user has uploaded before
+   *  (null hides the banner, not show a "first upload" prompt). */
+  lastLabUploadAt?: string | null;
 }
+
+const STALE_UPLOAD_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
 
 function netTrendLabel(trends: BiomarkerTrends): { text: string; className: string; Icon: typeof TrendingUp } {
   if (trends.netDirection === 'improving') {
@@ -110,6 +116,7 @@ export function DashboardContent({
   onOpenAddMeasurement,
   onOpenPDFUpload,
   onOpenLabUpload,
+  lastLabUploadAt,
 }: DashboardContentProps) {
   const { user } = useAuth();
   const trends = useBiomarkerTrends(biomarkers);
@@ -118,8 +125,29 @@ export function DashboardContent({
   const netTrend = netTrendLabel(trends);
   const NetTrendIcon = netTrend.Icon;
 
+  // Stale-upload nudge: only show if the user has uploaded at least once
+  // (null lastLabUploadAt means "never uploaded" — that's a different
+  // empty-state message handled below, not a "time to upload again" nudge).
+  const showStaleUploadNudge =
+    !!lastLabUploadAt &&
+    Date.now() - new Date(lastLabUploadAt).getTime() > STALE_UPLOAD_THRESHOLD_MS;
+
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
+      {showStaleUploadNudge && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800">
+          <p className="text-sm text-brand-800 dark:text-brand-200">
+            It's been a while since your last lab upload. Have new results?
+          </p>
+          <button
+            onClick={onOpenPDFUpload}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors"
+          >
+            Upload Now
+          </button>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{greeting}</h1>
@@ -304,23 +332,33 @@ export function DashboardContent({
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* Empty State — action-oriented, leads with the upload path because a
+          PDF populates the dashboard instantly. Manual entry is a secondary
+          option for users who don't have a lab report handy. */}
       {biomarkers.length === 0 && (
         <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 mt-8">
           <Activity className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            No Biomarkers Yet
+            No biomarkers tracked yet
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
-            Start tracking your health by adding measurements or uploading your lab reports.
+            Upload a lab report to see your health data at a glance.
           </p>
-          <button
-            onClick={onOpenAddMeasurement}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Your First Measurement
-          </button>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 justify-center">
+            <button
+              onClick={onOpenAddMeasurement}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add manually
+            </button>
+            <button
+              onClick={onOpenPDFUpload}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
+            >
+              Upload Lab Report
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -13,11 +13,18 @@ import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.
 // Mock dependencies
 vi.mock('bcryptjs');
 vi.mock('jsonwebtoken');
-vi.mock('crypto', () => ({
-    default: {
-        randomBytes: vi.fn(() => Buffer.alloc(32, 'a')), // 32 bytes of 'a' = 64 hex chars of '61'
-    }
-}));
+vi.mock('crypto', async () => {
+    const actual = await vi.importActual<typeof import('crypto')>('crypto');
+    return {
+        default: {
+            randomBytes: vi.fn(() => Buffer.alloc(32, 'a')), // 32 bytes of 'a' = 64 hex chars of '61'
+            // Delegate hash/createHash to the real crypto so the token-hashing
+            // helpers in authService (hashToken, etc.) work under test. Only
+            // randomBytes needs the deterministic stub — the rest can be real.
+            createHash: actual.createHash.bind(actual),
+        },
+    };
+});
 vi.mock('uuid', () => ({ v4: vi.fn() }));
 vi.mock('../config/index.js');
 vi.mock('../utils/logger.js');
@@ -30,12 +37,14 @@ vi.mock('../utils/logger.js');
 const mocks = vi.hoisted(() => ({
   mockPrismaForRLS: null as unknown,
   withRLSContext: vi.fn(),
+  withRLSTransaction: vi.fn(),
   getPrismaClient: vi.fn(),
 }));
 
 vi.mock('./database.js', () => ({
   getPrismaClient: mocks.getPrismaClient,
   withRLSContext: mocks.withRLSContext,
+  withRLSTransaction: mocks.withRLSTransaction,
 }));
 
 const MOCK_USER_ID = 'test-user-id-123';
@@ -46,6 +55,14 @@ const MOCK_ACCESS_SECRET = 'test_access_secret';
 const MOCK_REFRESH_SECRET = 'test_refresh_secret';
 const MOCK_DEMO_EMAIL = 'demo@example.com';
 const MOCK_DEMO_PASSWORD = 'DemoPassword123!';
+
+// crypto.randomBytes(32) is stubbed to return 32 bytes of 0x61 → hex
+// "6161...61" (64 chars). After the F-2 token-hashing fix the DB stores
+// sha256(raw), not the raw token. Tests that assert on the value stored
+// in `emailVerificationToken` / `passwordResetToken` use this constant.
+const RAW_MOCK_TOKEN = '6161616161616161616161616161616161616161616161616161616161616161';
+// sha256('6161...61') — computed once, reused across specs.
+const HASHED_MOCK_TOKEN = '929c4474f1a1f9c1c65ec0654c81bb95a0bfeccc0ebfa5e929931a2474d6755d';
 
 const MOCK_USER: PrismaUser = {
   id: MOCK_USER_ID,
@@ -69,6 +86,11 @@ const MOCK_USER: PrismaUser = {
   dateOfBirthEncrypted: null,
   phoneEncrypted: null,
   addressEncrypted: null,
+  notificationPreferences: {},
+  healthProfileEncrypted: null,
+  plan: 'FREE',
+  planExpiresAt: null,
+  planUpdatedAt: null,
 };
 
 const MOCK_DEMO_USER: PrismaUser = {
@@ -90,6 +112,10 @@ interface MockPrismaClient {
     delete: ReturnType<typeof vi.fn>;
     deleteMany: ReturnType<typeof vi.fn>;
   };
+  // Tagged-template API: the real Prisma client exposes $queryRaw as a
+  // function that accepts a TemplateStringsArray plus interpolated args.
+  // The mock's single-arg vi.fn is compatible at runtime.
+  $queryRaw: ReturnType<typeof vi.fn>;
 }
 
 // JWT payload type for mocking
@@ -97,6 +123,7 @@ interface MockJwtPayload {
   id: string;
   email: string;
   role: string;
+  plan?: string;
   type: string;
   jti?: string;
 }
@@ -144,10 +171,17 @@ describe('authService', () => {
         delete: vi.fn(),
         deleteMany: vi.fn(),
       },
+      // Tagged-template $queryRaw returns a Promise<Array<Row>>. Default to
+      // empty so refreshTokens treats the session as already-consumed; the
+      // refreshTokens-happy-path test overrides per-call.
+      $queryRaw: vi.fn().mockResolvedValue([]),
     };
     // Re-bind withRLSContext implementation each test — resetAllMocks wipes it.
     mocks.mockPrismaForRLS = mockPrisma;
     mocks.withRLSContext.mockImplementation(
+      async (_userId: unknown, fn: (tx: unknown) => Promise<unknown>) => fn(mocks.mockPrismaForRLS)
+    );
+    mocks.withRLSTransaction.mockImplementation(
       async (_userId: unknown, fn: (tx: unknown) => Promise<unknown>) => fn(mocks.mockPrismaForRLS)
     );
     mocks.getPrismaClient.mockReturnValue(mockPrisma);
@@ -251,7 +285,7 @@ describe('authService', () => {
     it('generateAccessToken should create an access token', () => {
       const token = authService.generateAccessToken(mockUserForToken);
       expect(jwt.sign).toHaveBeenCalledWith(
-        { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'access' },
+        { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', plan: 'FREE', type: 'access' },
         MOCK_ACCESS_SECRET,
         { ...JWT_SIGN_OPTIONS, expiresIn: '15m' }
       );
@@ -276,7 +310,7 @@ describe('authService', () => {
       const refreshToken = await authService.generateRefreshToken(mockUserForToken, { ipAddress: '127.0.0.1' });
 
       expect(jwt.sign).toHaveBeenCalledWith(
-        { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'mock-jti-regular' },
+        { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', plan: 'FREE', type: 'refresh', jti: 'mock-jti-regular' },
         MOCK_REFRESH_SECRET,
         { ...JWT_SIGN_OPTIONS, expiresIn: '7d' }
       );
@@ -302,7 +336,7 @@ describe('authService', () => {
         const refreshToken = await authService.generateRefreshToken(demoUserForToken);
 
         expect(jwt.sign).toHaveBeenCalledWith(
-            { id: demoUserForToken.id, email: MOCK_DEMO_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'mock-jti-demo' },
+            { id: demoUserForToken.id, email: MOCK_DEMO_EMAIL, role: 'PATIENT', plan: 'FREE', type: 'refresh', jti: 'mock-jti-demo' },
             MOCK_REFRESH_SECRET,
             { ...JWT_SIGN_OPTIONS, expiresIn: '30d' }
         );
@@ -417,19 +451,24 @@ describe('authService', () => {
     it('refreshTokens should return new tokens and isDemo flag on valid refresh', async () => {
         const testRefreshToken = 'mock-jwt-token-refresh-test';
 
-        // jwt.verify is synchronous, use mockReturnValue not mockResolvedValue
+        // jwt.verify is synchronous, use mockReturnValue not mockResolvedValue.
+        // After the F-1 atomic-refresh fix, refreshTokens calls jwt.verify
+        // directly (not through the old verifyRefreshToken helper), so the
+        // test just needs a valid return shape here.
         vi.mocked(jwt.verify).mockReturnValue({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'old-jti' } as MockJwtPayload);
-        // jwt.decode is used by revokeRefreshToken to get the jti
-        vi.mocked(jwt.decode).mockReturnValueOnce({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'old-jti' } as MockJwtPayload);
-        mockPrisma.session.findUnique.mockResolvedValueOnce({
-            id: 'old-jti',
-            userId: MOCK_USER_ID,
-            expiresAt: new Date(Date.now() + 10000),
-            token: testRefreshToken,
-        });
+
+        // SELECT ... FOR UPDATE path — $queryRaw returns the locked session
+        // row. A single-element array means "row exists, not expired."
+        mockPrisma.$queryRaw.mockResolvedValueOnce([
+            {
+                id: 'old-jti',
+                userId: MOCK_USER_ID,
+                expiresAt: new Date(Date.now() + 10000),
+            },
+        ]);
         mockPrisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
-        mockPrisma.session.delete.mockResolvedValueOnce({}); // for revoking old token
-        vi.mocked(uuidv4).mockReturnValueOnce('new-jti'); // for new refresh token
+        mockPrisma.session.delete.mockResolvedValueOnce({}); // consume the old row
+        vi.mocked(uuidv4).mockReturnValueOnce('new-jti');    // new refresh token JTI
 
         const result = await authService.refreshTokens(testRefreshToken);
 
@@ -563,7 +602,7 @@ describe('authService', () => {
         email: MOCK_EMAIL,
         passwordHash: 'newhashedpassword',
         emailVerified: false,
-        emailVerificationToken: '6161616161616161616161616161616161616161616161616161616161616161',
+        emailVerificationToken: HASHED_MOCK_TOKEN,
         emailVerificationExpires: expect.any(Date),
       });
 
@@ -576,13 +615,16 @@ describe('authService', () => {
             email: MOCK_EMAIL,
             passwordHash: 'newhashedpassword',
             emailVerified: false,
-            emailVerificationToken: '6161616161616161616161616161616161616161616161616161616161616161',
+            // DB stores the SHA-256 hash of the raw token (F-2 fix).
+            emailVerificationToken: HASHED_MOCK_TOKEN,
             emailVerificationExpires: expect.any(Date),
           }),
         })
       );
       expect(result.user.email).toBe(MOCK_EMAIL);
-      expect(result.verificationToken).toBe('6161616161616161616161616161616161616161616161616161616161616161');
+      // Caller receives the UNHASHED token (to embed in the email link);
+      // hashed value was only for the DB.
+      expect(result.verificationToken).toBe(RAW_MOCK_TOKEN);
     });
 
     it('findUserByEmail should return a user if found', async () => {
@@ -843,12 +885,14 @@ describe('authService', () => {
         mockPrisma.user.update.mockResolvedValueOnce(userWithToken);
         const result = await authService.resendVerificationEmail(MOCK_EMAIL);
         expect(result.success).toBe(true);
-        expect(result.token).toBe('6161616161616161616161616161616161616161616161616161616161616161'); // Mocked crypto.randomBytes output
+        // Caller receives raw token for email link.
+        expect(result.token).toBe(RAW_MOCK_TOKEN);
         expect(mockPrisma.user.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 where: { id: userWithToken.id },
                 data: {
-                    emailVerificationToken: '6161616161616161616161616161616161616161616161616161616161616161',
+                    // DB stores sha256 hash, not the raw token.
+                    emailVerificationToken: HASHED_MOCK_TOKEN,
                     emailVerificationExpires: expect.any(Date),
                 },
             })
@@ -911,12 +955,14 @@ describe('authService', () => {
         mockPrisma.user.update.mockResolvedValueOnce(userWithResetToken);
         const result = await authService.forgotPassword(MOCK_EMAIL);
         expect(result.success).toBe(true);
-        expect(result.token).toBe('6161616161616161616161616161616161616161616161616161616161616161');
+        // Caller receives raw token for email link.
+        expect(result.token).toBe(RAW_MOCK_TOKEN);
         expect(mockPrisma.user.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 where: { id: userWithResetToken.id },
                 data: {
-                    passwordResetToken: '6161616161616161616161616161616161616161616161616161616161616161',
+                    // DB stores sha256 hash, not the raw token.
+                    passwordResetToken: HASHED_MOCK_TOKEN,
                     passwordResetExpires: expect.any(Date),
                 },
             })

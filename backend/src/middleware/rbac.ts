@@ -10,7 +10,7 @@
 import { Response, NextFunction } from 'express';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from './errorHandler.js';
 import type { AuthenticatedRequest } from '../types/index.js';
-import { getPrismaClient } from '../services/database.js';
+import { withRLSContext } from '../services/database.js';
 
 // Role hierarchy - higher roles inherit permissions from lower roles
 export const ROLE_HIERARCHY = {
@@ -190,7 +190,17 @@ function getTargetUserId(req: AuthenticatedRequest): string | null {
 }
 
 /**
- * Check if provider has access to patient's data
+ * Check if provider has access to patient's data.
+ *
+ * RLS: queries run inside withRLSContext with isAdmin=true so the lookup
+ * sees both sides of the relationship. A raw `prisma.providerPatient.*`
+ * call here would run on a connection that never received SET LOCAL
+ * app.current_user_id, making every RLS policy evaluate against NULL —
+ * which means the DB-level guard would be silently bypassed. Admin context
+ * is the right scope for middleware because the caller might be either the
+ * provider or (indirectly, via audit paths) a patient checking their own
+ * provider's access; the `status` + `consentExpiresAt` + capability-flag
+ * checks below are the authoritative policy for what counts as "access".
  */
 async function checkProviderPatientAccess(
   providerId: string,
@@ -198,16 +208,19 @@ async function checkProviderPatientAccess(
   resource: ResourceType,
   permission: Permission
 ): Promise<boolean> {
-  const prisma = getPrismaClient();
-
-  const relationship = await prisma.providerPatient.findUnique({
-    where: {
-      providerId_patientId: {
-        providerId,
-        patientId,
-      },
-    },
-  });
+  const relationship = await withRLSContext(
+    null,
+    async (tx) =>
+      tx.providerPatient.findUnique({
+        where: {
+          providerId_patientId: {
+            providerId,
+            patientId,
+          },
+        },
+      }),
+    { isAdmin: true }
+  );
 
   // No relationship exists
   if (!relationship) {
@@ -276,17 +289,23 @@ export function requireOwnership(resourceGetter: (req: AuthenticatedRequest) => 
         return next();
       }
 
-      // Provider access check
+      // Provider access check — same RLS reasoning as checkProviderPatientAccess
+      // above. Admin wrapper ensures the policy doesn't silently deny the
+      // lookup; the status-ACTIVE check below is the authoritative policy.
       if (userRole === 'PROVIDER') {
-        const prisma = getPrismaClient();
-        const relationship = await prisma.providerPatient.findUnique({
-          where: {
-            providerId_patientId: {
-              providerId: userId,
-              patientId: ownerId,
-            },
-          },
-        });
+        const relationship = await withRLSContext(
+          null,
+          async (tx) =>
+            tx.providerPatient.findUnique({
+              where: {
+                providerId_patientId: {
+                  providerId: userId,
+                  patientId: ownerId,
+                },
+              },
+            }),
+          { isAdmin: true }
+        );
 
         if (relationship && relationship.status === 'ACTIVE') {
           // Store relationship info for later use

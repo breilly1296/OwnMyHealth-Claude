@@ -21,6 +21,7 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoProfileUpdate } from '../middleware/demoProtection.js';
+import { requirePlanFeature } from '../middleware/planGating.js';
 import { validate, schemas } from '../middleware/validation.js';
 import * as settingsController from '../controllers/settingsController.js';
 
@@ -45,6 +46,13 @@ router.patch(
   asyncHandler(settingsController.updateProfile)
 );
 
+// GET /api/v1/settings/notifications - Fetch notification preferences
+router.get(
+  '/notifications',
+  sensitiveLimiter,
+  asyncHandler(settingsController.getNotifications)
+);
+
 // PATCH /api/v1/settings/notifications - Update notification preferences
 router.patch(
   '/notifications',
@@ -62,10 +70,14 @@ router.get(
 );
 
 // PATCH /api/v1/settings/health-profile - Partial update of health profile
+// Gated behind the healthProfile plan feature (FREE can't write; PRO/TEAM can).
+// GET remains ungated so a downgraded user can still see (and export) what
+// they've already saved.
 router.patch(
   '/health-profile',
   sensitiveLimiter,
   blockDemoProfileUpdate,
+  requirePlanFeature('healthProfile'),
   validate(schemas.settings.updateHealthProfile),
   asyncHandler(settingsController.updateHealthProfile)
 );

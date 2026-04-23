@@ -28,6 +28,10 @@ model User {
   lastFailedLogin          DateTime?           @map("last_failed_login") @db.Timestamptz(6)
   notificationPreferences  Json                @default("{}") @map("notification_preferences")
   healthProfileEncrypted   String?             @map("health_profile_encrypted")
+  plan                     String              @default("FREE") @db.VarChar(20)
+  planExpiresAt            DateTime?           @map("plan_expires_at") @db.Timestamptz(6)
+  planUpdatedAt            DateTime?           @map("plan_updated_at") @db.Timestamptz(6)
+  onboardingCompletedAt    DateTime?           @map("onboarding_completed_at") @db.Timestamptz(6)
   createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastLoginAt              DateTime?           @map("last_login_at") @db.Timestamptz(6)
@@ -457,6 +461,12 @@ model HealthGoal {
   descriptionEncrypted String?               @map("description_encrypted")
   category             String                @db.VarChar(100)
   targetValue          Decimal               @map("target_value") @db.Decimal(10, 4)
+  // Encrypted PHI replacement for targetValue. Numeric goals (target
+  // cholesterol, weight, A1c) reveal sensitive health conditions on their
+  // own; the Decimal column stays for backward-compat reads until a
+  // migration re-encrypts and nulls it. Written by the controller; read
+  // path prefers this and falls back to `targetValue` when null.
+  targetValueEncrypted String?               @map("target_value_encrypted")
   currentValue         Decimal?              @map("current_value") @db.Decimal(10, 4)
   startValue           Decimal?              @map("start_value") @db.Decimal(10, 4)
   unit                 String                @db.VarChar(50)

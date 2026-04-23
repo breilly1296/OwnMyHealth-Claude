@@ -26,6 +26,12 @@ model User {
   failedLoginAttempts      Int                 @default(0) @map("failed_login_attempts")
   lockedUntil              DateTime?           @map("locked_until") @db.Timestamptz(6)
   lastFailedLogin          DateTime?           @map("last_failed_login") @db.Timestamptz(6)
+  notificationPreferences  Json                @default("{}") @map("notification_preferences")
+  healthProfileEncrypted   String?             @map("health_profile_encrypted")
+  plan                     String              @default("FREE") @db.VarChar(20)
+  planExpiresAt            DateTime?           @map("plan_expires_at") @db.Timestamptz(6)
+  planUpdatedAt            DateTime?           @map("plan_updated_at") @db.Timestamptz(6)
+  onboardingCompletedAt    DateTime?           @map("onboarding_completed_at") @db.Timestamptz(6)
   createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastLoginAt              DateTime?           @map("last_login_at") @db.Timestamptz(6)
@@ -43,6 +49,7 @@ model User {
   expenseProjections       ExpenseProjection[]
   expenseActuals           ExpenseActual[]
   costAnalyses             CostAnalysis[]
+  labConnections           LabConnection[]
 
   @@index([email])
   @@index([createdAt])
@@ -454,6 +461,12 @@ model HealthGoal {
   descriptionEncrypted String?               @map("description_encrypted")
   category             String                @db.VarChar(100)
   targetValue          Decimal               @map("target_value") @db.Decimal(10, 4)
+  // Encrypted PHI replacement for targetValue. Numeric goals (target
+  // cholesterol, weight, A1c) reveal sensitive health conditions on their
+  // own; the Decimal column stays for backward-compat reads until a
+  // migration re-encrypts and nulls it. Written by the controller; read
+  // path prefers this and falls back to `targetValue` when null.
+  targetValueEncrypted String?               @map("target_value_encrypted")
   currentValue         Decimal?              @map("current_value") @db.Decimal(10, 4)
   startValue           Decimal?              @map("start_value") @db.Decimal(10, 4)
   unit                 String                @db.VarChar(50)
@@ -733,4 +746,34 @@ model CostAnalysis {
   @@index([userId, planId])
   @@index([analysisDate])
   @@map("cost_analyses")
+}
+
+// ===========================
+// LAB CONNECTIONS (FHIR / SMART on FHIR)
+// ===========================
+
+model LabConnection {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  // 'quest' today; design supports 'labcorp' and others later without migration.
+  provider              String    @db.VarChar(50)
+  fhirPatientId         String?   @map("fhir_patient_id") @db.VarChar(255)
+  // OAuth tokens are treated as PHI-adjacent — encrypted with the user's
+  // per-user key via the existing encryption service.
+  accessTokenEncrypted  String    @map("access_token_encrypted")
+  refreshTokenEncrypted String?   @map("refresh_token_encrypted")
+  tokenExpiresAt        DateTime? @map("token_expires_at") @db.Timestamptz(6)
+  scopeGranted          String?   @map("scope_granted")
+  connectedAt           DateTime  @default(now()) @map("connected_at") @db.Timestamptz(6)
+  lastSyncAt            DateTime? @map("last_sync_at") @db.Timestamptz(6)
+  // idle | syncing | error
+  syncStatus            String    @default("idle") @map("sync_status") @db.VarChar(20)
+  syncError             String?   @map("sync_error")
+  lastImportedCount     Int       @default(0) @map("last_imported_count")
+  isActive              Boolean   @default(true) @map("is_active")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("lab_connections")
 }

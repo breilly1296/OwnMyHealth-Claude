@@ -54,13 +54,16 @@ router.get(
       orderBy: { createdAt: 'desc' },
     });
 
-    // Transform to response format
+    // Transform to response format. PENDING relationships (and any other
+    // non-ACTIVE status) must not leak the patient's email — consent hasn't
+    // been granted yet, so only the provider's own typed-in email is
+    // confirmable, not the patient's stored one.
     const result = relationships.map((rel) => ({
       relationshipId: rel.id,
       patientId: rel.patientId,
       patient: {
         id: rel.patient.id,
-        email: rel.patient.email,
+        email: rel.status === 'ACTIVE' ? rel.patient.email : undefined,
         // Note: firstName/lastName would need decryption in a real app
         createdAt: rel.patient.createdAt,
       },
@@ -267,9 +270,15 @@ router.get(
       throw new ForbiddenError('Provider consent has expired');
     }
 
-    // Get patient data based on permissions
-    const patient = await prisma.user.findUnique({
-      where: { id: patientId },
+    // Get patient data based on permissions. Filter on isActive + lockedUntil
+    // so providers lose access the moment a patient's account is deactivated
+    // or locked — consent doesn't survive account state changes.
+    const patient = await prisma.user.findFirst({
+      where: {
+        id: patientId,
+        isActive: true,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+      },
       select: {
         id: true,
         email: true,
@@ -281,7 +290,12 @@ router.get(
     });
 
     if (!patient) {
-      throw new NotFoundError('Patient not found');
+      await auditService.logAccess('patient_detail', patientId, { req, userId: providerId }, {
+        operation: 'VIEW_PATIENT',
+        success: false,
+        reason: 'patient_inactive_or_locked',
+      });
+      throw new NotFoundError('Patient not found or account is inactive');
     }
 
     const result = {
@@ -374,6 +388,25 @@ router.get(
         reason: 'permission_denied',
       });
       throw new ForbiddenError('You do not have permission to view this patient\'s biomarkers');
+    }
+
+    // Deny PHI access if the patient account is deactivated or locked.
+    // Consent alone isn't sufficient — account state must also allow it.
+    const patient = await prisma.user.findFirst({
+      where: {
+        id: patientId,
+        isActive: true,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (!patient) {
+      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: 'patient_inactive_or_locked',
+      });
+      throw new NotFoundError('Patient not found or account is inactive');
     }
 
     const biomarkers = await prisma.biomarker.findMany({
@@ -477,6 +510,24 @@ router.get(
         reason: 'permission_denied',
       });
       throw new ForbiddenError('You do not have permission to view this patient\'s health needs');
+    }
+
+    // Deny PHI access if the patient account is deactivated or locked.
+    const patient = await prisma.user.findFirst({
+      where: {
+        id: patientId,
+        isActive: true,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    if (!patient) {
+      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: 'patient_inactive_or_locked',
+      });
+      throw new NotFoundError('Patient not found or account is inactive');
     }
 
     const healthNeeds = await prisma.healthNeed.findMany({

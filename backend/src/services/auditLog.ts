@@ -230,6 +230,17 @@ export class AuditLogService {
   }
 
   /**
+   * Derive actorType from context. ADMIN when the authenticated user has
+   * role=ADMIN; USER for other authenticated users; SYSTEM when there is no
+   * user (background jobs, boot).
+   */
+  private resolveActorType(context: AuditContext): ActorType {
+    if (!context.userId) return 'SYSTEM';
+    const role = (context.req as Request & { user?: { role?: string } } | undefined)?.user?.role;
+    return role === 'ADMIN' ? 'ADMIN' : 'USER';
+  }
+
+  /**
    * Encrypt sensitive values before storing in audit log
    */
   private encryptValue(value: unknown): string | null {
@@ -311,7 +322,7 @@ export class AuditLogService {
   ): Promise<void> {
     await this.log({
       userId: context.userId,
-      actorType: context.userId ? 'USER' : 'SYSTEM',
+      actorType: this.resolveActorType(context),
       action: 'READ',
       resourceType,
       resourceId: resourceId || undefined,
@@ -332,7 +343,7 @@ export class AuditLogService {
   ): Promise<void> {
     await this.log({
       userId: context.userId,
-      actorType: context.userId ? 'USER' : 'SYSTEM',
+      actorType: this.resolveActorType(context),
       action: 'CREATE',
       resourceType,
       resourceId,
@@ -355,7 +366,7 @@ export class AuditLogService {
   ): Promise<void> {
     await this.log({
       userId: context.userId,
-      actorType: context.userId ? 'USER' : 'SYSTEM',
+      actorType: this.resolveActorType(context),
       action: 'UPDATE',
       resourceType,
       resourceId,
@@ -378,7 +389,7 @@ export class AuditLogService {
   ): Promise<void> {
     await this.log({
       userId: context.userId,
-      actorType: context.userId ? 'USER' : 'SYSTEM',
+      actorType: this.resolveActorType(context),
       action: 'DELETE',
       resourceType,
       resourceId,
@@ -438,7 +449,7 @@ export class AuditLogService {
   ): Promise<void> {
     await this.log({
       userId: context.userId,
-      actorType: context.userId ? 'USER' : 'SYSTEM',
+      actorType: this.resolveActorType(context),
       action: 'EXPORT',
       resourceType,
       ...this.contextFields(context),

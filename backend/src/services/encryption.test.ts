@@ -440,13 +440,20 @@ describe('encryption.ts', () => {
       const tamperedEncryptedEmail = (encryptedData.email as string).replace('A', 'Z');
       const tamperedData = { ...encryptedData, email: tamperedEncryptedEmail };
 
-      // Expect a warning log for the failed decryption
-      // vi.spyOn(console, 'warn') is not needed when mocking the logger module
       const decryptedData = service.decryptFields(tamperedData, fieldsToEncrypt, userSalt);
 
+      // Name should still decrypt successfully.
       expect(decryptedData.name).toBe('John Doe');
-      expect(decryptedData.email).toBe(tamperedEncryptedEmail); // Should return the tampered value
-      expect(mockedLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to decrypt field: email'));
+      // Tampered field must return null — NOT the ciphertext. Returning
+      // ciphertext leaks encrypted data structure to clients and confuses
+      // the UI; null is the clean "decryption failed" signal.
+      expect(decryptedData.email).toBeNull();
+      // Must log at ERROR (not WARN) — a silent decrypt failure can mean
+      // bit rot, a missed key rotation, or an attacker probe.
+      expect(mockedLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to decrypt field: email'),
+        expect.any(Object),
+      );
     });
   });
 

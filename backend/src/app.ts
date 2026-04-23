@@ -44,6 +44,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { standardLimiter } from './middleware/rateLimiter.js';
@@ -53,6 +54,7 @@ import { requireJsonContentType } from './middleware/validation.js';
 import { initializeDatabase, disconnectDatabase, checkDatabaseHealth, getPrismaClient } from './services/database.js';
 import { initializeDemoUser, startSessionCleanup, stopSessionCleanup } from './services/authService.js';
 import { startAuditCleanup, stopAuditCleanup } from './services/auditLog.js';
+import { startEmailScheduler, stopEmailScheduler } from './schedulers/emailScheduler.js';
 import { logger } from './utils/logger.js';
 
 // Production frontend origins that are always allowed, independent of the
@@ -124,6 +126,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
+      // TODO(csp-nonce): 'unsafe-inline' is required today because Tailwind
+      // and third-party libs inject runtime <style> tags. Migrate to a
+      // nonce-based CSP (generate per-request nonce middleware → thread
+      // into index.html + React style injection) to close the XSS vector.
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
     },
@@ -163,7 +169,9 @@ const corsOptions: cors.CorsOptions = {
   // Ensure preflight requests are handled properly
   preflightContinue: false,
   optionsSuccessStatus: 204,
-  maxAge: 86400, // Cache preflight for 24 hours
+  // 1-hour preflight cache. A longer cache (previously 24h) means CORS
+  // policy changes take up to a day to propagate to already-loaded clients.
+  maxAge: 3600,
 };
 
 // Log CORS configuration on startup for debugging
@@ -183,6 +191,20 @@ app.options('*', cors(corsOptions));
 
 // Cookie parsing (must be before routes)
 app.use(cookieParser());
+
+// Response compression. Runs before CSRF/routes so every JSON payload the
+// app ships is gzipped on the way out. `threshold` skips tiny responses
+// (below 1KB gzip overhead > savings). The filter explicitly opts OUT of
+// Server-Sent Events — compressing streams buffers them and breaks the
+// real-time delivery the Health Guide chat relies on.
+app.use(compression({
+  threshold: 1024,
+  level: 6,
+  filter: (req, res) => {
+    if (req.headers.accept === 'text/event-stream') return false;
+    return compression.filter(req, res);
+  },
+}));
 
 // CSRF protection for state-changing requests
 // Skip in development if DISABLE_CSRF=true for easier testing
@@ -207,6 +229,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Content-Type validation for JSON requests
 app.use(requireJsonContentType);
 
+// Prevent intermediate caches (browser, CDN, corporate proxy) from storing
+// API responses. Most endpoints return PHI or session-scoped data; the
+// blanket no-store is safer than auditing every controller individually.
+// Controllers that want a stronger default (e.g. the data-export endpoint)
+// set their own headers on top of this.
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, private');
+  next();
+});
+
 // API routes
 app.use(`/api/${config.apiVersion}`, routes);
 
@@ -216,7 +248,7 @@ app.use(`/api/${config.apiVersion}`, routes);
 // double-checks NODE_ENV as a belt-and-suspenders guard.
 if (config.isDevelopment) {
   // Lazy import so production builds don't carry the mock data.
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+   
   import('./services/fhir/mockFhirServer.js').then(({ mountMockFhirServer }) => {
     mountMockFhirServer(app);
   });
@@ -253,8 +285,11 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-// Legacy database health check endpoint (kept for backwards compatibility)
-app.get('/api/health/db', async (_req, res) => {
+// Legacy database health check endpoint (kept for backwards compatibility).
+// Explicit standardLimiter on a DB-hitting endpoint — the global limiter
+// already covers it, but being explicit makes the intent obvious and
+// survives any future refactor that might re-order middleware.
+app.get('/api/health/db', standardLimiter, async (_req, res) => {
   const health = await checkDatabaseHealth();
   res.status(health.connected ? 200 : 503).json({
     success: health.connected,
@@ -282,6 +317,10 @@ async function startServer() {
 
     // Start audit log cleanup scheduler (runs daily)
     startAuditCleanup(getPrismaClient());
+
+    // Start engagement email scheduler (weekly summary + goal reminders on
+    // Mondays 8am UTC, daily plan-expiring sweep).
+    startEmailScheduler();
 
     const server = app.listen(config.port, () => {
       // Log cookie configuration for debugging cross-domain issues
@@ -318,6 +357,7 @@ async function startServer() {
       logger.startup(`${signal} received, shutting down gracefully...`);
       stopSessionCleanup();
       stopAuditCleanup();
+      stopEmailScheduler();
       server.close(async () => {
         await disconnectDatabase();
         logger.startup('Server closed');

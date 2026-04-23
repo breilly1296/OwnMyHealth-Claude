@@ -5,6 +5,8 @@
  * and automatic token refresh. All domain APIs use this client.
  */
 
+import { apiLogger } from '../../utils/logger';
+
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -36,6 +38,27 @@ export interface ApiError {
   message: string;
   code?: string;
   status: number;
+  /**
+   * Populated only for `code: 'PLAN_LIMIT_EXCEEDED'` 403s. UI code uses these
+   * fields to render an upgrade CTA with the exact usage numbers instead of
+   * the generic "Forbidden" toast.
+   */
+  planLimit?: {
+    limit: number;
+    current: number;
+    feature: string;
+    upgradeRequired: boolean;
+  };
+}
+
+/** Narrowing helper: does this error represent a plan-limit 403? */
+export function isPlanLimitError(err: unknown): err is ApiError & { planLimit: NonNullable<ApiError['planLimit']> } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as ApiError).code === 'PLAN_LIMIT_EXCEEDED' &&
+    !!(err as ApiError).planLimit
+  );
 }
 
 // Auth token management (stored in memory only)
@@ -100,7 +123,11 @@ export function getCsrfToken(): string {
   const token = match ? decodeURIComponent(match[1]) : '';
 
   if (!token && typeof window !== 'undefined') {
-    console.warn('[CSRF] No csrf token found in cookies:', cookies.substring(0, 200));
+    // Don't log the cookie substring — even a prefix can leak session state
+    // to the browser console (audit F-10). The logger also gates this in
+    // production so it only surfaces in dev where it's useful for debugging
+    // CSRF configuration issues.
+    apiLogger.warn('No CSRF token found in cookies');
   }
 
   return token;
@@ -163,7 +190,7 @@ export async function apiFetch<T>(
     if (csrfToken) {
       (headers as Record<string, string>)['x-csrf-token'] = csrfToken;
     } else {
-      console.warn(`[CSRF] Making ${method} request to ${endpoint} without CSRF token`);
+      apiLogger.warn('Mutation request without CSRF token', { method, endpoint });
     }
   }
 
@@ -229,11 +256,30 @@ export async function apiFetch<T>(
         ? data.error?.code
         : data.code;
 
-      throw {
+      const apiError: ApiError = {
         message: getUserFriendlyMessage(response.status, serverMessage),
         code: errorCode || `HTTP_${response.status}`,
         status: response.status,
-      } as ApiError;
+      };
+
+      // Plan-limit errors carry extra fields so the UI can show an
+      // upgrade prompt with precise numbers. See planGating.ts on the backend.
+      if (errorCode === 'PLAN_LIMIT_EXCEEDED' && typeof data.error === 'object' && data.error) {
+        const err = data.error as {
+          limit?: number;
+          current?: number;
+          feature?: string;
+          upgradeRequired?: boolean;
+        };
+        apiError.planLimit = {
+          limit: typeof err.limit === 'number' ? err.limit : 0,
+          current: typeof err.current === 'number' ? err.current : 0,
+          feature: typeof err.feature === 'string' ? err.feature : '',
+          upgradeRequired: err.upgradeRequired === true,
+        };
+      }
+
+      throw apiError;
     }
 
     return data as ApiResponse<T>;

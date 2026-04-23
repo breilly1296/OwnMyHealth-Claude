@@ -1,0 +1,116 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+# Staging mirrors deploy.yml but targets a separate Cloud Run service and GCS
+# bucket in the same GCP project. No traffic-splitting, no smoke-test gate —
+# staging is the smoke test. Keep the structure duplicated (not a reusable
+# workflow) while this is still young; factor once the two jobs drift enough
+# to make copy-paste painful.
+
+env:
+  PROJECT_ID: ownmyhealth-prod
+  REGION: us-central1
+  SERVICE: ownmyhealth-backend-staging
+  REPOSITORY: ownmyhealth
+  FRONTEND_BUCKET: ownmyhealth-frontend-staging
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}"
+          IMAGE_SHA="${IMAGE_BASE}:${{ github.sha }}"
+          IMAGE_LATEST="${IMAGE_BASE}:latest"
+          echo "Building $IMAGE_SHA"
+          cd backend
+          docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_LATEST"
+
+      # Staging deploys straight to 100% traffic — no canary tag, no
+      # gated promote step. If this breaks, it breaks staging only.
+      - name: Deploy to Cloud Run (staging)
+        run: |
+          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+          echo "Deploying $IMAGE to $SERVICE at 100% traffic"
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image "$IMAGE" \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --platform managed
+
+      - name: Post-deploy health probe
+        run: |
+          for i in 1 2 3 4 5 6; do
+            STATUS=$(curl -sS -o /tmp/body.json -w "%{http_code}" --max-time 30 \
+              https://api-staging.ownmyhealth.io/api/v1/health || echo "000")
+            echo "  attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "PASS"
+              exit 0
+            fi
+            sleep $((i * 5))
+          done
+          echo "WARN: staging health probe never returned 200. The revision is live; investigate if retries persist."
+          # Non-fatal — staging has no traffic-split safety net to roll back to.
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --mode staging makes Vite load .env.staging, which points VITE_API_URL
+      # at the staging backend domain.
+      - name: Build frontend (staging)
+        run: npm run build -- --mode staging
+
+      - name: Deploy to Cloud Storage
+        run: |
+          gsutil -m rm -r gs://${{ env.FRONTEND_BUCKET }}/** || true
+          gsutil -m cp -r dist/* gs://${{ env.FRONTEND_BUCKET }}/
+          gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://${{ env.FRONTEND_BUCKET }}/index.html

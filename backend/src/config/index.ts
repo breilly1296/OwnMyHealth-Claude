@@ -27,6 +27,14 @@ function requireEnv(key: string): string {
   return value;
 }
 
+// Environment-tier flags. Staging is production-like (same CORS rules,
+// structured logging, rate limits) but differs on three points: Claude
+// calls are locked out (BAA inactive), SendGrid is in sandbox mode so no
+// real email ships, and the demo account is allowed.
+const isProductionEnv = process.env.NODE_ENV === 'production';
+const isStagingEnv = process.env.NODE_ENV === 'staging';
+const isDevelopmentEnv = !isProductionEnv && !isStagingEnv;
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -68,7 +76,8 @@ export const config = {
   security: {
     maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10),
     lockoutDuration: parseInt(process.env.LOCKOUT_DURATION_MINUTES || '30', 10) * 60 * 1000, // 30 min in ms
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+    // 13 rounds minimum recommended for healthcare/HIPAA workloads (2024+)
+    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '13', 10),
   },
 
   // CORS - allow multiple frontend ports during development
@@ -104,6 +113,11 @@ export const config = {
     fromEmail: process.env.EMAIL_FROM || 'noreply@ownmyhealth.com',
     fromName: process.env.EMAIL_FROM_NAME || 'OwnMyHealth',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    // SendGrid sandbox mode — validates requests (templates, recipients)
+    // but never actually delivers. Staging sets this to true so test
+    // accounts can trigger notification flows without spamming real users.
+    sandboxMode:
+      process.env.SENDGRID_SANDBOX_MODE === 'true' || isStagingEnv,
   },
 
   // Google Cloud Platform Configuration
@@ -145,8 +159,9 @@ export const config = {
   apiVersion: 'v1',
 
   // Validation
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
+  isDevelopment: isDevelopmentEnv,
+  isStaging: isStagingEnv,
+  isProduction: isProductionEnv,
 } as const;
 
 // Universal JWT-secret-quality checks — run in EVERY environment, not just prod.
@@ -213,8 +228,15 @@ if (config.anthropic.apiKey && !config.anthropic.baaActive) {
   }
 }
 
-// Validate other critical configuration in production
-if (config.isProduction) {
+// Validate critical configuration in production AND staging. Staging is
+// production-like — same DB/encryption requirements, same CORS sanity
+// check — with two explicit carveouts: demo account is allowed (needed
+// for testing flows) and BAA gate stays a warning (staging uses no real
+// PHI, so Claude calls being blocked by the runtime gate is the intended
+// behavior).
+if (config.isProduction || config.isStaging) {
+  const envLabel = config.isProduction ? 'production' : 'staging';
+
   const requiredEnvVars = [
     'DATABASE_URL',
     'PHI_ENCRYPTION_KEY',
@@ -222,7 +244,7 @@ if (config.isProduction) {
   const missing = requiredEnvVars.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables for production: ${missing.join(', ')}`);
+    throw new Error(`Missing required environment variables for ${envLabel}: ${missing.join(', ')}`);
   }
 
   // Validate PHI_ENCRYPTION_KEY format and security
@@ -256,16 +278,16 @@ if (config.isProduction) {
     );
   }
 
-  // Validate CORS origin is not localhost in production
+  // Validate CORS origin is not localhost in prod/staging.
   // Note: Using process.stderr directly to avoid circular dependency with logger
   // This is a critical security warning that must always display
   const corsOrigin = config.cors.origin;
   if (Array.isArray(corsOrigin) && corsOrigin.some(o => o.includes('localhost'))) {
-    process.stderr.write(`${new Date().toISOString()} WARN [Security] CORS origin contains localhost URLs in production\n`);
+    process.stderr.write(`${new Date().toISOString()} WARN [Security] CORS origin contains localhost URLs in ${envLabel}\n`);
   }
 
-  // Block demo account in production - security risk
-  if (config.demo.enabled) {
+  // Demo account: blocked in prod only. Staging needs it for testing.
+  if (config.isProduction && config.demo.enabled) {
     throw new Error(
       'DEMO_ACCOUNT_ENABLED cannot be true in production. ' +
       'Demo mode bypasses security controls and is only for development/testing. ' +

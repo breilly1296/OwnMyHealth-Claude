@@ -11,6 +11,25 @@
  * - Health check endpoint support
  * - Graceful shutdown handling
  *
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║ RLS FOOTGUN — READ BEFORE TOUCHING ANY CONTROLLER OR SERVICE QUERY.       ║
+ * ║                                                                           ║
+ * ║ Inside a `withRLSContext(userId, async (tx) => ...)` callback, EVERY      ║
+ * ║ Prisma call MUST go through `tx`. If you accidentally call the           ║
+ * ║ module-level `prisma` client (`prisma.biomarker.findMany(...)` or        ║
+ * ║ `getPrismaClient().biomarker.findMany(...)`), the query runs on a       ║
+ * ║ DIFFERENT connection from the pool — one that never received the         ║
+ * ║ `SET LOCAL app.current_user_id` that this wrapper issues. The RLS        ║
+ * ║ policies then evaluate against NULL and the query silently returns       ║
+ * ║ all rows across all users. No error, no warning — just a bypass.         ║
+ * ║                                                                           ║
+ * ║ The `scripts/check-rls-wrappers.sh` grep-based CI guard (see             ║
+ * ║ .github/workflows/ci.yml) fails the build on `prisma.` calls inside      ║
+ * ║ controllers and services. Rule: inside any RLS callback, always use     ║
+ * ║ `tx.*`. Outside a callback, use `getPrismaClient()` only for bare        ║
+ * ║ infra (migrations, health checks). Never mix.                            ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ *
  * RLS Usage:
  * - Use withRLSContext(userId, (tx) => ...) for most reads/writes.
  * - Use withRLSTransaction(userId, (tx) => ...) for multi-statement
@@ -77,11 +96,17 @@ let isInitialized = false;
 function createPrismaClient(): PrismaClient {
   const connectionString = getDatabaseConfig();
 
-  // Create PostgreSQL connection pool
-  // Cloud SQL through Auth Proxy needs longer timeouts, especially on cold starts
+  // Create PostgreSQL connection pool.
+  // Cloud SQL through Auth Proxy needs longer timeouts, especially on cold starts.
+  // `max` is env-configurable (DATABASE_POOL_SIZE) so ops can tune per-env:
+  //   - Cloud Run: 10 is a reasonable default; each instance handles
+  //     concurrent requests, and Cloud SQL has per-instance connection caps.
+  //   - Local dev: 5 is fine; tune up only if you hit "all connections busy".
+  // Default falls back to 10 — the old `max: 5` was hitting "all connections
+  // busy" under burst load.
   pool = new Pool({
     connectionString,
-    max: 5, // Reduced for Cloud Run (limited resources per instance)
+    max: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 30000, // 30s for Cloud SQL Auth Proxy
     statement_timeout: 30000, // 30s statement timeout

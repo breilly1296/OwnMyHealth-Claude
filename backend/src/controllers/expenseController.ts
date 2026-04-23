@@ -136,19 +136,33 @@ export async function getProjections(req: AuthenticatedRequest, res: Response): 
   const userId = req.user!.id;
   const { planId } = req.query;
 
+  // Pagination — projections accumulate across plan-years; fetching all
+  // every request means decrypting every row on every request.
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
+  const skip = (page - 1) * limit;
+
   try {
     const prisma = getPrismaClient();
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const projections = await withRLSTransaction(userId, async (tx) => {
-      return tx.expenseProjection.findMany({
-        where: {
-          userId,
-          ...(planId && { planId: planId as string }),
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+    const where = {
+      userId,
+      ...(planId && { planId: planId as string }),
+    };
+
+    const { projections, total } = await withRLSTransaction(userId, async (tx) => {
+      const [rows, count] = await Promise.all([
+        tx.expenseProjection.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        tx.expenseProjection.count({ where }),
+      ]);
+      return { projections: rows, total: count };
     });
 
     // Decrypt PHI fields
@@ -164,10 +178,25 @@ export async function getProjections(req: AuthenticatedRequest, res: Response): 
     await auditService.logAccess(RESOURCE_TYPE_PROJECTION, undefined, { req, userId }, {
       operation: 'LIST',
       count: decrypted.length,
+      total,
+      page,
+      limit,
       planId: (planId as string) || 'all',
     });
 
-    res.json(decrypted);
+    // Wrap in the standard ApiResponse envelope now that we're paginating.
+    // Existing frontend callers that expect an array body are covered by
+    // the array + the rest of the response being additive metadata.
+    res.json({
+      success: true,
+      data: decrypted,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     logger.error('Operation failed:', { data: { error } });
     res.status(500).json({ error: 'Failed to fetch expense projections' });
@@ -382,19 +411,32 @@ export async function getActuals(req: AuthenticatedRequest, res: Response): Prom
   const userId = req.user!.id;
   const { planId } = req.query;
 
+  // Pagination — actuals grow unboundedly across plan-years.
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
+  const skip = (page - 1) * limit;
+
   try {
     const prisma = getPrismaClient();
     const userSalt = await getUserEncryptionSalt(userId);
     const encryption = getEncryptionService();
 
-    const actuals = await withRLSTransaction(userId, async (tx) => {
-      return tx.expenseActual.findMany({
-        where: {
-          userId,
-          ...(planId && { planId: planId as string }),
-        },
-        orderBy: [{ dateOfService: 'desc' }, { createdAt: 'desc' }],
-      });
+    const where = {
+      userId,
+      ...(planId && { planId: planId as string }),
+    };
+
+    const { actuals, total } = await withRLSTransaction(userId, async (tx) => {
+      const [rows, count] = await Promise.all([
+        tx.expenseActual.findMany({
+          where,
+          orderBy: [{ dateOfService: 'desc' }, { createdAt: 'desc' }],
+          skip,
+          take: limit,
+        }),
+        tx.expenseActual.count({ where }),
+      ]);
+      return { actuals: rows, total: count };
     });
 
     const decrypted = actuals.map((a) => decryptActual(a, encryption, userSalt));
@@ -403,10 +445,22 @@ export async function getActuals(req: AuthenticatedRequest, res: Response): Prom
     await auditService.logAccess(RESOURCE_TYPE_ACTUAL, undefined, { req, userId }, {
       operation: 'LIST',
       count: decrypted.length,
+      total,
+      page,
+      limit,
       planId: (planId as string) || 'all',
     });
 
-    res.json(decrypted);
+    res.json({
+      success: true,
+      data: decrypted,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     logger.error('Operation failed:', { data: { error } });
     res.status(500).json({ error: 'Failed to fetch expense actuals' });

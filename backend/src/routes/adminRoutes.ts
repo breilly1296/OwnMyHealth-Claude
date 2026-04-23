@@ -451,11 +451,12 @@ router.delete(
   '/users/:id/permanent',
   sensitiveLimiter,
   validate(schemas.uuidParam, 'params'),
+  validate(schemas.admin.permanentDelete),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const { id } = req.params;
     const adminId = req.user!.id;
-    const { confirmEmail } = req.body;
+    const { confirmEmail } = req.body as { confirmEmail: string };
 
     const auditService = getAuditLogService(prisma);
 
@@ -526,6 +527,100 @@ router.delete(
     const response: ApiResponse<{ message: string }> = {
       success: true,
       data: { message: 'User permanently deleted' },
+    };
+    res.json(response);
+  })
+);
+
+/**
+ * PATCH /api/v1/admin/users/:id/plan
+ * Manually change a user's subscription plan. Used for beta upgrades and
+ * comped accounts before the Stripe webhook path exists.
+ *
+ * Body:
+ *   { "plan": "PRO", "expiresAt": "2026-12-31T00:00:00Z" | null | undefined }
+ *
+ * expiresAt semantics:
+ *   - omitted/undefined → clear any existing expiry (plan is permanent)
+ *   - null              → same as omitted (explicit clear)
+ *   - ISO string        → auto-downgrade target timestamp
+ */
+router.patch(
+  '/users/:id/plan',
+  validate(schemas.uuidParam, 'params'),
+  validate(schemas.admin.updateUserPlan),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const prisma = getPrismaClient();
+    const { id } = req.params;
+    const adminId = req.user!.id;
+    const { plan, expiresAt } = req.body as { plan: 'FREE' | 'PRO' | 'TEAM'; expiresAt?: string | null };
+
+    const auditService = getAuditLogService(prisma);
+
+    const result = await withRLSContext(
+      null,
+      async (tx) => {
+        const existing = await tx.user.findUnique({
+          where: { id },
+          select: { id: true, email: true, plan: true, planExpiresAt: true },
+        });
+        if (!existing) {
+          return { found: false as const };
+        }
+
+        const user = await tx.user.update({
+          where: { id },
+          data: {
+            plan,
+            planExpiresAt: expiresAt ? new Date(expiresAt) : null,
+            planUpdatedAt: new Date(),
+          },
+          select: {
+            id: true,
+            email: true,
+            plan: true,
+            planExpiresAt: true,
+            planUpdatedAt: true,
+          },
+        });
+
+        return { found: true as const, existing, user };
+      },
+      { isAdmin: true }
+    );
+
+    if (!result.found) {
+      await auditService.logAccess('admin_user_plan', id, { req, userId: adminId }, {
+        operation: 'PLAN_CHANGE',
+        actorType: 'ADMIN',
+        success: false,
+        reason: 'user_not_found',
+      });
+      throw new NotFoundError('User not found');
+    }
+    const { existing, user } = result;
+
+    // Plan changes are permission-adjacent (they gate features/spend), so
+    // log them as SETTINGS_CHANGE-level events with before/after state.
+    await auditService.logUpdate(
+      'admin_user_plan',
+      id,
+      { plan: existing.plan, planExpiresAt: existing.planExpiresAt },
+      { plan: user.plan, planExpiresAt: user.planExpiresAt },
+      { req, userId: adminId },
+      {
+        operation: 'PLAN_CHANGE',
+        actorType: 'ADMIN',
+        targetUserId: id,
+        targetEmail: existing.email,
+        previousPlan: existing.plan,
+        newPlan: user.plan,
+      }
+    );
+
+    const response: ApiResponse<typeof user> = {
+      success: true,
+      data: user,
     };
     res.json(response);
   })

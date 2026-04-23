@@ -119,6 +119,11 @@ vi.mock('../middleware/demoProtection.js', () => ({
   blockDemoAI: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
+vi.mock('../middleware/planGating.js', () => ({
+  requirePlanLimit: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+  requirePlanFeature: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 // -- Imports AFTER mocks --------------------------------------------------
 import {
   getBiomarkers,

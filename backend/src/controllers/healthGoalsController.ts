@@ -14,9 +14,35 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { parseStringParam } from '../utils/queryHelpers.js';
+import { logger } from '../utils/logger.js';
 import type { HealthGoal as PrismaHealthGoal, GoalProgressHistory, Prisma } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'HealthGoal';
+
+/**
+ * Read the goal's targetValue in decrypted form.
+ *
+ * Prefers `targetValueEncrypted` when present (new write path after the
+ * 20260420 migration) and falls back to the plaintext `targetValue`
+ * Decimal column for rows written before encryption was wired up. Returns
+ * 0 if decryption fails AND there's no plaintext fallback — callers that
+ * need to distinguish "no target" from "zero target" should check both
+ * columns themselves.
+ */
+function readTargetValue(
+  goal: { targetValue: unknown; targetValueEncrypted: string | null },
+  userSalt: string
+): number {
+  const encryptionService = getEncryptionService();
+  if (goal.targetValueEncrypted) {
+    try {
+      return parseFloat(encryptionService.decrypt(goal.targetValueEncrypted, userSalt));
+    } catch {
+      // decrypt already logs — fall through to the plaintext backup.
+    }
+  }
+  return Number(goal.targetValue);
+}
 
 // Response types
 interface HealthGoalResponse {
@@ -82,9 +108,19 @@ function toResponse(
 ): HealthGoalResponse {
   const encryptionService = getEncryptionService();
 
+  // Per-field try/catch: a single corrupt ciphertext (missed key rotation,
+  // bit rot, tampering) shouldn't crash the whole goal fetch. Mirrors the
+  // null-on-failure contract in readTargetValue and decryptFields.
   let description: string | null = null;
   if (goal.descriptionEncrypted) {
-    description = encryptionService.decrypt(goal.descriptionEncrypted, userSalt);
+    try {
+      description = encryptionService.decrypt(goal.descriptionEncrypted, userSalt);
+    } catch (err) {
+      logger.error('Failed to decrypt health goal description', {
+        data: { goalId: goal.id, error: err instanceof Error ? err.message : 'Unknown' },
+      });
+      description = null;
+    }
   }
 
   const milestones = parseMilestones(goal.milestones);
@@ -95,7 +131,7 @@ function toResponse(
     name: goal.name,
     description,
     category: goal.category,
-    targetValue: Number(goal.targetValue),
+    targetValue: readTargetValue(goal, userSalt),
     currentValue: goal.currentValue ? Number(goal.currentValue) : null,
     startValue: goal.startValue ? Number(goal.startValue) : null,
     unit: goal.unit,
@@ -112,15 +148,33 @@ function toResponse(
     completedAt: goal.completedAt,
   };
 
-  // Include progress history if available
+  // Include progress history if available. Note decryption is wrapped
+  // per-entry so one corrupt row doesn't take down the whole history array.
   if (goal.progressHistory) {
-    response.progressHistory = goal.progressHistory.map((h) => ({
-      id: h.id,
-      value: Number(h.value),
-      progress: Number(h.progress),
-      note: h.noteEncrypted ? encryptionService.decrypt(h.noteEncrypted, userSalt) : null,
-      recordedAt: h.recordedAt,
-    }));
+    response.progressHistory = goal.progressHistory.map((h) => {
+      let note: string | null = null;
+      if (h.noteEncrypted) {
+        try {
+          note = encryptionService.decrypt(h.noteEncrypted, userSalt);
+        } catch (err) {
+          logger.error('Failed to decrypt goal progress note', {
+            data: {
+              goalId: goal.id,
+              historyId: h.id,
+              error: err instanceof Error ? err.message : 'Unknown',
+            },
+          });
+          note = null;
+        }
+      }
+      return {
+        id: h.id,
+        value: Number(h.value),
+        progress: Number(h.progress),
+        note,
+        recordedAt: h.recordedAt,
+      };
+    });
   }
 
   return response;
@@ -182,20 +236,33 @@ export async function getHealthGoals(
     where.category = categoryFilter;
   }
 
-  const goals = await withRLSTransaction(userId, async (tx) => {
-    return tx.healthGoal.findMany({
-      where,
-      include: {
-        progressHistory: {
-          orderBy: { recordedAt: 'desc' },
-          take: 10, // Last 10 progress entries
+  // Pagination — page/limit come through the Zod pagination schema
+  // (see router wiring). Keeps unbounded list reads from scaling linearly
+  // with a user's total goal count.
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
+  const skip = (page - 1) * limit;
+
+  const { goals, total } = await withRLSTransaction(userId, async (tx) => {
+    const [rows, count] = await Promise.all([
+      tx.healthGoal.findMany({
+        where,
+        include: {
+          progressHistory: {
+            orderBy: { recordedAt: 'desc' },
+            take: 10, // Last 10 progress entries
+          },
         },
-      },
-      orderBy: [
-        { status: 'asc' }, // Active goals first
-        { targetDate: 'asc' }, // Nearest target date first
-      ],
-    });
+        orderBy: [
+          { status: 'asc' }, // Active goals first
+          { targetDate: 'asc' }, // Nearest target date first
+        ],
+        skip,
+        take: limit,
+      }),
+      tx.healthGoal.count({ where }),
+    ]);
+    return { goals: rows, total: count };
   });
 
   const decryptedGoals = goals.map((g) => toResponse(g, userSalt));
@@ -205,6 +272,9 @@ export async function getHealthGoals(
   await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
     operation: 'LIST',
     count: goals.length,
+    total,
+    page,
+    limit,
     status: statusFilter ?? 'all',
     category: categoryFilter ?? 'all',
   });
@@ -212,6 +282,12 @@ export async function getHealthGoals(
   const response: ApiResponse<HealthGoalResponse[]> = {
     success: true,
     data: decryptedGoals,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 
   res.json(response);
@@ -306,6 +382,11 @@ export async function createHealthGoal(
     ? calculateProgress(startValue, currentValue, targetValue, direction || 'DECREASE')
     : 0;
 
+  // Encrypt targetValue at rest. The plaintext `targetValue` column is
+  // still written for back-compat during the rollout — see the 20260420
+  // migration. New reads prefer the encrypted column.
+  const targetValueEncrypted = encryptionService.encrypt(targetValue.toString(), userSalt);
+
   // Transaction ensures goal and initial history are created atomically
   const goal = await withRLSTransaction(userId, async (tx) => {
     const newGoal = await tx.healthGoal.create({
@@ -315,6 +396,7 @@ export async function createHealthGoal(
         descriptionEncrypted,
         category,
         targetValue,
+        targetValueEncrypted,
         currentValue: currentValue ?? null,
         startValue,
         unit,
@@ -398,7 +480,16 @@ export async function updateHealthGoal(
     if (description !== undefined) {
       updateData.descriptionEncrypted = encryptionService.encrypt(description, userSalt);
     }
-    if (targetValue !== undefined) updateData.targetValue = targetValue;
+    if (targetValue !== undefined) {
+      updateData.targetValue = targetValue;
+      // Keep the encrypted column in sync so future reads use the new value.
+      // The plaintext `targetValue` stays populated during the rollout but
+      // is authoritative only when the encrypted column is null.
+      updateData.targetValueEncrypted = encryptionService.encrypt(
+        targetValue.toString(),
+        userSalt,
+      );
+    }
     if (targetDate !== undefined) updateData.targetDate = new Date(targetDate);
     if (milestones !== undefined) updateData.milestones = JSON.stringify(milestones);
     if (reminderFrequency !== undefined) updateData.reminderFrequency = reminderFrequency;
@@ -462,9 +553,12 @@ export async function updateGoalProgress(
       throw new NotFoundError('Health goal not found');
     }
 
-    // Calculate new progress
-    const startValue = Number(foundGoal.startValue) || Number(foundGoal.targetValue);
-    const progress = calculateProgress(startValue, value, Number(foundGoal.targetValue), foundGoal.direction);
+    // Calculate new progress. Prefer the encrypted target value — it's the
+    // authoritative one after the 20260420 migration. readTargetValue falls
+    // back to the plaintext column transparently.
+    const decryptedTargetValue = readTargetValue(foundGoal, userSalt);
+    const startValue = Number(foundGoal.startValue) || decryptedTargetValue;
+    const progress = calculateProgress(startValue, value, decryptedTargetValue, foundGoal.direction);
 
     // Check if goal is achieved
     let status = foundGoal.status;

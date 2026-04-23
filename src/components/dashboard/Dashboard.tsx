@@ -17,9 +17,12 @@
  * @module components/dashboard/Dashboard
  */
 
-import React, { useState, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useCallback, lazy, Suspense, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Biomarker } from '../../types';
+import { onboardingApi } from '../../services/api';
+import type { OnboardingStatus } from '../../services/api';
+import { dashboardLogger } from '../../utils/logger';
 import {
   useModals,
   useErrorNotification,
@@ -45,6 +48,7 @@ const AccountSettingsPage = lazy(() => import('../settings/AccountSettingsPage')
 const GoalTrackerPanel = lazy(() => import('../analytics/GoalTrackerPanel'));
 const HealthNeedsPage = lazy(() => import('../health/HealthNeedsPage'));
 const HealthGuidePage = lazy(() => import('../health/HealthGuidePage'));
+const OnboardingWizard = lazy(() => import('../onboarding/OnboardingWizard'));
 
 // Data (for demo mode / fallback)
 import { initialBiomarkers as sampleBiomarkers, navGroups, categories } from '../../data/sampleData';
@@ -113,12 +117,40 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   const stats = useBiomarkerStats(biomarkers);
   const filteredBiomarkers = useFilteredBiomarkers(biomarkers, selectedCategory);
 
+  // Onboarding state. Unknown until the first fetch resolves; the wizard
+  // renders only when we've confirmed `completed: false`. Demo mode skips
+  // onboarding entirely — the sample dataset already makes the app useful.
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null);
+  const [onboardingChecked, setOnboardingChecked] = useState(isDemoMode);
+  useEffect(() => {
+    if (isDemoMode || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await onboardingApi.getStatus();
+        if (!cancelled) setOnboardingStatus(status);
+      } catch {
+        // Non-fatal — if the check fails, fall through to the normal
+        // dashboard rather than trap the user behind a broken wizard.
+      } finally {
+        if (!cancelled) setOnboardingChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoMode, user?.id]);
+
+  const showOnboarding = !!onboardingStatus && !onboardingStatus.completed;
+
   // Event handlers
   const handleLogout = useCallback(async () => {
     try {
       await authLogout();
     } catch (error) {
-      console.error('Logout error:', error);
+      dashboardLogger.error('Logout failed', {
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
     }
   }, [authLogout]);
 
@@ -184,6 +216,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
               biomarkers={biomarkers}
               insurancePlans={insurancePlans}
               onNavigateToSettings={() => handleCategorySelect('Account Settings')}
+              onOpenLabUpload={() => modals.open('pdfUpload')}
             />
           </Suspense>
         );
@@ -261,7 +294,24 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
 
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-8">
-          {isSpecialPage ? (
+          {!onboardingChecked ? (
+            <PageLoadSpinner />
+          ) : showOnboarding && onboardingStatus ? (
+            <Suspense fallback={<PageLoadSpinner />}>
+              <OnboardingWizard
+                status={onboardingStatus}
+                onComplete={() => {
+                  // Mark completed but keep the rest of the status so the
+                  // stale-upload banner below can still read lastLabUploadAt.
+                  setOnboardingStatus((prev) =>
+                    prev ? { ...prev, completed: true, completedAt: new Date().toISOString() } : prev
+                  );
+                  refreshBiomarkers();
+                }}
+                onOpenHealthProfile={() => handleCategorySelect('Account Settings')}
+              />
+            </Suspense>
+          ) : isSpecialPage ? (
             renderSpecialPage()
           ) : selectedCategory === 'Overview' || selectedCategory === 'Dashboard' ? (
             <DashboardContent
@@ -274,6 +324,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
               onOpenPDFUpload={() => modals.open('pdfUpload')}
               onOpenLabUpload={() => modals.open('labUpload')}
               onOpenClinicalUpload={() => modals.open('clinicalUpload')}
+              lastLabUploadAt={onboardingStatus?.lastLabUploadAt ?? null}
             />
           ) : (
             <CategoryContent

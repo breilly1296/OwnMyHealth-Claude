@@ -26,6 +26,9 @@ import React, { useState, useCallback } from 'react';
 import { Upload, X, FileText, Shield, DollarSign, Loader2, CheckCircle, AlertCircle, Eye, Brain, Tag, Search } from 'lucide-react';
 import type { InsurancePlan, InsuranceBenefit, InsuranceCost, InsuranceLimitation } from '../../types';
 import { insuranceApi } from '../../services/api/insurance';
+import { logger } from '../../utils/logger';
+
+const uploadLogger = logger.createLogger('InsuranceUpload');
 
 // Legacy types kept local — these describe the shape this component builds
 // from `insuranceApi.uploadSBC()` responses, not the richer parser output in
@@ -271,7 +274,10 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
         } else if (err && typeof err === 'object' && 'message' in err) {
           errorMessage = (err as { message: string }).message;
         }
-        console.error('SBC upload failed:', err);
+        uploadLogger.error('SBC upload failed', {
+          error: err instanceof Error ? err.message : errorMessage,
+          filename: file.name,
+        });
         setUploadedFiles(prev => prev.map(pf =>
           pf.file.name === file.name
             ? {

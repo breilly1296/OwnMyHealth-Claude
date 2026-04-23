@@ -26,6 +26,7 @@ import { validate, schemas, sanitizeForPrompt } from '../middleware/validation.j
 import { asyncHandler, NotFoundError } from '../middleware/errorHandler.js';
 import { bulkOperationLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
+import { requirePlanLimit } from '../middleware/planGating.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
 import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
@@ -117,6 +118,7 @@ router.post(
   '/:id/guidance',
   aiLimiter,
   blockDemoAI,
+  requirePlanLimit('aiGuidancePerDay'),
   validate(schemas.uuidParam, 'params'),
   asyncHandler(async (req: Request, res: Response) => {
     const authReq = req as AuthenticatedRequest;

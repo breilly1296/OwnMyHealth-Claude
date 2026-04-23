@@ -108,3 +108,34 @@ jobs:
       - name: Audit backend dependencies
         run: npm audit --audit-level=high
         working-directory: backend
+
+      # Fail the build if any controller/service bypasses RLS by calling the
+      # module-level Prisma client instead of the tx inside a withRLSContext
+      # callback. See backend/src/services/database.ts header for details.
+      - name: RLS wrapper guard
+        run: bash scripts/check-rls-wrappers.sh
+
+  # TODO: Add E2E test job once staging DB is available in CI.
+  # The Playwright specs under /e2e/*.spec.ts exercise the full auth +
+  # biomarker + health-guide + export + settings flows against a running
+  # dev stack. They need a Postgres instance, seeded test user
+  # (e2e/setup/seed-test-user.ts), and both dev servers running concurrently.
+  # Defer this to the staging infra rollout (see docs/STAGING.md).
+  #
+  # e2e-tests:
+  #   needs: [backend, frontend]
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: postgres:15
+  #       env:
+  #         POSTGRES_PASSWORD: postgres
+  #       ports: ['5432:5432']
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with: { node-version: '20', cache: 'npm' }
+  #     - run: npm ci
+  #     - run: cd backend && npm ci && npx prisma migrate deploy
+  #     - run: npm run test:e2e:install
+  #     - run: npm run test:e2e

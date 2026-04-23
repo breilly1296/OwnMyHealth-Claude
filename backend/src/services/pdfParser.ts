@@ -18,8 +18,11 @@ import { BIOMARKER_DEFINITIONS, type BiomarkerDefinition } from './data/biomarke
  */
 type PDFParser = (buffer: Buffer) => Promise<PDFParseResult>;
 
-// Dynamic import for pdf-parse to handle CJS/ESM compatibility
+// Dynamic import for pdf-parse to handle CJS/ESM compatibility.
+// pdf-parse ships no types — @ts-expect-error narrows the silencing scope
+// to the single import line rather than an untyped module declaration.
 async function getPdfParser(): Promise<PDFParser> {
+  // @ts-expect-error — pdf-parse has no @types package
   const pdfParseModule = await import('pdf-parse');
   // Handle both default and named exports
   const pdfParse = (pdfParseModule as { default?: PDFParser }).default ?? pdfParseModule;

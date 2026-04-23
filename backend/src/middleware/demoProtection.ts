@@ -19,13 +19,19 @@ interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: string;
+    plan: string;
   };
 }
 
 /**
- * Check if the current user is the demo account
+ * Check if the current user is the demo account.
+ *
+ * SECURITY: If DEMO_EMAIL is unset (config.demo.email === ''), no one is a
+ * demo user. Without this guard an unset DEMO_EMAIL in production could match
+ * any user with an empty req.user.email.
  */
 export function isDemoAccount(req: AuthenticatedRequest): boolean {
+  if (!config.demo.email || config.demo.email.trim() === '') return false;
   return req.user?.email?.toLowerCase() === config.demo.email.toLowerCase();
 }
 

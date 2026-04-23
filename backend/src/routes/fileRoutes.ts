@@ -23,12 +23,28 @@ import * as fileController from '../controllers/fileController.js';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication.
+//
+// OWNERSHIP ENFORCEMENT (defense in depth):
+//   1. Every file-related controller (getFile, getFileDownloadUrl, deleteFile)
+//      runs its read inside `withRLSTransaction(userId, ...)` AND scopes the
+//      `findFirst` / `findUnique` call by `{ id, userId }`. A request for
+//      someone else's file returns 404, not 403 — indistinguishable from
+//      "file does not exist."
+//   2. The `user_files` Postgres RLS policy filters by
+//      `user_id = current_user_id()`, so even if a controller forgot the
+//      explicit userId scope, the DB layer would still deny the read.
+//
+// No middleware-level ownership lookup is added here on purpose — it would
+// duplicate the DB round-trip performed by the controller, and the two
+// existing layers (controller WHERE clause + RLS policy) already give the
+// defense-in-depth the security review asked for.
 router.use(authenticate);
 
-// GET /api/v1/files - Get all files for the user
+// GET /api/v1/files - Get all files for the user (paginated)
 router.get(
   '/',
+  validate(schemas.pagination, 'query'),
   asyncHandler(fileController.getFiles)
 );
 

@@ -32,6 +32,8 @@ import fileRoutes from './fileRoutes.js';
 import expenseRoutes from './expenseRoutes.js';
 import aiRoutes from './aiRoutes.js';
 import fhirRoutes from './fhirRoutes.js';
+import planRoutes from './planRoutes.js';
+import onboardingRoutes from './onboardingRoutes.js';
 import type { ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -68,6 +70,8 @@ router.get('/', (_req: Request, res: Response) => {
         '/api/v1/files',
         '/api/v1/settings',
         '/api/v1/ai',
+        '/api/v1/plan',
+        '/api/v1/onboarding',
       ],
     },
   };
@@ -101,5 +105,11 @@ router.use('/ai', aiRoutes);
 
 // FHIR / SMART on FHIR (Quest, Labcorp, etc.)
 router.use('/fhir', fhirRoutes);
+
+// Subscription plan info (GET /plan, GET /plan/available)
+router.use('/plan', planRoutes);
+
+// First-session onboarding wizard state
+router.use('/onboarding', onboardingRoutes);
 
 export default router;

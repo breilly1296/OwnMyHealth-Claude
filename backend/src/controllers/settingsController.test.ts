@@ -75,9 +75,21 @@ import { storageService } from '../services/storageService.js';
 import { verifyPassword } from '../services/authService.js';
 import { getEncryptionService } from '../services/encryption.js';
 
-// Narrow helper for the res stub
+// Narrow helper for the res stub.
+// `set` returns `this` in Express for chaining; the mock mirrors that —
+// exportUserData (post-F-10) calls `res.set({ Cache-Control: ... })`
+// before `res.json`.
 function mockRes() {
-  return { json: vi.fn() } as unknown as import('express').Response;
+  const res: {
+    json: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+  } = {
+    json: vi.fn(),
+    set: vi.fn(function (this: unknown) {
+      return this;
+    }),
+  };
+  return res as unknown as import('express').Response;
 }
 
 function mockReq(userId: string, body: Record<string, unknown> = {}) {

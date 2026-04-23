@@ -66,8 +66,25 @@ const SALT_LENGTH = 32;
 /** Derived key length in bytes (256 bits for AES-256) */
 const KEY_LENGTH = 32;
 
-/** PBKDF2 iterations for key derivation (OWASP recommended minimum) */
-const PBKDF2_ITERATIONS = 100000;
+/**
+ * PBKDF2 iterations for per-user key derivation.
+ *
+ * OWASP 2023 password storage guidance recommends ≥600,000 for PBKDF2-SHA512:
+ *   https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+ *
+ * `PBKDF2_ITERATIONS` is the current target for new encryption work.
+ * `PBKDF2_ITERATIONS_LEGACY` is the pre-hardening value (100k); decryption
+ * attempts the current iteration count first and falls back to the legacy
+ * count if the authentication tag fails to verify. This lets us raise the
+ * bar for new data without a coordinated re-encryption of the whole DB.
+ *
+ * TODO(key-rotation): store the iteration count per user (or per-ciphertext
+ * envelope) and remove the legacy fallback once all rows are re-encrypted.
+ * The current scheme leaks nothing — both derivations use the same stored
+ * salt — but it's a migration artifact, not a long-term design.
+ */
+const PBKDF2_ITERATIONS = 600000;
+const PBKDF2_ITERATIONS_LEGACY = 100000;
 
 /** Minimum master key length (64 hex chars = 256 bits) */
 const MIN_KEY_LENGTH = 64;
@@ -169,14 +186,15 @@ export class EncryptionService {
   }
 
   /**
-   * Derives a user-specific encryption key from the master key
-   * This ensures that even with the same plaintext, different users get different ciphertext
+   * Derives a user-specific encryption key from the master key.
+   * `iterations` defaults to the current target (600k); the legacy value
+   * (100k) is only passed when retrying a failed decryption — see `decrypt`.
    */
-  private deriveUserKey(userSalt: Buffer): Buffer {
+  private deriveUserKey(userSalt: Buffer, iterations: number = PBKDF2_ITERATIONS): Buffer {
     return crypto.pbkdf2Sync(
       this.masterKey,
       userSalt,
-      PBKDF2_ITERATIONS,
+      iterations,
       KEY_LENGTH,
       'sha512'
     );
@@ -279,14 +297,29 @@ export class EncryptionService {
     const iv = Buffer.from(ivBase64, 'base64');
     const authTag = Buffer.from(authTagBase64, 'base64');
     const salt = Buffer.from(userSalt, 'hex');
-    const key = this.deriveUserKey(salt);
 
+    // Try the current iteration count first. If the auth tag verification
+    // fails, retry with the legacy count — data encrypted before the
+    // 100k→600k bump used a different derived key. Both derivations use
+    // the same stored salt, so the fallback leaks nothing that wasn't
+    // already on disk.
+    try {
+      return this.attemptDecrypt(ciphertext, iv, authTag, this.deriveUserKey(salt, PBKDF2_ITERATIONS));
+    } catch (primaryErr) {
+      try {
+        return this.attemptDecrypt(ciphertext, iv, authTag, this.deriveUserKey(salt, PBKDF2_ITERATIONS_LEGACY));
+      } catch {
+        // Re-throw the primary error so logs point at the current code path.
+        throw primaryErr;
+      }
+    }
+  }
+
+  private attemptDecrypt(ciphertext: string, iv: Buffer, authTag: Buffer, key: Buffer): string {
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: 16 });
     decipher.setAuthTag(authTag);
-
     let decrypted = decipher.update(ciphertext, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
-
     return decrypted;
   }
 
@@ -334,9 +367,16 @@ export class EncryptionService {
       if (typeof value === 'string' && value) {
         try {
           (decrypted as Record<string, unknown>)[field as string] = this.decrypt(value, userSalt);
-        } catch {
-          // If decryption fails, keep original value (might not be encrypted)
-          logger.warn(`Failed to decrypt field: ${String(field)}`);
+        } catch (err) {
+          // Returning ciphertext is worse than returning null — it leaks
+          // encrypted data structure to the client and confuses the UI.
+          // Null signals "decryption failed" cleanly. Log at error level
+          // because a silent decrypt failure means either a master-key
+          // rotation that missed this row, bit rot, or an attacker probe.
+          logger.error(`Failed to decrypt field: ${String(field)}`, {
+            data: { error: err instanceof Error ? err.message : 'Unknown' },
+          });
+          (decrypted as Record<string, unknown>)[field as string] = null;
         }
       }
     }

@@ -15,8 +15,9 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { uploadLimiter } from '../middleware/rateLimiter.js';
+import { uploadLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
+import { requirePlanLimit } from '../middleware/planGating.js';
 import { uploadLabReport, uploadSBC, uploadLabResultOCR } from '../controllers/upload/index.js';
 
 const router = Router();
@@ -76,7 +77,9 @@ const uploadOCR = multer({
 router.post(
   '/lab-report',
   authenticate,
+  aiLimiter,
   blockDemoAI,
+  requirePlanLimit('pdfUploadsPerMonth'),
   upload.single('file'),
   asyncHandler(uploadLabReport)
 );
@@ -91,7 +94,9 @@ router.post(
 router.post(
   '/insurance-sbc',
   authenticate,
+  aiLimiter,
   blockDemoAI,
+  requirePlanLimit('pdfUploadsPerMonth'),
   upload.single('file'),
   asyncHandler(uploadSBC)
 );
@@ -119,7 +124,9 @@ router.post(
 router.post(
   '/lab-results-ocr',
   authenticate,
+  aiLimiter,
   blockDemoAI,
+  requirePlanLimit('pdfUploadsPerMonth'),
   uploadOCR.single('file'),
   asyncHandler(uploadLabResultOCR)
 );
