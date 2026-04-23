@@ -184,8 +184,6 @@ export const logger = {
 };
 
 // Pre-configured service loggers for common modules
-export const dnaLogger = createServiceLogger('dnaParser');
-export const dnaControllerLogger = createServiceLogger('dnaController');
 export const pdfLogger = createServiceLogger('pdfParser');
 export const authLogger = createServiceLogger('Auth');
 export const encryptionLogger = createServiceLogger('Encryption');
