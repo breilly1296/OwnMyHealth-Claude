@@ -82,18 +82,32 @@ export async function getHealthNeeds(
     where.urgency = urgencyFilter as 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE';
   }
 
-  const needs = await withRLSTransaction(userId, async (tx) => {
-    return tx.healthNeed.findMany({
-      where,
-      orderBy: [
-        // Sort by urgency (IMMEDIATE first)
-        { urgency: 'asc' },
-        { createdAt: 'desc' },
-      ],
-    });
+  // Pagination happens at the DB layer so a long-tail user doesn't pay
+  // for decrypting 1000 rows on every dashboard mount.
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
+  const skip = (page - 1) * limit;
+
+  const { needs, total } = await withRLSTransaction(userId, async (tx) => {
+    const [rows, count] = await Promise.all([
+      tx.healthNeed.findMany({
+        where,
+        orderBy: [
+          // Sort by urgency (IMMEDIATE first)
+          { urgency: 'asc' },
+          { createdAt: 'desc' },
+        ],
+        skip,
+        take: limit,
+      }),
+      tx.healthNeed.count({ where }),
+    ]);
+    return { needs: rows, total: count };
   });
 
-  // Custom sort to put IMMEDIATE first (Prisma doesn't support custom enum ordering)
+  // Custom sort to put IMMEDIATE first (Prisma doesn't support custom enum ordering).
+  // Applied to the current page only — acceptable because urgency is also
+  // the primary sort at the DB layer above.
   const urgencyOrder: Record<string, number> = {
     IMMEDIATE: 0,
     URGENT: 1,
@@ -114,6 +128,9 @@ export async function getHealthNeeds(
   await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
     operation: 'LIST',
     count: needs.length,
+    total,
+    page,
+    limit,
     status: statusFilter ?? 'all',
     urgency: urgencyFilter ?? 'all',
   });
@@ -121,6 +138,12 @@ export async function getHealthNeeds(
   const response: ApiResponse<HealthNeedResponse[]> = {
     success: true,
     data: decryptedNeeds,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 
   res.json(response);

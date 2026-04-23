@@ -508,6 +508,9 @@ export const schemas = {
       status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'DISMISSED']).optional(),
       urgency: z.enum(['IMMEDIATE', 'URGENT', 'FOLLOW_UP', 'ROUTINE']).optional(),
       needType: z.enum(['CONDITION', 'ACTION', 'SERVICE', 'MEDICATION', 'LIFESTYLE']).optional(),
+      // Pagination — see healthGoal.listQuery for the rationale.
+      page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
+      limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
     }),
   },
 
@@ -557,6 +560,9 @@ export const schemas = {
     listQuery: z.object({
       status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'PAUSED', 'ABANDONED']).optional(),
       category: z.enum(['WEIGHT', 'FITNESS', 'NUTRITION', 'BIOMARKER', 'MEDICATION', 'LIFESTYLE', 'MENTAL_HEALTH', 'OTHER']).optional(),
+      // Pagination — clamped here so Prisma never sees unbounded take.
+      page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
+      limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
     }),
   },
 
@@ -615,6 +621,8 @@ export const schemas = {
 
     projectionsQuery: z.object({
       planId: uuid.optional(),
+      page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
+      limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
     }),
 
     analysesQuery: z.object({
@@ -655,6 +663,8 @@ export const schemas = {
 
     actualsQuery: z.object({
       planId: uuid.optional(),
+      page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
+      limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
     }),
   },
 
@@ -689,9 +699,22 @@ export const schemas = {
     ),
 
     updateNotifications: z.object({
+      // Legacy flat-key inputs — kept for back-compat with existing toggles.
       emailNotifications: z.boolean().optional(),
       weeklySummary: z.boolean().optional(),
       abnormalAlerts: z.boolean().optional(),
+      // New nested shape — any combination of email.* boolean fields.
+      email: z.object({
+        enabled: z.boolean().optional(),
+        newResults: z.boolean().optional(),
+        outOfRangeAlerts: z.boolean().optional(),
+        goalReminders: z.boolean().optional(),
+        weeklySummary: z.boolean().optional(),
+        planExpiring: z.boolean().optional(),
+      }).refine(
+        (data) => Object.keys(data).length > 0,
+        { message: 'email: at least one field must be provided' }
+      ).optional(),
     }).refine(
       (data) => Object.keys(data).length > 0,
       { message: 'At least one notification preference must be provided' }
@@ -765,6 +788,19 @@ export const schemas = {
       endDate: dateString.optional(),
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
       limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '50', 10)), 200)),
+    }),
+
+    // Admin plan assignment. expiresAt is optional (null/omitted = no expiry).
+    updateUserPlan: z.object({
+      plan: z.enum(['FREE', 'PRO', 'TEAM']),
+      expiresAt: z.string().datetime().nullable().optional(),
+    }),
+
+    // Permanent delete confirmation. The handler compares confirmEmail
+    // against the target user's email — validating shape here catches
+    // empty/malformed payloads before they hit the DB lookup.
+    permanentDelete: z.object({
+      confirmEmail: z.string().email('Valid email required for confirmation'),
     }),
   },
 };

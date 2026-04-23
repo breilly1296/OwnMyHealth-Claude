@@ -31,6 +31,8 @@ interface HealthGuidePageProps {
   insurancePlans?: InsurancePlan[];
   /** Optional — when provided, the "set up" banner links here. */
   onNavigateToSettings?: () => void;
+  /** Optional — opens the lab upload modal when the user has no data. */
+  onOpenLabUpload?: () => void;
 }
 
 function summarizeProfile(profile: UserHealthProfile | null): string | null {
@@ -85,6 +87,7 @@ export default function HealthGuidePage({
   biomarkers,
   insurancePlans,
   onNavigateToSettings,
+  onOpenLabUpload,
 }: HealthGuidePageProps) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState('');
@@ -291,6 +294,13 @@ export default function HealthGuidePage({
             suggestions={suggestions}
             onSuggestionClick={handleSuggestionClick}
             disabled={isStreaming}
+            hasNoData={
+              (biomarkers?.length ?? 0) === 0 &&
+              (insurancePlans?.length ?? 0) === 0 &&
+              !healthProfile
+            }
+            onOpenLabUpload={onOpenLabUpload}
+            onNavigateToSettings={onNavigateToSettings}
           />
         ) : (
           <div className="space-y-4">
@@ -345,11 +355,57 @@ function EmptyState({
   suggestions,
   onSuggestionClick,
   disabled,
+  hasNoData,
+  onOpenLabUpload,
+  onNavigateToSettings,
 }: {
   suggestions: string[];
   onSuggestionClick: (s: string) => void;
   disabled: boolean;
+  hasNoData: boolean;
+  onOpenLabUpload?: () => void;
+  onNavigateToSettings?: () => void;
 }) {
+  // When the account has neither biomarkers, plans, nor a health profile,
+  // the suggestion pills would just produce shallow answers. Replace them
+  // with concrete CTAs — this is the "Health Guide works best with your
+  // health data" nudge.
+  if (hasNoData) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-12 gap-4">
+        <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-purple-600 rounded-2xl flex items-center justify-center">
+          <Sparkles className="w-8 h-8 text-white" />
+        </div>
+        <div className="max-w-md">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            The Health Guide works best with your health data.
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Upload a lab report or set up your health profile to get personalized insights.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 mt-2">
+          {onOpenLabUpload && (
+            <button
+              onClick={onOpenLabUpload}
+              className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors"
+            >
+              Upload Lab Report
+            </button>
+          )}
+          {onNavigateToSettings && (
+            <button
+              onClick={onNavigateToSettings}
+              className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              Set Up Profile
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 gap-4">
       <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-purple-600 rounded-2xl flex items-center justify-center">

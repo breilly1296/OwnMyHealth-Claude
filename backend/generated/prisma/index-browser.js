@@ -24,12 +24,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 7.2.0
- * Query Engine version: 0c8ef2ce45c83248ab3df073180d5eda9e8be7a3
+ * Prisma Client JS version: 7.7.0
+ * Query Engine version: 75cbdc1eb7150937890ad5465d861175c6624711
  */
 Prisma.prismaVersion = {
-  client: "7.2.0",
-  engine: "0c8ef2ce45c83248ab3df073180d5eda9e8be7a3"
+  client: "7.7.0",
+  engine: "75cbdc1eb7150937890ad5465d861175c6624711"
 }
 
 Prisma.PrismaClientKnownRequestError = () => {
@@ -139,6 +139,12 @@ exports.Prisma.UserScalarFieldEnum = {
   failedLoginAttempts: 'failedLoginAttempts',
   lockedUntil: 'lockedUntil',
   lastFailedLogin: 'lastFailedLogin',
+  notificationPreferences: 'notificationPreferences',
+  healthProfileEncrypted: 'healthProfileEncrypted',
+  plan: 'plan',
+  planExpiresAt: 'planExpiresAt',
+  planUpdatedAt: 'planUpdatedAt',
+  onboardingCompletedAt: 'onboardingCompletedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastLoginAt: 'lastLoginAt'
@@ -427,6 +433,7 @@ exports.Prisma.HealthGoalScalarFieldEnum = {
   descriptionEncrypted: 'descriptionEncrypted',
   category: 'category',
   targetValue: 'targetValue',
+  targetValueEncrypted: 'targetValueEncrypted',
   currentValue: 'currentValue',
   startValue: 'startValue',
   unit: 'unit',
@@ -529,14 +536,41 @@ exports.Prisma.CostAnalysisScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.LabConnectionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  provider: 'provider',
+  fhirPatientId: 'fhirPatientId',
+  accessTokenEncrypted: 'accessTokenEncrypted',
+  refreshTokenEncrypted: 'refreshTokenEncrypted',
+  tokenExpiresAt: 'tokenExpiresAt',
+  scopeGranted: 'scopeGranted',
+  connectedAt: 'connectedAt',
+  lastSyncAt: 'lastSyncAt',
+  syncStatus: 'syncStatus',
+  syncError: 'syncError',
+  lastImportedCount: 'lastImportedCount',
+  isActive: 'isActive'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
 };
 
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
 exports.Prisma.QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 
 exports.Prisma.NullsOrder = {
@@ -687,7 +721,8 @@ exports.Prisma.ModelName = {
   SystemConfig: 'SystemConfig',
   ExpenseProjection: 'ExpenseProjection',
   ExpenseActual: 'ExpenseActual',
-  CostAnalysis: 'CostAnalysis'
+  CostAnalysis: 'CostAnalysis',
+  LabConnection: 'LabConnection'
 };
 
 /**

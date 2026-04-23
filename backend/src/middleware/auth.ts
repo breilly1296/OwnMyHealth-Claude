@@ -20,6 +20,7 @@ interface JwtPayload {
   id: string;
   email: string;
   role: string;
+  plan?: string;
   type: 'access' | 'refresh';
   iat: number;
   exp: number;
@@ -73,7 +74,11 @@ export function authenticate(
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
-    };
+      // Tokens issued before plan was added to the payload won't have it;
+      // fall back to FREE so the request still flows. New tokens get the
+      // real plan.
+      plan: decoded.plan || 'FREE',
+    } as AuthenticatedRequest['user'];
 
     next();
   } catch (error) {
@@ -114,7 +119,11 @@ export function optionalAuth(
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
-    };
+      // Tokens issued before plan was added to the payload won't have it;
+      // fall back to FREE so the request still flows. New tokens get the
+      // real plan.
+      plan: decoded.plan || 'FREE',
+    } as AuthenticatedRequest['user'];
 
     next();
   } catch {

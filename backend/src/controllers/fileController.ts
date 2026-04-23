@@ -44,17 +44,29 @@ export async function getFiles(
 
   const prisma = getPrismaClient();
 
-  // Get all files for the user with linked biomarker categories
-  const files = await withRLSTransaction(userId, async (tx) => {
-    return tx.userFile.findMany({
-      where: { userId },
-      include: {
-        biomarkers: {
-          select: { category: true },
+  // Pagination — uploaded lab files accumulate over time; fetching them all
+  // on every dashboard mount means a fresh signed URL pass for each one.
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
+  const skip = (page - 1) * limit;
+
+  // Get a page of files + total count in one tx so the numbers match.
+  const { files, total } = await withRLSTransaction(userId, async (tx) => {
+    const [rows, count] = await Promise.all([
+      tx.userFile.findMany({
+        where: { userId },
+        include: {
+          biomarkers: {
+            select: { category: true },
+          },
         },
-      },
-      orderBy: { labDate: 'desc' },
-    });
+        orderBy: { labDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      tx.userFile.count({ where: { userId } }),
+    ]);
+    return { files: rows, total: count };
   });
 
   // Transform to response format with computed categories
@@ -85,11 +97,20 @@ export async function getFiles(
   await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
     operation: 'LIST',
     count: files.length,
+    total,
+    page,
+    limit,
   });
 
   const response: ApiResponse<UserFileResponse[]> = {
     success: true,
     data: fileResponses,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 
   res.json(response);

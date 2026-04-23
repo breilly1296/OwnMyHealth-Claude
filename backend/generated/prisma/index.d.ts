@@ -113,6 +113,11 @@ export type ExpenseActual = $Result.DefaultSelection<Prisma.$ExpenseActualPayloa
  * 
  */
 export type CostAnalysis = $Result.DefaultSelection<Prisma.$CostAnalysisPayload>
+/**
+ * Model LabConnection
+ * 
+ */
+export type LabConnection = $Result.DefaultSelection<Prisma.$LabConnectionPayload>
 
 /**
  * Enums
@@ -354,7 +359,9 @@ export const AuditAction: typeof $Enums.AuditAction
  * Type-safe database client for TypeScript & Node.js
  * @example
  * ```
- * const prisma = new PrismaClient()
+ * const prisma = new PrismaClient({
+ *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
+ * })
  * // Fetch zero or more Users
  * const users = await prisma.user.findMany()
  * ```
@@ -375,7 +382,9 @@ export class PrismaClient<
    * Type-safe database client for TypeScript & Node.js
    * @example
    * ```
-   * const prisma = new PrismaClient()
+   * const prisma = new PrismaClient({
+   *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
+   * })
    * // Fetch zero or more Users
    * const users = await prisma.user.findMany()
    * ```
@@ -455,7 +464,7 @@ export class PrismaClient<
    * ])
    * ```
    * 
-   * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
+   * Read more in our [docs](https://www.prisma.io/docs/orm/prisma-client/queries/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
 
@@ -664,6 +673,16 @@ export class PrismaClient<
     * ```
     */
   get costAnalysis(): Prisma.CostAnalysisDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.labConnection`: Exposes CRUD operations for the **LabConnection** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more LabConnections
+    * const labConnections = await prisma.labConnection.findMany()
+    * ```
+    */
+  get labConnection(): Prisma.LabConnectionDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -714,8 +733,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 7.2.0
-   * Query Engine version: 0c8ef2ce45c83248ab3df073180d5eda9e8be7a3
+   * Prisma Client JS version: 7.7.0
+   * Query Engine version: 75cbdc1eb7150937890ad5465d861175c6624711
    */
   export type PrismaVersion = {
     client: string
@@ -1117,7 +1136,8 @@ export namespace Prisma {
     SystemConfig: 'SystemConfig',
     ExpenseProjection: 'ExpenseProjection',
     ExpenseActual: 'ExpenseActual',
-    CostAnalysis: 'CostAnalysis'
+    CostAnalysis: 'CostAnalysis',
+    LabConnection: 'LabConnection'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1133,7 +1153,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig" | "expenseProjection" | "expenseActual" | "costAnalysis"
+      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig" | "expenseProjection" | "expenseActual" | "costAnalysis" | "labConnection"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2617,6 +2637,80 @@ export namespace Prisma {
           }
         }
       }
+      LabConnection: {
+        payload: Prisma.$LabConnectionPayload<ExtArgs>
+        fields: Prisma.LabConnectionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.LabConnectionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.LabConnectionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>
+          }
+          findFirst: {
+            args: Prisma.LabConnectionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.LabConnectionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>
+          }
+          findMany: {
+            args: Prisma.LabConnectionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>[]
+          }
+          create: {
+            args: Prisma.LabConnectionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>
+          }
+          createMany: {
+            args: Prisma.LabConnectionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.LabConnectionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>[]
+          }
+          delete: {
+            args: Prisma.LabConnectionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>
+          }
+          update: {
+            args: Prisma.LabConnectionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>
+          }
+          deleteMany: {
+            args: Prisma.LabConnectionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.LabConnectionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.LabConnectionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>[]
+          }
+          upsert: {
+            args: Prisma.LabConnectionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LabConnectionPayload>
+          }
+          aggregate: {
+            args: Prisma.LabConnectionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateLabConnection>
+          }
+          groupBy: {
+            args: Prisma.LabConnectionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<LabConnectionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.LabConnectionCountArgs<ExtArgs>
+            result: $Utils.Optional<LabConnectionCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -2745,6 +2839,7 @@ export namespace Prisma {
     expenseProjection?: ExpenseProjectionOmit
     expenseActual?: ExpenseActualOmit
     costAnalysis?: CostAnalysisOmit
+    labConnection?: LabConnectionOmit
   }
 
   /* Types for Logging */
@@ -2839,6 +2934,7 @@ export namespace Prisma {
     expenseProjections: number
     expenseActuals: number
     costAnalyses: number
+    labConnections: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2856,6 +2952,7 @@ export namespace Prisma {
     expenseProjections?: boolean | UserCountOutputTypeCountExpenseProjectionsArgs
     expenseActuals?: boolean | UserCountOutputTypeCountExpenseActualsArgs
     costAnalyses?: boolean | UserCountOutputTypeCountCostAnalysesArgs
+    labConnections?: boolean | UserCountOutputTypeCountLabConnectionsArgs
   }
 
   // Custom InputTypes
@@ -2965,6 +3062,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountCostAnalysesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: CostAnalysisWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountLabConnectionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: LabConnectionWhereInput
   }
 
 
@@ -3233,6 +3337,11 @@ export namespace Prisma {
     failedLoginAttempts: number | null
     lockedUntil: Date | null
     lastFailedLogin: Date | null
+    healthProfileEncrypted: string | null
+    plan: string | null
+    planExpiresAt: Date | null
+    planUpdatedAt: Date | null
+    onboardingCompletedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
     lastLoginAt: Date | null
@@ -3257,6 +3366,11 @@ export namespace Prisma {
     failedLoginAttempts: number | null
     lockedUntil: Date | null
     lastFailedLogin: Date | null
+    healthProfileEncrypted: string | null
+    plan: string | null
+    planExpiresAt: Date | null
+    planUpdatedAt: Date | null
+    onboardingCompletedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
     lastLoginAt: Date | null
@@ -3281,6 +3395,12 @@ export namespace Prisma {
     failedLoginAttempts: number
     lockedUntil: number
     lastFailedLogin: number
+    notificationPreferences: number
+    healthProfileEncrypted: number
+    plan: number
+    planExpiresAt: number
+    planUpdatedAt: number
+    onboardingCompletedAt: number
     createdAt: number
     updatedAt: number
     lastLoginAt: number
@@ -3315,6 +3435,11 @@ export namespace Prisma {
     failedLoginAttempts?: true
     lockedUntil?: true
     lastFailedLogin?: true
+    healthProfileEncrypted?: true
+    plan?: true
+    planExpiresAt?: true
+    planUpdatedAt?: true
+    onboardingCompletedAt?: true
     createdAt?: true
     updatedAt?: true
     lastLoginAt?: true
@@ -3339,6 +3464,11 @@ export namespace Prisma {
     failedLoginAttempts?: true
     lockedUntil?: true
     lastFailedLogin?: true
+    healthProfileEncrypted?: true
+    plan?: true
+    planExpiresAt?: true
+    planUpdatedAt?: true
+    onboardingCompletedAt?: true
     createdAt?: true
     updatedAt?: true
     lastLoginAt?: true
@@ -3363,6 +3493,12 @@ export namespace Prisma {
     failedLoginAttempts?: true
     lockedUntil?: true
     lastFailedLogin?: true
+    notificationPreferences?: true
+    healthProfileEncrypted?: true
+    plan?: true
+    planExpiresAt?: true
+    planUpdatedAt?: true
+    onboardingCompletedAt?: true
     createdAt?: true
     updatedAt?: true
     lastLoginAt?: true
@@ -3474,6 +3610,12 @@ export namespace Prisma {
     failedLoginAttempts: number
     lockedUntil: Date | null
     lastFailedLogin: Date | null
+    notificationPreferences: JsonValue
+    healthProfileEncrypted: string | null
+    plan: string
+    planExpiresAt: Date | null
+    planUpdatedAt: Date | null
+    onboardingCompletedAt: Date | null
     createdAt: Date
     updatedAt: Date
     lastLoginAt: Date | null
@@ -3517,6 +3659,12 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    notificationPreferences?: boolean
+    healthProfileEncrypted?: boolean
+    plan?: boolean
+    planExpiresAt?: boolean
+    planUpdatedAt?: boolean
+    onboardingCompletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
@@ -3534,6 +3682,7 @@ export namespace Prisma {
     expenseProjections?: boolean | User$expenseProjectionsArgs<ExtArgs>
     expenseActuals?: boolean | User$expenseActualsArgs<ExtArgs>
     costAnalyses?: boolean | User$costAnalysesArgs<ExtArgs>
+    labConnections?: boolean | User$labConnectionsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3556,6 +3705,12 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    notificationPreferences?: boolean
+    healthProfileEncrypted?: boolean
+    plan?: boolean
+    planExpiresAt?: boolean
+    planUpdatedAt?: boolean
+    onboardingCompletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
@@ -3580,6 +3735,12 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    notificationPreferences?: boolean
+    healthProfileEncrypted?: boolean
+    plan?: boolean
+    planExpiresAt?: boolean
+    planUpdatedAt?: boolean
+    onboardingCompletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
@@ -3604,12 +3765,18 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    notificationPreferences?: boolean
+    healthProfileEncrypted?: boolean
+    plan?: boolean
+    planExpiresAt?: boolean
+    planUpdatedAt?: boolean
+    onboardingCompletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
@@ -3625,6 +3792,7 @@ export namespace Prisma {
     expenseProjections?: boolean | User$expenseProjectionsArgs<ExtArgs>
     expenseActuals?: boolean | User$expenseActualsArgs<ExtArgs>
     costAnalyses?: boolean | User$costAnalysesArgs<ExtArgs>
+    labConnections?: boolean | User$labConnectionsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -3647,6 +3815,7 @@ export namespace Prisma {
       expenseProjections: Prisma.$ExpenseProjectionPayload<ExtArgs>[]
       expenseActuals: Prisma.$ExpenseActualPayload<ExtArgs>[]
       costAnalyses: Prisma.$CostAnalysisPayload<ExtArgs>[]
+      labConnections: Prisma.$LabConnectionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3667,6 +3836,12 @@ export namespace Prisma {
       failedLoginAttempts: number
       lockedUntil: Date | null
       lastFailedLogin: Date | null
+      notificationPreferences: Prisma.JsonValue
+      healthProfileEncrypted: string | null
+      plan: string
+      planExpiresAt: Date | null
+      planUpdatedAt: Date | null
+      onboardingCompletedAt: Date | null
       createdAt: Date
       updatedAt: Date
       lastLoginAt: Date | null
@@ -4078,6 +4253,7 @@ export namespace Prisma {
     expenseProjections<T extends User$expenseProjectionsArgs<ExtArgs> = {}>(args?: Subset<T, User$expenseProjectionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseProjectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     expenseActuals<T extends User$expenseActualsArgs<ExtArgs> = {}>(args?: Subset<T, User$expenseActualsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ExpenseActualPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     costAnalyses<T extends User$costAnalysesArgs<ExtArgs> = {}>(args?: Subset<T, User$costAnalysesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CostAnalysisPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    labConnections<T extends User$labConnectionsArgs<ExtArgs> = {}>(args?: Subset<T, User$labConnectionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4125,6 +4301,12 @@ export namespace Prisma {
     readonly failedLoginAttempts: FieldRef<"User", 'Int'>
     readonly lockedUntil: FieldRef<"User", 'DateTime'>
     readonly lastFailedLogin: FieldRef<"User", 'DateTime'>
+    readonly notificationPreferences: FieldRef<"User", 'Json'>
+    readonly healthProfileEncrypted: FieldRef<"User", 'String'>
+    readonly plan: FieldRef<"User", 'String'>
+    readonly planExpiresAt: FieldRef<"User", 'DateTime'>
+    readonly planUpdatedAt: FieldRef<"User", 'DateTime'>
+    readonly onboardingCompletedAt: FieldRef<"User", 'DateTime'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
     readonly lastLoginAt: FieldRef<"User", 'DateTime'>
@@ -4324,6 +4506,11 @@ export namespace Prisma {
      * Skip the first `n` Users.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Users.
+     */
     distinct?: UserScalarFieldEnum | UserScalarFieldEnum[]
   }
 
@@ -4849,6 +5036,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
+  }
+
+  /**
+   * User.labConnections
+   */
+  export type User$labConnectionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    where?: LabConnectionWhereInput
+    orderBy?: LabConnectionOrderByWithRelationInput | LabConnectionOrderByWithRelationInput[]
+    cursor?: LabConnectionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: LabConnectionScalarFieldEnum | LabConnectionScalarFieldEnum[]
   }
 
   /**
@@ -5736,6 +5947,11 @@ export namespace Prisma {
      * Skip the first `n` Sessions.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Sessions.
+     */
     distinct?: SessionScalarFieldEnum | SessionScalarFieldEnum[]
   }
 
@@ -6880,6 +7096,11 @@ export namespace Prisma {
      * Skip the first `n` UserEncryptionKeys.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserEncryptionKeys.
+     */
     distinct?: UserEncryptionKeyScalarFieldEnum | UserEncryptionKeyScalarFieldEnum[]
   }
 
@@ -8076,6 +8297,11 @@ export namespace Prisma {
      * Skip the first `n` ProviderPatients.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ProviderPatients.
+     */
     distinct?: ProviderPatientScalarFieldEnum | ProviderPatientScalarFieldEnum[]
   }
 
@@ -9286,6 +9512,11 @@ export namespace Prisma {
      * Skip the first `n` UserFiles.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UserFiles.
+     */
     distinct?: UserFileScalarFieldEnum | UserFileScalarFieldEnum[]
   }
 
@@ -10619,6 +10850,11 @@ export namespace Prisma {
      * Skip the first `n` Biomarkers.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Biomarkers.
+     */
     distinct?: BiomarkerScalarFieldEnum | BiomarkerScalarFieldEnum[]
   }
 
@@ -11720,6 +11956,11 @@ export namespace Prisma {
      * Skip the first `n` BiomarkerHistories.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of BiomarkerHistories.
+     */
     distinct?: BiomarkerHistoryScalarFieldEnum | BiomarkerHistoryScalarFieldEnum[]
   }
 
@@ -14670,6 +14911,11 @@ export namespace Prisma {
      * Skip the first `n` InsurancePlans.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of InsurancePlans.
+     */
     distinct?: InsurancePlanScalarFieldEnum | InsurancePlanScalarFieldEnum[]
   }
 
@@ -16000,6 +16246,11 @@ export namespace Prisma {
      * Skip the first `n` InsuranceBenefits.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of InsuranceBenefits.
+     */
     distinct?: InsuranceBenefitScalarFieldEnum | InsuranceBenefitScalarFieldEnum[]
   }
 
@@ -17171,6 +17422,11 @@ export namespace Prisma {
      * Skip the first `n` DNAData.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DNAData.
+     */
     distinct?: DNADataScalarFieldEnum | DNADataScalarFieldEnum[]
   }
 
@@ -18337,6 +18593,11 @@ export namespace Prisma {
      * Skip the first `n` DNAVariants.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DNAVariants.
+     */
     distinct?: DNAVariantScalarFieldEnum | DNAVariantScalarFieldEnum[]
   }
 
@@ -19511,6 +19772,11 @@ export namespace Prisma {
      * Skip the first `n` GeneticTraits.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of GeneticTraits.
+     */
     distinct?: GeneticTraitScalarFieldEnum | GeneticTraitScalarFieldEnum[]
   }
 
@@ -20643,6 +20909,11 @@ export namespace Prisma {
      * Skip the first `n` HealthNeeds.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HealthNeeds.
+     */
     distinct?: HealthNeedScalarFieldEnum | HealthNeedScalarFieldEnum[]
   }
 
@@ -20894,6 +21165,7 @@ export namespace Prisma {
     descriptionEncrypted: string | null
     category: string | null
     targetValue: Decimal | null
+    targetValueEncrypted: string | null
     currentValue: Decimal | null
     startValue: Decimal | null
     unit: string | null
@@ -20918,6 +21190,7 @@ export namespace Prisma {
     descriptionEncrypted: string | null
     category: string | null
     targetValue: Decimal | null
+    targetValueEncrypted: string | null
     currentValue: Decimal | null
     startValue: Decimal | null
     unit: string | null
@@ -20942,6 +21215,7 @@ export namespace Prisma {
     descriptionEncrypted: number
     category: number
     targetValue: number
+    targetValueEncrypted: number
     currentValue: number
     startValue: number
     unit: number
@@ -20982,6 +21256,7 @@ export namespace Prisma {
     descriptionEncrypted?: true
     category?: true
     targetValue?: true
+    targetValueEncrypted?: true
     currentValue?: true
     startValue?: true
     unit?: true
@@ -21006,6 +21281,7 @@ export namespace Prisma {
     descriptionEncrypted?: true
     category?: true
     targetValue?: true
+    targetValueEncrypted?: true
     currentValue?: true
     startValue?: true
     unit?: true
@@ -21030,6 +21306,7 @@ export namespace Prisma {
     descriptionEncrypted?: true
     category?: true
     targetValue?: true
+    targetValueEncrypted?: true
     currentValue?: true
     startValue?: true
     unit?: true
@@ -21141,6 +21418,7 @@ export namespace Prisma {
     descriptionEncrypted: string | null
     category: string
     targetValue: Decimal
+    targetValueEncrypted: string | null
     currentValue: Decimal | null
     startValue: Decimal | null
     unit: string
@@ -21184,6 +21462,7 @@ export namespace Prisma {
     descriptionEncrypted?: boolean
     category?: boolean
     targetValue?: boolean
+    targetValueEncrypted?: boolean
     currentValue?: boolean
     startValue?: boolean
     unit?: boolean
@@ -21211,6 +21490,7 @@ export namespace Prisma {
     descriptionEncrypted?: boolean
     category?: boolean
     targetValue?: boolean
+    targetValueEncrypted?: boolean
     currentValue?: boolean
     startValue?: boolean
     unit?: boolean
@@ -21236,6 +21516,7 @@ export namespace Prisma {
     descriptionEncrypted?: boolean
     category?: boolean
     targetValue?: boolean
+    targetValueEncrypted?: boolean
     currentValue?: boolean
     startValue?: boolean
     unit?: boolean
@@ -21261,6 +21542,7 @@ export namespace Prisma {
     descriptionEncrypted?: boolean
     category?: boolean
     targetValue?: boolean
+    targetValueEncrypted?: boolean
     currentValue?: boolean
     startValue?: boolean
     unit?: boolean
@@ -21278,7 +21560,7 @@ export namespace Prisma {
     completedAt?: boolean
   }
 
-  export type HealthGoalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "name" | "descriptionEncrypted" | "category" | "targetValue" | "currentValue" | "startValue" | "unit" | "direction" | "relatedBiomarkerId" | "startDate" | "targetDate" | "status" | "progress" | "milestones" | "reminderFrequency" | "lastReminderSent" | "createdAt" | "updatedAt" | "completedAt", ExtArgs["result"]["healthGoal"]>
+  export type HealthGoalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "name" | "descriptionEncrypted" | "category" | "targetValue" | "targetValueEncrypted" | "currentValue" | "startValue" | "unit" | "direction" | "relatedBiomarkerId" | "startDate" | "targetDate" | "status" | "progress" | "milestones" | "reminderFrequency" | "lastReminderSent" | "createdAt" | "updatedAt" | "completedAt", ExtArgs["result"]["healthGoal"]>
   export type HealthGoalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     progressHistory?: boolean | HealthGoal$progressHistoryArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -21304,6 +21586,7 @@ export namespace Prisma {
       descriptionEncrypted: string | null
       category: string
       targetValue: Prisma.Decimal
+      targetValueEncrypted: string | null
       currentValue: Prisma.Decimal | null
       startValue: Prisma.Decimal | null
       unit: string
@@ -21750,6 +22033,7 @@ export namespace Prisma {
     readonly descriptionEncrypted: FieldRef<"HealthGoal", 'String'>
     readonly category: FieldRef<"HealthGoal", 'String'>
     readonly targetValue: FieldRef<"HealthGoal", 'Decimal'>
+    readonly targetValueEncrypted: FieldRef<"HealthGoal", 'String'>
     readonly currentValue: FieldRef<"HealthGoal", 'Decimal'>
     readonly startValue: FieldRef<"HealthGoal", 'Decimal'>
     readonly unit: FieldRef<"HealthGoal", 'String'>
@@ -21961,6 +22245,11 @@ export namespace Prisma {
      * Skip the first `n` HealthGoals.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HealthGoals.
+     */
     distinct?: HealthGoalScalarFieldEnum | HealthGoalScalarFieldEnum[]
   }
 
@@ -23094,6 +23383,11 @@ export namespace Prisma {
      * Skip the first `n` GoalProgressHistories.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of GoalProgressHistories.
+     */
     distinct?: GoalProgressHistoryScalarFieldEnum | GoalProgressHistoryScalarFieldEnum[]
   }
 
@@ -24282,6 +24576,11 @@ export namespace Prisma {
      * Skip the first `n` AuditLogs.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AuditLogs.
+     */
     distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
   }
 
@@ -25376,6 +25675,11 @@ export namespace Prisma {
      * Skip the first `n` SystemConfigs.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of SystemConfigs.
+     */
     distinct?: SystemConfigScalarFieldEnum | SystemConfigScalarFieldEnum[]
   }
 
@@ -26532,6 +26836,11 @@ export namespace Prisma {
      * Skip the first `n` ExpenseProjections.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ExpenseProjections.
+     */
     distinct?: ExpenseProjectionScalarFieldEnum | ExpenseProjectionScalarFieldEnum[]
   }
 
@@ -27786,6 +28095,11 @@ export namespace Prisma {
      * Skip the first `n` ExpenseActuals.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ExpenseActuals.
+     */
     distinct?: ExpenseActualScalarFieldEnum | ExpenseActualScalarFieldEnum[]
   }
 
@@ -28957,6 +29271,11 @@ export namespace Prisma {
      * Skip the first `n` CostAnalyses.
      */
     skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CostAnalyses.
+     */
     distinct?: CostAnalysisScalarFieldEnum | CostAnalysisScalarFieldEnum[]
   }
 
@@ -29176,6 +29495,1220 @@ export namespace Prisma {
 
 
   /**
+   * Model LabConnection
+   */
+
+  export type AggregateLabConnection = {
+    _count: LabConnectionCountAggregateOutputType | null
+    _avg: LabConnectionAvgAggregateOutputType | null
+    _sum: LabConnectionSumAggregateOutputType | null
+    _min: LabConnectionMinAggregateOutputType | null
+    _max: LabConnectionMaxAggregateOutputType | null
+  }
+
+  export type LabConnectionAvgAggregateOutputType = {
+    lastImportedCount: number | null
+  }
+
+  export type LabConnectionSumAggregateOutputType = {
+    lastImportedCount: number | null
+  }
+
+  export type LabConnectionMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    provider: string | null
+    fhirPatientId: string | null
+    accessTokenEncrypted: string | null
+    refreshTokenEncrypted: string | null
+    tokenExpiresAt: Date | null
+    scopeGranted: string | null
+    connectedAt: Date | null
+    lastSyncAt: Date | null
+    syncStatus: string | null
+    syncError: string | null
+    lastImportedCount: number | null
+    isActive: boolean | null
+  }
+
+  export type LabConnectionMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    provider: string | null
+    fhirPatientId: string | null
+    accessTokenEncrypted: string | null
+    refreshTokenEncrypted: string | null
+    tokenExpiresAt: Date | null
+    scopeGranted: string | null
+    connectedAt: Date | null
+    lastSyncAt: Date | null
+    syncStatus: string | null
+    syncError: string | null
+    lastImportedCount: number | null
+    isActive: boolean | null
+  }
+
+  export type LabConnectionCountAggregateOutputType = {
+    id: number
+    userId: number
+    provider: number
+    fhirPatientId: number
+    accessTokenEncrypted: number
+    refreshTokenEncrypted: number
+    tokenExpiresAt: number
+    scopeGranted: number
+    connectedAt: number
+    lastSyncAt: number
+    syncStatus: number
+    syncError: number
+    lastImportedCount: number
+    isActive: number
+    _all: number
+  }
+
+
+  export type LabConnectionAvgAggregateInputType = {
+    lastImportedCount?: true
+  }
+
+  export type LabConnectionSumAggregateInputType = {
+    lastImportedCount?: true
+  }
+
+  export type LabConnectionMinAggregateInputType = {
+    id?: true
+    userId?: true
+    provider?: true
+    fhirPatientId?: true
+    accessTokenEncrypted?: true
+    refreshTokenEncrypted?: true
+    tokenExpiresAt?: true
+    scopeGranted?: true
+    connectedAt?: true
+    lastSyncAt?: true
+    syncStatus?: true
+    syncError?: true
+    lastImportedCount?: true
+    isActive?: true
+  }
+
+  export type LabConnectionMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    provider?: true
+    fhirPatientId?: true
+    accessTokenEncrypted?: true
+    refreshTokenEncrypted?: true
+    tokenExpiresAt?: true
+    scopeGranted?: true
+    connectedAt?: true
+    lastSyncAt?: true
+    syncStatus?: true
+    syncError?: true
+    lastImportedCount?: true
+    isActive?: true
+  }
+
+  export type LabConnectionCountAggregateInputType = {
+    id?: true
+    userId?: true
+    provider?: true
+    fhirPatientId?: true
+    accessTokenEncrypted?: true
+    refreshTokenEncrypted?: true
+    tokenExpiresAt?: true
+    scopeGranted?: true
+    connectedAt?: true
+    lastSyncAt?: true
+    syncStatus?: true
+    syncError?: true
+    lastImportedCount?: true
+    isActive?: true
+    _all?: true
+  }
+
+  export type LabConnectionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which LabConnection to aggregate.
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LabConnections to fetch.
+     */
+    orderBy?: LabConnectionOrderByWithRelationInput | LabConnectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: LabConnectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LabConnections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LabConnections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned LabConnections
+    **/
+    _count?: true | LabConnectionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: LabConnectionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: LabConnectionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: LabConnectionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: LabConnectionMaxAggregateInputType
+  }
+
+  export type GetLabConnectionAggregateType<T extends LabConnectionAggregateArgs> = {
+        [P in keyof T & keyof AggregateLabConnection]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateLabConnection[P]>
+      : GetScalarType<T[P], AggregateLabConnection[P]>
+  }
+
+
+
+
+  export type LabConnectionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: LabConnectionWhereInput
+    orderBy?: LabConnectionOrderByWithAggregationInput | LabConnectionOrderByWithAggregationInput[]
+    by: LabConnectionScalarFieldEnum[] | LabConnectionScalarFieldEnum
+    having?: LabConnectionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: LabConnectionCountAggregateInputType | true
+    _avg?: LabConnectionAvgAggregateInputType
+    _sum?: LabConnectionSumAggregateInputType
+    _min?: LabConnectionMinAggregateInputType
+    _max?: LabConnectionMaxAggregateInputType
+  }
+
+  export type LabConnectionGroupByOutputType = {
+    id: string
+    userId: string
+    provider: string
+    fhirPatientId: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted: string | null
+    tokenExpiresAt: Date | null
+    scopeGranted: string | null
+    connectedAt: Date
+    lastSyncAt: Date | null
+    syncStatus: string
+    syncError: string | null
+    lastImportedCount: number
+    isActive: boolean
+    _count: LabConnectionCountAggregateOutputType | null
+    _avg: LabConnectionAvgAggregateOutputType | null
+    _sum: LabConnectionSumAggregateOutputType | null
+    _min: LabConnectionMinAggregateOutputType | null
+    _max: LabConnectionMaxAggregateOutputType | null
+  }
+
+  type GetLabConnectionGroupByPayload<T extends LabConnectionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<LabConnectionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof LabConnectionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], LabConnectionGroupByOutputType[P]>
+            : GetScalarType<T[P], LabConnectionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type LabConnectionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    provider?: boolean
+    fhirPatientId?: boolean
+    accessTokenEncrypted?: boolean
+    refreshTokenEncrypted?: boolean
+    tokenExpiresAt?: boolean
+    scopeGranted?: boolean
+    connectedAt?: boolean
+    lastSyncAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    lastImportedCount?: boolean
+    isActive?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["labConnection"]>
+
+  export type LabConnectionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    provider?: boolean
+    fhirPatientId?: boolean
+    accessTokenEncrypted?: boolean
+    refreshTokenEncrypted?: boolean
+    tokenExpiresAt?: boolean
+    scopeGranted?: boolean
+    connectedAt?: boolean
+    lastSyncAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    lastImportedCount?: boolean
+    isActive?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["labConnection"]>
+
+  export type LabConnectionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    provider?: boolean
+    fhirPatientId?: boolean
+    accessTokenEncrypted?: boolean
+    refreshTokenEncrypted?: boolean
+    tokenExpiresAt?: boolean
+    scopeGranted?: boolean
+    connectedAt?: boolean
+    lastSyncAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    lastImportedCount?: boolean
+    isActive?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["labConnection"]>
+
+  export type LabConnectionSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    provider?: boolean
+    fhirPatientId?: boolean
+    accessTokenEncrypted?: boolean
+    refreshTokenEncrypted?: boolean
+    tokenExpiresAt?: boolean
+    scopeGranted?: boolean
+    connectedAt?: boolean
+    lastSyncAt?: boolean
+    syncStatus?: boolean
+    syncError?: boolean
+    lastImportedCount?: boolean
+    isActive?: boolean
+  }
+
+  export type LabConnectionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "provider" | "fhirPatientId" | "accessTokenEncrypted" | "refreshTokenEncrypted" | "tokenExpiresAt" | "scopeGranted" | "connectedAt" | "lastSyncAt" | "syncStatus" | "syncError" | "lastImportedCount" | "isActive", ExtArgs["result"]["labConnection"]>
+  export type LabConnectionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type LabConnectionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type LabConnectionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $LabConnectionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "LabConnection"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      provider: string
+      fhirPatientId: string | null
+      accessTokenEncrypted: string
+      refreshTokenEncrypted: string | null
+      tokenExpiresAt: Date | null
+      scopeGranted: string | null
+      connectedAt: Date
+      lastSyncAt: Date | null
+      syncStatus: string
+      syncError: string | null
+      lastImportedCount: number
+      isActive: boolean
+    }, ExtArgs["result"]["labConnection"]>
+    composites: {}
+  }
+
+  type LabConnectionGetPayload<S extends boolean | null | undefined | LabConnectionDefaultArgs> = $Result.GetResult<Prisma.$LabConnectionPayload, S>
+
+  type LabConnectionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<LabConnectionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: LabConnectionCountAggregateInputType | true
+    }
+
+  export interface LabConnectionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['LabConnection'], meta: { name: 'LabConnection' } }
+    /**
+     * Find zero or one LabConnection that matches the filter.
+     * @param {LabConnectionFindUniqueArgs} args - Arguments to find a LabConnection
+     * @example
+     * // Get one LabConnection
+     * const labConnection = await prisma.labConnection.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends LabConnectionFindUniqueArgs>(args: SelectSubset<T, LabConnectionFindUniqueArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one LabConnection that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {LabConnectionFindUniqueOrThrowArgs} args - Arguments to find a LabConnection
+     * @example
+     * // Get one LabConnection
+     * const labConnection = await prisma.labConnection.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends LabConnectionFindUniqueOrThrowArgs>(args: SelectSubset<T, LabConnectionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first LabConnection that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionFindFirstArgs} args - Arguments to find a LabConnection
+     * @example
+     * // Get one LabConnection
+     * const labConnection = await prisma.labConnection.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends LabConnectionFindFirstArgs>(args?: SelectSubset<T, LabConnectionFindFirstArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first LabConnection that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionFindFirstOrThrowArgs} args - Arguments to find a LabConnection
+     * @example
+     * // Get one LabConnection
+     * const labConnection = await prisma.labConnection.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends LabConnectionFindFirstOrThrowArgs>(args?: SelectSubset<T, LabConnectionFindFirstOrThrowArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more LabConnections that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all LabConnections
+     * const labConnections = await prisma.labConnection.findMany()
+     * 
+     * // Get first 10 LabConnections
+     * const labConnections = await prisma.labConnection.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const labConnectionWithIdOnly = await prisma.labConnection.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends LabConnectionFindManyArgs>(args?: SelectSubset<T, LabConnectionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a LabConnection.
+     * @param {LabConnectionCreateArgs} args - Arguments to create a LabConnection.
+     * @example
+     * // Create one LabConnection
+     * const LabConnection = await prisma.labConnection.create({
+     *   data: {
+     *     // ... data to create a LabConnection
+     *   }
+     * })
+     * 
+     */
+    create<T extends LabConnectionCreateArgs>(args: SelectSubset<T, LabConnectionCreateArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many LabConnections.
+     * @param {LabConnectionCreateManyArgs} args - Arguments to create many LabConnections.
+     * @example
+     * // Create many LabConnections
+     * const labConnection = await prisma.labConnection.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends LabConnectionCreateManyArgs>(args?: SelectSubset<T, LabConnectionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many LabConnections and returns the data saved in the database.
+     * @param {LabConnectionCreateManyAndReturnArgs} args - Arguments to create many LabConnections.
+     * @example
+     * // Create many LabConnections
+     * const labConnection = await prisma.labConnection.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many LabConnections and only return the `id`
+     * const labConnectionWithIdOnly = await prisma.labConnection.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends LabConnectionCreateManyAndReturnArgs>(args?: SelectSubset<T, LabConnectionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a LabConnection.
+     * @param {LabConnectionDeleteArgs} args - Arguments to delete one LabConnection.
+     * @example
+     * // Delete one LabConnection
+     * const LabConnection = await prisma.labConnection.delete({
+     *   where: {
+     *     // ... filter to delete one LabConnection
+     *   }
+     * })
+     * 
+     */
+    delete<T extends LabConnectionDeleteArgs>(args: SelectSubset<T, LabConnectionDeleteArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one LabConnection.
+     * @param {LabConnectionUpdateArgs} args - Arguments to update one LabConnection.
+     * @example
+     * // Update one LabConnection
+     * const labConnection = await prisma.labConnection.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends LabConnectionUpdateArgs>(args: SelectSubset<T, LabConnectionUpdateArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more LabConnections.
+     * @param {LabConnectionDeleteManyArgs} args - Arguments to filter LabConnections to delete.
+     * @example
+     * // Delete a few LabConnections
+     * const { count } = await prisma.labConnection.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends LabConnectionDeleteManyArgs>(args?: SelectSubset<T, LabConnectionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more LabConnections.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many LabConnections
+     * const labConnection = await prisma.labConnection.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends LabConnectionUpdateManyArgs>(args: SelectSubset<T, LabConnectionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more LabConnections and returns the data updated in the database.
+     * @param {LabConnectionUpdateManyAndReturnArgs} args - Arguments to update many LabConnections.
+     * @example
+     * // Update many LabConnections
+     * const labConnection = await prisma.labConnection.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more LabConnections and only return the `id`
+     * const labConnectionWithIdOnly = await prisma.labConnection.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends LabConnectionUpdateManyAndReturnArgs>(args: SelectSubset<T, LabConnectionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one LabConnection.
+     * @param {LabConnectionUpsertArgs} args - Arguments to update or create a LabConnection.
+     * @example
+     * // Update or create a LabConnection
+     * const labConnection = await prisma.labConnection.upsert({
+     *   create: {
+     *     // ... data to create a LabConnection
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the LabConnection we want to update
+     *   }
+     * })
+     */
+    upsert<T extends LabConnectionUpsertArgs>(args: SelectSubset<T, LabConnectionUpsertArgs<ExtArgs>>): Prisma__LabConnectionClient<$Result.GetResult<Prisma.$LabConnectionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of LabConnections.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionCountArgs} args - Arguments to filter LabConnections to count.
+     * @example
+     * // Count the number of LabConnections
+     * const count = await prisma.labConnection.count({
+     *   where: {
+     *     // ... the filter for the LabConnections we want to count
+     *   }
+     * })
+    **/
+    count<T extends LabConnectionCountArgs>(
+      args?: Subset<T, LabConnectionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], LabConnectionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a LabConnection.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends LabConnectionAggregateArgs>(args: Subset<T, LabConnectionAggregateArgs>): Prisma.PrismaPromise<GetLabConnectionAggregateType<T>>
+
+    /**
+     * Group by LabConnection.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LabConnectionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends LabConnectionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: LabConnectionGroupByArgs['orderBy'] }
+        : { orderBy?: LabConnectionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, LabConnectionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetLabConnectionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the LabConnection model
+   */
+  readonly fields: LabConnectionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for LabConnection.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__LabConnectionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the LabConnection model
+   */
+  interface LabConnectionFieldRefs {
+    readonly id: FieldRef<"LabConnection", 'String'>
+    readonly userId: FieldRef<"LabConnection", 'String'>
+    readonly provider: FieldRef<"LabConnection", 'String'>
+    readonly fhirPatientId: FieldRef<"LabConnection", 'String'>
+    readonly accessTokenEncrypted: FieldRef<"LabConnection", 'String'>
+    readonly refreshTokenEncrypted: FieldRef<"LabConnection", 'String'>
+    readonly tokenExpiresAt: FieldRef<"LabConnection", 'DateTime'>
+    readonly scopeGranted: FieldRef<"LabConnection", 'String'>
+    readonly connectedAt: FieldRef<"LabConnection", 'DateTime'>
+    readonly lastSyncAt: FieldRef<"LabConnection", 'DateTime'>
+    readonly syncStatus: FieldRef<"LabConnection", 'String'>
+    readonly syncError: FieldRef<"LabConnection", 'String'>
+    readonly lastImportedCount: FieldRef<"LabConnection", 'Int'>
+    readonly isActive: FieldRef<"LabConnection", 'Boolean'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * LabConnection findUnique
+   */
+  export type LabConnectionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * Filter, which LabConnection to fetch.
+     */
+    where: LabConnectionWhereUniqueInput
+  }
+
+  /**
+   * LabConnection findUniqueOrThrow
+   */
+  export type LabConnectionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * Filter, which LabConnection to fetch.
+     */
+    where: LabConnectionWhereUniqueInput
+  }
+
+  /**
+   * LabConnection findFirst
+   */
+  export type LabConnectionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * Filter, which LabConnection to fetch.
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LabConnections to fetch.
+     */
+    orderBy?: LabConnectionOrderByWithRelationInput | LabConnectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for LabConnections.
+     */
+    cursor?: LabConnectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LabConnections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LabConnections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of LabConnections.
+     */
+    distinct?: LabConnectionScalarFieldEnum | LabConnectionScalarFieldEnum[]
+  }
+
+  /**
+   * LabConnection findFirstOrThrow
+   */
+  export type LabConnectionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * Filter, which LabConnection to fetch.
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LabConnections to fetch.
+     */
+    orderBy?: LabConnectionOrderByWithRelationInput | LabConnectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for LabConnections.
+     */
+    cursor?: LabConnectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LabConnections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LabConnections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of LabConnections.
+     */
+    distinct?: LabConnectionScalarFieldEnum | LabConnectionScalarFieldEnum[]
+  }
+
+  /**
+   * LabConnection findMany
+   */
+  export type LabConnectionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * Filter, which LabConnections to fetch.
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LabConnections to fetch.
+     */
+    orderBy?: LabConnectionOrderByWithRelationInput | LabConnectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing LabConnections.
+     */
+    cursor?: LabConnectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LabConnections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LabConnections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of LabConnections.
+     */
+    distinct?: LabConnectionScalarFieldEnum | LabConnectionScalarFieldEnum[]
+  }
+
+  /**
+   * LabConnection create
+   */
+  export type LabConnectionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a LabConnection.
+     */
+    data: XOR<LabConnectionCreateInput, LabConnectionUncheckedCreateInput>
+  }
+
+  /**
+   * LabConnection createMany
+   */
+  export type LabConnectionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many LabConnections.
+     */
+    data: LabConnectionCreateManyInput | LabConnectionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * LabConnection createManyAndReturn
+   */
+  export type LabConnectionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * The data used to create many LabConnections.
+     */
+    data: LabConnectionCreateManyInput | LabConnectionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * LabConnection update
+   */
+  export type LabConnectionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a LabConnection.
+     */
+    data: XOR<LabConnectionUpdateInput, LabConnectionUncheckedUpdateInput>
+    /**
+     * Choose, which LabConnection to update.
+     */
+    where: LabConnectionWhereUniqueInput
+  }
+
+  /**
+   * LabConnection updateMany
+   */
+  export type LabConnectionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update LabConnections.
+     */
+    data: XOR<LabConnectionUpdateManyMutationInput, LabConnectionUncheckedUpdateManyInput>
+    /**
+     * Filter which LabConnections to update
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * Limit how many LabConnections to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * LabConnection updateManyAndReturn
+   */
+  export type LabConnectionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * The data used to update LabConnections.
+     */
+    data: XOR<LabConnectionUpdateManyMutationInput, LabConnectionUncheckedUpdateManyInput>
+    /**
+     * Filter which LabConnections to update
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * Limit how many LabConnections to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * LabConnection upsert
+   */
+  export type LabConnectionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the LabConnection to update in case it exists.
+     */
+    where: LabConnectionWhereUniqueInput
+    /**
+     * In case the LabConnection found by the `where` argument doesn't exist, create a new LabConnection with this data.
+     */
+    create: XOR<LabConnectionCreateInput, LabConnectionUncheckedCreateInput>
+    /**
+     * In case the LabConnection was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<LabConnectionUpdateInput, LabConnectionUncheckedUpdateInput>
+  }
+
+  /**
+   * LabConnection delete
+   */
+  export type LabConnectionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+    /**
+     * Filter which LabConnection to delete.
+     */
+    where: LabConnectionWhereUniqueInput
+  }
+
+  /**
+   * LabConnection deleteMany
+   */
+  export type LabConnectionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which LabConnections to delete
+     */
+    where?: LabConnectionWhereInput
+    /**
+     * Limit how many LabConnections to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * LabConnection without action
+   */
+  export type LabConnectionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LabConnection
+     */
+    select?: LabConnectionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the LabConnection
+     */
+    omit?: LabConnectionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LabConnectionInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -29208,6 +30741,12 @@ export namespace Prisma {
     failedLoginAttempts: 'failedLoginAttempts',
     lockedUntil: 'lockedUntil',
     lastFailedLogin: 'lastFailedLogin',
+    notificationPreferences: 'notificationPreferences',
+    healthProfileEncrypted: 'healthProfileEncrypted',
+    plan: 'plan',
+    planExpiresAt: 'planExpiresAt',
+    planUpdatedAt: 'planUpdatedAt',
+    onboardingCompletedAt: 'onboardingCompletedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     lastLoginAt: 'lastLoginAt'
@@ -29535,6 +31074,7 @@ export namespace Prisma {
     descriptionEncrypted: 'descriptionEncrypted',
     category: 'category',
     targetValue: 'targetValue',
+    targetValueEncrypted: 'targetValueEncrypted',
     currentValue: 'currentValue',
     startValue: 'startValue',
     unit: 'unit',
@@ -29658,6 +31198,26 @@ export namespace Prisma {
   export type CostAnalysisScalarFieldEnum = (typeof CostAnalysisScalarFieldEnum)[keyof typeof CostAnalysisScalarFieldEnum]
 
 
+  export const LabConnectionScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    provider: 'provider',
+    fhirPatientId: 'fhirPatientId',
+    accessTokenEncrypted: 'accessTokenEncrypted',
+    refreshTokenEncrypted: 'refreshTokenEncrypted',
+    tokenExpiresAt: 'tokenExpiresAt',
+    scopeGranted: 'scopeGranted',
+    connectedAt: 'connectedAt',
+    lastSyncAt: 'lastSyncAt',
+    syncStatus: 'syncStatus',
+    syncError: 'syncError',
+    lastImportedCount: 'lastImportedCount',
+    isActive: 'isActive'
+  };
+
+  export type LabConnectionScalarFieldEnum = (typeof LabConnectionScalarFieldEnum)[keyof typeof LabConnectionScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -29666,12 +31226,28 @@ export namespace Prisma {
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
   export const QueryMode: {
     default: 'default',
     insensitive: 'insensitive'
   };
 
   export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   export const NullsOrder: {
@@ -29747,6 +31323,20 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'QueryMode'
+   */
+  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -29999,6 +31589,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFilter<"User"> | number
     lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
     lastFailedLogin?: DateTimeNullableFilter<"User"> | Date | string | null
+    notificationPreferences?: JsonFilter<"User">
+    healthProfileEncrypted?: StringNullableFilter<"User"> | string | null
+    plan?: StringFilter<"User"> | string
+    planExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    planUpdatedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    onboardingCompletedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
@@ -30016,6 +31612,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionListRelationFilter
     expenseActuals?: ExpenseActualListRelationFilter
     costAnalyses?: CostAnalysisListRelationFilter
+    labConnections?: LabConnectionListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -30037,6 +31634,12 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrderInput | SortOrder
     lastFailedLogin?: SortOrderInput | SortOrder
+    notificationPreferences?: SortOrder
+    healthProfileEncrypted?: SortOrderInput | SortOrder
+    plan?: SortOrder
+    planExpiresAt?: SortOrderInput | SortOrder
+    planUpdatedAt?: SortOrderInput | SortOrder
+    onboardingCompletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
@@ -30054,6 +31657,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionOrderByRelationAggregateInput
     expenseActuals?: ExpenseActualOrderByRelationAggregateInput
     costAnalyses?: CostAnalysisOrderByRelationAggregateInput
+    labConnections?: LabConnectionOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -30078,6 +31682,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFilter<"User"> | number
     lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
     lastFailedLogin?: DateTimeNullableFilter<"User"> | Date | string | null
+    notificationPreferences?: JsonFilter<"User">
+    healthProfileEncrypted?: StringNullableFilter<"User"> | string | null
+    plan?: StringFilter<"User"> | string
+    planExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    planUpdatedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    onboardingCompletedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
@@ -30095,6 +31705,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionListRelationFilter
     expenseActuals?: ExpenseActualListRelationFilter
     costAnalyses?: CostAnalysisListRelationFilter
+    labConnections?: LabConnectionListRelationFilter
   }, "id" | "email" | "emailVerificationToken" | "passwordResetToken">
 
   export type UserOrderByWithAggregationInput = {
@@ -30116,6 +31727,12 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrderInput | SortOrder
     lastFailedLogin?: SortOrderInput | SortOrder
+    notificationPreferences?: SortOrder
+    healthProfileEncrypted?: SortOrderInput | SortOrder
+    plan?: SortOrder
+    planExpiresAt?: SortOrderInput | SortOrder
+    planUpdatedAt?: SortOrderInput | SortOrder
+    onboardingCompletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
@@ -30148,6 +31765,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntWithAggregatesFilter<"User"> | number
     lockedUntil?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     lastFailedLogin?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    notificationPreferences?: JsonWithAggregatesFilter<"User">
+    healthProfileEncrypted?: StringNullableWithAggregatesFilter<"User"> | string | null
+    plan?: StringWithAggregatesFilter<"User"> | string
+    planExpiresAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    planUpdatedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    onboardingCompletedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
@@ -31771,6 +33394,7 @@ export namespace Prisma {
     descriptionEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     category?: StringFilter<"HealthGoal"> | string
     targetValue?: DecimalFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     unit?: StringFilter<"HealthGoal"> | string
@@ -31797,6 +33421,7 @@ export namespace Prisma {
     descriptionEncrypted?: SortOrderInput | SortOrder
     category?: SortOrder
     targetValue?: SortOrder
+    targetValueEncrypted?: SortOrderInput | SortOrder
     currentValue?: SortOrderInput | SortOrder
     startValue?: SortOrderInput | SortOrder
     unit?: SortOrder
@@ -31826,6 +33451,7 @@ export namespace Prisma {
     descriptionEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     category?: StringFilter<"HealthGoal"> | string
     targetValue?: DecimalFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     unit?: StringFilter<"HealthGoal"> | string
@@ -31852,6 +33478,7 @@ export namespace Prisma {
     descriptionEncrypted?: SortOrderInput | SortOrder
     category?: SortOrder
     targetValue?: SortOrder
+    targetValueEncrypted?: SortOrderInput | SortOrder
     currentValue?: SortOrderInput | SortOrder
     startValue?: SortOrderInput | SortOrder
     unit?: SortOrder
@@ -31884,6 +33511,7 @@ export namespace Prisma {
     descriptionEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     category?: StringWithAggregatesFilter<"HealthGoal"> | string
     targetValue?: DecimalWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     unit?: StringWithAggregatesFilter<"HealthGoal"> | string
@@ -32434,6 +34062,109 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"CostAnalysis"> | Date | string
   }
 
+  export type LabConnectionWhereInput = {
+    AND?: LabConnectionWhereInput | LabConnectionWhereInput[]
+    OR?: LabConnectionWhereInput[]
+    NOT?: LabConnectionWhereInput | LabConnectionWhereInput[]
+    id?: UuidFilter<"LabConnection"> | string
+    userId?: UuidFilter<"LabConnection"> | string
+    provider?: StringFilter<"LabConnection"> | string
+    fhirPatientId?: StringNullableFilter<"LabConnection"> | string | null
+    accessTokenEncrypted?: StringFilter<"LabConnection"> | string
+    refreshTokenEncrypted?: StringNullableFilter<"LabConnection"> | string | null
+    tokenExpiresAt?: DateTimeNullableFilter<"LabConnection"> | Date | string | null
+    scopeGranted?: StringNullableFilter<"LabConnection"> | string | null
+    connectedAt?: DateTimeFilter<"LabConnection"> | Date | string
+    lastSyncAt?: DateTimeNullableFilter<"LabConnection"> | Date | string | null
+    syncStatus?: StringFilter<"LabConnection"> | string
+    syncError?: StringNullableFilter<"LabConnection"> | string | null
+    lastImportedCount?: IntFilter<"LabConnection"> | number
+    isActive?: BoolFilter<"LabConnection"> | boolean
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type LabConnectionOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    provider?: SortOrder
+    fhirPatientId?: SortOrderInput | SortOrder
+    accessTokenEncrypted?: SortOrder
+    refreshTokenEncrypted?: SortOrderInput | SortOrder
+    tokenExpiresAt?: SortOrderInput | SortOrder
+    scopeGranted?: SortOrderInput | SortOrder
+    connectedAt?: SortOrder
+    lastSyncAt?: SortOrderInput | SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrderInput | SortOrder
+    lastImportedCount?: SortOrder
+    isActive?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type LabConnectionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId_provider?: LabConnectionUserIdProviderCompoundUniqueInput
+    AND?: LabConnectionWhereInput | LabConnectionWhereInput[]
+    OR?: LabConnectionWhereInput[]
+    NOT?: LabConnectionWhereInput | LabConnectionWhereInput[]
+    userId?: UuidFilter<"LabConnection"> | string
+    provider?: StringFilter<"LabConnection"> | string
+    fhirPatientId?: StringNullableFilter<"LabConnection"> | string | null
+    accessTokenEncrypted?: StringFilter<"LabConnection"> | string
+    refreshTokenEncrypted?: StringNullableFilter<"LabConnection"> | string | null
+    tokenExpiresAt?: DateTimeNullableFilter<"LabConnection"> | Date | string | null
+    scopeGranted?: StringNullableFilter<"LabConnection"> | string | null
+    connectedAt?: DateTimeFilter<"LabConnection"> | Date | string
+    lastSyncAt?: DateTimeNullableFilter<"LabConnection"> | Date | string | null
+    syncStatus?: StringFilter<"LabConnection"> | string
+    syncError?: StringNullableFilter<"LabConnection"> | string | null
+    lastImportedCount?: IntFilter<"LabConnection"> | number
+    isActive?: BoolFilter<"LabConnection"> | boolean
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId_provider">
+
+  export type LabConnectionOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    provider?: SortOrder
+    fhirPatientId?: SortOrderInput | SortOrder
+    accessTokenEncrypted?: SortOrder
+    refreshTokenEncrypted?: SortOrderInput | SortOrder
+    tokenExpiresAt?: SortOrderInput | SortOrder
+    scopeGranted?: SortOrderInput | SortOrder
+    connectedAt?: SortOrder
+    lastSyncAt?: SortOrderInput | SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrderInput | SortOrder
+    lastImportedCount?: SortOrder
+    isActive?: SortOrder
+    _count?: LabConnectionCountOrderByAggregateInput
+    _avg?: LabConnectionAvgOrderByAggregateInput
+    _max?: LabConnectionMaxOrderByAggregateInput
+    _min?: LabConnectionMinOrderByAggregateInput
+    _sum?: LabConnectionSumOrderByAggregateInput
+  }
+
+  export type LabConnectionScalarWhereWithAggregatesInput = {
+    AND?: LabConnectionScalarWhereWithAggregatesInput | LabConnectionScalarWhereWithAggregatesInput[]
+    OR?: LabConnectionScalarWhereWithAggregatesInput[]
+    NOT?: LabConnectionScalarWhereWithAggregatesInput | LabConnectionScalarWhereWithAggregatesInput[]
+    id?: UuidWithAggregatesFilter<"LabConnection"> | string
+    userId?: UuidWithAggregatesFilter<"LabConnection"> | string
+    provider?: StringWithAggregatesFilter<"LabConnection"> | string
+    fhirPatientId?: StringNullableWithAggregatesFilter<"LabConnection"> | string | null
+    accessTokenEncrypted?: StringWithAggregatesFilter<"LabConnection"> | string
+    refreshTokenEncrypted?: StringNullableWithAggregatesFilter<"LabConnection"> | string | null
+    tokenExpiresAt?: DateTimeNullableWithAggregatesFilter<"LabConnection"> | Date | string | null
+    scopeGranted?: StringNullableWithAggregatesFilter<"LabConnection"> | string | null
+    connectedAt?: DateTimeWithAggregatesFilter<"LabConnection"> | Date | string
+    lastSyncAt?: DateTimeNullableWithAggregatesFilter<"LabConnection"> | Date | string | null
+    syncStatus?: StringWithAggregatesFilter<"LabConnection"> | string
+    syncError?: StringNullableWithAggregatesFilter<"LabConnection"> | string | null
+    lastImportedCount?: IntWithAggregatesFilter<"LabConnection"> | number
+    isActive?: BoolWithAggregatesFilter<"LabConnection"> | boolean
+  }
+
   export type UserCreateInput = {
     id?: string
     email: string
@@ -32453,6 +34184,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -32470,6 +34207,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -32491,6 +34229,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -32508,6 +34252,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -32529,6 +34274,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32546,6 +34297,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -32567,6 +34319,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32584,6 +34342,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -32605,6 +34364,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -32629,6 +34394,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32653,6 +34424,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -34614,6 +36391,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -34640,6 +36418,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -34664,6 +36443,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -34690,6 +36470,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -34715,6 +36496,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -34738,6 +36520,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -34762,6 +36545,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -35369,6 +37153,124 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type LabConnectionCreateInput = {
+    id?: string
+    provider: string
+    fhirPatientId?: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted?: string | null
+    tokenExpiresAt?: Date | string | null
+    scopeGranted?: string | null
+    connectedAt?: Date | string
+    lastSyncAt?: Date | string | null
+    syncStatus?: string
+    syncError?: string | null
+    lastImportedCount?: number
+    isActive?: boolean
+    user: UserCreateNestedOneWithoutLabConnectionsInput
+  }
+
+  export type LabConnectionUncheckedCreateInput = {
+    id?: string
+    userId: string
+    provider: string
+    fhirPatientId?: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted?: string | null
+    tokenExpiresAt?: Date | string | null
+    scopeGranted?: string | null
+    connectedAt?: Date | string
+    lastSyncAt?: Date | string | null
+    syncStatus?: string
+    syncError?: string | null
+    lastImportedCount?: number
+    isActive?: boolean
+  }
+
+  export type LabConnectionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    user?: UserUpdateOneRequiredWithoutLabConnectionsNestedInput
+  }
+
+  export type LabConnectionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type LabConnectionCreateManyInput = {
+    id?: string
+    userId: string
+    provider: string
+    fhirPatientId?: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted?: string | null
+    tokenExpiresAt?: Date | string | null
+    scopeGranted?: string | null
+    connectedAt?: Date | string
+    lastSyncAt?: Date | string | null
+    syncStatus?: string
+    syncError?: string | null
+    lastImportedCount?: number
+    isActive?: boolean
+  }
+
+  export type LabConnectionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type LabConnectionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+  }
+
   export type UuidFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -35443,6 +37345,29 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntFilter<$PrismaModel> | number
+  }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type DateTimeFilter<$PrismaModel = never> = {
@@ -35534,6 +37459,12 @@ export namespace Prisma {
     none?: CostAnalysisWhereInput
   }
 
+  export type LabConnectionListRelationFilter = {
+    every?: LabConnectionWhereInput
+    some?: LabConnectionWhereInput
+    none?: LabConnectionWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -35591,6 +37522,10 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type LabConnectionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type UserCountOrderByAggregateInput = {
     id?: SortOrder
     email?: SortOrder
@@ -35610,6 +37545,12 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrder
     lastFailedLogin?: SortOrder
+    notificationPreferences?: SortOrder
+    healthProfileEncrypted?: SortOrder
+    plan?: SortOrder
+    planExpiresAt?: SortOrder
+    planUpdatedAt?: SortOrder
+    onboardingCompletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrder
@@ -35638,6 +37579,11 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrder
     lastFailedLogin?: SortOrder
+    healthProfileEncrypted?: SortOrder
+    plan?: SortOrder
+    planExpiresAt?: SortOrder
+    planUpdatedAt?: SortOrder
+    onboardingCompletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrder
@@ -35662,6 +37608,11 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrder
     lastFailedLogin?: SortOrder
+    healthProfileEncrypted?: SortOrder
+    plan?: SortOrder
+    planExpiresAt?: SortOrder
+    planUpdatedAt?: SortOrder
+    onboardingCompletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrder
@@ -35768,6 +37719,32 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
   }
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -37267,6 +39244,7 @@ export namespace Prisma {
     descriptionEncrypted?: SortOrder
     category?: SortOrder
     targetValue?: SortOrder
+    targetValueEncrypted?: SortOrder
     currentValue?: SortOrder
     startValue?: SortOrder
     unit?: SortOrder
@@ -37298,6 +39276,7 @@ export namespace Prisma {
     descriptionEncrypted?: SortOrder
     category?: SortOrder
     targetValue?: SortOrder
+    targetValueEncrypted?: SortOrder
     currentValue?: SortOrder
     startValue?: SortOrder
     unit?: SortOrder
@@ -37322,6 +39301,7 @@ export namespace Prisma {
     descriptionEncrypted?: SortOrder
     category?: SortOrder
     targetValue?: SortOrder
+    targetValueEncrypted?: SortOrder
     currentValue?: SortOrder
     startValue?: SortOrder
     unit?: SortOrder
@@ -37719,6 +39699,70 @@ export namespace Prisma {
     deductibleMetMonth?: SortOrder
   }
 
+  export type LabConnectionUserIdProviderCompoundUniqueInput = {
+    userId: string
+    provider: string
+  }
+
+  export type LabConnectionCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    provider?: SortOrder
+    fhirPatientId?: SortOrder
+    accessTokenEncrypted?: SortOrder
+    refreshTokenEncrypted?: SortOrder
+    tokenExpiresAt?: SortOrder
+    scopeGranted?: SortOrder
+    connectedAt?: SortOrder
+    lastSyncAt?: SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrder
+    lastImportedCount?: SortOrder
+    isActive?: SortOrder
+  }
+
+  export type LabConnectionAvgOrderByAggregateInput = {
+    lastImportedCount?: SortOrder
+  }
+
+  export type LabConnectionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    provider?: SortOrder
+    fhirPatientId?: SortOrder
+    accessTokenEncrypted?: SortOrder
+    refreshTokenEncrypted?: SortOrder
+    tokenExpiresAt?: SortOrder
+    scopeGranted?: SortOrder
+    connectedAt?: SortOrder
+    lastSyncAt?: SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrder
+    lastImportedCount?: SortOrder
+    isActive?: SortOrder
+  }
+
+  export type LabConnectionMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    provider?: SortOrder
+    fhirPatientId?: SortOrder
+    accessTokenEncrypted?: SortOrder
+    refreshTokenEncrypted?: SortOrder
+    tokenExpiresAt?: SortOrder
+    scopeGranted?: SortOrder
+    connectedAt?: SortOrder
+    lastSyncAt?: SortOrder
+    syncStatus?: SortOrder
+    syncError?: SortOrder
+    lastImportedCount?: SortOrder
+    isActive?: SortOrder
+  }
+
+  export type LabConnectionSumOrderByAggregateInput = {
+    lastImportedCount?: SortOrder
+  }
+
   export type AuditLogCreateNestedManyWithoutUserInput = {
     create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
@@ -37817,6 +39861,13 @@ export namespace Prisma {
     connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
   }
 
+  export type LabConnectionCreateNestedManyWithoutUserInput = {
+    create?: XOR<LabConnectionCreateWithoutUserInput, LabConnectionUncheckedCreateWithoutUserInput> | LabConnectionCreateWithoutUserInput[] | LabConnectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: LabConnectionCreateOrConnectWithoutUserInput | LabConnectionCreateOrConnectWithoutUserInput[]
+    createMany?: LabConnectionCreateManyUserInputEnvelope
+    connect?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+  }
+
   export type AuditLogUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
@@ -37913,6 +39964,13 @@ export namespace Prisma {
     connectOrCreate?: CostAnalysisCreateOrConnectWithoutUserInput | CostAnalysisCreateOrConnectWithoutUserInput[]
     createMany?: CostAnalysisCreateManyUserInputEnvelope
     connect?: CostAnalysisWhereUniqueInput | CostAnalysisWhereUniqueInput[]
+  }
+
+  export type LabConnectionUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<LabConnectionCreateWithoutUserInput, LabConnectionUncheckedCreateWithoutUserInput> | LabConnectionCreateWithoutUserInput[] | LabConnectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: LabConnectionCreateOrConnectWithoutUserInput | LabConnectionCreateOrConnectWithoutUserInput[]
+    createMany?: LabConnectionCreateManyUserInputEnvelope
+    connect?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -38143,6 +40201,20 @@ export namespace Prisma {
     deleteMany?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
   }
 
+  export type LabConnectionUpdateManyWithoutUserNestedInput = {
+    create?: XOR<LabConnectionCreateWithoutUserInput, LabConnectionUncheckedCreateWithoutUserInput> | LabConnectionCreateWithoutUserInput[] | LabConnectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: LabConnectionCreateOrConnectWithoutUserInput | LabConnectionCreateOrConnectWithoutUserInput[]
+    upsert?: LabConnectionUpsertWithWhereUniqueWithoutUserInput | LabConnectionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: LabConnectionCreateManyUserInputEnvelope
+    set?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    disconnect?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    delete?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    connect?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    update?: LabConnectionUpdateWithWhereUniqueWithoutUserInput | LabConnectionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: LabConnectionUpdateManyWithWhereWithoutUserInput | LabConnectionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: LabConnectionScalarWhereInput | LabConnectionScalarWhereInput[]
+  }
+
   export type AuditLogUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<AuditLogCreateWithoutUserInput, AuditLogUncheckedCreateWithoutUserInput> | AuditLogCreateWithoutUserInput[] | AuditLogUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AuditLogCreateOrConnectWithoutUserInput | AuditLogCreateOrConnectWithoutUserInput[]
@@ -38337,6 +40409,20 @@ export namespace Prisma {
     update?: CostAnalysisUpdateWithWhereUniqueWithoutUserInput | CostAnalysisUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: CostAnalysisUpdateManyWithWhereWithoutUserInput | CostAnalysisUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: CostAnalysisScalarWhereInput | CostAnalysisScalarWhereInput[]
+  }
+
+  export type LabConnectionUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<LabConnectionCreateWithoutUserInput, LabConnectionUncheckedCreateWithoutUserInput> | LabConnectionCreateWithoutUserInput[] | LabConnectionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: LabConnectionCreateOrConnectWithoutUserInput | LabConnectionCreateOrConnectWithoutUserInput[]
+    upsert?: LabConnectionUpsertWithWhereUniqueWithoutUserInput | LabConnectionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: LabConnectionCreateManyUserInputEnvelope
+    set?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    disconnect?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    delete?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    connect?: LabConnectionWhereUniqueInput | LabConnectionWhereUniqueInput[]
+    update?: LabConnectionUpdateWithWhereUniqueWithoutUserInput | LabConnectionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: LabConnectionUpdateManyWithWhereWithoutUserInput | LabConnectionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: LabConnectionScalarWhereInput | LabConnectionScalarWhereInput[]
   }
 
   export type UserCreateNestedOneWithoutSessionsInput = {
@@ -39194,6 +41280,20 @@ export namespace Prisma {
     update?: XOR<XOR<InsurancePlanUpdateToOneWithWhereWithoutCostAnalysesInput, InsurancePlanUpdateWithoutCostAnalysesInput>, InsurancePlanUncheckedUpdateWithoutCostAnalysesInput>
   }
 
+  export type UserCreateNestedOneWithoutLabConnectionsInput = {
+    create?: XOR<UserCreateWithoutLabConnectionsInput, UserUncheckedCreateWithoutLabConnectionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutLabConnectionsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutLabConnectionsNestedInput = {
+    create?: XOR<UserCreateWithoutLabConnectionsInput, UserUncheckedCreateWithoutLabConnectionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutLabConnectionsInput
+    upsert?: UserUpsertWithoutLabConnectionsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutLabConnectionsInput, UserUpdateWithoutLabConnectionsInput>, UserUncheckedUpdateWithoutLabConnectionsInput>
+  }
+
   export type NestedUuidFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -39394,6 +41494,29 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -39911,6 +42034,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -39935,6 +42059,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -40563,6 +42688,48 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type LabConnectionCreateWithoutUserInput = {
+    id?: string
+    provider: string
+    fhirPatientId?: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted?: string | null
+    tokenExpiresAt?: Date | string | null
+    scopeGranted?: string | null
+    connectedAt?: Date | string
+    lastSyncAt?: Date | string | null
+    syncStatus?: string
+    syncError?: string | null
+    lastImportedCount?: number
+    isActive?: boolean
+  }
+
+  export type LabConnectionUncheckedCreateWithoutUserInput = {
+    id?: string
+    provider: string
+    fhirPatientId?: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted?: string | null
+    tokenExpiresAt?: Date | string | null
+    scopeGranted?: string | null
+    connectedAt?: Date | string
+    lastSyncAt?: Date | string | null
+    syncStatus?: string
+    syncError?: string | null
+    lastImportedCount?: number
+    isActive?: boolean
+  }
+
+  export type LabConnectionCreateOrConnectWithoutUserInput = {
+    where: LabConnectionWhereUniqueInput
+    create: XOR<LabConnectionCreateWithoutUserInput, LabConnectionUncheckedCreateWithoutUserInput>
+  }
+
+  export type LabConnectionCreateManyUserInputEnvelope = {
+    data: LabConnectionCreateManyUserInput | LabConnectionCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type AuditLogUpsertWithWhereUniqueWithoutUserInput = {
     where: AuditLogWhereUniqueInput
     update: XOR<AuditLogUpdateWithoutUserInput, AuditLogUncheckedUpdateWithoutUserInput>
@@ -40700,6 +42867,7 @@ export namespace Prisma {
     descriptionEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     category?: StringFilter<"HealthGoal"> | string
     targetValue?: DecimalFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     unit?: StringFilter<"HealthGoal"> | string
@@ -41140,6 +43308,42 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"CostAnalysis"> | Date | string
   }
 
+  export type LabConnectionUpsertWithWhereUniqueWithoutUserInput = {
+    where: LabConnectionWhereUniqueInput
+    update: XOR<LabConnectionUpdateWithoutUserInput, LabConnectionUncheckedUpdateWithoutUserInput>
+    create: XOR<LabConnectionCreateWithoutUserInput, LabConnectionUncheckedCreateWithoutUserInput>
+  }
+
+  export type LabConnectionUpdateWithWhereUniqueWithoutUserInput = {
+    where: LabConnectionWhereUniqueInput
+    data: XOR<LabConnectionUpdateWithoutUserInput, LabConnectionUncheckedUpdateWithoutUserInput>
+  }
+
+  export type LabConnectionUpdateManyWithWhereWithoutUserInput = {
+    where: LabConnectionScalarWhereInput
+    data: XOR<LabConnectionUpdateManyMutationInput, LabConnectionUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type LabConnectionScalarWhereInput = {
+    AND?: LabConnectionScalarWhereInput | LabConnectionScalarWhereInput[]
+    OR?: LabConnectionScalarWhereInput[]
+    NOT?: LabConnectionScalarWhereInput | LabConnectionScalarWhereInput[]
+    id?: UuidFilter<"LabConnection"> | string
+    userId?: UuidFilter<"LabConnection"> | string
+    provider?: StringFilter<"LabConnection"> | string
+    fhirPatientId?: StringNullableFilter<"LabConnection"> | string | null
+    accessTokenEncrypted?: StringFilter<"LabConnection"> | string
+    refreshTokenEncrypted?: StringNullableFilter<"LabConnection"> | string | null
+    tokenExpiresAt?: DateTimeNullableFilter<"LabConnection"> | Date | string | null
+    scopeGranted?: StringNullableFilter<"LabConnection"> | string | null
+    connectedAt?: DateTimeFilter<"LabConnection"> | Date | string
+    lastSyncAt?: DateTimeNullableFilter<"LabConnection"> | Date | string | null
+    syncStatus?: StringFilter<"LabConnection"> | string
+    syncError?: StringNullableFilter<"LabConnection"> | string | null
+    lastImportedCount?: IntFilter<"LabConnection"> | number
+    isActive?: BoolFilter<"LabConnection"> | boolean
+  }
+
   export type UserCreateWithoutSessionsInput = {
     id?: string
     email: string
@@ -41159,6 +43363,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41175,6 +43385,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -41196,6 +43407,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41212,6 +43429,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -41249,6 +43467,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41265,6 +43489,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -41286,6 +43511,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41302,6 +43533,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutEncryptionKeysInput = {
@@ -41323,6 +43555,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41339,6 +43577,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutEncryptionKeysInput = {
@@ -41360,6 +43599,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41376,6 +43621,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutEncryptionKeysInput = {
@@ -41413,6 +43659,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41429,6 +43681,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutEncryptionKeysInput = {
@@ -41450,6 +43703,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41466,6 +43725,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutPatientRelationshipsInput = {
@@ -41487,6 +43747,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41503,6 +43769,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutPatientRelationshipsInput = {
@@ -41524,6 +43791,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41540,6 +43813,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutPatientRelationshipsInput = {
@@ -41566,6 +43840,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41582,6 +43862,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutProviderRelationshipsInput = {
@@ -41603,6 +43884,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41619,6 +43906,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutProviderRelationshipsInput = {
@@ -41656,6 +43944,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41672,6 +43966,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutPatientRelationshipsInput = {
@@ -41693,6 +43988,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41709,6 +44010,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserUpsertWithoutProviderRelationshipsInput = {
@@ -41741,6 +44043,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41757,6 +44065,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutProviderRelationshipsInput = {
@@ -41778,6 +44087,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41794,6 +44109,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerCreateWithoutUserFileInput = {
@@ -41871,6 +44187,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41887,6 +44209,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutFilesInput = {
@@ -41908,6 +44231,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41924,6 +44253,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutFilesInput = {
@@ -41977,6 +44307,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41993,6 +44329,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutFilesInput = {
@@ -42014,6 +44351,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42030,6 +44373,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerHistoryCreateWithoutBiomarkerInput = {
@@ -42112,6 +44456,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42128,6 +44478,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutBiomarkersInput = {
@@ -42149,6 +44500,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42165,6 +44522,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutBiomarkersInput = {
@@ -42272,6 +44630,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42288,6 +44652,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutBiomarkersInput = {
@@ -42309,6 +44674,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42325,6 +44696,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type BiomarkerCreateWithoutHistoryInput = {
@@ -42498,6 +44870,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42514,6 +44892,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutInsurancePlansInput = {
@@ -42535,6 +44914,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42551,6 +44936,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutInsurancePlansInput = {
@@ -42743,6 +45129,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42759,6 +45151,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutInsurancePlansInput = {
@@ -42780,6 +45173,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42796,6 +45195,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type ExpenseProjectionUpsertWithWhereUniqueWithoutPlanInput = {
@@ -43373,6 +45773,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43389,6 +45795,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutDnaDataInput = {
@@ -43410,6 +45817,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43426,6 +45839,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutDnaDataInput = {
@@ -43527,6 +45941,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43543,6 +45963,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDnaDataInput = {
@@ -43564,6 +45985,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43580,6 +46007,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput = {
@@ -43807,6 +46235,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43823,6 +46257,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutHealthNeedsInput = {
@@ -43844,6 +46279,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43860,6 +46301,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutHealthNeedsInput = {
@@ -43897,6 +46339,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43913,6 +46361,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutHealthNeedsInput = {
@@ -43934,6 +46383,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43950,6 +46405,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type GoalProgressHistoryCreateWithoutGoalInput = {
@@ -43997,6 +46453,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44013,6 +46475,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutHealthGoalsInput = {
@@ -44034,6 +46497,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44050,6 +46519,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutHealthGoalsInput = {
@@ -44115,6 +46585,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44131,6 +46607,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutHealthGoalsInput = {
@@ -44152,6 +46629,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44168,6 +46651,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type HealthGoalCreateWithoutProgressHistoryInput = {
@@ -44176,6 +46660,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -44201,6 +46686,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -44240,6 +46726,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -44265,6 +46752,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -44301,6 +46789,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44317,6 +46811,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -44338,6 +46833,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44354,6 +46855,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -44391,6 +46893,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44407,6 +46915,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -44428,6 +46937,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44444,6 +46959,7 @@ export namespace Prisma {
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutExpenseProjectionsInput = {
@@ -44465,6 +46981,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44481,6 +47003,7 @@ export namespace Prisma {
     files?: UserFileCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutExpenseProjectionsInput = {
@@ -44502,6 +47025,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44518,6 +47047,7 @@ export namespace Prisma {
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutExpenseProjectionsInput = {
@@ -44854,6 +47384,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44870,6 +47406,7 @@ export namespace Prisma {
     files?: UserFileUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutExpenseProjectionsInput = {
@@ -44891,6 +47428,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44907,6 +47450,7 @@ export namespace Prisma {
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type InsurancePlanUpsertWithoutExpenseProjectionsInput = {
@@ -45201,6 +47745,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -45217,6 +47767,7 @@ export namespace Prisma {
     files?: UserFileCreateNestedManyWithoutUserInput
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutExpenseActualsInput = {
@@ -45238,6 +47789,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -45254,6 +47811,7 @@ export namespace Prisma {
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutExpenseActualsInput = {
@@ -45575,6 +48133,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -45591,6 +48155,7 @@ export namespace Prisma {
     files?: UserFileUpdateManyWithoutUserNestedInput
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutExpenseActualsInput = {
@@ -45612,6 +48177,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -45628,6 +48199,7 @@ export namespace Prisma {
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type InsurancePlanUpsertWithoutExpenseActualsInput = {
@@ -45945,6 +48517,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -45961,6 +48539,7 @@ export namespace Prisma {
     files?: UserFileCreateNestedManyWithoutUserInput
     expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutCostAnalysesInput = {
@@ -45982,6 +48561,12 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -45998,6 +48583,7 @@ export namespace Prisma {
     files?: UserFileUncheckedCreateNestedManyWithoutUserInput
     expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
     expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutCostAnalysesInput = {
@@ -46286,6 +48872,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -46302,6 +48894,7 @@ export namespace Prisma {
     files?: UserFileUpdateManyWithoutUserNestedInput
     expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutCostAnalysesInput = {
@@ -46323,6 +48916,12 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -46339,6 +48938,7 @@ export namespace Prisma {
     files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
     expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type InsurancePlanUpsertWithoutCostAnalysesInput = {
@@ -46598,6 +49198,198 @@ export namespace Prisma {
     expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutPlanNestedInput
   }
 
+  export type UserCreateWithoutLabConnectionsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
+    dnaData?: DNADataCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
+    files?: UserFileCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutLabConnectionsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    firstNameEncrypted?: string | null
+    lastNameEncrypted?: string | null
+    dateOfBirthEncrypted?: string | null
+    phoneEncrypted?: string | null
+    addressEncrypted?: string | null
+    emailVerified?: boolean
+    emailVerificationToken?: string | null
+    emailVerificationExpires?: Date | string | null
+    passwordResetToken?: string | null
+    passwordResetExpires?: Date | string | null
+    isActive?: boolean
+    role?: $Enums.UserRole
+    failedLoginAttempts?: number
+    lockedUntil?: Date | string | null
+    lastFailedLogin?: Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: string | null
+    plan?: string
+    planExpiresAt?: Date | string | null
+    planUpdatedAt?: Date | string | null
+    onboardingCompletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    lastLoginAt?: Date | string | null
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
+    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
+    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
+    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
+    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
+    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
+    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
+    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
+    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
+    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
+    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutLabConnectionsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutLabConnectionsInput, UserUncheckedCreateWithoutLabConnectionsInput>
+  }
+
+  export type UserUpsertWithoutLabConnectionsInput = {
+    update: XOR<UserUpdateWithoutLabConnectionsInput, UserUncheckedUpdateWithoutLabConnectionsInput>
+    create: XOR<UserCreateWithoutLabConnectionsInput, UserUncheckedCreateWithoutLabConnectionsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutLabConnectionsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutLabConnectionsInput, UserUncheckedUpdateWithoutLabConnectionsInput>
+  }
+
+  export type UserUpdateWithoutLabConnectionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
+    files?: UserFileUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutLabConnectionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
+    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notificationPreferences?: JsonNullValueInput | InputJsonValue
+    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    plan?: StringFieldUpdateOperationsInput | string
+    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
+    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
+    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
+    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
+    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
+    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
+    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
+    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
+    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
+    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
+    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
+  }
+
   export type AuditLogCreateManyUserInput = {
     id?: string
     actorType: $Enums.ActorType
@@ -46655,6 +49447,7 @@ export namespace Prisma {
     descriptionEncrypted?: string | null
     category: string
     targetValue: Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
     unit: string
@@ -46916,6 +49709,22 @@ export namespace Prisma {
     createdAt?: Date | string
   }
 
+  export type LabConnectionCreateManyUserInput = {
+    id?: string
+    provider: string
+    fhirPatientId?: string | null
+    accessTokenEncrypted: string
+    refreshTokenEncrypted?: string | null
+    tokenExpiresAt?: Date | string | null
+    scopeGranted?: string | null
+    connectedAt?: Date | string
+    lastSyncAt?: Date | string | null
+    syncStatus?: string
+    syncError?: string | null
+    lastImportedCount?: number
+    isActive?: boolean
+  }
+
   export type AuditLogUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     actorType?: EnumActorTypeFieldUpdateOperationsInput | $Enums.ActorType
@@ -47081,6 +49890,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -47105,6 +49915,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -47129,6 +49940,7 @@ export namespace Prisma {
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
     targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     unit?: StringFieldUpdateOperationsInput | string
@@ -47888,6 +50700,54 @@ export namespace Prisma {
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LabConnectionUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type LabConnectionUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+  }
+
+  export type LabConnectionUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    fhirPatientId?: NullableStringFieldUpdateOperationsInput | string | null
+    accessTokenEncrypted?: StringFieldUpdateOperationsInput | string
+    refreshTokenEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scopeGranted?: NullableStringFieldUpdateOperationsInput | string | null
+    connectedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastSyncAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    syncStatus?: StringFieldUpdateOperationsInput | string
+    syncError?: NullableStringFieldUpdateOperationsInput | string | null
+    lastImportedCount?: IntFieldUpdateOperationsInput | number
+    isActive?: BoolFieldUpdateOperationsInput | boolean
   }
 
   export type BiomarkerCreateManyUserFileInput = {

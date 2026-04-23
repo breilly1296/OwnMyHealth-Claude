@@ -26,6 +26,7 @@ import {
   validatePasswordStrength,
   revokeRefreshToken,
   revokeAllUserTokens,
+  revokeAccessToken,
   refreshTokens,
   verifyEmail as verifyEmailService,
   resendVerificationEmail as resendVerificationService,
@@ -380,6 +381,18 @@ export async function logout(
   const refreshTokenValue = req.cookies?.refresh_token;
   if (refreshTokenValue) {
     await revokeRefreshToken(refreshTokenValue);
+  }
+
+  // Revoke the access token too. Access tokens are short-lived (15 min),
+  // but a logged-out user's token should stop working on this instance
+  // immediately. Extract from cookie OR Authorization header — either
+  // could be carrying the current session.
+  const accessTokenFromCookie = req.cookies?.access_token;
+  const authHeader = req.headers.authorization;
+  const accessTokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+  const accessTokenValue = accessTokenFromCookie || accessTokenFromHeader;
+  if (accessTokenValue) {
+    revokeAccessToken(accessTokenValue);
   }
 
   // Clear cookies

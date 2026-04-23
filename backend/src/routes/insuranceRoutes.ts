@@ -24,7 +24,7 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { uploadLimiter } from '../middleware/rateLimiter.js';
+import { uploadLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import * as insuranceController from '../controllers/insuranceController.js';
 import { uploadSBC, reanalyzePlan } from '../controllers/upload/index.js';
@@ -117,6 +117,7 @@ router.put(
   validate(schemas.uuidParam, 'params'),
   blockDemoAI,
   uploadLimiter,
+  aiLimiter,
   upload.single('file'),
   asyncHandler(reanalyzePlan)
 );
@@ -127,6 +128,7 @@ router.post(
   '/upload-sbc',
   blockDemoAI,
   uploadLimiter,
+  aiLimiter,
   upload.single('file'),
   asyncHandler(uploadSBC)
 );

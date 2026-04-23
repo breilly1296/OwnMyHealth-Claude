@@ -58,6 +58,38 @@ export const SUPPORTED_MIME_TYPES = {
 
 export type UploadType = keyof typeof SUPPORTED_MIME_TYPES;
 
+/**
+ * Magic bytes per mimetype. Used to verify that the client-declared mimetype
+ * actually matches file content — multer's fileFilter only checks the
+ * Content-Type header, which is attacker-controlled.
+ *
+ * PDF is intentionally listed here too so the base case is covered; the more
+ * detailed PDF-version check in `validatePdfHeader` is called separately by
+ * upload handlers that invoke pdf-parse / Claude.
+ */
+const MAGIC_BYTES: Record<string, Buffer[]> = {
+  'application/pdf': [Buffer.from([0x25, 0x50, 0x44, 0x46])],           // %PDF
+  'image/png': [Buffer.from([0x89, 0x50, 0x4e, 0x47])],                 // .PNG
+  'image/jpeg': [Buffer.from([0xff, 0xd8, 0xff])],                      // JPEG SOI
+  'image/gif': [Buffer.from('GIF87a', 'ascii'), Buffer.from('GIF89a', 'ascii')],
+  'image/tiff': [
+    Buffer.from([0x4d, 0x4d, 0x00, 0x2a]),                              // TIFF big-endian
+    Buffer.from([0x49, 0x49, 0x2a, 0x00]),                              // TIFF little-endian
+  ],
+  'image/webp': [Buffer.from([0x52, 0x49, 0x46, 0x46])],                // RIFF (WebP container)
+};
+
+function validateMagicBytes(buffer: Buffer, mimetype: string): void {
+  const expected = MAGIC_BYTES[mimetype];
+  if (!expected) return; // No check for mimetypes not in the map
+  const matches = expected.some((magic) =>
+    buffer.length >= magic.length && buffer.subarray(0, magic.length).equals(magic)
+  );
+  if (!matches) {
+    throw new ValidationError('File content does not match its declared type');
+  }
+}
+
 /** Validate uploaded file — throws ValidationError if invalid */
 export function validateUploadFile(
   file: Express.Multer.File | undefined,
@@ -80,6 +112,10 @@ export function validateUploadFile(
   if (file.size > maxSizeBytes) {
     throw new ValidationError(`File size must be less than ${maxSizeMB}MB`);
   }
+
+  // Verify magic bytes match declared mimetype — defends against clients
+  // spoofing Content-Type to smuggle a different file format.
+  validateMagicBytes(file.buffer, file.mimetype);
 }
 
 // ============================================
@@ -105,9 +141,17 @@ export interface CreateBiomarkersOptions {
   userFileId?: string | null;
 }
 
-/** Create biomarkers from OCR/Claude results — encrypts values+notes and persists */
+/**
+ * Create biomarkers from OCR/Claude results — encrypts values+notes and persists.
+ *
+ * `tx` is named to reinforce the RLS contract: callers must pass a Prisma
+ * transaction client obtained from `withRLSContext(userId, ...)` / `withRLSTransaction(...)`,
+ * NOT the module-level Prisma client. Naming it `tx` (instead of `prisma`)
+ * keeps the CI RLS guard honest — a bare `prisma.*` call would slip past the
+ * grep if the local parameter was also named `prisma`.
+ */
 export async function createBiomarkersFromOCRResult(
-  prisma: { biomarker: ReturnType<typeof getPrismaClient>['biomarker'] },
+  tx: { biomarker: ReturnType<typeof getPrismaClient>['biomarker'] },
   encryptionService: ReturnType<typeof getEncryptionService>,
   userSalt: string,
   options: CreateBiomarkersOptions
@@ -124,7 +168,7 @@ export async function createBiomarkersFromOCRResult(
     const isOutOfRange = biomarker.value < biomarker.normalRange.min ||
                          biomarker.value > biomarker.normalRange.max;
 
-    const created = await prisma.biomarker.create({
+    const created = await tx.biomarker.create({
       data: {
         userId,
         category: biomarker.category,

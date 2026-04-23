@@ -40,6 +40,9 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [isEditingRange, setIsEditingRange] = useState(false);
+  // Guard against double-click duplicates. The parent's onAdd triggers an
+  // async save; without this a fast double-click creates two biomarker rows.
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [normalRange, setNormalRange] = useState<NormalRange>({
     min: 0,
     max: 0,
@@ -59,8 +62,10 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     const biomarker = categoryBiomarkers.find(b => b.name === selectedBiomarker);
     if (biomarker && value) {
+      setIsSubmitting(true);
       onAdd({
         id: crypto.randomUUID(),
         name: biomarker.name,
@@ -79,6 +84,7 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
       setNotes('');
       setIsEditingRange(false);
       setNormalRange({ min: 0, max: 0, source: normalRangeSources[0] });
+      setIsSubmitting(false);
     }
   };
 
@@ -218,9 +224,10 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
             </button>
             <button
               type="submit"
-              className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-xl sm:rounded-md hover:bg-blue-700 font-medium"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-xl sm:rounded-md hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed font-medium"
             >
-              Add Measurement
+              {isSubmitting ? 'Adding…' : 'Add Measurement'}
             </button>
           </div>
         </form>

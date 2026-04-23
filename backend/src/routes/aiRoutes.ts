@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
+import { requirePlanLimit } from '../middleware/planGating.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { handleAIChat } from '../controllers/aiChatController.js';
@@ -26,6 +27,7 @@ router.post(
   '/chat',
   aiLimiter,
   blockDemoAI,
+  requirePlanLimit('aiChatsPerDay'),
   validate(schemas.ai.chat),
   asyncHandler(handleAIChat)
 );

@@ -6,6 +6,7 @@
  */
 
 import { Response } from 'express';
+import { Prisma } from '../../generated/prisma/index.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { getPrismaClient, withRLSContext, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
@@ -29,10 +30,32 @@ const DECRYPT_BATCH_SIZE = 20;
 // Profile response types
 // ============================================
 
-interface NotificationPreferences {
+/**
+ * Email notification preferences — the canonical new shape.
+ *
+ * Defaults are all-on so new users get the retention emails without opting
+ * in. Anyone who explicitly toggles something to false keeps that choice.
+ */
+export interface EmailNotificationPreferences {
+  enabled: boolean;          // master switch
+  newResults: boolean;       // lab extraction completed
+  outOfRangeAlerts: boolean; // one or more biomarkers flagged abnormal
+  goalReminders: boolean;    // weekly nudge on active goals
+  weeklySummary: boolean;    // weekly digest
+  planExpiring: boolean;     // 7 days before plan expiry
+}
+
+/**
+ * Full preferences response shape. The top-level `emailNotifications` /
+ * `weeklySummary` / `abnormalAlerts` keys are back-compat aliases so the
+ * existing Account Settings toggles keep working unchanged. New UIs read
+ * `email.*` directly; dispatchers (notificationService) also read `email.*`.
+ */
+export interface NotificationPreferences {
   emailNotifications: boolean;
   weeklySummary: boolean;
   abnormalAlerts: boolean;
+  email: EmailNotificationPreferences;
 }
 
 interface ProfileResponse {
@@ -43,21 +66,60 @@ interface ProfileResponse {
   notificationPreferences: NotificationPreferences;
 }
 
-const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  emailNotifications: true,
-  weeklySummary: false,
-  abnormalAlerts: true,
+export const DEFAULT_EMAIL_PREFERENCES: EmailNotificationPreferences = {
+  enabled: true,
+  newResults: true,
+  outOfRangeAlerts: true,
+  goalReminders: true,
+  weeklySummary: true,
+  planExpiring: true,
 };
 
-function normalizeNotificationPreferences(raw: unknown): NotificationPreferences {
-  const base = { ...DEFAULT_NOTIFICATION_PREFERENCES };
+/**
+ * Normalize whatever shape is in the DB into the canonical response.
+ *
+ * Handles three shapes the column might hold:
+ *   1. New nested: `{ email: { enabled, newResults, ... } }`
+ *   2. Legacy flat: `{ emailNotifications, weeklySummary, abnormalAlerts }`
+ *   3. Empty/unknown: defaults
+ *
+ * The back-compat mapping: legacy `emailNotifications` = new `email.enabled`;
+ * legacy `abnormalAlerts` = new `email.outOfRangeAlerts`; legacy
+ * `weeklySummary` = new `email.weeklySummary`. Nested keys win over legacy
+ * when both are present (new UI is authoritative).
+ */
+export function normalizeNotificationPreferences(raw: unknown): NotificationPreferences {
+  const email: EmailNotificationPreferences = { ...DEFAULT_EMAIL_PREFERENCES };
+
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const stored = raw as Record<string, unknown>;
-    if (typeof stored.emailNotifications === 'boolean') base.emailNotifications = stored.emailNotifications;
-    if (typeof stored.weeklySummary === 'boolean') base.weeklySummary = stored.weeklySummary;
-    if (typeof stored.abnormalAlerts === 'boolean') base.abnormalAlerts = stored.abnormalAlerts;
+
+    // 1. Legacy flat-key back-compat. Apply first so nested keys can override.
+    if (typeof stored.emailNotifications === 'boolean') email.enabled = stored.emailNotifications;
+    if (typeof stored.weeklySummary === 'boolean') email.weeklySummary = stored.weeklySummary;
+    if (typeof stored.abnormalAlerts === 'boolean') email.outOfRangeAlerts = stored.abnormalAlerts;
+
+    // 2. New nested shape — overlays on top of the legacy values.
+    const nested = stored.email;
+    if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+      const e = nested as Record<string, unknown>;
+      if (typeof e.enabled === 'boolean') email.enabled = e.enabled;
+      if (typeof e.newResults === 'boolean') email.newResults = e.newResults;
+      if (typeof e.outOfRangeAlerts === 'boolean') email.outOfRangeAlerts = e.outOfRangeAlerts;
+      if (typeof e.goalReminders === 'boolean') email.goalReminders = e.goalReminders;
+      if (typeof e.weeklySummary === 'boolean') email.weeklySummary = e.weeklySummary;
+      if (typeof e.planExpiring === 'boolean') email.planExpiring = e.planExpiring;
+    }
   }
-  return base;
+
+  return {
+    // Canonical new shape:
+    email,
+    // Back-compat aliases so the existing settings UI keeps working:
+    emailNotifications: email.enabled,
+    weeklySummary: email.weeklySummary,
+    abnormalAlerts: email.outOfRangeAlerts,
+  };
 }
 
 // Export data response types
@@ -591,6 +653,15 @@ export async function exportUserData(
     data: exportData,
   };
 
+  // Prevent browsers and proxies from caching PHI. Export responses contain
+  // the entire decrypted health record — a cached copy on a shared terminal
+  // or corporate proxy would be a HIPAA incident.
+  res.set({
+    'Cache-Control': 'no-store, no-cache, private, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  });
+
   res.json(response);
 }
 
@@ -964,15 +1035,52 @@ export async function updateProfile(
 }
 
 /**
- * Update the authenticated user's notification preferences
+ * Fetch the authenticated user's notification preferences.
+ * GET /api/v1/settings/notifications
+ */
+export async function getNotifications(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+
+  const user = await withRLSContext(userId, async (tx) => {
+    return tx.user.findUnique({
+      where: { id: userId },
+      select: { notificationPreferences: true },
+    });
+  });
+
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  const response: ApiResponse<NotificationPreferences> = {
+    success: true,
+    data: normalizeNotificationPreferences(user.notificationPreferences),
+  };
+  res.json(response);
+}
+
+/**
+ * Update the authenticated user's notification preferences.
  * PATCH /api/v1/settings/notifications
+ *
+ * Accepts both the legacy flat shape (emailNotifications/weeklySummary/
+ * abnormalAlerts) and the new nested shape ({ email: { enabled, newResults,
+ * ... } }). Stores the canonical new shape so future reads are simple.
  */
 export async function updateNotifications(
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
   const userId = req.user!.id;
-  const input = req.body as Partial<NotificationPreferences>;
+  const input = req.body as Partial<{
+    emailNotifications: boolean;
+    weeklySummary: boolean;
+    abnormalAlerts: boolean;
+    email: Partial<EmailNotificationPreferences>;
+  }>;
 
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
@@ -987,14 +1095,30 @@ export async function updateNotifications(
       throw new UnauthorizedError('User not found');
     }
 
-    const merged: NotificationPreferences = {
-      ...normalizeNotificationPreferences(current.notificationPreferences),
-      ...input,
-    };
+    const normalized = normalizeNotificationPreferences(current.notificationPreferences);
 
+    // Merge patch into the canonical `email.*` shape. Legacy flat keys from
+    // the request body get mapped to their nested equivalents so both the
+    // new UI and existing toggles feed the same state.
+    const nextEmail: EmailNotificationPreferences = { ...normalized.email };
+    if (typeof input.emailNotifications === 'boolean') nextEmail.enabled = input.emailNotifications;
+    if (typeof input.weeklySummary === 'boolean') nextEmail.weeklySummary = input.weeklySummary;
+    if (typeof input.abnormalAlerts === 'boolean') nextEmail.outOfRangeAlerts = input.abnormalAlerts;
+    if (input.email && typeof input.email === 'object') {
+      for (const key of Object.keys(input.email) as (keyof EmailNotificationPreferences)[]) {
+        const v = input.email[key];
+        if (typeof v === 'boolean') nextEmail[key] = v;
+      }
+    }
+
+    // Persist the canonical nested shape. Legacy flat aliases aren't stored
+    // (they're derived on read) to avoid divergence between the two shapes.
+    // Prisma's InputJsonValue requires an index signature; build the payload
+    // as a JsonObject so booleans pass through cleanly.
+    const nextPrefs: Prisma.InputJsonValue = { email: { ...nextEmail } };
     return tx.user.update({
       where: { id: userId },
-      data: { notificationPreferences: { ...merged } },
+      data: { notificationPreferences: nextPrefs },
       select: { notificationPreferences: true },
     });
   });

@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   User,
   Palette,
-  Bell,
   Shield,
   Heart,
   Lock,
@@ -33,15 +32,13 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { settingsApi } from '../../services/api';
-import type { NotificationPreferences } from '../../services/api/settings';
+import { logger } from '../../utils/logger';
+
+const settingsLogger = logger.createLogger('Settings');
 import ChangePasswordModal from './ChangePasswordModal';
 import HealthProfileSection from './HealthProfileSection';
-
-const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
-  emailNotifications: true,
-  weeklySummary: false,
-  abnormalAlerts: true,
-};
+import PlanSection from './PlanSection';
+import NotificationSettingsSection from './NotificationSettingsSection';
 
 function composeDisplayName(firstName: string | null, lastName: string | null, fallback: string): string {
   const parts = [firstName, lastName].filter((p): p is string => !!p && p.trim().length > 0);
@@ -64,8 +61,6 @@ interface AccountSettingsPageProps {
   onBack: () => void;
 }
 
-type NotificationSetting = 'emailNotifications' | 'weeklySummary' | 'abnormalAlerts';
-
 export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps) {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -81,9 +76,6 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
 
   // Password modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-
-  // Notification settings (persisted server-side)
-  const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
 
   // Delete confirmation state
   const [deleteType, setDeleteType] = useState<'data' | 'account' | null>(null);
@@ -113,7 +105,6 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
         const profile = await settingsApi.getProfile();
         if (cancelled) return;
         setDisplayName(composeDisplayName(profile.firstName, profile.lastName, emailLocal));
-        setNotifications(profile.notificationPreferences);
       } catch (err) {
         if (cancelled) return;
         setProfileLoadError(err instanceof Error ? err.message : 'Failed to load profile');
@@ -142,19 +133,6 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
     }
   };
 
-  const handleNotificationChange = async (key: NotificationSetting) => {
-    const previous = notifications;
-    const updated = { ...previous, [key]: !previous[key] };
-    setNotifications(updated);
-    try {
-      const saved = await settingsApi.updateNotifications({ [key]: updated[key] });
-      setNotifications(saved);
-    } catch (err) {
-      setNotifications(previous);
-      showToast(err instanceof Error ? err.message : 'Failed to update notification setting', 'error');
-    }
-  };
-
   const handleExportData = async () => {
     setIsExporting(true);
     try {
@@ -171,7 +149,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (err) {
-      console.error('Export failed:', err);
+      settingsLogger.error('Data export failed', {
+        error: err instanceof Error ? err.message : 'Unknown',
+      });
     } finally {
       setIsExporting(false);
     }
@@ -369,46 +349,15 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
           </div>
         </section>
 
-        {/* Notifications Section */}
-        <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
-                <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Notifications</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">For future use</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-6 space-y-4">
-            {[
-              { key: 'emailNotifications' as NotificationSetting, label: 'Email Notifications', description: 'Receive important updates via email' },
-              { key: 'weeklySummary' as NotificationSetting, label: 'Weekly Summary', description: 'Get a weekly digest of your health data' },
-              { key: 'abnormalAlerts' as NotificationSetting, label: 'Abnormal Results Alerts', description: 'Be notified when results are outside normal range' },
-            ].map(({ key, label, description }) => (
-              <div key={key} className="flex items-center justify-between py-2">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">{label}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
-                </div>
-                <button
-                  onClick={() => handleNotificationChange(key)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    notifications[key] ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      notifications[key] ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Notifications Section — new nested-shape toggles. Replaces the
+            previous flat 3-toggle block; the new component handles the full
+            set (master + 5 sub-toggles) and persists via PATCH on change. */}
+        <NotificationSettingsSection
+          onError={(message) => showToast(message, 'error')}
+        />
+
+        {/* Plan & Usage Section */}
+        <PlanSection onError={(message) => showToast(message, 'error')} />
 
         {/* Health Profile Section */}
         <HealthProfileSection

@@ -20,6 +20,7 @@ declare global {
         id: string;
         email: string;
         role: UserRole;
+        plan: string;
       };
 
       /**

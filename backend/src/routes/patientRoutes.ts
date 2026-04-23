@@ -10,7 +10,7 @@
 import { Router, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
-import { asyncHandler, NotFoundError } from '../middleware/errorHandler.js';
+import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { getPrismaClient, withRLSContext } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -337,6 +337,21 @@ router.patch(
           reason: 'relationship_not_found_or_inactive',
         });
         throw new NotFoundError('Active provider relationship not found');
+      }
+
+      // Block permission edits on expired consent. The `status === 'ACTIVE'`
+      // filter above doesn't cover this — `status` is a manual state, while
+      // `consentExpiresAt` is a time-based gate. A permission change on an
+      // expired relationship would silently grant or remove access without
+      // the patient re-consenting.
+      if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
+        await auditService.logAccess('provider_consent_permissions', id, { req, userId: patientId }, {
+          operation: 'UPDATE_PERMISSIONS',
+          success: false,
+          reason: 'consent_expired',
+          consentExpiresAt: relationship.consentExpiresAt.toISOString(),
+        });
+        throw new ForbiddenError('Consent has expired. Please renew consent before updating permissions.');
       }
 
       const previousPermissions = {

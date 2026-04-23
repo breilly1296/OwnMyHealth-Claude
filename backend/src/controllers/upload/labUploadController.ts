@@ -15,6 +15,8 @@ import { getEncryptionService } from '../../services/encryption.js';
 import { getUserEncryptionSalt } from '../../services/userEncryption.js';
 import { processDocument, extractDateFromText, extractLabNameFromText } from '../../services/ocrService.js';
 import { uploadFile as uploadToGCS } from '../../services/storageService.js';
+import { validatePdfHeader } from '../../utils/securePdfParsing.js';
+import { notifyNewResults, notifyOutOfRange } from '../../services/notificationService.js';
 import { logger } from '../../utils/logger.js';
 import {
   type UploadRequest,
@@ -39,6 +41,7 @@ export async function uploadLabReport(
   const file = req.file;
 
   validateUploadFile(file, 'pdf');
+  validatePdfHeader(file.buffer, file.originalname);
 
   const prisma = getPrismaClient();
   const encryptionService = getEncryptionService();
@@ -146,6 +149,25 @@ export async function uploadLabReport(
     storageKey: storageKey || undefined,
   }, { req, userId });
 
+  // Fire-and-forget engagement emails. Use ocrResult.biomarkers (not
+  // createdBiomarkers) because it carries the normal-range min/max needed
+  // to classify high-vs-low direction.
+  const outOfRangeSummary = ocrResult.biomarkers
+    .filter((b) => b.value < b.normalRange.min || b.value > b.normalRange.max)
+    .map((b) => ({
+      name: b.name,
+      status: (b.value > b.normalRange.max ? 'high' : 'low') as 'high' | 'low',
+    }));
+
+  void notifyNewResults(userId, {
+    biomarkerCount: createdBiomarkers.length,
+    outOfRangeCount: outOfRangeSummary.length,
+    labName: labName || undefined,
+  });
+  if (outOfRangeSummary.length > 0) {
+    void notifyOutOfRange(userId, { biomarkers: outOfRangeSummary });
+  }
+
   const response: ApiResponse<LabReportUploadResponse> = {
     success: true,
     data: {
@@ -174,6 +196,11 @@ export async function uploadLabResultOCR(
   const file = req.file;
 
   validateUploadFile(file, 'ocr');
+  // PDF path in the OCR uploader must also be header-checked (PDF-bomb guard);
+  // images are magic-byte-validated inside validateUploadFile.
+  if (file.mimetype === 'application/pdf') {
+    validatePdfHeader(file.buffer, file.originalname);
+  }
 
   const prisma = getPrismaClient();
   const encryptionService = getEncryptionService();
@@ -292,6 +319,23 @@ export async function uploadLabResultOCR(
     },
     { req, userId }
   );
+
+  // Same fire-and-forget pattern as the Claude upload path above.
+  const outOfRangeSummary = ocrResult.biomarkers
+    .filter((b) => b.value < b.normalRange.min || b.value > b.normalRange.max)
+    .map((b) => ({
+      name: b.name,
+      status: (b.value > b.normalRange.max ? 'high' : 'low') as 'high' | 'low',
+    }));
+
+  void notifyNewResults(userId, {
+    biomarkerCount: createdBiomarkers.length,
+    outOfRangeCount: outOfRangeSummary.length,
+    labName: labName || undefined,
+  });
+  if (outOfRangeSummary.length > 0) {
+    void notifyOutOfRange(userId, { biomarkers: outOfRangeSummary });
+  }
 
   const response: ApiResponse<LabResultOCRResponse> = {
     success: true,

@@ -15,13 +15,18 @@
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
-// SendGrid types (lazy loaded to avoid errors if not installed)
+// SendGrid types (lazy loaded to avoid errors if not installed).
+// mailSettings.sandboxMode is SendGrid's "validate but don't send" hook —
+// used by staging so notification flows fire without spamming real inboxes.
 interface SendGridMailData {
   to: string;
   from: { email: string; name: string };
   subject: string;
   text: string;
   html: string;
+  mailSettings?: {
+    sandboxMode?: { enable: boolean };
+  };
 }
 
 // Lazy-loaded SendGrid client
@@ -234,10 +239,18 @@ async function sendEmail(
       subject,
       text,
       html,
+      // Sandbox mode runs through SendGrid's validation pipeline (templates,
+      // recipient format, from-address) but skips actual delivery. Staging
+      // turns this on so we can exercise the full notification path without
+      // sending to real addresses.
+      ...(config.email.sandboxMode && {
+        mailSettings: { sandboxMode: { enable: true } },
+      }),
     };
 
     await client.send(msg);
-    logger.info(`Email sent: ${subject} to ${to}`, { prefix: 'Email' });
+    const deliveryLabel = config.email.sandboxMode ? 'Email validated (sandbox)' : 'Email sent';
+    logger.info(`${deliveryLabel}: ${subject} to ${to}`, { prefix: 'Email' });
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -294,6 +307,23 @@ export async function sendPasswordResetEmail(
   return sendEmail(email, subject, text, html);
 }
 
+/**
+ * Generic send used by the engagement/notification pipeline.
+ *
+ * Exposed separately from the typed `sendVerificationEmail` / `sendPasswordResetEmail`
+ * helpers because engagement emails need to go through a single dispatcher
+ * (notificationService) that resolves the body via `emailTemplates.ts`.
+ * The dev-mode logging fallback is reused.
+ */
+export async function sendGenericEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string
+): Promise<{ success: boolean; error?: string }> {
+  return sendEmail(to, subject, text, html);
+}
+
 // ============================================
 // Export
 // ============================================
@@ -301,6 +331,7 @@ export async function sendPasswordResetEmail(
 export const emailService = {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  send: sendGenericEmail,
 };
 
 export default emailService;

@@ -30,24 +30,50 @@ const SENSITIVE_FIELDS = new Set([
 ]);
 
 /**
- * Sanitize data object to remove sensitive fields before logging
+ * Recursively sanitize an arbitrary value, redacting any object field whose
+ * key matches SENSITIVE_FIELDS. Arrays are walked element-by-element so
+ * objects nested inside arrays don't bypass redaction — prior to F-21 this
+ * path short-circuited and a `biomarkers: [{ valueEncrypted: "..." }]`
+ * shape would have leaked straight through.
  */
+function sanitizeValue(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map(sanitizeValue);
+  if (typeof value !== 'object') return value;
+  return sanitizeData(value as Record<string, unknown>);
+}
+
 function sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
       sanitized[key] = '[REDACTED]';
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      sanitized[key] = sanitizeData(value as Record<string, unknown>);
     } else {
-      sanitized[key] = value;
+      sanitized[key] = sanitizeValue(value);
     }
   }
   return sanitized;
 }
 
 /**
- * Log a message with environment awareness
+ * Cloud Logging severity values. Cloud Run auto-parses JSON log lines with a
+ * `severity` field and routes them to the right log level in the GCP console.
+ * https://cloud.google.com/logging/docs/structured-logging
+ */
+const SEVERITY_BY_LEVEL: Record<LogLevel, string> = {
+  debug: 'DEBUG',
+  info: 'INFO',
+  warn: 'WARNING',
+  error: 'ERROR',
+};
+
+/**
+ * Log a message with environment awareness.
+ *
+ * - Dev/test: pretty text format, readable in a terminal.
+ * - Production: single-line JSON with Cloud Logging's reserved field names
+ *   (`severity`, `message`, `timestamp`) so GCP parses log lines correctly
+ *   and logs are searchable by service + severity in the console.
  */
 function log(level: LogLevel, message: string, options?: LogOptions): void {
   // In production, only log warnings and errors
@@ -56,10 +82,30 @@ function log(level: LogLevel, message: string, options?: LogOptions): void {
   }
 
   const timestamp = new Date().toISOString();
-  const prefix = options?.prefix ? `[${options.prefix}]` : '';
+  const prefix = options?.prefix;
   const sanitizedData = options?.data ? sanitizeData(options.data) : undefined;
 
-  const formattedMessage = `${timestamp} ${level.toUpperCase()} ${prefix} ${message}`;
+  if (config.isProduction) {
+    // Structured JSON for Cloud Logging. stderr for warn/error so Cloud Run's
+    // default log splitter routes them to the error log stream.
+    const entry: Record<string, unknown> = {
+      severity: SEVERITY_BY_LEVEL[level],
+      message,
+      timestamp,
+    };
+    if (prefix) entry.service = prefix;
+    if (sanitizedData) Object.assign(entry, sanitizedData);
+    const line = JSON.stringify(entry) + '\n';
+    if (level === 'error' || level === 'warn') {
+      process.stderr.write(line);
+    } else {
+      process.stdout.write(line);
+    }
+    return;
+  }
+
+  const prefixStr = prefix ? `[${prefix}]` : '';
+  const formattedMessage = `${timestamp} ${level.toUpperCase()} ${prefixStr} ${message}`;
 
   // SECURITY: Use explicit format string to prevent format-string injection.
   // If formattedMessage contains % specifiers (%s, %d, %o), they would be

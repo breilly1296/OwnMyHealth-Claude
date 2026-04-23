@@ -14,6 +14,7 @@ export {
   clearAuthToken,
   setOnAuthFailure,
   attemptTokenRefresh,
+  isPlanLimitError,
 } from './client';
 export type { ApiResponse, ApiError } from './client';
 
@@ -69,6 +70,7 @@ export type {
   ExportInsurancePlan,
   UserExportData,
   NotificationPreferences,
+  EmailNotificationPreferences,
   UserProfile,
   UserHealthProfile,
   UpdateHealthProfileData,
@@ -84,6 +86,20 @@ export type {
 // Files API
 export { filesApi } from './files';
 export type { UserFileData } from './files';
+
+// Onboarding API
+export { onboardingApi } from './onboarding';
+export type { OnboardingStatus, OnboardingSteps, SuggestedNextStep } from './onboarding';
+
+// Plan API
+export { planApi, isUnlimited as isPlanLimitUnlimited } from './plan';
+export type {
+  PlanTier,
+  PlanLimits,
+  PlanConfig,
+  PlanUsage,
+  CurrentPlanData,
+} from './plan';
 
 // Expenses API
 export { expensesApi } from './expenses';

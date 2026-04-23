@@ -86,6 +86,13 @@ vi.mock('../middleware/demoProtection.js', () => ({
   blockDemoAI: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
+// Plan gating is covered in its own tests — pass-through here so the
+// BAA / IDOR / happy-path invariants aren't coupled to a plan-limit check.
+vi.mock('../middleware/planGating.js', () => ({
+  requirePlanLimit: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+  requirePlanFeature: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 // Real controller not exercised here — mount-time import only.
 vi.mock('../controllers/biomarkerController.js', () => ({
   getBiomarkers: vi.fn(),

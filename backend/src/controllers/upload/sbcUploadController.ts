@@ -12,6 +12,7 @@ import { ValidationError, NotFoundError } from '../../middleware/errorHandler.js
 import { getPrismaClient, withRLSTransaction } from '../../services/database.js';
 import { getAuditLogService } from '../../services/auditLog.js';
 import { uploadFile as uploadToGCS } from '../../services/storageService.js';
+import { validatePdfHeader } from '../../utils/securePdfParsing.js';
 import { logger } from '../../utils/logger.js';
 import {
   type UploadRequest,
@@ -37,6 +38,7 @@ export async function uploadSBC(
   const file = req.file;
 
   validateUploadFile(file, 'pdf');
+  validatePdfHeader(file.buffer, file.originalname);
 
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
@@ -228,6 +230,7 @@ export async function reanalyzePlan(
   const file = req.file;
 
   validateUploadFile(file, 'pdf');
+  validatePdfHeader(file.buffer, file.originalname);
 
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);

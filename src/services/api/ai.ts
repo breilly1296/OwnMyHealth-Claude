@@ -37,7 +37,7 @@ function parseSSELines(buffer: string): { events: string[]; rest: string } {
   const events: string[] = [];
   let rest = buffer;
   let idx: number;
-  // eslint-disable-next-line no-cond-assign
+   
   while ((idx = rest.indexOf('\n\n')) >= 0) {
     events.push(rest.slice(0, idx));
     rest = rest.slice(idx + 2);
@@ -88,14 +88,39 @@ export const aiApi = {
       if (!response.ok) {
         // Try to surface the JSON error body if the server sent one.
         let errorMessage = `Chat request failed (${response.status})`;
+        let errorCode: string | undefined;
+        let planLimit: { limit: number; current: number; feature: string; upgradeRequired: boolean } | undefined;
         try {
           const errJson = await response.json();
           const nested = errJson?.error?.message ?? errJson?.error ?? errJson?.message;
           if (typeof nested === 'string') errorMessage = nested;
+          const code = errJson?.error?.code;
+          if (typeof code === 'string') errorCode = code;
+          if (code === 'PLAN_LIMIT_EXCEEDED' && typeof errJson.error === 'object') {
+            planLimit = {
+              limit: Number(errJson.error.limit) || 0,
+              current: Number(errJson.error.current) || 0,
+              feature: String(errJson.error.feature || ''),
+              upgradeRequired: errJson.error.upgradeRequired === true,
+            };
+            // Friendlier default message for the chat surface.
+            errorMessage =
+              planLimit.limit > 0
+                ? `You've used your ${planLimit.limit} free AI chats for today. Upgrade to Pro for unlimited conversations.`
+                : 'AI chat is not available on your current plan. Upgrade to continue.';
+          }
         } catch {
           // fall through — keep the status-based message
         }
-        onError(new Error(errorMessage));
+        // Attach plan-limit context on the Error so the chat UI can render
+        // an upgrade CTA instead of a generic retry button.
+        const error = new Error(errorMessage) as Error & {
+          code?: string;
+          planLimit?: typeof planLimit;
+        };
+        error.code = errorCode;
+        error.planLimit = planLimit;
+        onError(error);
         return;
       }
 
@@ -110,7 +135,7 @@ export const aiApi = {
       let receivedUsage: ChatUsage = { inputTokens: 0, outputTokens: 0 };
       let streamError: string | null = null;
 
-      // eslint-disable-next-line no-constant-condition
+       
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;

@@ -32,6 +32,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { authApi, clearAuthToken, setOnAuthFailure, type AuthResponse } from '../services/api';
+import { authLogger } from '../utils/logger';
 
 /**
  * User object stored in auth context
@@ -89,10 +90,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 2. getCurrentUser() - now works with fresh access token in cookie + memory
         try {
           await authApi.refreshToken();
-          console.log('[AuthContext] Access token refreshed from refresh token');
+          // Routed through authLogger so the message is gated on production
+          // and goes through the PHI-redaction sanitizer. Raw console.log
+          // leaked auth-flow details to the browser console (audit F-18).
+          authLogger.debug('Access token refreshed from refresh token');
         } catch {
           // Refresh token invalid or expired - user must re-login
-          console.log('[AuthContext] Refresh token invalid, user not authenticated');
+          authLogger.debug('Refresh token invalid, user not authenticated');
           setUser(null);
           setIsLoading(false);
           return;
@@ -101,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Now get current user with the fresh access token
         const currentUser = await authApi.getCurrentUser();
         setUser(currentUser);
-        console.log('[AuthContext] Session restored successfully');
+        authLogger.debug('Session restored successfully');
       } catch {
         // Not authenticated, that's fine
         setUser(null);

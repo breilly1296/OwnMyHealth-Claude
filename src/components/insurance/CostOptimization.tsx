@@ -44,6 +44,9 @@ import {
 import ExpenseProjectionModal from './ExpenseProjectionModal';
 import DeductibleProgressBar from './DeductibleProgressBar';
 import ExpenseActualsList from './ExpenseActualsList';
+import { logger } from '../../utils/logger';
+
+const costLogger = logger.createLogger('CostOptimization');
 
 // ---------- Helpers: timeline + AI section parsing ----------
 
@@ -182,7 +185,9 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
       }
     } catch (err) {
       // Silent fail for analyses - not critical
-      console.error('Failed to load analyses:', err);
+      costLogger.error('Failed to load cost analyses', {
+        error: err instanceof Error ? err.message : 'Unknown',
+      });
       setAnalyses([]);
     } finally {
       setIsLoadingAnalyses(false);

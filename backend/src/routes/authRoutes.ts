@@ -63,9 +63,12 @@ router.get(
   asyncHandler(verifyEmail)
 );
 
-// Resend verification email
+// Resend verification email — strictAuthLimiter to prevent enumeration +
+// email-bombing via repeated resend-requests. Matches /forgot-password and
+// /reset-password rate-limit posture.
 router.post(
   '/resend-verification',
+  strictAuthLimiter,
   validate(schemas.auth.resendVerification),
   asyncHandler(resendVerification)
 );

@@ -168,10 +168,27 @@ export interface UserExportData {
   };
 }
 
+/** New canonical shape — fields the notification dispatcher actually reads. */
+export interface EmailNotificationPreferences {
+  enabled: boolean;
+  newResults: boolean;
+  outOfRangeAlerts: boolean;
+  goalReminders: boolean;
+  weeklySummary: boolean;
+  planExpiring: boolean;
+}
+
+/**
+ * The preferences payload returned by GET /settings/notifications.
+ * Includes back-compat flat aliases (emailNotifications / weeklySummary /
+ * abnormalAlerts) so the existing toggles in AccountSettingsPage keep
+ * rendering without conditional code.
+ */
 export interface NotificationPreferences {
   emailNotifications: boolean;
   weeklySummary: boolean;
   abnormalAlerts: boolean;
+  email: EmailNotificationPreferences;
 }
 
 export interface UserProfile {
@@ -249,6 +266,22 @@ export const settingsApi = {
     const response = await apiFetch<NotificationPreferences>('/settings/notifications', {
       method: 'PATCH',
       body: JSON.stringify(prefs),
+    });
+    return response.data;
+  },
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    const response = await apiFetch<NotificationPreferences>('/settings/notifications');
+    return response.data;
+  },
+
+  /** Patch the new nested `email.*` shape. */
+  async updateNotificationPreferences(
+    prefs: Partial<EmailNotificationPreferences>
+  ): Promise<NotificationPreferences> {
+    const response = await apiFetch<NotificationPreferences>('/settings/notifications', {
+      method: 'PATCH',
+      body: JSON.stringify({ email: prefs }),
     });
     return response.data;
   },
