@@ -17,14 +17,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-# Scope matches the check the prompt described: controllers/ + services/.
-# Routes are a known follow-up (TODO: convert bare prisma.* in providerRoutes
-# and patientRoutes to withRLSContext). Adding them here today would block CI
-# on pre-existing violations; track in the backlog and expand scope once
-# clean.
+# C-8 Part 4 — scope expanded to every directory where app code touches
+# Prisma. Controllers and services were the original scope; routes,
+# schedulers, and middleware were carved out in the prior version because
+# they had pre-existing violations. Those violations were resolved in the
+# Part 2 sweep, so this check now enforces the full surface.
 TARGETS=(
   "$ROOT_DIR/backend/src/controllers"
   "$ROOT_DIR/backend/src/services"
+  "$ROOT_DIR/backend/src/routes"
+  "$ROOT_DIR/backend/src/schedulers"
+  "$ROOT_DIR/backend/src/middleware"
 )
 
 # database.ts legitimately contains `prisma.<model>.<verb>(` in its docblock
@@ -35,7 +38,11 @@ EXCLUDE_FILES=(
   "$ROOT_DIR/backend/src/services/database.ts"
 )
 
-PATTERN='prisma\.(biomarker|biomarkerHistory|insurancePlan|insuranceBenefit|healthGoal|healthNeed|dNAData|dNAVariant|user|session|auditLog|userFile|userEncryptionKey|providerPatient|costAnalysis|expenseProjection|expenseActual|labConnection|goalProgressHistory|systemConfig|importConflict)\.(findMany|findFirst|findUnique|findUniqueOrThrow|create|createMany|update|updateMany|upsert|delete|deleteMany|count|aggregate|groupBy)\('
+# Generic pattern — any `prisma.<model>.<method>(` call, regardless of model
+# name. The prior enum-based list went stale every time a model was added or
+# renamed (dnaData removal in 2026-04-23 left stale entries here). Matching
+# the shape directly is more robust and catches future models automatically.
+PATTERN='\bprisma\.[a-zA-Z_][a-zA-Z0-9_]*\.(findMany|findFirst|findUnique|findUniqueOrThrow|create|createMany|update|updateMany|upsert|delete|deleteMany|count|aggregate|groupBy)\('
 
 RAW_HITS=$(grep -rnE "$PATTERN" "${TARGETS[@]}" \
   --include='*.ts' \

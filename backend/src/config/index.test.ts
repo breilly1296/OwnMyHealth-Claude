@@ -32,6 +32,10 @@ function validEnv() {
   process.env.JWT_REFRESH_SECRET = 'b'.repeat(40);
   process.env.DATABASE_URL = 'postgres://localhost/test';
   process.env.PHI_ENCRYPTION_KEY = '0'.repeat(64);
+  // C-8 — audit salt now required at module load. 32 hex chars is enough to
+  // clear the 16-char minimum; not validating hex-ness here since the real
+  // validator only enforces length (see config/index.ts).
+  process.env.AUDIT_LOG_SALT = 'c'.repeat(32);
 }
 
 describe('config — JWT secrets (C-3)', () => {
@@ -46,6 +50,7 @@ describe('config — JWT secrets (C-3)', () => {
     delete process.env.NODE_ENV;
     delete process.env.DATABASE_URL;
     delete process.env.PHI_ENCRYPTION_KEY;
+    delete process.env.AUDIT_LOG_SALT;
   });
 
   afterEach(() => {

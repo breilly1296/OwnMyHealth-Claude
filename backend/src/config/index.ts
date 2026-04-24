@@ -40,6 +40,19 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
 
+  // Audit log encryption salt. Pre C-8 this was stored in the system_config
+  // table and read at boot; that coupled startup to an admin-bypass DB call,
+  // which blocks the NOBYPASSRLS role cutover. Moving the salt to an env var
+  // (Secret Manager in prod) removes the dependency entirely.
+  //
+  // Migration note: production already has a historic salt encrypted in
+  // `system_config.audit_encryption_salt`. Before this code is deployed to
+  // prod, an operator must extract that salt (see docs/STAGING.md → "Audit
+  // salt migration") and write the plaintext value to AUDIT_LOG_SALT in
+  // Secret Manager. Rotating the salt silently would make every pre-existing
+  // audit log's encrypted PHI undecryptable — hence the hard-fail below.
+  auditSalt: process.env.AUDIT_LOG_SALT || '',
+
   // Security - JWT Configuration
   // Note: expiresIn values are in seconds (number) for type compatibility with jsonwebtoken.
   // accessSecret / refreshSecret go through requireEnv — no fallback in any environment.
@@ -205,6 +218,22 @@ if (config.jwt.refreshSecret.length < MIN_JWT_SECRET_LENGTH) {
     `JWT_REFRESH_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters. ` +
     `Current length: ${config.jwt.refreshSecret.length}. ` +
     `Generate with: openssl rand -base64 32`
+  );
+}
+
+// Audit salt validation — fail hard if missing or too short. Silently
+// generating a new salt would render existing audit logs undecryptable, so
+// we refuse to boot rather than risk that. Length check mirrors
+// AuditLogService.initialize()'s prior runtime check (see auditLog.ts).
+const MIN_AUDIT_SALT_LENGTH = 16;
+if (!config.auditSalt || config.auditSalt.length < MIN_AUDIT_SALT_LENGTH) {
+  throw new Error(
+    `AUDIT_LOG_SALT must be set and at least ${MIN_AUDIT_SALT_LENGTH} characters. ` +
+    `Historic audit logs are encrypted with this salt — rotating it breaks decryption. ` +
+    `For new environments, generate with: openssl rand -hex 32. ` +
+    `For existing production envs, extract the plaintext salt from ` +
+    `system_config.audit_encryption_salt (decrypt with PHI_ENCRYPTION_KEY) ` +
+    `before setting AUDIT_LOG_SALT.`
   );
 }
 

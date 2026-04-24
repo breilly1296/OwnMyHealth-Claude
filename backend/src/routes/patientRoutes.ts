@@ -33,22 +33,34 @@ router.get(
     const prisma = getPrismaClient();
     const patientId = req.user!.id;
 
-    const relationships = await prisma.providerPatient.findMany({
-      where: { patientId },
-      orderBy: { createdAt: 'desc' },
+    // Own ProviderPatient rows — patient's session is the RLS identity.
+    const relationships = await withRLSContext(patientId, async (tx) => {
+      return tx.providerPatient.findMany({
+        where: { patientId },
+        orderBy: { createdAt: 'desc' },
+      });
     });
 
-    // Get provider details
+    // Cross-tenant lookup: rendering the provider user's email for display.
+    // Admin context because users_select_own restricts SELECT to the row's
+    // owner, and patient is not the provider. Disclosure is bounded by the
+    // id-set (only providers the patient already has a relationship with).
     const providerIds = relationships.map((r) => r.providerId);
-    const providers = await prisma.user.findMany({
-      where: { id: { in: providerIds } },
-      select: {
-        id: true,
-        email: true,
-        firstNameEncrypted: true,
-        lastNameEncrypted: true,
+    const providers = await withRLSContext(
+      null,
+      async (tx) => {
+        return tx.user.findMany({
+          where: { id: { in: providerIds } },
+          select: {
+            id: true,
+            email: true,
+            firstNameEncrypted: true,
+            lastNameEncrypted: true,
+          },
+        });
       },
-    });
+      { isAdmin: true },
+    );
 
     const result = relationships.map((rel) => {
       const provider = providers.find((p) => p.id === rel.providerId);
@@ -101,25 +113,35 @@ router.get(
     const prisma = getPrismaClient();
     const patientId = req.user!.id;
 
-    const pendingRequests = await prisma.providerPatient.findMany({
-      where: {
-        patientId,
-        status: 'PENDING',
-      },
-      orderBy: { createdAt: 'desc' },
+    // Own ProviderPatient rows — patient's session is the RLS identity.
+    const pendingRequests = await withRLSContext(patientId, async (tx) => {
+      return tx.providerPatient.findMany({
+        where: {
+          patientId,
+          status: 'PENDING',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     });
 
-    // Get provider details
+    // Cross-tenant lookup for the provider user's display info; same
+    // reasoning as GET /providers above.
     const providerIds = pendingRequests.map((r) => r.providerId);
-    const providers = await prisma.user.findMany({
-      where: { id: { in: providerIds } },
-      select: {
-        id: true,
-        email: true,
-        firstNameEncrypted: true,
-        lastNameEncrypted: true,
+    const providers = await withRLSContext(
+      null,
+      async (tx) => {
+        return tx.user.findMany({
+          where: { id: { in: providerIds } },
+          select: {
+            id: true,
+            email: true,
+            firstNameEncrypted: true,
+            lastNameEncrypted: true,
+          },
+        });
       },
-    });
+      { isAdmin: true },
+    );
 
     const result = pendingRequests.map((rel) => {
       const provider = providers.find((p) => p.id === rel.providerId);

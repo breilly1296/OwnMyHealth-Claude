@@ -34,25 +34,34 @@ router.get(
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
 
-    // Use Prisma include for efficient single-query join
-    const relationships = await prisma.providerPatient.findMany({
-      where: {
-        providerId,
-        status: { in: ['ACTIVE', 'PENDING'] },
-      },
-      include: {
-        patient: {
-          select: {
-            id: true,
-            email: true,
-            firstNameEncrypted: true,
-            lastNameEncrypted: true,
-            createdAt: true,
+    // Admin RLS context: the joined `patient` User is another tenant,
+    // so provider's own session would be denied by users_select_own. The
+    // providerId filter on ProviderPatient + the ACTIVE/PENDING status
+    // filter bound disclosure to the provider's own relationships.
+    const relationships = await withRLSContext(
+      null,
+      async (tx) => {
+        return tx.providerPatient.findMany({
+          where: {
+            providerId,
+            status: { in: ['ACTIVE', 'PENDING'] },
           },
-        },
+          include: {
+            patient: {
+              select: {
+                id: true,
+                email: true,
+                firstNameEncrypted: true,
+                lastNameEncrypted: true,
+                createdAt: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
       },
-      orderBy: { createdAt: 'desc' },
-    });
+      { isAdmin: true },
+    );
 
     // Transform to response format. PENDING relationships (and any other
     // non-ACTIVE status) must not leak the patient's email — consent hasn't
@@ -237,15 +246,49 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    // Verify access
-    const relationship = await prisma.providerPatient.findUnique({
-      where: {
-        providerId_patientId: {
-          providerId,
-          patientId,
-        },
+    // Admin context: relationship lookup + cross-tenant User read.
+    // Application-level enforcement (relationship.status, consent expiry,
+    // account-state filter) is the authorization — this just wraps the SQL
+    // in an RLS-honoring transaction so a NOBYPASSRLS role can't silently
+    // return no rows when policies evaluate against a NULL user id.
+    const { relationship, patient } = await withRLSContext(
+      null,
+      async (tx) => {
+        const rel = await tx.providerPatient.findUnique({
+          where: {
+            providerId_patientId: {
+              providerId,
+              patientId,
+            },
+          },
+        });
+
+        // Filter on isActive + lockedUntil so providers lose access the
+        // moment a patient's account is deactivated or locked — consent
+        // doesn't survive account state changes. Only hit the User table
+        // if the relationship itself looks viable; skip on fail-fast.
+        const pt =
+          rel && rel.status === 'ACTIVE'
+            ? await tx.user.findFirst({
+                where: {
+                  id: patientId,
+                  isActive: true,
+                  OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+                },
+                select: {
+                  id: true,
+                  email: true,
+                  firstNameEncrypted: true,
+                  lastNameEncrypted: true,
+                  createdAt: true,
+                  lastLoginAt: true,
+                },
+              })
+            : null;
+        return { relationship: rel, patient: pt };
       },
-    });
+      { isAdmin: true },
+    );
 
     const auditService = getAuditLogService(prisma);
 
@@ -269,25 +312,6 @@ router.get(
       });
       throw new ForbiddenError('Provider consent has expired');
     }
-
-    // Get patient data based on permissions. Filter on isActive + lockedUntil
-    // so providers lose access the moment a patient's account is deactivated
-    // or locked — consent doesn't survive account state changes.
-    const patient = await prisma.user.findFirst({
-      where: {
-        id: patientId,
-        isActive: true,
-        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
-      },
-      select: {
-        id: true,
-        email: true,
-        firstNameEncrypted: true,
-        lastNameEncrypted: true,
-        createdAt: true,
-        lastLoginAt: true,
-      },
-    });
 
     if (!patient) {
       await auditService.logAccess('patient_detail', patientId, { req, userId: providerId }, {
@@ -347,15 +371,52 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    // Verify access to biomarkers
-    const relationship = await prisma.providerPatient.findUnique({
-      where: {
-        providerId_patientId: {
-          providerId,
-          patientId,
-        },
+    // Admin context wraps all three reads: relationship, patient account
+    // state, and the patient's biomarkers. Cross-tenant access bounded by
+    // the application-level canViewBiomarkers + status + consent checks
+    // below. See GET /patients/:patientId for the same pattern.
+    const { relationship, patient, biomarkers } = await withRLSContext(
+      null,
+      async (tx) => {
+        const rel = await tx.providerPatient.findUnique({
+          where: {
+            providerId_patientId: {
+              providerId,
+              patientId,
+            },
+          },
+        });
+
+        // Only reach through to PHI if the relationship row itself qualifies.
+        // The explicit ForbiddenError branches below still render the right
+        // audit reason, so early-return-null is safe.
+        const viable =
+          rel &&
+          rel.status === 'ACTIVE' &&
+          rel.canViewBiomarkers &&
+          !(rel.consentExpiresAt && new Date(rel.consentExpiresAt) < new Date());
+
+        if (!viable) return { relationship: rel, patient: null, biomarkers: [] };
+
+        const pt = await tx.user.findFirst({
+          where: {
+            id: patientId,
+            isActive: true,
+            OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+          },
+          select: { id: true },
+        });
+
+        if (!pt) return { relationship: rel, patient: null, biomarkers: [] };
+
+        const rows = await tx.biomarker.findMany({
+          where: { userId: patientId },
+          orderBy: { measurementDate: 'desc' },
+        });
+        return { relationship: rel, patient: pt, biomarkers: rows };
       },
-    });
+      { isAdmin: true },
+    );
 
     const auditService = getAuditLogService(prisma);
 
@@ -390,16 +451,6 @@ router.get(
       throw new ForbiddenError('You do not have permission to view this patient\'s biomarkers');
     }
 
-    // Deny PHI access if the patient account is deactivated or locked.
-    // Consent alone isn't sufficient — account state must also allow it.
-    const patient = await prisma.user.findFirst({
-      where: {
-        id: patientId,
-        isActive: true,
-        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
-      },
-      select: { id: true },
-    });
     if (!patient) {
       await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
         operation: 'PHI_ACCESS',
@@ -408,11 +459,6 @@ router.get(
       });
       throw new NotFoundError('Patient not found or account is inactive');
     }
-
-    const biomarkers = await prisma.biomarker.findMany({
-      where: { userId: patientId },
-      orderBy: { measurementDate: 'desc' },
-    });
 
     // Decrypt biomarker PHI using patient's encryption key
     const patientSalt = await getUserEncryptionSalt(patientId);
@@ -469,15 +515,48 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    // Verify access
-    const relationship = await prisma.providerPatient.findUnique({
-      where: {
-        providerId_patientId: {
-          providerId,
-          patientId,
-        },
+    // Admin context wraps relationship + patient state + health needs.
+    // See /patients/:patientId/biomarkers for the same pattern and
+    // authorization-in-app-layer rationale.
+    const { relationship, patient, healthNeeds } = await withRLSContext(
+      null,
+      async (tx) => {
+        const rel = await tx.providerPatient.findUnique({
+          where: {
+            providerId_patientId: {
+              providerId,
+              patientId,
+            },
+          },
+        });
+
+        const viable =
+          rel &&
+          rel.status === 'ACTIVE' &&
+          rel.canViewHealthNeeds &&
+          !(rel.consentExpiresAt && new Date(rel.consentExpiresAt) < new Date());
+
+        if (!viable) return { relationship: rel, patient: null, healthNeeds: [] };
+
+        const pt = await tx.user.findFirst({
+          where: {
+            id: patientId,
+            isActive: true,
+            OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+          },
+          select: { id: true },
+        });
+
+        if (!pt) return { relationship: rel, patient: null, healthNeeds: [] };
+
+        const rows = await tx.healthNeed.findMany({
+          where: { userId: patientId },
+          orderBy: { createdAt: 'desc' },
+        });
+        return { relationship: rel, patient: pt, healthNeeds: rows };
       },
-    });
+      { isAdmin: true },
+    );
 
     const auditService = getAuditLogService(prisma);
 
@@ -512,15 +591,6 @@ router.get(
       throw new ForbiddenError('You do not have permission to view this patient\'s health needs');
     }
 
-    // Deny PHI access if the patient account is deactivated or locked.
-    const patient = await prisma.user.findFirst({
-      where: {
-        id: patientId,
-        isActive: true,
-        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
-      },
-      select: { id: true },
-    });
     if (!patient) {
       await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
         operation: 'PHI_ACCESS',
@@ -529,11 +599,6 @@ router.get(
       });
       throw new NotFoundError('Patient not found or account is inactive');
     }
-
-    const healthNeeds = await prisma.healthNeed.findMany({
-      where: { userId: patientId },
-      orderBy: { createdAt: 'desc' },
-    });
 
     // Decrypt health need PHI using patient's encryption key
     const patientSalt = await getUserEncryptionSalt(patientId);
