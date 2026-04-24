@@ -36,11 +36,8 @@ test.describe('Account Settings', () => {
 
   test('notification toggle flips on click and persists', async ({ page }) => {
     // NotificationSettingsSection renders toggle buttons (not <input
-    // type=checkbox>); they use aria-pressed for state.
-    const toggles = page.getByRole('button', { name: '' }).filter({
-      has: page.locator('span'),
-    });
-    // Fall back to the toggles inside the Email Notifications section.
+    // type=checkbox>); they use aria-pressed for state. Scope to the
+    // Email Notifications section since that's the test surface.
     const section = page.locator('section', { hasText: /email notifications/i });
     const firstToggle = section.locator('button[aria-pressed]').first();
 
