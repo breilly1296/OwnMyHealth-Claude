@@ -70,7 +70,6 @@ router.get(
       permissions: {
         canViewBiomarkers: rel.canViewBiomarkers,
         canViewInsurance: rel.canViewInsurance,
-        canViewDna: rel.canViewDna,
         canViewHealthNeeds: rel.canViewHealthNeeds,
         canEditData: rel.canEditData,
       },
@@ -311,7 +310,6 @@ router.get(
         permissions: {
           canViewBiomarkers: relationship.canViewBiomarkers,
           canViewInsurance: relationship.canViewInsurance,
-          canViewDna: relationship.canViewDna,
           canViewHealthNeeds: relationship.canViewHealthNeeds,
           canEditData: relationship.canEditData,
         },

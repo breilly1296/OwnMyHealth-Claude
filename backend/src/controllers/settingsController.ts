@@ -241,7 +241,6 @@ interface ExportProviderRelationship {
   role: 'patient' | 'provider';
   canViewBiomarkers: boolean;
   canViewInsurance: boolean;
-  canViewDna: boolean;
   canViewHealthNeeds: boolean;
   canEditData: boolean;
   consentGrantedAt?: string;
@@ -582,7 +581,6 @@ export async function exportUserData(
       role: rel.patientId === userId ? 'patient' : 'provider',
       canViewBiomarkers: rel.canViewBiomarkers,
       canViewInsurance: rel.canViewInsurance,
-      canViewDna: rel.canViewDna,
       canViewHealthNeeds: rel.canViewHealthNeeds,
       canEditData: rel.canEditData,
       consentGrantedAt: rel.consentGrantedAt?.toISOString(),

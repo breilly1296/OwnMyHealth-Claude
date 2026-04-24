@@ -14,7 +14,6 @@ export interface PatientProviderRelationship {
   permissions: {
     canViewBiomarkers: boolean;
     canViewInsurance: boolean;
-    canViewDna: boolean;
     canViewHealthNeeds: boolean;
     canEditData: boolean;
   };
@@ -52,7 +51,6 @@ export const patientApi = {
     permissions?: {
       canViewBiomarkers?: boolean;
       canViewInsurance?: boolean;
-      canViewDna?: boolean;
       canViewHealthNeeds?: boolean;
       canEditData?: boolean;
       consentDurationDays?: number;
@@ -77,7 +75,6 @@ export const patientApi = {
     permissions: {
       canViewBiomarkers?: boolean;
       canViewInsurance?: boolean;
-      canViewDna?: boolean;
       canViewHealthNeeds?: boolean;
       canEditData?: boolean;
     }

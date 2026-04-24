@@ -19,7 +19,6 @@ export interface ProviderPatientRelationship {
   permissions: {
     canViewBiomarkers: boolean;
     canViewInsurance: boolean;
-    canViewDna: boolean;
     canViewHealthNeeds: boolean;
     canEditData: boolean;
   };

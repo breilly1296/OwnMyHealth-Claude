@@ -498,7 +498,6 @@ describe('exportUserData', () => {
         status: 'ACTIVE',
         canViewBiomarkers: true,
         canViewInsurance: false,
-        canViewDna: false,
         canViewHealthNeeds: true,
         canEditData: false,
         consentGrantedAt: now,

@@ -178,7 +178,6 @@ exports.Prisma.ProviderPatientScalarFieldEnum = {
   patientId: 'patientId',
   canViewBiomarkers: 'canViewBiomarkers',
   canViewInsurance: 'canViewInsurance',
-  canViewDna: 'canViewDna',
   canViewHealthNeeds: 'canViewHealthNeeds',
   canEditData: 'canEditData',
   relationshipType: 'relationshipType',
@@ -372,43 +371,6 @@ exports.Prisma.InsuranceBenefitScalarFieldEnum = {
   outNetworkDeductible: 'outNetworkDeductible',
   limitations: 'limitations',
   preAuthRequired: 'preAuthRequired',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.DNADataScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  filename: 'filename',
-  source: 'source',
-  uploadDate: 'uploadDate',
-  totalVariants: 'totalVariants',
-  validVariants: 'validVariants',
-  processingStatus: 'processingStatus',
-  processedAt: 'processedAt',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.DNAVariantScalarFieldEnum = {
-  id: 'id',
-  dnaDataId: 'dnaDataId',
-  rsid: 'rsid',
-  chromosome: 'chromosome',
-  position: 'position',
-  genotypeEncrypted: 'genotypeEncrypted',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.GeneticTraitScalarFieldEnum = {
-  id: 'id',
-  dnaDataId: 'dnaDataId',
-  traitName: 'traitName',
-  category: 'category',
-  rsid: 'rsid',
-  riskLevel: 'riskLevel',
-  descriptionEncrypted: 'descriptionEncrypted',
-  recommendationsEncrypted: 'recommendationsEncrypted',
-  citationCount: 'citationCount',
-  confidence: 'confidence',
   createdAt: 'createdAt'
 };
 
@@ -615,21 +577,6 @@ exports.PlanType = exports.$Enums.PlanType = {
   HDHP: 'HDHP'
 };
 
-exports.ProcessingStatus = exports.$Enums.ProcessingStatus = {
-  PENDING: 'PENDING',
-  PROCESSING: 'PROCESSING',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED'
-};
-
-exports.RiskLevel = exports.$Enums.RiskLevel = {
-  HIGH: 'HIGH',
-  MODERATE: 'MODERATE',
-  LOW: 'LOW',
-  PROTECTIVE: 'PROTECTIVE',
-  UNKNOWN: 'UNKNOWN'
-};
-
 exports.HealthNeedType = exports.$Enums.HealthNeedType = {
   CONDITION: 'CONDITION',
   ACTION: 'ACTION',
@@ -711,9 +658,6 @@ exports.Prisma.ModelName = {
   BiomarkerHistory: 'BiomarkerHistory',
   InsurancePlan: 'InsurancePlan',
   InsuranceBenefit: 'InsuranceBenefit',
-  DNAData: 'DNAData',
-  DNAVariant: 'DNAVariant',
-  GeneticTrait: 'GeneticTrait',
   HealthNeed: 'HealthNeed',
   HealthGoal: 'HealthGoal',
   GoalProgressHistory: 'GoalProgressHistory',
