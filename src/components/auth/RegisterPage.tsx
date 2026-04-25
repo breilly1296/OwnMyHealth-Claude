@@ -345,7 +345,12 @@ export default function RegisterPage({
           <div className="mt-6 text-center">
             <div className="flex items-center justify-center gap-2 text-slate-500 text-xs">
               <Shield className="w-4 h-4" />
-              <span>By creating an account, you agree to our Terms of Service and Privacy Policy.</span>
+              <span>
+                By creating an account, you agree to our{' '}
+                <a href="/terms" target="_blank" className="underline text-cyan-400 hover:text-cyan-300">Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" className="underline text-cyan-400 hover:text-cyan-300">Privacy Policy</a>.
+              </span>
             </div>
             <p className="mt-2 text-xs text-slate-600">Your health data is encrypted and secure.</p>
           </div>

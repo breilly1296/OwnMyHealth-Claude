@@ -349,23 +349,13 @@ export default function LoginPage({
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-950 text-slate-500">or continue with</span>
-              </div>
-            </div>
-
-            {/* Demo Login Button */}
+            {/* Demo Login Button (dev/staging only — onDemoLogin is undefined in prod) */}
             {onDemoLogin && (
               <button
                 type="button"
                 onClick={handleDemoLogin}
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 bg-slate-800/50 text-slate-300 font-medium rounded-xl border border-slate-700 hover:bg-slate-800 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="mt-6 w-full py-3.5 px-4 bg-slate-800/50 text-slate-300 font-medium rounded-xl border border-slate-700 hover:bg-slate-800 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 Try Demo Account
               </button>
