@@ -10,7 +10,7 @@
  * Failed PATCHes roll the local state back to the previous value.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, AlertTriangle, Loader2 } from 'lucide-react';
 import { settingsApi } from '../../services/api';
 import type { EmailNotificationPreferences, NotificationPreferences } from '../../services/api';
@@ -38,9 +38,18 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<keyof EmailNotificationPreferences | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Stable ref so useEffect doesn't re-run when the parent passes a new
+  // inline `onError` arrow on every render. Without this, the parent's
+  // re-renders trigger a fetch storm — see audit F-? / production 429 incident.
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
     (async () => {
       try {
         const p = await settingsApi.getNotificationPreferences();
@@ -49,7 +58,7 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
         if (cancelled) return;
         const message = err instanceof Error ? err.message : 'Failed to load notification preferences';
         setLoadError(message);
-        onError?.(message);
+        onErrorRef.current?.(message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -57,7 +66,7 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
     return () => {
       cancelled = true;
     };
-  }, [onError]);
+  }, [reloadKey]);
 
   async function handleToggle(key: keyof EmailNotificationPreferences) {
     if (!prefs || savingKey) return;
@@ -107,9 +116,18 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
             <span className="text-sm">Loading preferences…</span>
           </div>
         ) : loadError || !prefs ? (
-          <div className="flex items-center space-x-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm text-red-600 dark:text-red-400">{loadError ?? 'Preferences unavailable'}</p>
+          <div className="flex items-center justify-between space-x-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+              <p className="text-sm text-red-600 dark:text-red-400">{loadError ?? 'Preferences unavailable'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 underline"
+            >
+              Try again
+            </button>
           </div>
         ) : (
           <>

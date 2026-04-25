@@ -12,10 +12,11 @@
  * pattern elsewhere in the settings page.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   Loader2,
   Lock,
@@ -139,6 +140,8 @@ export default function HealthProfileSection({ onError }: HealthProfileSectionPr
   const [isSaving, setIsSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Ephemeral inputs for condition/medication/family entry forms.
   const [newCondition, setNewCondition] = useState('');
@@ -146,14 +149,24 @@ export default function HealthProfileSection({ onError }: HealthProfileSectionPr
   const [newMedicationPurpose, setNewMedicationPurpose] = useState('');
   const [newFamilyHistory, setNewFamilyHistory] = useState('');
 
+  // Stable ref so useEffect doesn't re-run when the parent passes a new
+  // inline `onError` arrow on every render.
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
     (async () => {
       try {
         const data = await settingsApi.getHealthProfile();
         if (!cancelled) setProfile(data);
       } catch (err) {
-        if (!cancelled) onError?.(err instanceof Error ? err.message : 'Failed to load health profile');
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : 'Failed to load health profile';
+        setLoadError(message);
+        onErrorRef.current?.(message);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -161,7 +174,7 @@ export default function HealthProfileSection({ onError }: HealthProfileSectionPr
     return () => {
       cancelled = true;
     };
-  }, [onError]);
+  }, [reloadKey]);
 
   // Auto-hide the success message after 3s.
   useEffect(() => {
@@ -284,6 +297,22 @@ export default function HealthProfileSection({ onError }: HealthProfileSectionPr
       {isLoading ? (
         <div className="p-12 flex items-center justify-center">
           <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+        </div>
+      ) : loadError ? (
+        <div className="p-6">
+          <div className="flex items-center justify-between space-x-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+              <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 underline"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       ) : (
         <div className="p-6 space-y-6">

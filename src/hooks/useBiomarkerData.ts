@@ -173,7 +173,11 @@ export function useBiomarkerData({
         if (!cancelled) {
           const errorMsg = error instanceof Error ? error.message : 'Failed to load insurance plans';
           dashboardLogger.error('Error fetching insurance plans', { error: errorMsg });
-          // Don't show error toast - insurance is optional, silent fail is OK
+          // Surface as a non-blocking notice so the user knows cost features
+          // are limited. The dashboard still renders without insurance data.
+          onErrorRef.current(
+            'Insurance data unavailable — some cost features may be limited'
+          );
         }
       }
     };

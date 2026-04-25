@@ -7,7 +7,7 @@
  * "Contact us" hint. When billing lands, swap the onClick to kick off checkout.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CreditCard, CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { planApi, isPlanLimitUnlimited } from '../../services/api';
 import type { CurrentPlanData, PlanLimits, PlanUsage, PlanTier } from '../../services/api';
@@ -57,9 +57,17 @@ export default function PlanSection({ onError }: PlanSectionProps) {
   const [data, setData] = useState<CurrentPlanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Stable ref so useEffect doesn't re-run when the parent passes a new
+  // inline `onError` arrow on every render.
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
     (async () => {
       try {
         const current = await planApi.getCurrentPlan();
@@ -69,7 +77,7 @@ export default function PlanSection({ onError }: PlanSectionProps) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : 'Failed to load plan';
         setLoadError(message);
-        onError?.(message);
+        onErrorRef.current?.(message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -77,7 +85,7 @@ export default function PlanSection({ onError }: PlanSectionProps) {
     return () => {
       cancelled = true;
     };
-  }, [onError]);
+  }, [reloadKey]);
 
   const body = useMemo(() => {
     if (loading) {
@@ -90,9 +98,18 @@ export default function PlanSection({ onError }: PlanSectionProps) {
     }
     if (loadError) {
       return (
-        <div className="flex items-center space-x-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-          <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+        <div className="flex items-center justify-between space-x-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+            <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 underline"
+          >
+            Try again
+          </button>
         </div>
       );
     }

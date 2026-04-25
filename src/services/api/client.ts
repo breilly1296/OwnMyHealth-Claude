@@ -156,6 +156,12 @@ export async function attemptTokenRefresh(): Promise<boolean> {
         return true;
       }
 
+      // Explicit: 429 on refresh = rate limited, log user out
+      // rather than retrying and amplifying the storm. The `!response.ok`
+      // branch below covers 401 (terminal — refresh token invalid) and
+      // 429 (terminal — back off via the auth-failure path) identically.
+      // The caller treats `false` as "refresh failed → onAuthFailureCallback",
+      // which lands the user back on /login without re-issuing requests.
       clearAuthToken();
       return false;
     } catch {
@@ -170,11 +176,45 @@ export async function attemptTokenRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
+/**
+ * 429 retry policy: respect Retry-After when the server provides it,
+ * otherwise back off exponentially (1s, 2s, 4s) with ±25% jitter, up
+ * to MAX_RETRY_429 attempts. Auth-management endpoints opt out — see
+ * the call site in apiFetch.
+ */
+const MAX_RETRY_429 = 3;
+
+function parseRetryAfter(header: string | null): number | null {
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+  // HTTP-date form. Date.parse returns NaN on garbage.
+  const epochMs = Date.parse(header);
+  if (Number.isFinite(epochMs)) {
+    return Math.max(0, epochMs - Date.now());
+  }
+  return null;
+}
+
+function backoffDelayMs(attempt: number): number {
+  // attempt: 1 → 1s, 2 → 2s, 3 → 4s. Jitter ±25%.
+  const base = 1000 * Math.pow(2, attempt - 1);
+  const jitter = base * 0.25 * (Math.random() * 2 - 1);
+  return Math.max(0, Math.round(base + jitter));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {},
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
-  isRetry: boolean = false
+  isRetry: boolean = false,
+  retryCount429: number = 0
 ): Promise<ApiResponse<T>> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -219,6 +259,23 @@ export async function apiFetch<T>(
 
     clearTimeout(timeoutId);
 
+    // 429 retry: back off and retry up to MAX_RETRY_429 times before
+    // surfacing the error. Auth-management endpoints are exempt — refresh
+    // failure is terminal and logout should not loop. The original `isRetry`
+    // (post-401-refresh retry) is also exempt to keep the existing one-shot
+    // semantic on that path.
+    if (
+      response.status === 429 &&
+      !isAuthMgmtEndpoint &&
+      !isRetry &&
+      retryCount429 < MAX_RETRY_429
+    ) {
+      const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
+      const delay = retryAfterMs ?? backoffDelayMs(retryCount429 + 1);
+      await sleep(delay);
+      return apiFetch<T>(endpoint, options, timeoutMs, isRetry, retryCount429 + 1);
+    }
+
     let data;
     try {
       data = await response.json();
@@ -227,7 +284,7 @@ export async function apiFetch<T>(
         if (response.status === 401 && !isRetry && !isAuthMgmtEndpoint) {
           const refreshed = await attemptTokenRefresh();
           if (refreshed) {
-            return apiFetch<T>(endpoint, options, timeoutMs, true);
+            return apiFetch<T>(endpoint, options, timeoutMs, true, retryCount429);
           }
           if (onAuthFailureCallback) {
             onAuthFailureCallback();
