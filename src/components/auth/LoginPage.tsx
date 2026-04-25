@@ -171,11 +171,11 @@ export default function LoginPage({
         </div>
 
         {/* Bottom Text */}
-        <div className="relative z-10">
+        <footer className="relative z-10">
           <p className="text-slate-500 text-sm">
             HIPAA-compliant security. Your data is encrypted and never shared.
           </p>
-        </div>
+        </footer>
       </div>
 
       {/* Right Side - Login Form */}
@@ -195,10 +195,10 @@ export default function LoginPage({
 
         {/* Mobile Value Proposition */}
         <div className="lg:hidden px-6 py-6 border-b border-slate-800 bg-slate-900/50">
-          <h1 className="text-xl font-bold text-white mb-4 text-center">
+          <p className="text-xl font-bold text-white mb-4 text-center">
             Take control of your
             <span className="bg-gradient-to-r from-brand-400 to-wellness-400 bg-clip-text text-transparent"> health data</span>
-          </h1>
+          </p>
 
           {/* Condensed Feature Pills */}
           <div className="flex flex-wrap justify-center gap-2 mb-4">
@@ -318,6 +318,7 @@ export default function LoginPage({
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     className="absolute inset-y-0 right-0 pr-3.5 flex items-center"
                   >
                     {showPassword ? (
@@ -336,7 +337,7 @@ export default function LoginPage({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl hover:from-brand-600 hover:to-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25"
               >
                 {isLoading ? (
                   <>
@@ -355,7 +356,7 @@ export default function LoginPage({
                 type="button"
                 onClick={handleDemoLogin}
                 disabled={isLoading}
-                className="mt-6 w-full py-3.5 px-4 bg-slate-800/50 text-slate-300 font-medium rounded-xl border border-slate-700 hover:bg-slate-800 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="mt-6 w-full py-3.5 px-4 bg-slate-800/50 text-slate-300 font-medium rounded-xl border border-slate-700 hover:bg-slate-800 hover:border-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 Try Demo Account
               </button>
@@ -374,12 +375,12 @@ export default function LoginPage({
             </p>
 
             {/* Security Notice */}
-            <div className="mt-8 pt-8 border-t border-slate-800">
+            <footer className="mt-8 pt-8 border-t border-slate-800">
               <div className="flex items-center justify-center gap-2 text-slate-500 text-xs">
                 <Shield className="w-4 h-4" />
                 <span>256-bit encrypted. Your health data stays private.</span>
               </div>
-            </div>
+            </footer>
           </div>
         </main>
       </div>
