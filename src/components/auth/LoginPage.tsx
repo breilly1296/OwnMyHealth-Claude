@@ -41,33 +41,44 @@ export default function LoginPage({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocalError(null);
+    setEmailError(null);
+    setPasswordError(null);
 
-    // Basic validation
-    if (!email.trim()) {
-      setLocalError('Email is required');
-      return;
-    }
-
-    if (!password) {
-      setLocalError('Password is required');
-      return;
-    }
-
+    // Field-level validation. Both errors render inline below their field;
+    // we set them all up-front (instead of returning on first miss) so the
+    // user sees every problem in one pass.
+    let hasError = false;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setLocalError('Please enter a valid email address');
-      return;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      hasError = true;
+    } else if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      hasError = true;
     }
+    if (!password) {
+      setPasswordError('Password is required');
+      hasError = true;
+    }
+    if (hasError) return;
 
     try {
       await onLogin(email, password);
-    } catch (error) {
-      logger.error('Login failed', { error });
+    } catch (err) {
+      // Keep email so a mistyped password doesn't force re-typing the address.
+      // Clear the password field — wrong-credential or any failure should
+      // require fresh entry.
+      setPassword('');
+      // DEV-only log. Error objects can carry request bodies / headers in
+      // their nested fields; logging them in production is a leak risk.
+      if (import.meta.env.DEV) {
+        logger.error('Login failed', { error: err });
+      }
     }
   };
 
@@ -75,13 +86,15 @@ export default function LoginPage({
     if (onDemoLogin) {
       try {
         await onDemoLogin();
-      } catch (error) {
-        logger.error('Demo login failed', { error });
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          logger.error('Demo login failed', { error: err });
+        }
       }
     }
   };
 
-  const displayError = localError || error;
+  const displayError = error;
 
   return (
     <div className="min-h-screen bg-slate-950 flex">
@@ -242,7 +255,7 @@ export default function LoginPage({
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                  Email address
+                  Email address <span className="text-red-400">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -252,20 +265,27 @@ export default function LoginPage({
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError(null);
+                    }}
                     className="block w-full pl-11 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
                     placeholder="you@example.com"
                     disabled={isLoading}
                     autoComplete="email"
+                    required
                   />
                 </div>
+                {emailError && (
+                  <p className="mt-1 text-xs text-red-400">{emailError}</p>
+                )}
               </div>
 
               {/* Password Field */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label htmlFor="password" className="block text-sm font-medium text-slate-300">
-                    Password
+                    Password <span className="text-red-400">*</span>
                   </label>
                   {onForgotPassword && (
                     <button
@@ -285,11 +305,15 @@ export default function LoginPage({
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (passwordError) setPasswordError(null);
+                    }}
                     className="block w-full pl-11 pr-12 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
                     placeholder="Enter your password"
                     disabled={isLoading}
                     autoComplete="current-password"
+                    required
                   />
                   <button
                     type="button"
@@ -303,6 +327,9 @@ export default function LoginPage({
                     )}
                   </button>
                 </div>
+                {passwordError && (
+                  <p className="mt-1 text-xs text-red-400">{passwordError}</p>
+                )}
               </div>
 
               {/* Submit Button */}

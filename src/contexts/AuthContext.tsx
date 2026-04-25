@@ -131,7 +131,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
+    // Do NOT flip the global `isLoading` flag here. App.tsx renders a
+    // full-screen loading spinner while `isLoading` is true, which unmounts
+    // the LoginPage mid-submit. On failure the LoginPage remounts with
+    // fresh state, wiping the email field. App.tsx tracks its own
+    // `isAuthLoading` for in-flight UI; the global flag is reserved for the
+    // initial session-restore check on mount.
     setError(null);
 
     try {
@@ -141,8 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const message = (err as { message?: string }).message || 'Login failed';
       setError(message);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
