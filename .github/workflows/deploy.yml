@@ -1,5 +1,17 @@
 name: Deploy to Cloud Run
 
+# F-30 follow-up — TODO(supply-chain): pin every third-party action below to
+# a full commit SHA instead of the major-version tag (`@v2`, `@v4`).
+# Currently used: `actions/checkout@v4`, `google-github-actions/auth@v2`,
+# `google-github-actions/setup-gcloud@v2`, `actions/setup-node@v4`. A version
+# tag is mutable — if a release tag is ever force-pushed to a malicious
+# commit, every CI run picks it up. SHA pins make the action body
+# tamper-evident; renovate / dependabot can still bump them with a
+# reviewable diff. The pin should be done from a trusted environment with
+# access to the action's release page so the SHA can be verified against
+# what GitHub actually published; doing it blind in this repo would risk
+# fixing to a typoed or substituted hash.
+
 on:
   push:
     branches: [master, main]
@@ -41,15 +53,19 @@ jobs:
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build and Push Docker Image
+        # F-32: dropped the `:latest` tag. Cloud Run deploys reference
+        # `:${{ github.sha }}` (see "Deploy no-traffic tagged revision" below),
+        # so `:latest` was unused dead weight. Removing it eliminates the
+        # confusion of two coexisting "current image" pointers and the risk
+        # of a future hand-rolled `kubectl`/`gcloud` invocation pulling a
+        # stale `:latest` while traffic is on a different SHA.
         run: |
           IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}"
           IMAGE_SHA="${IMAGE_BASE}:${{ github.sha }}"
-          IMAGE_LATEST="${IMAGE_BASE}:latest"
           echo "Building $IMAGE_SHA"
           cd backend
-          docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
+          docker build -t "$IMAGE_SHA" .
           docker push "$IMAGE_SHA"
-          docker push "$IMAGE_LATEST"
 
       - name: Deploy no-traffic tagged revision
         id: deploy
@@ -59,12 +75,17 @@ jobs:
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
 
           echo "Deploying revision tagged $TAG at 0% traffic"
+          # --max-instances=3 bounds in-memory rate-limiter dilution.
+          # See rateLimiter.ts for the per-instance-store limitation. Keep in
+          # sync with that comment: raising this cap means switching the
+          # limiter store to Redis first.
           gcloud run deploy ${{ env.SERVICE }} \
             --image "$IMAGE" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
             --platform managed \
             --no-traffic \
+            --max-instances=3 \
             --tag "$TAG"
 
           NEW_REV=$(gcloud run services describe ${{ env.SERVICE }} \
@@ -201,7 +222,14 @@ jobs:
           VITE_API_URL: https://api.ownmyhealth.io/api/v1
 
       - name: Deploy to Cloud Storage
+        # F-31: replaced `gsutil rm -r` + `gsutil cp -r` with `gsutil rsync`.
+        # The old shape created a 404 window (between rm and cp completing)
+        # during which any user opening the SPA would get the GCS error
+        # page. `rsync -d -r` uploads new/changed files first, then deletes
+        # objects no longer in `dist/` — no window where assets are missing.
+        # `-d` deletes destination-only files; `-r` recurses; `-c` would add
+        # checksum-based diffing but Cloud Run + cache bust on `index.html`
+        # makes mtime-based diffing fine here.
         run: |
-          gsutil -m rm -r gs://${{ env.FRONTEND_BUCKET }}/** || true
-          gsutil -m cp -r dist/* gs://${{ env.FRONTEND_BUCKET }}/
+          gsutil -m rsync -d -r dist/ gs://${{ env.FRONTEND_BUCKET }}/
           gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://${{ env.FRONTEND_BUCKET }}/index.html

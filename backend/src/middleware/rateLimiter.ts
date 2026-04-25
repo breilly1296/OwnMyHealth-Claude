@@ -3,6 +3,15 @@ import type { Request } from 'express';
 import { config } from '../config/index.js';
 import type { ApiResponse } from '../types/index.js';
 
+// KNOWN LIMITATION: In-memory rate-limit store is per-instance.
+// On Cloud Run with N instances, an attacker can hit each instance up to N
+// times the stated limit before any bucket fills. Mitigated today by pinning
+// Cloud Run to a low `--max-instances` (see deploy config). When we scale
+// beyond ~3 instances, replace MemoryStore with `rate-limit-redis` backed by
+// Cloud Memorystore so counters are shared across instances. Not fixed now
+// because Redis is a new piece of infra and the current traffic fits on one
+// instance — see audit HIGH finding on rate-limiter dilution.
+
 // Standard rate limiter for general API endpoints
 export const standardLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
@@ -105,6 +114,34 @@ export const aiLimiter = rateLimit({
   keyGenerator: (req) => {
     // Key by authenticated user ID for per-user cost protection, fallback to IP
     return (req as Request & { user?: { id: string } }).user?.id || req.ip || req.socket.remoteAddress || 'unknown';
+  },
+});
+
+// Provider access-request limiter — caps how often one provider can fan
+// out requests to patient emails. User-keyed (not IP-keyed) so a provider
+// behind a corporate NAT can't be DoS'd by another provider's rate, and so
+// a single account can't sidestep the cap by hopping IPs. 10/hour matches
+// the plan-tier ceiling on legitimate practice growth (a provider adding
+// 10 patients/hour to their roster is plausible; 100/hour is enumeration).
+export const providerAccessRequestLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: {
+    success: false,
+    error: {
+      code: 'PROVIDER_REQUEST_RATE_LIMIT_EXCEEDED',
+      message: 'Too many access requests. Please try again later.',
+    },
+  } as ApiResponse,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return (
+      (req as Request & { user?: { id: string } }).user?.id ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      'unknown'
+    );
   },
 });
 

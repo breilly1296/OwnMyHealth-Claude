@@ -187,11 +187,10 @@ export async function initializeDatabase(): Promise<void> {
     }
   );
 
-  // C-8 Part 3 — RLS enforcement check. Runs after the connection is alive
-  // so we can actually query pg_roles under the current login. Policy: warn
-  // by default (safe during the rollout — the code change lands before the
-  // infrastructure cutover), escalate to hard-exit when RLS_ENFORCEMENT=strict
-  // is set. See infrastructure cutover steps in docs/STAGING.md.
+  // C-8 PR C — RLS enforcement check. Runs after the connection is alive so
+  // we can query pg_roles under the current login. In production this hard-
+  // exits if BYPASSRLS=true; in non-prod it warns. See assertNoBypassRLS for
+  // the full rationale, and C8_PART3_RUNBOOK.md for the rollout/rollback.
   await assertNoBypassRLS();
 
   isInitialized = true;
@@ -199,27 +198,24 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 /**
- * Fail loud in production if the DB login has BYPASSRLS. Without this, a
- * forgotten credential rotation back to a superuser silently turns RLS off
- * for every query — application code would keep working, tests would still
- * pass, and tenant isolation would quietly collapse.
+ * Fail loud if the DB login has BYPASSRLS. Without this, a forgotten
+ * credential rotation back to a superuser silently turns RLS off for
+ * every query — application code keeps working, tests keep passing,
+ * and tenant isolation quietly collapses.
  *
- * Non-production environments always skip: dev DBs are commonly the
- * superuser, and staging stays on BYPASSRLS until the omh_app role is
- * provisioned there too.
- *
- * RLS_ENFORCEMENT semantics:
- *   - unset or anything other than "strict": log a warning, keep booting.
- *     This is the transitional state — the code ships before the infra
- *     cutover, and we don't want to take prod down the instant this
- *     assertion reaches it.
- *   - "strict": log the error and process.exit(1). Set this env var only
- *     after the omh_app NOBYPASSRLS role is live in Cloud SQL and
- *     DATABASE_URL has been rotated in Secret Manager.
+ * C-8 PR C semantics (post-cutover):
+ *   - Production with BYPASSRLS=true → log FATAL and process.exit(1).
+ *     There is no opt-out: if the role can bypass RLS in prod, the
+ *     deployment is broken and refusing to start is safer than serving
+ *     unisolated PHI. The transitional `RLS_ENFORCEMENT=strict` flag
+ *     was removed when the omh_app cutover landed.
+ *   - Non-production with BYPASSRLS=true → log WARNING and continue.
+ *     Dev databases are commonly the superuser; staging may not have
+ *     omh_app provisioned yet. The warning makes the unsafe state
+ *     audible without blocking the boot.
+ *   - Either environment with BYPASSRLS=false → log success and continue.
  */
 async function assertNoBypassRLS(): Promise<void> {
-  if (!config.isProduction) return;
-
   if (!prisma) {
     // Defensive — should be impossible given the caller. A missing client
     // here would also block everything else, so let the normal failure
@@ -249,23 +245,18 @@ async function assertNoBypassRLS(): Promise<void> {
     return;
   }
 
-  const strict = process.env.RLS_ENFORCEMENT === 'strict';
-  const message =
-    'FATAL: Database role has BYPASSRLS=true in production. ' +
-    'RLS policies are not enforced — tenant isolation relies solely on ' +
-    'application `where: { userId }` filters. Fix: connect as a NOBYPASSRLS ' +
-    'role (see docs/STAGING.md → role provisioning).';
-
-  if (strict) {
-    logger.error(message);
-    logger.error('RLS_ENFORCEMENT=strict — refusing to start.');
+  if (config.isProduction) {
+    logger.error(
+      'FATAL: Production database role has BYPASSRLS. ' +
+      'RLS policies are not enforcing. Refusing to start. ' +
+      'See C8_PART3_RUNBOOK.md.'
+    );
     process.exit(1);
   }
 
-  logger.warn(message);
   logger.warn(
-    'RLS_ENFORCEMENT is not "strict" — continuing with warning. Flip the ' +
-      'env var to "strict" immediately after the omh_app role cutover.',
+    'WARNING: Database role has BYPASSRLS — RLS policies are not enforcing. ' +
+    'This is acceptable in development but must be fixed before production.'
   );
 }
 

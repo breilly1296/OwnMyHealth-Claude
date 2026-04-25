@@ -529,7 +529,7 @@ exports.Prisma.CostAnalysisScalarFieldEnum = {
   userId: 'userId',
   planId: 'planId',
   analysisDate: 'analysisDate',
-  claudeResponse: 'claudeResponse',
+  claudeResponseEncrypted: 'claudeResponseEncrypted',
   totalProjectedOopEncrypted: 'totalProjectedOopEncrypted',
   deductibleMetMonth: 'deductibleMetMonth',
   projectedExpensesSnapshotEncrypted: 'projectedExpensesSnapshotEncrypted',

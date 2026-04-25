@@ -57,11 +57,14 @@ jobs:
         run: |
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
           echo "Deploying $IMAGE to $SERVICE at 100% traffic"
+          # --max-instances=3 bounds in-memory rate-limiter dilution.
+          # See backend/src/middleware/rateLimiter.ts.
           gcloud run deploy ${{ env.SERVICE }} \
             --image "$IMAGE" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
-            --platform managed
+            --platform managed \
+            --max-instances=3
 
       - name: Post-deploy health probe
         run: |

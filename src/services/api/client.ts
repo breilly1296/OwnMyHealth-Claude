@@ -122,11 +122,12 @@ export function getCsrfToken(): string {
   const match = cookies.match(/csrf[_-]?token=([^;]+)/i);
   const token = match ? decodeURIComponent(match[1]) : '';
 
-  if (!token && typeof window !== 'undefined') {
-    // Don't log the cookie substring — even a prefix can leak session state
-    // to the browser console (audit F-10). The logger also gates this in
-    // production so it only surfaces in dev where it's useful for debugging
-    // CSRF configuration issues.
+  if (!token && typeof window !== 'undefined' && import.meta.env.DEV) {
+    // Dev-only diagnostic. The frontend logger forwards `warn` even in prod
+    // (only `debug`/`info` are gated), so the import.meta.env.DEV guard is
+    // what actually keeps this out of shipped builds. Don't log the cookie
+    // substring — even a prefix can leak session state to the browser
+    // console (audit F-10).
     apiLogger.warn('No CSRF token found in cookies');
   }
 
@@ -189,7 +190,10 @@ export async function apiFetch<T>(
     const csrfToken = getCsrfToken();
     if (csrfToken) {
       (headers as Record<string, string>)['x-csrf-token'] = csrfToken;
-    } else {
+    } else if (import.meta.env.DEV) {
+      // Same DEV-only rationale as getCsrfToken's warn. In prod the missing
+      // header will fail server-side CSRF validation with a clean 403 — no
+      // need to also surface a console warning to end users.
       apiLogger.warn('Mutation request without CSRF token', { method, endpoint });
     }
   }

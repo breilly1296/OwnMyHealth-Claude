@@ -5,6 +5,7 @@
  * and SBC upload controllers.
  */
 
+import path from 'node:path';
 import type { AuthenticatedRequest } from '../../types/index.js';
 import { ValidationError } from '../../middleware/errorHandler.js';
 import { getPrismaClient } from '../../services/database.js';
@@ -90,7 +91,31 @@ function validateMagicBytes(buffer: Buffer, mimetype: string): void {
   }
 }
 
-/** Validate uploaded file — throws ValidationError if invalid */
+/**
+ * Sanitize a client-supplied filename so it's safe to:
+ *   - persist as `UserFile.originalFilename` (DB column, never executed)
+ *   - quote into log lines (control chars would corrupt the log stream)
+ *   - echo back in `Content-Disposition` headers on signed-URL downloads
+ *     (where path separators or quote chars would let a malicious filename
+ *     escape the header value)
+ *
+ * Strategy: take the basename only (drops any `..\foo` or `/etc/passwd`
+ * prefix the client embedded), replace control + filesystem-unsafe chars
+ * with `_`, and cap to 255 bytes (filesystem POSIX max). Idempotent — safe
+ * to call repeatedly.
+ */
+function sanitizeFilename(name: string): string {
+  return path.basename(name)
+    // C0 controls + DEL + Windows-illegal + path seps + quote chars.
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1F\x7F"<>|:*?\\/]/g, '_')
+    .slice(0, 255);
+}
+
+/** Validate uploaded file — throws ValidationError if invalid. Mutates
+ *  `file.originalname` to a sanitized form so every downstream consumer
+ *  (DB write, log line, Content-Disposition header) gets the safe string
+ *  by default. */
 export function validateUploadFile(
   file: Express.Multer.File | undefined,
   uploadType: UploadType,
@@ -116,6 +141,12 @@ export function validateUploadFile(
   // Verify magic bytes match declared mimetype — defends against clients
   // spoofing Content-Type to smuggle a different file format.
   validateMagicBytes(file.buffer, file.mimetype);
+
+  // F-15 fix: sanitize client-supplied filename before any downstream code
+  // reads `file.originalname`. Mutation here means upload controllers,
+  // audit logs, and DB writes all see the sanitized form without each
+  // having to remember to call sanitizeFilename themselves.
+  file.originalname = sanitizeFilename(file.originalname);
 }
 
 // ============================================
@@ -286,10 +317,14 @@ export interface ExtractedSBCData {
  * Prefers Claude Sonnet when configured; falls back to the regex parser on
  * failure or when Claude is disabled. Returns a normalized ExtractedSBCData
  * shape regardless of which path ran.
+ *
+ * `userId` is plumbed through to Claude cost attribution — callers must pass
+ * the authenticated upload user.
  */
 export async function extractSBCData(
   fileBuffer: Buffer,
   fileName: string,
+  userId: string,
   context: { planId?: string } = {}
 ): Promise<ExtractedSBCData> {
   if (isSBCExtractionConfigured()) {
@@ -300,7 +335,7 @@ export async function extractSBCData(
           : 'Attempting Claude Sonnet SBC extraction',
         context.planId ? { data: { planId: context.planId } } : undefined
       );
-      const claudeResult = await extractInsuranceFromSBC(fileBuffer);
+      const claudeResult = await extractInsuranceFromSBC(fileBuffer, userId);
 
       return {
         planName: claudeResult.planName,

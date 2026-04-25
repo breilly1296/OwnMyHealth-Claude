@@ -50,27 +50,45 @@ export default function FilesPage({ onUploadClick }: FilesPageProps) {
     fetchFiles();
   }, []);
 
-  // Handle view file
+  // Handle view file.
+  // The backend now proxies file bytes instead of handing out a signed URL
+  // (defense-in-depth against link leakage — see storageService.getFileStream
+  // and fileController.getFileDownloadUrl). We fetch under the authenticated
+  // session, materialize a blob URL, open it in a new tab, and revoke on
+  // cleanup so memory doesn't leak per download.
   const handleView = useCallback(async (file: UserFile) => {
     try {
-      const { url } = await filesApi.getDownloadUrl(file.id);
-      window.open(url, '_blank');
+      const { blobUrl } = await filesApi.downloadFile(file.id);
+      const win = window.open(blobUrl, '_blank');
+      // Revoke once the new tab has loaded (or after a timeout if the open
+      // was blocked / navigated away). Browsers need the URL alive while the
+      // tab is rendering it.
+      const revoke = () => URL.revokeObjectURL(blobUrl);
+      if (win) {
+        win.addEventListener('load', revoke, { once: true });
+        setTimeout(revoke, 60_000); // safety net
+      } else {
+        revoke();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to open file');
     }
   }, []);
 
-  // Handle download file
+  // Handle download file — same proxy-via-backend pattern as handleView.
   const handleDownload = useCallback(async (file: UserFile) => {
     try {
-      const { url } = await filesApi.getDownloadUrl(file.id);
-      // Create a temporary link to trigger download
+      const { blobUrl } = await filesApi.downloadFile(file.id);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
       link.download = file.originalFilename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      // Revoke after the click has started the download. Short timeout
+      // gives the browser time to kick off the transfer before we drop
+      // the reference.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1_000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to download file');
     }

@@ -12,6 +12,7 @@ import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
 import { asyncHandler, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
+import { providerAccessRequestLimiter } from '../middleware/rateLimiter.js';
 import { getPrismaClient, withRLSContext } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
@@ -107,10 +108,27 @@ router.get(
 
 /**
  * POST /api/v1/provider/patients/request
- * Request access to a patient (by email)
+ * Request access to a patient (by email).
+ *
+ * Response is intentionally uniform whether the email exists, doesn't
+ * exist, or belongs to a non-PATIENT account. Distinct 404/403 responses
+ * (the prior shape) leaked role + existence — a provider could probe
+ * the user table by trying every email on a list and noting which got
+ * "not found" vs "not a patient". Both cases now return the same generic
+ * "if it belongs to a patient, they'll receive your request" success.
+ *
+ * Audit logs retain the actual reason (patient_not_found vs not_patient_role)
+ * so admins can detect enumeration patterns; only the API response is
+ * collapsed.
+ *
+ * Rate-limited per authenticated user via providerAccessRequestLimiter
+ * (10/hour). The limit is applied user-keyed rather than IP-keyed so a
+ * single provider account can't escape the cap by changing IPs and one
+ * provider can't DoS another by sharing a NAT.
  */
 router.post(
   '/patients/request',
+  providerAccessRequestLimiter,
   validate(schemas.providerPatient.request),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
@@ -122,8 +140,7 @@ router.post(
     // is_admin_session()`, which would deny a provider trying to resolve
     // a patient's id by email. Admin wrap is the pragmatic fix; a
     // narrower policy that permits PROVIDER role to SELECT {id, role}
-    // would be more correct long-term. F-21 (distinct error messages
-    // leaking existence/role) is adjacent but not addressed here.
+    // would be more correct long-term.
     const patient = await withRLSContext(
       null,
       async (tx) => {
@@ -137,24 +154,37 @@ router.post(
 
     const auditService = getAuditLogService(prisma);
 
+    // Generic body returned for every "we won't be sending the request" path.
+    // Phrased so it's true regardless of which gate tripped:
+    //   - email doesn't exist → no notification ever happens; statement holds vacuously
+    //   - exists but role != PATIENT → no notification (we never send to non-patients)
+    //   - exists, is a patient → request lands and the patient sees it
+    const genericResponse: ApiResponse<{ message: string }> = {
+      success: true,
+      data: {
+        message: 'If this email belongs to a patient account, they will receive your request.',
+      },
+    };
+
     if (!patient) {
-      // Audit log: Failed access request — patient not found
+      // Audit log retains the real reason for enumeration detection.
       await auditService.logAccess('provider_patient_request', undefined, { req, userId: providerId }, {
         operation: 'REQUEST_ACCESS',
         success: false,
         reason: 'patient_not_found',
       });
-      throw new NotFoundError('Patient not found with this email');
+      res.json(genericResponse);
+      return;
     }
 
     if (patient.role !== 'PATIENT') {
-      // Audit log: Failed access request — not a patient account
       await auditService.logAccess('provider_patient_request', patient.id, { req, userId: providerId }, {
         operation: 'REQUEST_ACCESS',
         success: false,
         reason: 'not_patient_role',
       });
-      throw new ForbiddenError('Can only request access to patient accounts');
+      res.json(genericResponse);
+      return;
     }
 
     // Encrypt the message if provided (using provider's encryption salt).

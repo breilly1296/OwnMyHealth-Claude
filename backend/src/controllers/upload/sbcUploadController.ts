@@ -43,7 +43,7 @@ export async function uploadSBC(
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
 
-  const extractedData = await extractSBCData(file.buffer, file.originalname);
+  const extractedData = await extractSBCData(file.buffer, file.originalname, userId);
 
   if (
     !extractedData.planName &&
@@ -246,7 +246,7 @@ export async function reanalyzePlan(
     throw new NotFoundError('Insurance plan not found');
   }
 
-  const extractedData = await extractSBCData(file.buffer, file.originalname, { planId });
+  const extractedData = await extractSBCData(file.buffer, file.originalname, userId, { planId });
 
   if (
     !extractedData.planName &&

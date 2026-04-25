@@ -665,7 +665,7 @@ All three are in-process `setInterval` timers started by `startServer` in `app.t
 
 | Job | File:Line | Cadence | Effect |
 |---|---|---|---|
-| Session cleanup | `services/authService.ts:1221-1237` (`startSessionCleanup`) | every 60 min | `DELETE FROM sessions WHERE expires_at < NOW()` (`authService.ts:1197-1218`) |
+| Session cleanup | `services/authService.ts:1221-1237` (`startSessionCleanup`) | every 10 min | `DELETE FROM sessions WHERE expires_at < NOW()` (`authService.ts:1197-1218`) |
 | Audit log retention | `services/auditLog.ts:520-546` (`startAuditCleanup`) | every 24 h | `DELETE FROM audit_logs WHERE created_at < NOW() - 2555 days`, then log `SYSTEM / DELETE / retention_cleanup` (`auditLog.ts:475-503`) |
 | Engagement email | `schedulers/emailScheduler.ts:242` (`startEmailScheduler`) | every 60 min (`ONE_HOUR_MS`, `emailScheduler.ts:25,242`) | Mondays 08:00–08:59 UTC → weekly summaries + goal reminders (dedup via `lastWeeklyRunKey`, `emailScheduler.ts:36-40`); every tick → plan-expiring in ~7 days → `notifyPlanExpiring` |
 

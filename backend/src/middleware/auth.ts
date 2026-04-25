@@ -46,6 +46,24 @@ function extractToken(req: AuthenticatedRequest): string | null {
 }
 
 /**
+ * Extract token from Authorization header ONLY — ignores cookies.
+ *
+ * This exists so that CSRF-exempt routes (today: the SSE chat stream) are
+ * genuinely Bearer-only, not cookie-and-Bearer. The original exemption list
+ * assumed "Bearer means no CSRF" but the base `authenticate` middleware
+ * reads the cookie first — meaning a cookie-carrying cross-site request
+ * would pass auth AND bypass CSRF at the same time. Routes that skip CSRF
+ * must use this helper so that attack shape is impossible.
+ */
+function extractBearerToken(req: AuthenticatedRequest): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return null;
+}
+
+/**
  * Main authentication middleware
  * Verifies JWT and attaches user to request
  */
@@ -133,6 +151,54 @@ export function optionalAuth(
 }
 
 // Note: requireRole is exported from rbac.ts - use that instead for type-safe role checking
+
+/**
+ * Bearer-only authentication middleware.
+ *
+ * Use on routes that are intentionally CSRF-exempt — because `authenticate`
+ * would accept the cookie path and reopen the CSRF hole that the exemption
+ * assumed was closed. Today the only such route is `/ai/chat` (SSE streaming
+ * can't ergonomically carry a CSRF header through `EventSource`).
+ *
+ * Semantics are otherwise identical to `authenticate`: verifies an access
+ * JWT, rejects refresh tokens, attaches `req.user`.
+ */
+export function requireBearerAuth(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): void {
+  try {
+    const token = extractBearerToken(req);
+
+    if (!token) {
+      throw new UnauthorizedError('Bearer token required');
+    }
+
+    const decoded = jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;
+
+    if (decoded.type && decoded.type !== 'access') {
+      throw new UnauthorizedError('Invalid token type');
+    }
+
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+      plan: decoded.plan || 'FREE',
+    } as AuthenticatedRequest['user'];
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      next(new UnauthorizedError('Token has expired. Please refresh your session.'));
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      next(new UnauthorizedError('Invalid token'));
+    } else {
+      next(error);
+    }
+  }
+}
 
 /**
  * Generate JWT token (legacy support for other parts of the app)

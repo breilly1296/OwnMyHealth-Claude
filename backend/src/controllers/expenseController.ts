@@ -17,30 +17,22 @@
  */
 
 import { Response } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import type { AuthenticatedRequest } from '../types/index.js';
 import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
+import {
+  BadRequestError,
+  NotFoundError,
+  ServiceUnavailableError,
+} from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 import { sanitizeForPrompt } from '../middleware/validation.js';
 import { trackAIUsage } from '../services/aiCostTracker.js';
+import { getAnthropicClient } from '../services/anthropicClient.js';
 import { config } from '../config/index.js';
-
-/**
- * Anthropic client singleton — reuse across requests
- */
-let anthropicClient: Anthropic | null = null;
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
-    anthropicClient = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
-  }
-  return anthropicClient;
-}
+import { stripPHIFromText } from '../utils/phiRedaction.js';
 
 const RESOURCE_TYPE_PROJECTION = 'expense_projection';
 const RESOURCE_TYPE_ACTUAL = 'expense_actual';
@@ -82,50 +74,47 @@ export async function createProjection(req: AuthenticatedRequest, res: Response)
   const userId = req.user!.id;
   const { planId, serviceType, estimatedCost, frequencyPerYear, isInNetwork, notes } = req.body;
 
-  try {
-    // Validate required fields
-    if (!planId || !serviceType || estimatedCost === undefined || !frequencyPerYear) {
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
-    }
-
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
-
-    const projection = await withRLSTransaction(userId, async (tx) => {
-      return tx.expenseProjection.create({
-        data: {
-          userId,
-          planId,
-          serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
-          estimatedCostEncrypted: encryption.encrypt(estimatedCost.toString(), userSalt),
-          frequencyPerYear,
-          isInNetwork: isInNetwork ?? true,
-          notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
-        },
-      });
-    });
-
-    const auditService = getAuditLogService(prisma);
-    await auditService.logCreate(RESOURCE_TYPE_PROJECTION, projection.id, {
-      serviceType,
-      estimatedCost,
-    }, { req, userId });
-
-    // Decrypt for response
-    const decrypted = {
-      ...projection,
-      serviceType: encryption.decrypt(projection.serviceTypeEncrypted, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(projection.estimatedCostEncrypted, userSalt)),
-      notes: projection.notesEncrypted ? encryption.decrypt(projection.notesEncrypted, userSalt) : null,
-    };
-
-    res.status(201).json(decrypted);
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to create expense projection' });
+  // Validate required fields. Throw a typed error so the centralized
+  // errorHandler maps it to a 400 with the standard envelope shape; routes
+  // are wrapped in `asyncHandler` (`routes/expenseRoutes.ts`), which
+  // forwards thrown errors to that handler.
+  if (!planId || !serviceType || estimatedCost === undefined || !frequencyPerYear) {
+    throw new BadRequestError('Missing required fields');
   }
+
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
+
+  const projection = await withRLSTransaction(userId, async (tx) => {
+    return tx.expenseProjection.create({
+      data: {
+        userId,
+        planId,
+        serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
+        estimatedCostEncrypted: encryption.encrypt(estimatedCost.toString(), userSalt),
+        frequencyPerYear,
+        isInNetwork: isInNetwork ?? true,
+        notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
+      },
+    });
+  });
+
+  const auditService = getAuditLogService(prisma);
+  await auditService.logCreate(RESOURCE_TYPE_PROJECTION, projection.id, {
+    serviceType,
+    estimatedCost,
+  }, { req, userId });
+
+  // Decrypt for response
+  const decrypted = {
+    ...projection,
+    serviceType: encryption.decrypt(projection.serviceTypeEncrypted, userSalt),
+    estimatedCost: parseFloat(encryption.decrypt(projection.estimatedCostEncrypted, userSalt)),
+    notes: projection.notesEncrypted ? encryption.decrypt(projection.notesEncrypted, userSalt) : null,
+  };
+
+  res.status(201).json(decrypted);
 }
 
 /**
@@ -142,65 +131,60 @@ export async function getProjections(req: AuthenticatedRequest, res: Response): 
   const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
   const skip = (page - 1) * limit;
 
-  try {
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    const where = {
-      userId,
-      ...(planId && { planId: planId as string }),
-    };
+  const where = {
+    userId,
+    ...(planId && { planId: planId as string }),
+  };
 
-    const { projections, total } = await withRLSTransaction(userId, async (tx) => {
-      const [rows, count] = await Promise.all([
-        tx.expenseProjection.findMany({
-          where,
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: limit,
-        }),
-        tx.expenseProjection.count({ where }),
-      ]);
-      return { projections: rows, total: count };
-    });
+  const { projections, total } = await withRLSTransaction(userId, async (tx) => {
+    const [rows, count] = await Promise.all([
+      tx.expenseProjection.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      tx.expenseProjection.count({ where }),
+    ]);
+    return { projections: rows, total: count };
+  });
 
-    // Decrypt PHI fields
-    const decrypted = projections.map((p) => ({
-      ...p,
-      serviceType: encryption.decrypt(p.serviceTypeEncrypted, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
-      notes: p.notesEncrypted ? encryption.decrypt(p.notesEncrypted, userSalt) : null,
-    }));
+  // Decrypt PHI fields
+  const decrypted = projections.map((p) => ({
+    ...p,
+    serviceType: encryption.decrypt(p.serviceTypeEncrypted, userSalt),
+    estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
+    notes: p.notesEncrypted ? encryption.decrypt(p.notesEncrypted, userSalt) : null,
+  }));
 
-    // Audit log: READ access to expense projections
-    const auditService = getAuditLogService(prisma);
-    await auditService.logAccess(RESOURCE_TYPE_PROJECTION, undefined, { req, userId }, {
-      operation: 'LIST',
-      count: decrypted.length,
-      total,
+  // Audit log: READ access to expense projections
+  const auditService = getAuditLogService(prisma);
+  await auditService.logAccess(RESOURCE_TYPE_PROJECTION, undefined, { req, userId }, {
+    operation: 'LIST',
+    count: decrypted.length,
+    total,
+    page,
+    limit,
+    planId: (planId as string) || 'all',
+  });
+
+  // Wrap in the standard ApiResponse envelope now that we're paginating.
+  // Existing frontend callers that expect an array body are covered by
+  // the array + the rest of the response being additive metadata.
+  res.json({
+    success: true,
+    data: decrypted,
+    pagination: {
       page,
       limit,
-      planId: (planId as string) || 'all',
-    });
-
-    // Wrap in the standard ApiResponse envelope now that we're paginating.
-    // Existing frontend callers that expect an array body are covered by
-    // the array + the rest of the response being additive metadata.
-    res.json({
-      success: true,
-      data: decrypted,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to fetch expense projections' });
-  }
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 }
 
 /**
@@ -212,47 +196,42 @@ export async function updateProjection(req: AuthenticatedRequest, res: Response)
   const { id } = req.params;
   const { serviceType, estimatedCost, frequencyPerYear, isInNetwork, notes } = req.body;
 
-  try {
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    const updateData: Record<string, unknown> = {};
-    if (serviceType !== undefined) {
-      updateData.serviceTypeEncrypted = encryption.encrypt(serviceType, userSalt);
-    }
-    if (estimatedCost !== undefined) {
-      updateData.estimatedCostEncrypted = encryption.encrypt(estimatedCost.toString(), userSalt);
-    }
-    if (frequencyPerYear !== undefined) updateData.frequencyPerYear = frequencyPerYear;
-    if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
-    if (notes !== undefined) {
-      updateData.notesEncrypted = notes ? encryption.encrypt(notes, userSalt) : null;
-    }
-
-    const updated = await withRLSTransaction(userId, async (tx) => {
-      return tx.expenseProjection.update({
-        where: { id, userId },
-        data: updateData,
-      });
-    });
-
-    const auditService = getAuditLogService(prisma);
-    await auditService.logUpdate(RESOURCE_TYPE_PROJECTION, id, {}, updateData, { req, userId });
-
-    // Decrypt for response
-    const decrypted = {
-      ...updated,
-      serviceType: encryption.decrypt(updated.serviceTypeEncrypted, userSalt),
-      estimatedCost: parseFloat(encryption.decrypt(updated.estimatedCostEncrypted, userSalt)),
-      notes: updated.notesEncrypted ? encryption.decrypt(updated.notesEncrypted, userSalt) : null,
-    };
-
-    res.json(decrypted);
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to update expense projection' });
+  const updateData: Record<string, unknown> = {};
+  if (serviceType !== undefined) {
+    updateData.serviceTypeEncrypted = encryption.encrypt(serviceType, userSalt);
   }
+  if (estimatedCost !== undefined) {
+    updateData.estimatedCostEncrypted = encryption.encrypt(estimatedCost.toString(), userSalt);
+  }
+  if (frequencyPerYear !== undefined) updateData.frequencyPerYear = frequencyPerYear;
+  if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
+  if (notes !== undefined) {
+    updateData.notesEncrypted = notes ? encryption.encrypt(notes, userSalt) : null;
+  }
+
+  const updated = await withRLSTransaction(userId, async (tx) => {
+    return tx.expenseProjection.update({
+      where: { id, userId },
+      data: updateData,
+    });
+  });
+
+  const auditService = getAuditLogService(prisma);
+  await auditService.logUpdate(RESOURCE_TYPE_PROJECTION, id, {}, updateData, { req, userId });
+
+  // Decrypt for response
+  const decrypted = {
+    ...updated,
+    serviceType: encryption.decrypt(updated.serviceTypeEncrypted, userSalt),
+    estimatedCost: parseFloat(encryption.decrypt(updated.estimatedCostEncrypted, userSalt)),
+    notes: updated.notesEncrypted ? encryption.decrypt(updated.notesEncrypted, userSalt) : null,
+  };
+
+  res.json(decrypted);
 }
 
 /**
@@ -263,23 +242,18 @@ export async function deleteProjection(req: AuthenticatedRequest, res: Response)
   const userId = req.user!.id;
   const { id } = req.params;
 
-  try {
-    const prisma = getPrismaClient();
+  const prisma = getPrismaClient();
 
-    await withRLSTransaction(userId, async (tx) => {
-      await tx.expenseProjection.delete({
-        where: { id, userId },
-      });
+  await withRLSTransaction(userId, async (tx) => {
+    await tx.expenseProjection.delete({
+      where: { id, userId },
     });
+  });
 
-    const auditService = getAuditLogService(prisma);
-    await auditService.logDelete(RESOURCE_TYPE_PROJECTION, id, {}, { req, userId });
+  const auditService = getAuditLogService(prisma);
+  await auditService.logDelete(RESOURCE_TYPE_PROJECTION, id, {}, { req, userId });
 
-    res.status(204).send();
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to delete expense projection' });
-  }
+  res.status(204).send();
 }
 
 // ============================================
@@ -359,48 +333,43 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
     notes,
   } = req.body;
 
-  try {
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    // Create path: undefined/null both collapse to null (no prior value to preserve).
-    const encNum = (v: number | undefined | null) =>
-      v === undefined || v === null ? null : encryption.encrypt(v.toString(), userSalt);
+  // Create path: undefined/null both collapse to null (no prior value to preserve).
+  const encNum = (v: number | undefined | null) =>
+    v === undefined || v === null ? null : encryption.encrypt(v.toString(), userSalt);
 
-    const actual = await withRLSTransaction(userId, async (tx) => {
-      return tx.expenseActual.create({
-        data: {
-          userId,
-          planId,
-          projectionId: projectionId ?? null,
-          serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
-          dateOfService: serviceDate ? new Date(serviceDate) : null,
-          providerNameEncrypted: providerName ? encryption.encrypt(providerName, userSalt) : null,
-          billedAmountEncrypted: encNum(billedAmount),
-          insurancePaidEncrypted: encNum(insurancePaid),
-          patientPaidEncrypted: encNum(patientPaid),
-          appliedToDeductibleEncrypted: encNum(appliedToDeductible),
-          appliedToOopEncrypted: encNum(appliedToOop),
-          isInNetwork: isInNetwork ?? true,
-          claimStatus: claimStatus ?? 'processed',
-          notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
-        },
-      });
+  const actual = await withRLSTransaction(userId, async (tx) => {
+    return tx.expenseActual.create({
+      data: {
+        userId,
+        planId,
+        projectionId: projectionId ?? null,
+        serviceTypeEncrypted: encryption.encrypt(serviceType, userSalt),
+        dateOfService: serviceDate ? new Date(serviceDate) : null,
+        providerNameEncrypted: providerName ? encryption.encrypt(providerName, userSalt) : null,
+        billedAmountEncrypted: encNum(billedAmount),
+        insurancePaidEncrypted: encNum(insurancePaid),
+        patientPaidEncrypted: encNum(patientPaid),
+        appliedToDeductibleEncrypted: encNum(appliedToDeductible),
+        appliedToOopEncrypted: encNum(appliedToOop),
+        isInNetwork: isInNetwork ?? true,
+        claimStatus: claimStatus ?? 'processed',
+        notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
+      },
     });
+  });
 
-    const auditService = getAuditLogService(prisma);
-    await auditService.logCreate(RESOURCE_TYPE_ACTUAL, actual.id, {
-      planId,
-      serviceType,
-      claimStatus: claimStatus ?? 'processed',
-    }, { req, userId });
+  const auditService = getAuditLogService(prisma);
+  await auditService.logCreate(RESOURCE_TYPE_ACTUAL, actual.id, {
+    planId,
+    serviceType,
+    claimStatus: claimStatus ?? 'processed',
+  }, { req, userId });
 
-    res.status(201).json(decryptActual(actual, encryption, userSalt));
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to create expense actual' });
-  }
+  res.status(201).json(decryptActual(actual, encryption, userSalt));
 }
 
 /**
@@ -416,55 +385,50 @@ export async function getActuals(req: AuthenticatedRequest, res: Response): Prom
   const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
   const skip = (page - 1) * limit;
 
-  try {
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    const where = {
-      userId,
-      ...(planId && { planId: planId as string }),
-    };
+  const where = {
+    userId,
+    ...(planId && { planId: planId as string }),
+  };
 
-    const { actuals, total } = await withRLSTransaction(userId, async (tx) => {
-      const [rows, count] = await Promise.all([
-        tx.expenseActual.findMany({
-          where,
-          orderBy: [{ dateOfService: 'desc' }, { createdAt: 'desc' }],
-          skip,
-          take: limit,
-        }),
-        tx.expenseActual.count({ where }),
-      ]);
-      return { actuals: rows, total: count };
-    });
+  const { actuals, total } = await withRLSTransaction(userId, async (tx) => {
+    const [rows, count] = await Promise.all([
+      tx.expenseActual.findMany({
+        where,
+        orderBy: [{ dateOfService: 'desc' }, { createdAt: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      tx.expenseActual.count({ where }),
+    ]);
+    return { actuals: rows, total: count };
+  });
 
-    const decrypted = actuals.map((a) => decryptActual(a, encryption, userSalt));
+  const decrypted = actuals.map((a) => decryptActual(a, encryption, userSalt));
 
-    const auditService = getAuditLogService(prisma);
-    await auditService.logAccess(RESOURCE_TYPE_ACTUAL, undefined, { req, userId }, {
-      operation: 'LIST',
-      count: decrypted.length,
-      total,
+  const auditService = getAuditLogService(prisma);
+  await auditService.logAccess(RESOURCE_TYPE_ACTUAL, undefined, { req, userId }, {
+    operation: 'LIST',
+    count: decrypted.length,
+    total,
+    page,
+    limit,
+    planId: (planId as string) || 'all',
+  });
+
+  res.json({
+    success: true,
+    data: decrypted,
+    pagination: {
       page,
       limit,
-      planId: (planId as string) || 'all',
-    });
-
-    res.json({
-      success: true,
-      data: decrypted,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to fetch expense actuals' });
-  }
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 }
 
 /**
@@ -489,49 +453,44 @@ export async function updateActual(req: AuthenticatedRequest, res: Response): Pr
     notes,
   } = req.body;
 
-  try {
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    const encNum = (v: number | undefined | null) =>
-      encNumIfProvided(v, encryption.encrypt.bind(encryption), userSalt);
-    const encStr = (v: string | undefined | null) =>
-      encIfProvided(v, encryption.encrypt.bind(encryption), userSalt);
+  const encNum = (v: number | undefined | null) =>
+    encNumIfProvided(v, encryption.encrypt.bind(encryption), userSalt);
+  const encStr = (v: string | undefined | null) =>
+    encIfProvided(v, encryption.encrypt.bind(encryption), userSalt);
 
-    const updateData: Record<string, unknown> = {};
-    if (projectionId !== undefined) updateData.projectionId = projectionId;
-    if (serviceType !== undefined) updateData.serviceTypeEncrypted = encryption.encrypt(serviceType, userSalt);
-    if (serviceDate !== undefined) {
-      updateData.dateOfService = serviceDate ? new Date(serviceDate) : null;
-    }
-    if (providerName !== undefined) updateData.providerNameEncrypted = encStr(providerName);
-    if (billedAmount !== undefined) updateData.billedAmountEncrypted = encNum(billedAmount);
-    if (insurancePaid !== undefined) updateData.insurancePaidEncrypted = encNum(insurancePaid);
-    if (patientPaid !== undefined) updateData.patientPaidEncrypted = encNum(patientPaid);
-    if (appliedToDeductible !== undefined) updateData.appliedToDeductibleEncrypted = encNum(appliedToDeductible);
-    if (appliedToOop !== undefined) updateData.appliedToOopEncrypted = encNum(appliedToOop);
-    if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
-    if (claimStatus !== undefined) updateData.claimStatus = claimStatus;
-    if (notes !== undefined) updateData.notesEncrypted = encStr(notes);
-
-    const updated = await withRLSTransaction(userId, async (tx) => {
-      return tx.expenseActual.update({
-        where: { id, userId },
-        data: updateData,
-      });
-    });
-
-    const auditService = getAuditLogService(prisma);
-    await auditService.logUpdate(RESOURCE_TYPE_ACTUAL, id, {}, {
-      fieldsUpdated: Object.keys(updateData),
-    }, { req, userId });
-
-    res.json(decryptActual(updated, encryption, userSalt));
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to update expense actual' });
+  const updateData: Record<string, unknown> = {};
+  if (projectionId !== undefined) updateData.projectionId = projectionId;
+  if (serviceType !== undefined) updateData.serviceTypeEncrypted = encryption.encrypt(serviceType, userSalt);
+  if (serviceDate !== undefined) {
+    updateData.dateOfService = serviceDate ? new Date(serviceDate) : null;
   }
+  if (providerName !== undefined) updateData.providerNameEncrypted = encStr(providerName);
+  if (billedAmount !== undefined) updateData.billedAmountEncrypted = encNum(billedAmount);
+  if (insurancePaid !== undefined) updateData.insurancePaidEncrypted = encNum(insurancePaid);
+  if (patientPaid !== undefined) updateData.patientPaidEncrypted = encNum(patientPaid);
+  if (appliedToDeductible !== undefined) updateData.appliedToDeductibleEncrypted = encNum(appliedToDeductible);
+  if (appliedToOop !== undefined) updateData.appliedToOopEncrypted = encNum(appliedToOop);
+  if (isInNetwork !== undefined) updateData.isInNetwork = isInNetwork;
+  if (claimStatus !== undefined) updateData.claimStatus = claimStatus;
+  if (notes !== undefined) updateData.notesEncrypted = encStr(notes);
+
+  const updated = await withRLSTransaction(userId, async (tx) => {
+    return tx.expenseActual.update({
+      where: { id, userId },
+      data: updateData,
+    });
+  });
+
+  const auditService = getAuditLogService(prisma);
+  await auditService.logUpdate(RESOURCE_TYPE_ACTUAL, id, {}, {
+    fieldsUpdated: Object.keys(updateData),
+  }, { req, userId });
+
+  res.json(decryptActual(updated, encryption, userSalt));
 }
 
 /**
@@ -541,23 +500,18 @@ export async function deleteActual(req: AuthenticatedRequest, res: Response): Pr
   const userId = req.user!.id;
   const { id } = req.params;
 
-  try {
-    const prisma = getPrismaClient();
+  const prisma = getPrismaClient();
 
-    await withRLSTransaction(userId, async (tx) => {
-      await tx.expenseActual.delete({
-        where: { id, userId },
-      });
+  await withRLSTransaction(userId, async (tx) => {
+    await tx.expenseActual.delete({
+      where: { id, userId },
     });
+  });
 
-    const auditService = getAuditLogService(prisma);
-    await auditService.logDelete(RESOURCE_TYPE_ACTUAL, id, {}, { req, userId });
+  const auditService = getAuditLogService(prisma);
+  await auditService.logDelete(RESOURCE_TYPE_ACTUAL, id, {}, { req, userId });
 
-    res.status(204).send();
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to delete expense actual' });
-  }
+  res.status(204).send();
 }
 
 // ============================================
@@ -573,36 +527,30 @@ export async function updateCurrentSpending(req: AuthenticatedRequest, res: Resp
   const { id } = req.params;
   const { deductibleMet, oopMet } = req.body;
 
-  try {
-    if (deductibleMet === undefined || oopMet === undefined) {
-      res.status(400).json({ error: 'Missing deductibleMet or oopMet' });
-      return;
-    }
-
-    const prisma = getPrismaClient();
-
-    const updated = await withRLSTransaction(userId, async (tx) => {
-      return tx.insurancePlan.update({
-        where: { id, userId },
-        data: {
-          deductibleMetIndividual: deductibleMet,
-          oopMetIndividual: oopMet,
-          updatedAt: new Date(),
-        },
-      });
-    });
-
-    const auditService = getAuditLogService(prisma);
-    await auditService.logUpdate('insurance_plan', id, {}, {
-      deductibleMet,
-      oopMet,
-    }, { req, userId });
-
-    res.json(updated);
-  } catch (error) {
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to update spending' });
+  if (deductibleMet === undefined || oopMet === undefined) {
+    throw new BadRequestError('Missing deductibleMet or oopMet');
   }
+
+  const prisma = getPrismaClient();
+
+  const updated = await withRLSTransaction(userId, async (tx) => {
+    return tx.insurancePlan.update({
+      where: { id, userId },
+      data: {
+        deductibleMetIndividual: deductibleMet,
+        oopMetIndividual: oopMet,
+        updatedAt: new Date(),
+      },
+    });
+  });
+
+  const auditService = getAuditLogService(prisma);
+  await auditService.logUpdate('insurance_plan', id, {}, {
+    deductibleMet,
+    oopMet,
+  }, { req, userId });
+
+  res.json(updated);
 }
 
 // ============================================
@@ -617,52 +565,45 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
   const userId = req.user!.id;
   const { planId } = req.body;
 
-  try {
-    if (!planId) {
-      res.status(400).json({ error: 'Plan ID required' });
-      return;
-    }
+  if (!planId) {
+    throw new BadRequestError('Plan ID required');
+  }
 
-    const prisma = getPrismaClient();
+  const prisma = getPrismaClient();
 
-    // C-7 runtime gate — refuse to send anything to Claude unless the BAA flag
-    // is explicitly set. Matches claudeExtraction/sbcExtraction; graceful 503
-    // so the UI can show a user-facing message instead of a 500.
-    if (!config.anthropic.baaActive) {
-      const auditService = getAuditLogService(prisma);
-      await auditService.logAccess(RESOURCE_TYPE_ANALYSIS, planId, { req, userId }, {
-        operation: 'ANALYZE_BLOCKED_NO_BAA',
-      });
-      res.status(503).json({
-        error: {
-          code: 'SERVICE_UNAVAILABLE',
-          message: 'Cost analysis is disabled: ANTHROPIC_BAA_ACTIVE must be "true". See SECURITY_STATUS.md C-7.',
-        },
-      });
-      return;
-    }
+  // C-7 runtime gate — refuse to send anything to Claude unless the BAA flag
+  // is explicitly set. Matches claudeExtraction/sbcExtraction; surfaces as
+  // a 503 so the UI shows a "feature unavailable" message instead of a 500.
+  if (!config.anthropic.baaActive) {
+    const auditService = getAuditLogService(prisma);
+    await auditService.logAccess(RESOURCE_TYPE_ANALYSIS, planId, { req, userId }, {
+      operation: 'ANALYZE_BLOCKED_NO_BAA',
+    });
+    throw new ServiceUnavailableError(
+      'Cost analysis is disabled: ANTHROPIC_BAA_ACTIVE must be "true". See SECURITY_STATUS.md C-7.'
+    );
+  }
 
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    // Fetch plan details and expense projections within RLS transaction
-    const { plan, projections } = await withRLSTransaction(userId, async (tx) => {
-      const plan = await tx.insurancePlan.findUnique({
-        where: { id: planId, userId },
-      });
-
-      const projections = await tx.expenseProjection.findMany({
-        where: { userId, planId },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      return { plan, projections };
+  // Fetch plan details and expense projections within RLS transaction
+  const { plan, projections } = await withRLSTransaction(userId, async (tx) => {
+    const plan = await tx.insurancePlan.findUnique({
+      where: { id: planId, userId },
     });
 
-    if (!plan) {
-      res.status(404).json({ error: 'Insurance plan not found' });
-      return;
-    }
+    const projections = await tx.expenseProjection.findMany({
+      where: { userId, planId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { plan, projections };
+  });
+
+  if (!plan) {
+    throw new NotFoundError('Insurance plan not found');
+  }
 
     // Decrypt projections (sanitize serviceType for prompt safety)
     const decryptedProjections = projections.map((p) => ({
@@ -674,13 +615,27 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       notes: p.notesEncrypted ? sanitizeForPrompt(encryption.decrypt(p.notesEncrypted, userSalt)) : null,
     }));
 
-    // Build Claude prompt
-    const prompt = buildCostAnalysisPrompt(plan, decryptedProjections);
+  // Build Claude prompt
+  const rawPrompt = buildCostAnalysisPrompt(plan, decryptedProjections);
 
-    // Call Claude API
-    const anthropic = getAnthropicClient();
+  // F-17 floor: serviceType + notes already pass through `sanitizeForPrompt`
+  // (lines above) which strips control chars and prompt-control tokens.
+  // Run the assembled prompt through `stripPHIFromText` as a final scrub
+  // before it leaves the box — catches stray PHI patterns (emails, phone
+  // numbers, dates, SSN-shaped values, etc.) that a user might have typed
+  // into a free-form note on an expense projection. Service-type
+  // anonymization (mapping "HIV PrEP consultation" → "Specialist Visit")
+  // remains a follow-up; doing it well needs a curated medical taxonomy.
+  const prompt = stripPHIFromText(rawPrompt);
 
-    const message = await anthropic.messages.create({
+  // Call Claude API. Wrap only the network call so a timeout / network
+  // error surfaces as a typed ServiceUnavailableError; everything else
+  // falls through to the centralized handler.
+  const anthropic = getAnthropicClient();
+
+  let message;
+  try {
+    message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4000,
       messages: [
@@ -690,8 +645,22 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
         },
       ],
     });
+  } catch (error) {
+    if (error instanceof Error && (error.name === 'APIConnectionTimeoutError' || error.message.includes('timed out'))) {
+      logger.error('Cost analysis timed out', { data: { error: error.message } });
+      throw new ServiceUnavailableError('Cost analysis timed out. Please try again.');
+    }
+    // Anything else (auth error, 5xx from Claude, parse error) — re-throw and
+    // let the centralized handler render a generic 500 with logging.
+    throw error;
+  }
 
-    const claudeResponse = message.content[0].type === 'text' ? message.content[0].text : '';
+    // Defense-in-depth: strip any PHI Claude may have reflected back into
+    // its cost-analysis narrative (e.g., a quoted service-type note or a
+    // provider name). The response is both persisted to DB (encrypted) and
+    // returned to the client — scrub before both sinks.
+    const rawClaudeResponse = message.content[0].type === 'text' ? message.content[0].text : '';
+    const claudeResponse = stripPHIFromText(rawClaudeResponse);
 
     trackAIUsage({
       endpoint: 'cost-analysis',
@@ -711,7 +680,11 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
         data: {
           userId,
           planId,
-          claudeResponse: encryption.encrypt(claudeResponse, userSalt),
+          // Column was renamed `claude_response` → `claude_response_encrypted`
+          // in migration `20260424_align_uuid_defaults_and_rename_claude_response`.
+          // The local `claudeResponse` variable is the post-stripPHIFromText
+          // plaintext narrative; the column stores its AES-256-GCM ciphertext.
+          claudeResponseEncrypted: encryption.encrypt(claudeResponse, userSalt),
           totalProjectedOopEncrypted: totalProjectedOop
             ? encryption.encrypt(totalProjectedOop.toString(), userSalt)
             : null,
@@ -727,23 +700,14 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       projectionsCount: decryptedProjections.length,
     }, { req, userId });
 
-    // Return decrypted analysis
-    res.json({
-      id: analysis.id,
-      analysisDate: analysis.analysisDate,
-      claudeResponse,
-      totalProjectedOop,
-      deductibleMetMonth,
-    });
-  } catch (error) {
-    if (error instanceof Error && (error.name === 'APIConnectionTimeoutError' || error.message.includes('timed out'))) {
-      logger.error('Cost analysis timed out', { data: { error: error.message } });
-      res.status(504).json({ error: 'Cost analysis timed out. Please try again.' });
-      return;
-    }
-    logger.error('Operation failed:', { data: { error } });
-    res.status(500).json({ error: 'Failed to generate cost analysis' });
-  }
+  // Return decrypted analysis
+  res.json({
+    id: analysis.id,
+    analysisDate: analysis.analysisDate,
+    claudeResponse,
+    totalProjectedOop,
+    deductibleMetMonth,
+  });
 }
 
 /**
@@ -754,47 +718,42 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
   const userId = req.user!.id;
   const { planId } = req.query;
 
-  try {
-    const prisma = getPrismaClient();
-    const userSalt = await getUserEncryptionSalt(userId);
-    const encryption = getEncryptionService();
+  const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
-    const analyses = await withRLSTransaction(userId, async (tx) => {
-      return tx.costAnalysis.findMany({
-        where: {
-          userId,
-          ...(planId && { planId: planId as string }),
-        },
-        orderBy: { analysisDate: 'desc' },
-        take: 10, // Limit to last 10 analyses
-      });
+  const analyses = await withRLSTransaction(userId, async (tx) => {
+    return tx.costAnalysis.findMany({
+      where: {
+        userId,
+        ...(planId && { planId: planId as string }),
+      },
+      orderBy: { analysisDate: 'desc' },
+      take: 10, // Limit to last 10 analyses
     });
+  });
 
-    // Decrypt PHI fields
-    const decrypted = analyses.map((a) => ({
-      id: a.id,
-      planId: a.planId,
-      analysisDate: a.analysisDate,
-      claudeResponse: encryption.decrypt(a.claudeResponse, userSalt),
-      totalProjectedOop: a.totalProjectedOopEncrypted
-        ? parseFloat(encryption.decrypt(a.totalProjectedOopEncrypted, userSalt))
-        : null,
-      deductibleMetMonth: a.deductibleMetMonth,
-    }));
+  // Decrypt PHI fields
+  const decrypted = analyses.map((a) => ({
+    id: a.id,
+    planId: a.planId,
+    analysisDate: a.analysisDate,
+    claudeResponse: encryption.decrypt(a.claudeResponseEncrypted, userSalt),
+    totalProjectedOop: a.totalProjectedOopEncrypted
+      ? parseFloat(encryption.decrypt(a.totalProjectedOopEncrypted, userSalt))
+      : null,
+    deductibleMetMonth: a.deductibleMetMonth,
+  }));
 
-    // Audit log: READ access to cost analyses
-    const auditService = getAuditLogService(prisma);
-    await auditService.logAccess(RESOURCE_TYPE_ANALYSIS, undefined, { req, userId }, {
-      operation: 'LIST',
-      count: decrypted.length,
-      planId: (planId as string) || 'all',
-    });
+  // Audit log: READ access to cost analyses
+  const auditService = getAuditLogService(prisma);
+  await auditService.logAccess(RESOURCE_TYPE_ANALYSIS, undefined, { req, userId }, {
+    operation: 'LIST',
+    count: decrypted.length,
+    planId: (planId as string) || 'all',
+  });
 
-    res.json(decrypted);
-  } catch (error) {
-    logger.error('Failed to fetch analyses:', { data: { error } });
-    res.status(500).json({ error: 'Failed to fetch cost analyses' });
-  }
+  res.json(decrypted);
 }
 
 // ============================================

@@ -17,17 +17,19 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-# C-8 Part 4 — scope expanded to every directory where app code touches
-# Prisma. Controllers and services were the original scope; routes,
-# schedulers, and middleware were carved out in the prior version because
-# they had pre-existing violations. Those violations were resolved in the
-# Part 2 sweep, so this check now enforces the full surface.
+# C-8 PR B — TARGETS covers every directory where app code can plausibly
+# acquire a Prisma client. controllers/services/routes/schedulers/middleware
+# were the original surface; utils/ is added so a future "shared query
+# helper" can't slip past the guard. config/ and types/ are intentionally
+# out: env-loading and type-only files don't acquire a Prisma client, and
+# generated/ is generated code (Prisma's own internals).
 TARGETS=(
   "$ROOT_DIR/backend/src/controllers"
   "$ROOT_DIR/backend/src/services"
   "$ROOT_DIR/backend/src/routes"
   "$ROOT_DIR/backend/src/schedulers"
   "$ROOT_DIR/backend/src/middleware"
+  "$ROOT_DIR/backend/src/utils"
 )
 
 # database.ts legitimately contains `prisma.<model>.<verb>(` in its docblock
@@ -38,11 +40,23 @@ EXCLUDE_FILES=(
   "$ROOT_DIR/backend/src/services/database.ts"
 )
 
-# Generic pattern — any `prisma.<model>.<method>(` call, regardless of model
-# name. The prior enum-based list went stale every time a model was added or
-# renamed (dnaData removal in 2026-04-23 left stale entries here). Matching
-# the shape directly is more robust and catches future models automatically.
-PATTERN='\bprisma\.[a-zA-Z_][a-zA-Z0-9_]*\.(findMany|findFirst|findUnique|findUniqueOrThrow|create|createMany|update|updateMany|upsert|delete|deleteMany|count|aggregate|groupBy)\('
+# Flag bare module-level prisma calls in two shapes:
+#   1. ORM model calls — `prisma.<model>.<verb>(` (findMany, create, etc).
+#      The prior enum-based list went stale every time a model was added or
+#      renamed (dnaData removal in 2026-04-23 left stale entries here).
+#      Matching the shape directly is more robust.
+#   2. Raw-SQL and transaction entry points — `prisma.$queryRaw(`,
+#      `prisma.$executeRaw(`, `prisma.$transaction(`, and the Unsafe
+#      siblings. These bypass the wrapper the same way a model call does:
+#      a raw query against a table with RLS policies runs with no
+#      `app.current_user_id` set. C-8 PR B widens the guard so a future
+#      raw-SQL helper doesn't slip past the CI check.
+#
+# Legitimate uses of `prisma.$queryRaw` / `$transaction` in database.ts
+# (the pg_roles assertion, the `SELECT 1` health ping, and the wrapper
+# implementation itself) live in a file that's already in EXCLUDE_FILES
+# below — no per-line annotation needed there.
+PATTERN='\bprisma\.([a-zA-Z_][a-zA-Z0-9_]*\.(findMany|findFirst|findUnique|findUniqueOrThrow|create|createMany|update|updateMany|upsert|delete|deleteMany|count|aggregate|groupBy)|\$queryRaw|\$queryRawUnsafe|\$executeRaw|\$executeRawUnsafe|\$transaction)\('
 
 RAW_HITS=$(grep -rnE "$PATTERN" "${TARGETS[@]}" \
   --include='*.ts' \

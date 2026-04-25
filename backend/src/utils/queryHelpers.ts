@@ -41,10 +41,12 @@ export interface PaginationOptions {
  * ```typescript
  * const { page, limit } = req.query;
  * const pagination = parsePagination(page, limit);
- * const records = await prisma.entity.findMany({
- *   skip: pagination.skip,
- *   take: pagination.take,
- * });
+ * const records = await withRLSContext(userId, async (tx) =>
+ *   tx.entity.findMany({
+ *     skip: pagination.skip,
+ *     take: pagination.take,
+ *   })
+ * );
  * ```
  */
 export function parsePagination(
@@ -152,8 +154,11 @@ export function parseBooleanParam(
  *
  * @example
  * ```typescript
- * const total = await prisma.entity.count({ where });
- * const records = await prisma.entity.findMany({ ...pagination, where });
+ * const { total, records } = await withRLSContext(userId, async (tx) => {
+ *   const total = await tx.entity.count({ where });
+ *   const records = await tx.entity.findMany({ ...pagination, where });
+ *   return { total, records };
+ * });
  * res.json({
  *   data: records,
  *   pagination: createPaginationMeta(total, pagination),

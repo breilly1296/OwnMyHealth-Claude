@@ -547,7 +547,7 @@ Three in-process `setInterval` schedulers boot from `backend/src/app.ts:L315-L32
 
 | Job | File:line | Cadence | Effect |
 |---|---|---|---|
-| Session cleanup | `backend/src/services/authService.ts:1232` | `60 * 60 * 1000` ms = **1 hour** | `DELETE FROM sessions WHERE expiresAt < NOW()` via `withRLSContext(null, ..., {isAdmin:true})` (`backend/src/services/authService.ts:L1195-L1217`). |
+| Session cleanup | `backend/src/services/authService.ts:1232` | `10 * 60 * 1000` ms = **10 minutes** | `DELETE FROM sessions WHERE expiresAt < NOW()` via `withRLSContext(null, ..., {isAdmin:true})` (`backend/src/services/authService.ts:L1195-L1217`). |
 | Audit log retention cleanup | `backend/src/services/auditLog.ts:534` | `24 * 60 * 60 * 1000` ms = **24 hours** | Deletes rows older than `RETENTION_DAYS = 2555` (~7 years, `backend/src/services/auditLog.ts:9`) via `cleanupOldLogs()` (`backend/src/services/auditLog.ts:L471-L503`); logs a `DELETE AuditLog retention_cleanup` audit entry for the deletion itself. |
 | Engagement email scheduler | `backend/src/schedulers/emailScheduler.ts:242` | `ONE_HOUR_MS` = **1 hour** | Every tick: sends plan-expiring notices for users whose `planExpiresAt` is in the 6-7 day window. On Mondays 08:00-08:59 UTC (first hit only, via `lastWeeklyRunKey`), also sends weekly summaries + goal reminders (`backend/src/schedulers/emailScheduler.ts:L221-L238`). |
 | RLS wrapper CI guard | `scripts/check-rls-wrappers.sh` | manual (CI on every PR via `.github/workflows/ci.yml:L112-L116`) | Fails the build if any file under `backend/src/{controllers,services,routes,schedulers,middleware}` calls `prisma.<model>.<verb>(` outside a `withRLSContext` callback. |

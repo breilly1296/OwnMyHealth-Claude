@@ -11,11 +11,11 @@
 
 | Question | Answer | Anchor |
 |---|---|---|
-| Most urgent open issue | **C-8: RLS policies inert at runtime** — app runs as BYPASSRLS role in dev+prod. Defense-in-depth gap (controllers still filter by `userId`). | [Critical](#critical) |
+| Most urgent open issue | **C-8: RLS policies inert at runtime** — operator-pending only. Code prerequisites all merged (Parts A/B/C-code/D, integration tests, startup-assertion hard-exits in prod). Awaiting Cloud SQL `omh_app` role provisioning + `DATABASE_URL` rotation. | [Critical](#critical) |
 | TODO / FIXME / HACK / XXX markers | **4 total** (3 backend, 1 frontend). No `FIXME`, `HACK`, or `XXX` — all `TODO`. | [Code-marker inventory](#code-marker-inventory) |
-| Skipped / TODO tests | **0** `it.skip` / `it.todo`. One **conditional** `describe.skipIf(!hasLiveDb)` at `backend/src/services/rls.test.ts:29`. | [Skipped / TODO tests](#skipped--todo-tests) |
-| `npm audit` — root | **2 moderate**, 0 high, 0 critical | [Dependency vulnerabilities](#dependency-vulnerabilities) |
-| `npm audit` — backend | **9 moderate**, 2 low, 0 high, 0 critical | [Dependency vulnerabilities](#dependency-vulnerabilities) |
+| Skipped / TODO tests | **0** `it.skip` / `it.todo`. Two **conditional** `describe.skipIf(!hasLiveDb)` blocks: `backend/src/services/rls.test.ts:29` and `backend/src/__tests__/integration/rls-isolation.test.ts:189` (the C-8 PR D multi-tenant suite added 2026-04-24). | [Skipped / TODO tests](#skipped--todo-tests) |
+| `npm audit` — root | **2 moderate**, 0 high, 0 critical (verified 2026-04-25) | [Dependency vulnerabilities](#dependency-vulnerabilities) |
+| `npm audit` — backend | **9 moderate, 2 low**, 0 high, 0 critical (verified 2026-04-25) | [Dependency vulnerabilities](#dependency-vulnerabilities) |
 | Deprecated items flagged | **7** — DNA trio, 5 unused `RoleGuard` wrappers, 3 unused API modules, 2 `railway.toml` files, 1 stray `nul` file, `scratchpad.md.md` | [Deprecated](#deprecated-kept-for-compat) |
 | Controllers with zero tests | `fileController.ts`, `fhirController.ts`, `aiChatController.ts`, `upload/labUploadController.ts`, `upload/sbcUploadController.ts` | [Missing test coverage](#missing-test-coverage) |
 
@@ -25,21 +25,28 @@
 
 Issues that block core functionality or PHI isolation. Severity mirrors `SECURITY_STATUS.md` — do not re-grade here.
 
-### RLS policies inert at runtime (C-8)
+### RLS policies inert at runtime (C-8) — code-complete, operator-pending
 
-- **Severity**: Critical
-- **Symptom**: PostgreSQL RLS policies exist (`backend/prisma/migrations/20260107_add_rls_policies/`) and application code wraps queries in `withRLSContext` / `withRLSTransaction` (`backend/src/services/database.ts:L377-L465`), but the database role that the app connects as has the `BYPASSRLS` attribute in both dev and prod. `SET LOCAL app.current_user_id = ...` runs, policies evaluate — but the role bypasses them, so RLS does not enforce. Only the in-code `userId` filters in controllers and services actually protect tenant isolation.
+- **Severity**: 🟡 Operator-pending (was Critical pre-2026-04-24; reclassified
+  once code prerequisites for all four parts merged).
+- **Symptom**: PostgreSQL RLS policies exist (`backend/prisma/migrations/20260107_add_rls_policies/`) and application code wraps queries in `withRLSContext` / `withRLSTransaction` (`backend/src/services/database.ts:L377-L465`), but the database role that the app connects as has the `BYPASSRLS` attribute in both dev and prod. `SET LOCAL app.current_user_id = ...` runs, policies evaluate — but the role bypasses them, so RLS does not enforce. Only the in-code `userId` filters in controllers and services actually protect tenant isolation **today**.
 - **Root cause**: During Cloud SQL bootstrap the app role was granted `BYPASSRLS`. A non-superuser NOBYPASSRLS role needs to be provisioned, granted table-level rights, and swapped into `DATABASE_URL`.
-- **Workaround**: None at runtime. Treat every `withRLSContext(...)` call as advisory; continue to filter by `userId` in controllers. `rls.test.ts` auto-skips when the live-DB env is absent, and when present it runs against the same BYPASSRLS role — so regressions will not fail CI until the role cutover lands.
-- **Fix plan**: 4-PR sequence tracked as C-8 Parts 1 / 2a / 2b-i / 2b-ii / 3 — see [`SECURITY_STATUS.md#c-8`](./SECURITY_STATUS.md) (doc pending — see prompt `./19-security-status-doc.md`) and `docs/c-8-part-c-runbook.md`. Parts 1, 2a, 2b-i, 2b-ii and the code-prep step (commit `4290520`) have landed; Part 3 (DB role cutover) is the remaining work.
-- **Tracked in**: user memory `ownmyhealth-project.md` ("C-1/F-14/F-15 closed by PR #30 but runtime-role issue not fixed"); commit chain `9727492` (C-1) → `65f9ffb` (C-8 Part 1) → `a648eb8` (2a) → `4fa6460` (2b-i) → `74af20e` (2b-ii) → `4290520` (code prep).
-- **Files**: `backend/src/services/database.ts:L14-L31`, `backend/src/services/database.ts:L377-L465`, `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, Cloud SQL role config (external to repo — resolve in GCP console).
+- **Workaround**: None at runtime, but the code-side mitigations are now substantial:
+  1. Self-elevation trigger (`20260424_prevent_self_role_elevation/migration.sql`) blocks role/`is_active` mutation by non-admin sessions at the DB layer regardless of BYPASSRLS.
+  2. CI `check-rls-wrappers.sh` (post-2026-04-24) catches model-level + raw-SQL bare-prisma calls in controllers / services / routes / schedulers / middleware / utils.
+  3. Multi-tenant integration suite (`__tests__/integration/rls-isolation.test.ts`) exercises every user-scoped model, admin context, privilege-immutability, and pool-leak invariants when run against a live DB. Skips cleanly without one.
+  4. Startup assertion (`database.ts:200-265`) hard-exits in prod the moment the role rotates and is ever rolled back.
+- **Fix plan**: Operator-only. Provision `omh_app` NOBYPASSRLS role in Cloud SQL → grant table/sequence/function privileges → run live-DB integration suite in staging (`RLS_INTEGRATION_TESTS=true npm run test:integration`) → rotate `DATABASE_URL` in Secret Manager → deploy. Full runbook in [`SECURITY_STATUS.md#c-8`](./SECURITY_STATUS.md).
+- **Tracked in**: [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) C-8 row; user memory `ownmyhealth-project.md`; commit chain through `9727492` (C-1) → `65f9ffb` (Part A) → `a648eb8` (Part B) → `4fa6460` (Part B.2) → `74af20e` (Part B.3) → 2026-04-24 cycle (Parts C-code, D, hardened CI guard, self-elevation trigger).
+- **Files**: `backend/src/services/database.ts:200-265` (startup assertion, post-cycle), `backend/src/services/database.ts:L14-L31` (footgun banner), `backend/src/services/database.ts:L377-L465` (RLS wrappers), `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, `backend/prisma/migrations/20260424_prevent_self_role_elevation/migration.sql`, `backend/src/__tests__/integration/rls-isolation.test.ts`, Cloud SQL role config (external to repo — resolve in GCP console).
 
 ---
 
 ## High
 
 Significant feature gaps or security concerns that should be resolved before public beta. Security-severity items mirror [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
+
+> **2026-04-24 update**: Every audit-numbered High finding (~22 across `SECURITY_AUDIT_core.md`, `_periphery.md`, `_domain.md`) is closed — see [`SECURITY_STATUS.md` § 3](./SECURITY_STATUS.md#3-closed-in-current-cycle). The Highs listed below are non-audit tech-debt items (drift between docs/code, non-PHI feature gaps); they are local to this ledger and don't appear in the security register.
 
 ### Logger redaction gaps let PHI leak through structured logs
 
@@ -103,13 +110,12 @@ Usability issues and tech debt that should be addressed during beta. Non-securit
 - **Fix plan**: per the `TODO(csp-nonce)` at `app.ts:129-132`, add per-request nonce middleware, thread the nonce into `index.html` + React style injection, then drop `'unsafe-inline'`.
 - **Files**: `backend/src/app.ts:L125-L140`.
 
-### CSRF exemption list contains upload paths that already send the token
+### CSRF exemption list contains upload paths that already send the token — ✅ RESOLVED 2026-04-24
 
-- **Severity**: Medium
-- **Symptom**: `backend/src/middleware/csrf.ts:117-122` exempts `/upload/lab-report`, `/upload/insurance-sbc`, `/upload/lab-results-ocr`, `/insurance/upload-sbc` from CSRF. The upload client `uploadUtils.ts` already attaches `x-csrf-token`, so validation would succeed — the exemption is defensive only. Per the `TODO` at `csrf.ts:115`, this should be removed once all upload paths are confirmed.
-- **Workaround**: none — exemption is safe because routes are still `authenticate`-guarded and enforce magic-byte validation inside the controller.
-- **Fix plan**: verify every upload client path routes through `uploadUtils.ts`, then remove the exemption list.
-- **Files**: `backend/src/middleware/csrf.ts:L110-L122`.
+- **Severity**: Medium → resolved
+- **Symptom (historical)**: `middleware/csrf.ts` exempted four upload routes from CSRF validation, with a `TODO` to remove once all upload clients confirmed to attach the header.
+- **Resolution**: Frontend `uploadUtils.ts` was verified to attach `X-CSRF-Token` on every upload request. The exemption list was removed; only `/ai/chat` (SSE, bearer-only via `requireBearerAuth`) remains exempt. Regression file `backend/src/middleware/csrf.test.ts` (16 cases) covers the contract.
+- **Files**: `backend/src/middleware/csrf.ts` (post-2026-04-24, no upload exemption); `backend/src/middleware/csrf.test.ts` (regression coverage).
 
 ### Stripe billing not wired — plan upgrade button is a no-op
 
@@ -119,12 +125,11 @@ Usability issues and tech debt that should be addressed during beta. Non-securit
 - **Fix plan**: integrate Stripe Checkout; backend currently has no `/billing/*` endpoints.
 - **Files**: `src/components/settings/PlanSection.tsx:119`.
 
-### Backend `test:unit` / `test:integration` npm scripts point at non-existent dirs
+### Backend `test:unit` / `test:integration` npm scripts point at non-existent dirs — partially resolved 2026-04-24
 
-- **Severity**: Medium
-- **Symptom**: `backend/package.json:14-15` defines `test:unit` / `test:integration` scripts that target `src/__tests__/unit` / `src/__tests__/integration`. Those directories do not exist; colocated `*.test.ts` files next to source are the active convention. Running either script reports 0 tests silently. Per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 1088.
-- **Workaround**: use `npm run test` (full Vitest suite) instead.
-- **Fix plan**: delete the orphaned scripts or move colocated tests into those dirs.
+- **Severity**: Medium → partially resolved
+- **Symptom (historical)**: Both scripts used the broken `vitest run --dir src/__tests__/{unit,integration}` shape and reported 0 tests silently.
+- **Resolution**: 2026-04-24 — `test:integration` now resolves correctly (`vitest run src/__tests__/integration`) and picks up the new C-8 PR D suite at `src/__tests__/integration/rls-isolation.test.ts`. `test:unit` still points at a non-existent `src/__tests__/unit` directory; remaining work is to either populate that dir or delete the script (low priority — colocated `*.test.ts` next to source is the active convention).
 - **Files**: `backend/package.json:L14-L15`.
 
 ### `tesseract.js` manualChunks entry references code that is never imported
@@ -263,7 +268,8 @@ Conditional skips only:
 
 | Form | File:line | Condition |
 |---|---|---|
-| `describe.skipIf(!hasLiveDb)` | `backend/src/services/rls.test.ts:29` | Skips the entire `RLS tenant isolation` suite when `DATABASE_URL` or `PHI_ENCRYPTION_KEY` is unset. Intentional (unit-only CI stays green); becomes mandatory once the C-8 DB-role cutover lands. See [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 626. |
+| `describe.skipIf(!hasLiveDb)` | `backend/src/services/rls.test.ts:29` | Skips the original `RLS tenant isolation` suite when `DATABASE_URL` or `PHI_ENCRYPTION_KEY` is unset. Intentional (unit-only CI stays green); becomes mandatory once the C-8 DB-role cutover lands. See [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 626. |
+| `describe.skipIf(!hasLiveDb)` | `backend/src/__tests__/integration/rls-isolation.test.ts:189` | C-8 PR D multi-tenant integration suite added 2026-04-24. Two-user fixture across every user-scoped model + admin context + privilege-immutability + pool-leak invariants. Stricter live-DB gate than the older suite — opts in via `RLS_INTEGRATION_TESTS=true` so the testSetup default `postgresql://localhost/test` doesn't trigger a real connection. |
 
 Total hard-skipped or `.todo` tests: **0**.
 
@@ -380,7 +386,7 @@ Glob: 17 `*Routes.ts` files under `backend/src/routes/`; **2** have route-level 
 | `validation` | yes |
 | `rbac` | yes |
 | `auth` | **no** — JWT verify path untested at unit level |
-| `csrf` | **no** — exemption list + double-submit check untested |
+| `csrf` | yes (`csrf.test.ts`, added 2026-04-24) — covers exemption list, constant-time compare, public-auth pass-through |
 | `rateLimiter` | **no** |
 | `demoProtection` | tested indirectly via `adminRoutes.demoProtection.test.ts` |
 
@@ -419,6 +425,8 @@ Recent issues closed — from `git log --oneline` on 2026-04-24. Provides contex
 | `/ai/chat` transaction timeout leak (decryption inside transaction) | Closed | `52507c3` — "fix(ai-chat): move decryption out of withRLSContext transaction" | Introduces new risk: aiChatController still has **zero tests** — see [Missing test coverage](#missing-test-coverage). |
 | CORS_ORIGIN parsing | Closed | `64b7d14` + `8deed18` | Prod origins hardcoded as always-allowed. |
 | Dead-code audit | Closed | `eb45a57` — "Cleanup/dead code audit 2026 04 23 (#74)" | Surfaced the unused `RoleGuard` / `providerApi` / `patientApi` / `adminApi` — still not removed (tracked in [Deprecated](#deprecated-kept-for-compat)). |
+| Display-name edit was a no-op | Closed (verified 2026-04-25) | (was never a stub in current code) | Verification surfaced the path is fully wired: `AccountSettingsPage.tsx:121-134` → `settingsApi.updateProfile()` → `PATCH /api/v1/settings/profile` → `settingsController.updateProfile` (encrypts via `firstNameEncrypted`/`lastNameEncrypted`, RLS-scoped via `withRLSContext(userId, ...)`, audit-logged). The original audit note referred to an earlier prototype that didn't ship. New regression test file `controllers/settingsController.updateProfile.test.ts` (6 cases) pins the contract. |
+| Notification settings stored client-side via `localStorage` TODO | Closed (verified 2026-04-25) | (no localStorage path ever shipped) | `NotificationSettingsSection.tsx` calls `settingsApi.getNotifications()` / `settingsApi.updateNotifications(...)` against `GET`/`PATCH /api/v1/settings/notifications`. Preferences live on `User.notificationPreferences` (Json column) and persist across devices. The TODO referenced in the audit doc was closed during the notification-preferences PR; no separate fix was needed. |
 
 **Recently closed issue that introduced new known risk**: `52507c3` ("move decryption out of `withRLSContext` transaction") fixed a 15s transaction timeout on `/ai/chat` but the controller has zero tests, so the new shape of the decryption pipeline is not regression-guarded.
 
