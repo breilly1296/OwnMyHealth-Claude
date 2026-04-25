@@ -44,7 +44,6 @@ interface MockRelationship {
   status: 'ACTIVE' | 'PENDING' | 'REVOKED' | 'EXPIRED';
   canViewBiomarkers: boolean;
   canViewInsurance: boolean;
-  canViewDna: boolean;
   canViewHealthNeeds: boolean;
   canEditData: boolean;
   consentExpiresAt: Date | null;
@@ -63,7 +62,6 @@ function buildRelationship(overrides: Partial<MockRelationship> = {}): MockRelat
     status: 'ACTIVE',
     canViewBiomarkers: true,
     canViewInsurance: false,
-    canViewDna: false,
     canViewHealthNeeds: true,
     canEditData: false,
     consentExpiresAt: null,

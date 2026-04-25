@@ -76,7 +76,6 @@ router.get(
         permissions: {
           canViewBiomarkers: rel.canViewBiomarkers,
           canViewInsurance: rel.canViewInsurance,
-          canViewDna: rel.canViewDna,
           canViewHealthNeeds: rel.canViewHealthNeeds,
           canEditData: rel.canEditData,
         },
@@ -189,7 +188,6 @@ router.post(
     const {
       canViewBiomarkers = true,
       canViewInsurance = false,
-      canViewDna = false,
       canViewHealthNeeds = true,
       canEditData = false,
       consentDurationDays,
@@ -228,7 +226,6 @@ router.post(
           status: 'ACTIVE',
           canViewBiomarkers,
           canViewInsurance,
-          canViewDna,
           canViewHealthNeeds,
           canEditData,
           consentGrantedAt: new Date(),
@@ -245,7 +242,6 @@ router.post(
         providerId: relationship.providerId,
         canViewBiomarkers,
         canViewInsurance,
-        canViewDna,
         canViewHealthNeeds,
         canEditData,
         consentExpiresAt: consentExpiresAt?.toISOString() ?? 'none',
@@ -337,7 +333,7 @@ router.patch(
     const prisma = getPrismaClient();
     const patientId = req.user!.id;
     const { id } = req.params;
-    const { canViewBiomarkers, canViewInsurance, canViewDna, canViewHealthNeeds, canEditData } = req.body;
+    const { canViewBiomarkers, canViewInsurance, canViewHealthNeeds, canEditData } = req.body;
 
     const auditService = getAuditLogService(prisma);
 
@@ -379,7 +375,6 @@ router.patch(
       const previousPermissions = {
         canViewBiomarkers: relationship.canViewBiomarkers,
         canViewInsurance: relationship.canViewInsurance,
-        canViewDna: relationship.canViewDna,
         canViewHealthNeeds: relationship.canViewHealthNeeds,
         canEditData: relationship.canEditData,
       };
@@ -389,7 +384,6 @@ router.patch(
         data: {
           ...(canViewBiomarkers !== undefined && { canViewBiomarkers }),
           ...(canViewInsurance !== undefined && { canViewInsurance }),
-          ...(canViewDna !== undefined && { canViewDna }),
           ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
           ...(canEditData !== undefined && { canEditData }),
         },
@@ -399,7 +393,6 @@ router.patch(
       await auditService.logUpdate('provider_consent_permissions', id, previousPermissions, {
         canViewBiomarkers: updatedRel.canViewBiomarkers,
         canViewInsurance: updatedRel.canViewInsurance,
-        canViewDna: updatedRel.canViewDna,
         canViewHealthNeeds: updatedRel.canViewHealthNeeds,
         canEditData: updatedRel.canEditData,
       }, { req, userId: patientId }, {
@@ -458,7 +451,6 @@ router.post(
         providerId: relationship.providerId,
         canViewBiomarkers: relationship.canViewBiomarkers,
         canViewInsurance: relationship.canViewInsurance,
-        canViewDna: relationship.canViewDna,
         canViewHealthNeeds: relationship.canViewHealthNeeds,
         canEditData: relationship.canEditData,
       }, {
@@ -523,7 +515,6 @@ router.delete(
         status: relationship.status,
         canViewBiomarkers: relationship.canViewBiomarkers,
         canViewInsurance: relationship.canViewInsurance,
-        canViewDna: relationship.canViewDna,
         canViewHealthNeeds: relationship.canViewHealthNeeds,
         canEditData: relationship.canEditData,
       }, { req, userId: patientId }, {

@@ -541,7 +541,6 @@ export const schemas = {
     approve: z.object({
       canViewBiomarkers: z.boolean().optional().default(true),
       canViewInsurance: z.boolean().optional().default(false),
-      canViewDna: z.boolean().optional().default(false),
       canViewHealthNeeds: z.boolean().optional().default(true),
       canEditData: z.boolean().optional().default(false),
       consentDurationDays: z.number().min(1).max(365).optional(),
@@ -550,7 +549,6 @@ export const schemas = {
     updatePermissions: z.object({
       canViewBiomarkers: z.boolean().optional(),
       canViewInsurance: z.boolean().optional(),
-      canViewDna: z.boolean().optional(),
       canViewHealthNeeds: z.boolean().optional(),
       canEditData: z.boolean().optional(),
     }),

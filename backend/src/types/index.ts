@@ -27,7 +27,6 @@ export interface AuthenticatedRequest extends Request {
     patientId: string;
     canViewBiomarkers: boolean;
     canViewInsurance: boolean;
-    canViewDna: boolean;
     canViewHealthNeeds: boolean;
     canEditData: boolean;
     status: string;

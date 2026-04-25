@@ -59,21 +59,6 @@ export type InsurancePlan = $Result.DefaultSelection<Prisma.$InsurancePlanPayloa
  */
 export type InsuranceBenefit = $Result.DefaultSelection<Prisma.$InsuranceBenefitPayload>
 /**
- * Model DNAData
- * 
- */
-export type DNAData = $Result.DefaultSelection<Prisma.$DNADataPayload>
-/**
- * Model DNAVariant
- * 
- */
-export type DNAVariant = $Result.DefaultSelection<Prisma.$DNAVariantPayload>
-/**
- * Model GeneticTrait
- * 
- */
-export type GeneticTrait = $Result.DefaultSelection<Prisma.$GeneticTraitPayload>
-/**
  * Model HealthNeed
  * 
  */
@@ -174,27 +159,6 @@ export const PlanType: {
 };
 
 export type PlanType = (typeof PlanType)[keyof typeof PlanType]
-
-
-export const ProcessingStatus: {
-  PENDING: 'PENDING',
-  PROCESSING: 'PROCESSING',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED'
-};
-
-export type ProcessingStatus = (typeof ProcessingStatus)[keyof typeof ProcessingStatus]
-
-
-export const RiskLevel: {
-  HIGH: 'HIGH',
-  MODERATE: 'MODERATE',
-  LOW: 'LOW',
-  PROTECTIVE: 'PROTECTIVE',
-  UNKNOWN: 'UNKNOWN'
-};
-
-export type RiskLevel = (typeof RiskLevel)[keyof typeof RiskLevel]
 
 
 export const HealthNeedType: {
@@ -312,14 +276,6 @@ export const DataSourceType: typeof $Enums.DataSourceType
 export type PlanType = $Enums.PlanType
 
 export const PlanType: typeof $Enums.PlanType
-
-export type ProcessingStatus = $Enums.ProcessingStatus
-
-export const ProcessingStatus: typeof $Enums.ProcessingStatus
-
-export type RiskLevel = $Enums.RiskLevel
-
-export const RiskLevel: typeof $Enums.RiskLevel
 
 export type HealthNeedType = $Enums.HealthNeedType
 
@@ -563,36 +519,6 @@ export class PrismaClient<
     * ```
     */
   get insuranceBenefit(): Prisma.InsuranceBenefitDelegate<ExtArgs, ClientOptions>;
-
-  /**
-   * `prisma.dNAData`: Exposes CRUD operations for the **DNAData** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more DNAData
-    * const dNAData = await prisma.dNAData.findMany()
-    * ```
-    */
-  get dNAData(): Prisma.DNADataDelegate<ExtArgs, ClientOptions>;
-
-  /**
-   * `prisma.dNAVariant`: Exposes CRUD operations for the **DNAVariant** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more DNAVariants
-    * const dNAVariants = await prisma.dNAVariant.findMany()
-    * ```
-    */
-  get dNAVariant(): Prisma.DNAVariantDelegate<ExtArgs, ClientOptions>;
-
-  /**
-   * `prisma.geneticTrait`: Exposes CRUD operations for the **GeneticTrait** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more GeneticTraits
-    * const geneticTraits = await prisma.geneticTrait.findMany()
-    * ```
-    */
-  get geneticTrait(): Prisma.GeneticTraitDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.healthNeed`: Exposes CRUD operations for the **HealthNeed** model.
@@ -1126,9 +1052,6 @@ export namespace Prisma {
     BiomarkerHistory: 'BiomarkerHistory',
     InsurancePlan: 'InsurancePlan',
     InsuranceBenefit: 'InsuranceBenefit',
-    DNAData: 'DNAData',
-    DNAVariant: 'DNAVariant',
-    GeneticTrait: 'GeneticTrait',
     HealthNeed: 'HealthNeed',
     HealthGoal: 'HealthGoal',
     GoalProgressHistory: 'GoalProgressHistory',
@@ -1153,7 +1076,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "dNAData" | "dNAVariant" | "geneticTrait" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig" | "expenseProjection" | "expenseActual" | "costAnalysis" | "labConnection"
+      modelProps: "user" | "session" | "userEncryptionKey" | "providerPatient" | "userFile" | "biomarker" | "biomarkerHistory" | "insurancePlan" | "insuranceBenefit" | "healthNeed" | "healthGoal" | "goalProgressHistory" | "auditLog" | "systemConfig" | "expenseProjection" | "expenseActual" | "costAnalysis" | "labConnection"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1820,228 +1743,6 @@ export namespace Prisma {
           count: {
             args: Prisma.InsuranceBenefitCountArgs<ExtArgs>
             result: $Utils.Optional<InsuranceBenefitCountAggregateOutputType> | number
-          }
-        }
-      }
-      DNAData: {
-        payload: Prisma.$DNADataPayload<ExtArgs>
-        fields: Prisma.DNADataFieldRefs
-        operations: {
-          findUnique: {
-            args: Prisma.DNADataFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload> | null
-          }
-          findUniqueOrThrow: {
-            args: Prisma.DNADataFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>
-          }
-          findFirst: {
-            args: Prisma.DNADataFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload> | null
-          }
-          findFirstOrThrow: {
-            args: Prisma.DNADataFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>
-          }
-          findMany: {
-            args: Prisma.DNADataFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>[]
-          }
-          create: {
-            args: Prisma.DNADataCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>
-          }
-          createMany: {
-            args: Prisma.DNADataCreateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          createManyAndReturn: {
-            args: Prisma.DNADataCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>[]
-          }
-          delete: {
-            args: Prisma.DNADataDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>
-          }
-          update: {
-            args: Prisma.DNADataUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>
-          }
-          deleteMany: {
-            args: Prisma.DNADataDeleteManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateMany: {
-            args: Prisma.DNADataUpdateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.DNADataUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>[]
-          }
-          upsert: {
-            args: Prisma.DNADataUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNADataPayload>
-          }
-          aggregate: {
-            args: Prisma.DNADataAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateDNAData>
-          }
-          groupBy: {
-            args: Prisma.DNADataGroupByArgs<ExtArgs>
-            result: $Utils.Optional<DNADataGroupByOutputType>[]
-          }
-          count: {
-            args: Prisma.DNADataCountArgs<ExtArgs>
-            result: $Utils.Optional<DNADataCountAggregateOutputType> | number
-          }
-        }
-      }
-      DNAVariant: {
-        payload: Prisma.$DNAVariantPayload<ExtArgs>
-        fields: Prisma.DNAVariantFieldRefs
-        operations: {
-          findUnique: {
-            args: Prisma.DNAVariantFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload> | null
-          }
-          findUniqueOrThrow: {
-            args: Prisma.DNAVariantFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>
-          }
-          findFirst: {
-            args: Prisma.DNAVariantFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload> | null
-          }
-          findFirstOrThrow: {
-            args: Prisma.DNAVariantFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>
-          }
-          findMany: {
-            args: Prisma.DNAVariantFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>[]
-          }
-          create: {
-            args: Prisma.DNAVariantCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>
-          }
-          createMany: {
-            args: Prisma.DNAVariantCreateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          createManyAndReturn: {
-            args: Prisma.DNAVariantCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>[]
-          }
-          delete: {
-            args: Prisma.DNAVariantDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>
-          }
-          update: {
-            args: Prisma.DNAVariantUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>
-          }
-          deleteMany: {
-            args: Prisma.DNAVariantDeleteManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateMany: {
-            args: Prisma.DNAVariantUpdateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.DNAVariantUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>[]
-          }
-          upsert: {
-            args: Prisma.DNAVariantUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DNAVariantPayload>
-          }
-          aggregate: {
-            args: Prisma.DNAVariantAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateDNAVariant>
-          }
-          groupBy: {
-            args: Prisma.DNAVariantGroupByArgs<ExtArgs>
-            result: $Utils.Optional<DNAVariantGroupByOutputType>[]
-          }
-          count: {
-            args: Prisma.DNAVariantCountArgs<ExtArgs>
-            result: $Utils.Optional<DNAVariantCountAggregateOutputType> | number
-          }
-        }
-      }
-      GeneticTrait: {
-        payload: Prisma.$GeneticTraitPayload<ExtArgs>
-        fields: Prisma.GeneticTraitFieldRefs
-        operations: {
-          findUnique: {
-            args: Prisma.GeneticTraitFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload> | null
-          }
-          findUniqueOrThrow: {
-            args: Prisma.GeneticTraitFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>
-          }
-          findFirst: {
-            args: Prisma.GeneticTraitFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload> | null
-          }
-          findFirstOrThrow: {
-            args: Prisma.GeneticTraitFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>
-          }
-          findMany: {
-            args: Prisma.GeneticTraitFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>[]
-          }
-          create: {
-            args: Prisma.GeneticTraitCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>
-          }
-          createMany: {
-            args: Prisma.GeneticTraitCreateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          createManyAndReturn: {
-            args: Prisma.GeneticTraitCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>[]
-          }
-          delete: {
-            args: Prisma.GeneticTraitDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>
-          }
-          update: {
-            args: Prisma.GeneticTraitUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>
-          }
-          deleteMany: {
-            args: Prisma.GeneticTraitDeleteManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateMany: {
-            args: Prisma.GeneticTraitUpdateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.GeneticTraitUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>[]
-          }
-          upsert: {
-            args: Prisma.GeneticTraitUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$GeneticTraitPayload>
-          }
-          aggregate: {
-            args: Prisma.GeneticTraitAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateGeneticTrait>
-          }
-          groupBy: {
-            args: Prisma.GeneticTraitGroupByArgs<ExtArgs>
-            result: $Utils.Optional<GeneticTraitGroupByOutputType>[]
-          }
-          count: {
-            args: Prisma.GeneticTraitCountArgs<ExtArgs>
-            result: $Utils.Optional<GeneticTraitCountAggregateOutputType> | number
           }
         }
       }
@@ -2828,9 +2529,6 @@ export namespace Prisma {
     biomarkerHistory?: BiomarkerHistoryOmit
     insurancePlan?: InsurancePlanOmit
     insuranceBenefit?: InsuranceBenefitOmit
-    dNAData?: DNADataOmit
-    dNAVariant?: DNAVariantOmit
-    geneticTrait?: GeneticTraitOmit
     healthNeed?: HealthNeedOmit
     healthGoal?: HealthGoalOmit
     goalProgressHistory?: GoalProgressHistoryOmit
@@ -2922,7 +2620,6 @@ export namespace Prisma {
   export type UserCountOutputType = {
     auditLogs: number
     biomarkers: number
-    dnaData: number
     healthGoals: number
     healthNeeds: number
     insurancePlans: number
@@ -2940,7 +2637,6 @@ export namespace Prisma {
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
     biomarkers?: boolean | UserCountOutputTypeCountBiomarkersArgs
-    dnaData?: boolean | UserCountOutputTypeCountDnaDataArgs
     healthGoals?: boolean | UserCountOutputTypeCountHealthGoalsArgs
     healthNeeds?: boolean | UserCountOutputTypeCountHealthNeedsArgs
     insurancePlans?: boolean | UserCountOutputTypeCountInsurancePlansArgs
@@ -2978,13 +2674,6 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountBiomarkersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: BiomarkerWhereInput
-  }
-
-  /**
-   * UserCountOutputType without action
-   */
-  export type UserCountOutputTypeCountDnaDataArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DNADataWhereInput
   }
 
   /**
@@ -3189,46 +2878,6 @@ export namespace Prisma {
    */
   export type InsurancePlanCountOutputTypeCountCostAnalysesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: CostAnalysisWhereInput
-  }
-
-
-  /**
-   * Count Type DNADataCountOutputType
-   */
-
-  export type DNADataCountOutputType = {
-    variants: number
-    traits: number
-  }
-
-  export type DNADataCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    variants?: boolean | DNADataCountOutputTypeCountVariantsArgs
-    traits?: boolean | DNADataCountOutputTypeCountTraitsArgs
-  }
-
-  // Custom InputTypes
-  /**
-   * DNADataCountOutputType without action
-   */
-  export type DNADataCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNADataCountOutputType
-     */
-    select?: DNADataCountOutputTypeSelect<ExtArgs> | null
-  }
-
-  /**
-   * DNADataCountOutputType without action
-   */
-  export type DNADataCountOutputTypeCountVariantsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DNAVariantWhereInput
-  }
-
-  /**
-   * DNADataCountOutputType without action
-   */
-  export type DNADataCountOutputTypeCountTraitsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: GeneticTraitWhereInput
   }
 
 
@@ -3670,7 +3319,6 @@ export namespace Prisma {
     lastLoginAt?: boolean
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
-    dnaData?: boolean | User$dnaDataArgs<ExtArgs>
     healthGoals?: boolean | User$healthGoalsArgs<ExtArgs>
     healthNeeds?: boolean | User$healthNeedsArgs<ExtArgs>
     insurancePlans?: boolean | User$insurancePlansArgs<ExtArgs>
@@ -3780,7 +3428,6 @@ export namespace Prisma {
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
-    dnaData?: boolean | User$dnaDataArgs<ExtArgs>
     healthGoals?: boolean | User$healthGoalsArgs<ExtArgs>
     healthNeeds?: boolean | User$healthNeedsArgs<ExtArgs>
     insurancePlans?: boolean | User$insurancePlansArgs<ExtArgs>
@@ -3803,7 +3450,6 @@ export namespace Prisma {
     objects: {
       auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
       biomarkers: Prisma.$BiomarkerPayload<ExtArgs>[]
-      dnaData: Prisma.$DNADataPayload<ExtArgs>[]
       healthGoals: Prisma.$HealthGoalPayload<ExtArgs>[]
       healthNeeds: Prisma.$HealthNeedPayload<ExtArgs>[]
       insurancePlans: Prisma.$InsurancePlanPayload<ExtArgs>[]
@@ -4241,7 +3887,6 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     auditLogs<T extends User$auditLogsArgs<ExtArgs> = {}>(args?: Subset<T, User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     biomarkers<T extends User$biomarkersArgs<ExtArgs> = {}>(args?: Subset<T, User$biomarkersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BiomarkerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    dnaData<T extends User$dnaDataArgs<ExtArgs> = {}>(args?: Subset<T, User$dnaDataArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     healthGoals<T extends User$healthGoalsArgs<ExtArgs> = {}>(args?: Subset<T, User$healthGoalsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HealthGoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     healthNeeds<T extends User$healthNeedsArgs<ExtArgs> = {}>(args?: Subset<T, User$healthNeedsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HealthNeedPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     insurancePlans<T extends User$insurancePlansArgs<ExtArgs> = {}>(args?: Subset<T, User$insurancePlansArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InsurancePlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4748,30 +4393,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: BiomarkerScalarFieldEnum | BiomarkerScalarFieldEnum[]
-  }
-
-  /**
-   * User.dnaData
-   */
-  export type User$dnaDataArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    where?: DNADataWhereInput
-    orderBy?: DNADataOrderByWithRelationInput | DNADataOrderByWithRelationInput[]
-    cursor?: DNADataWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: DNADataScalarFieldEnum | DNADataScalarFieldEnum[]
   }
 
   /**
@@ -7335,7 +6956,6 @@ export namespace Prisma {
     patientId: string | null
     canViewBiomarkers: boolean | null
     canViewInsurance: boolean | null
-    canViewDna: boolean | null
     canViewHealthNeeds: boolean | null
     canEditData: boolean | null
     relationshipType: $Enums.ProviderRelationType | null
@@ -7353,7 +6973,6 @@ export namespace Prisma {
     patientId: string | null
     canViewBiomarkers: boolean | null
     canViewInsurance: boolean | null
-    canViewDna: boolean | null
     canViewHealthNeeds: boolean | null
     canEditData: boolean | null
     relationshipType: $Enums.ProviderRelationType | null
@@ -7371,7 +6990,6 @@ export namespace Prisma {
     patientId: number
     canViewBiomarkers: number
     canViewInsurance: number
-    canViewDna: number
     canViewHealthNeeds: number
     canEditData: number
     relationshipType: number
@@ -7391,7 +7009,6 @@ export namespace Prisma {
     patientId?: true
     canViewBiomarkers?: true
     canViewInsurance?: true
-    canViewDna?: true
     canViewHealthNeeds?: true
     canEditData?: true
     relationshipType?: true
@@ -7409,7 +7026,6 @@ export namespace Prisma {
     patientId?: true
     canViewBiomarkers?: true
     canViewInsurance?: true
-    canViewDna?: true
     canViewHealthNeeds?: true
     canEditData?: true
     relationshipType?: true
@@ -7427,7 +7043,6 @@ export namespace Prisma {
     patientId?: true
     canViewBiomarkers?: true
     canViewInsurance?: true
-    canViewDna?: true
     canViewHealthNeeds?: true
     canEditData?: true
     relationshipType?: true
@@ -7518,7 +7133,6 @@ export namespace Prisma {
     patientId: string
     canViewBiomarkers: boolean
     canViewInsurance: boolean
-    canViewDna: boolean
     canViewHealthNeeds: boolean
     canEditData: boolean
     relationshipType: $Enums.ProviderRelationType
@@ -7553,7 +7167,6 @@ export namespace Prisma {
     patientId?: boolean
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: boolean
@@ -7573,7 +7186,6 @@ export namespace Prisma {
     patientId?: boolean
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: boolean
@@ -7593,7 +7205,6 @@ export namespace Prisma {
     patientId?: boolean
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: boolean
@@ -7613,7 +7224,6 @@ export namespace Prisma {
     patientId?: boolean
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: boolean
@@ -7625,7 +7235,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type ProviderPatientOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "providerId" | "patientId" | "canViewBiomarkers" | "canViewInsurance" | "canViewDna" | "canViewHealthNeeds" | "canEditData" | "relationshipType" | "status" | "consentGrantedAt" | "consentExpiresAt" | "notesEncrypted" | "createdAt" | "updatedAt", ExtArgs["result"]["providerPatient"]>
+  export type ProviderPatientOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "providerId" | "patientId" | "canViewBiomarkers" | "canViewInsurance" | "canViewHealthNeeds" | "canEditData" | "relationshipType" | "status" | "consentGrantedAt" | "consentExpiresAt" | "notesEncrypted" | "createdAt" | "updatedAt", ExtArgs["result"]["providerPatient"]>
   export type ProviderPatientInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     patient?: boolean | UserDefaultArgs<ExtArgs>
     provider?: boolean | UserDefaultArgs<ExtArgs>
@@ -7651,7 +7261,6 @@ export namespace Prisma {
       patientId: string
       canViewBiomarkers: boolean
       canViewInsurance: boolean
-      canViewDna: boolean
       canViewHealthNeeds: boolean
       canEditData: boolean
       relationshipType: $Enums.ProviderRelationType
@@ -8091,7 +7700,6 @@ export namespace Prisma {
     readonly patientId: FieldRef<"ProviderPatient", 'String'>
     readonly canViewBiomarkers: FieldRef<"ProviderPatient", 'Boolean'>
     readonly canViewInsurance: FieldRef<"ProviderPatient", 'Boolean'>
-    readonly canViewDna: FieldRef<"ProviderPatient", 'Boolean'>
     readonly canViewHealthNeeds: FieldRef<"ProviderPatient", 'Boolean'>
     readonly canEditData: FieldRef<"ProviderPatient", 'Boolean'>
     readonly relationshipType: FieldRef<"ProviderPatient", 'ProviderRelationType'>
@@ -16466,3532 +16074,6 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: InsuranceBenefitInclude<ExtArgs> | null
-  }
-
-
-  /**
-   * Model DNAData
-   */
-
-  export type AggregateDNAData = {
-    _count: DNADataCountAggregateOutputType | null
-    _avg: DNADataAvgAggregateOutputType | null
-    _sum: DNADataSumAggregateOutputType | null
-    _min: DNADataMinAggregateOutputType | null
-    _max: DNADataMaxAggregateOutputType | null
-  }
-
-  export type DNADataAvgAggregateOutputType = {
-    totalVariants: number | null
-    validVariants: number | null
-  }
-
-  export type DNADataSumAggregateOutputType = {
-    totalVariants: number | null
-    validVariants: number | null
-  }
-
-  export type DNADataMinAggregateOutputType = {
-    id: string | null
-    userId: string | null
-    filename: string | null
-    source: string | null
-    uploadDate: Date | null
-    totalVariants: number | null
-    validVariants: number | null
-    processingStatus: $Enums.ProcessingStatus | null
-    processedAt: Date | null
-    createdAt: Date | null
-  }
-
-  export type DNADataMaxAggregateOutputType = {
-    id: string | null
-    userId: string | null
-    filename: string | null
-    source: string | null
-    uploadDate: Date | null
-    totalVariants: number | null
-    validVariants: number | null
-    processingStatus: $Enums.ProcessingStatus | null
-    processedAt: Date | null
-    createdAt: Date | null
-  }
-
-  export type DNADataCountAggregateOutputType = {
-    id: number
-    userId: number
-    filename: number
-    source: number
-    uploadDate: number
-    totalVariants: number
-    validVariants: number
-    processingStatus: number
-    processedAt: number
-    createdAt: number
-    _all: number
-  }
-
-
-  export type DNADataAvgAggregateInputType = {
-    totalVariants?: true
-    validVariants?: true
-  }
-
-  export type DNADataSumAggregateInputType = {
-    totalVariants?: true
-    validVariants?: true
-  }
-
-  export type DNADataMinAggregateInputType = {
-    id?: true
-    userId?: true
-    filename?: true
-    source?: true
-    uploadDate?: true
-    totalVariants?: true
-    validVariants?: true
-    processingStatus?: true
-    processedAt?: true
-    createdAt?: true
-  }
-
-  export type DNADataMaxAggregateInputType = {
-    id?: true
-    userId?: true
-    filename?: true
-    source?: true
-    uploadDate?: true
-    totalVariants?: true
-    validVariants?: true
-    processingStatus?: true
-    processedAt?: true
-    createdAt?: true
-  }
-
-  export type DNADataCountAggregateInputType = {
-    id?: true
-    userId?: true
-    filename?: true
-    source?: true
-    uploadDate?: true
-    totalVariants?: true
-    validVariants?: true
-    processingStatus?: true
-    processedAt?: true
-    createdAt?: true
-    _all?: true
-  }
-
-  export type DNADataAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which DNAData to aggregate.
-     */
-    where?: DNADataWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAData to fetch.
-     */
-    orderBy?: DNADataOrderByWithRelationInput | DNADataOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the start position
-     */
-    cursor?: DNADataWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAData from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAData.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Count returned DNAData
-    **/
-    _count?: true | DNADataCountAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to average
-    **/
-    _avg?: DNADataAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: DNADataSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the minimum value
-    **/
-    _min?: DNADataMinAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the maximum value
-    **/
-    _max?: DNADataMaxAggregateInputType
-  }
-
-  export type GetDNADataAggregateType<T extends DNADataAggregateArgs> = {
-        [P in keyof T & keyof AggregateDNAData]: P extends '_count' | 'count'
-      ? T[P] extends true
-        ? number
-        : GetScalarType<T[P], AggregateDNAData[P]>
-      : GetScalarType<T[P], AggregateDNAData[P]>
-  }
-
-
-
-
-  export type DNADataGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DNADataWhereInput
-    orderBy?: DNADataOrderByWithAggregationInput | DNADataOrderByWithAggregationInput[]
-    by: DNADataScalarFieldEnum[] | DNADataScalarFieldEnum
-    having?: DNADataScalarWhereWithAggregatesInput
-    take?: number
-    skip?: number
-    _count?: DNADataCountAggregateInputType | true
-    _avg?: DNADataAvgAggregateInputType
-    _sum?: DNADataSumAggregateInputType
-    _min?: DNADataMinAggregateInputType
-    _max?: DNADataMaxAggregateInputType
-  }
-
-  export type DNADataGroupByOutputType = {
-    id: string
-    userId: string
-    filename: string
-    source: string
-    uploadDate: Date
-    totalVariants: number
-    validVariants: number
-    processingStatus: $Enums.ProcessingStatus
-    processedAt: Date | null
-    createdAt: Date
-    _count: DNADataCountAggregateOutputType | null
-    _avg: DNADataAvgAggregateOutputType | null
-    _sum: DNADataSumAggregateOutputType | null
-    _min: DNADataMinAggregateOutputType | null
-    _max: DNADataMaxAggregateOutputType | null
-  }
-
-  type GetDNADataGroupByPayload<T extends DNADataGroupByArgs> = Prisma.PrismaPromise<
-    Array<
-      PickEnumerable<DNADataGroupByOutputType, T['by']> &
-        {
-          [P in ((keyof T) & (keyof DNADataGroupByOutputType))]: P extends '_count'
-            ? T[P] extends boolean
-              ? number
-              : GetScalarType<T[P], DNADataGroupByOutputType[P]>
-            : GetScalarType<T[P], DNADataGroupByOutputType[P]>
-        }
-      >
-    >
-
-
-  export type DNADataSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    userId?: boolean
-    filename?: boolean
-    source?: boolean
-    uploadDate?: boolean
-    totalVariants?: boolean
-    validVariants?: boolean
-    processingStatus?: boolean
-    processedAt?: boolean
-    createdAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
-    variants?: boolean | DNAData$variantsArgs<ExtArgs>
-    traits?: boolean | DNAData$traitsArgs<ExtArgs>
-    _count?: boolean | DNADataCountOutputTypeDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["dNAData"]>
-
-  export type DNADataSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    userId?: boolean
-    filename?: boolean
-    source?: boolean
-    uploadDate?: boolean
-    totalVariants?: boolean
-    validVariants?: boolean
-    processingStatus?: boolean
-    processedAt?: boolean
-    createdAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["dNAData"]>
-
-  export type DNADataSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    userId?: boolean
-    filename?: boolean
-    source?: boolean
-    uploadDate?: boolean
-    totalVariants?: boolean
-    validVariants?: boolean
-    processingStatus?: boolean
-    processedAt?: boolean
-    createdAt?: boolean
-    user?: boolean | UserDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["dNAData"]>
-
-  export type DNADataSelectScalar = {
-    id?: boolean
-    userId?: boolean
-    filename?: boolean
-    source?: boolean
-    uploadDate?: boolean
-    totalVariants?: boolean
-    validVariants?: boolean
-    processingStatus?: boolean
-    processedAt?: boolean
-    createdAt?: boolean
-  }
-
-  export type DNADataOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "filename" | "source" | "uploadDate" | "totalVariants" | "validVariants" | "processingStatus" | "processedAt" | "createdAt", ExtArgs["result"]["dNAData"]>
-  export type DNADataInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
-    variants?: boolean | DNAData$variantsArgs<ExtArgs>
-    traits?: boolean | DNAData$traitsArgs<ExtArgs>
-    _count?: boolean | DNADataCountOutputTypeDefaultArgs<ExtArgs>
-  }
-  export type DNADataIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
-  }
-  export type DNADataIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    user?: boolean | UserDefaultArgs<ExtArgs>
-  }
-
-  export type $DNADataPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "DNAData"
-    objects: {
-      user: Prisma.$UserPayload<ExtArgs>
-      variants: Prisma.$DNAVariantPayload<ExtArgs>[]
-      traits: Prisma.$GeneticTraitPayload<ExtArgs>[]
-    }
-    scalars: $Extensions.GetPayloadResult<{
-      id: string
-      userId: string
-      filename: string
-      source: string
-      uploadDate: Date
-      totalVariants: number
-      validVariants: number
-      processingStatus: $Enums.ProcessingStatus
-      processedAt: Date | null
-      createdAt: Date
-    }, ExtArgs["result"]["dNAData"]>
-    composites: {}
-  }
-
-  type DNADataGetPayload<S extends boolean | null | undefined | DNADataDefaultArgs> = $Result.GetResult<Prisma.$DNADataPayload, S>
-
-  type DNADataCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<DNADataFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: DNADataCountAggregateInputType | true
-    }
-
-  export interface DNADataDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DNAData'], meta: { name: 'DNAData' } }
-    /**
-     * Find zero or one DNAData that matches the filter.
-     * @param {DNADataFindUniqueArgs} args - Arguments to find a DNAData
-     * @example
-     * // Get one DNAData
-     * const dNAData = await prisma.dNAData.findUnique({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUnique<T extends DNADataFindUniqueArgs>(args: SelectSubset<T, DNADataFindUniqueArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find one DNAData that matches the filter or throw an error with `error.code='P2025'`
-     * if no matches were found.
-     * @param {DNADataFindUniqueOrThrowArgs} args - Arguments to find a DNAData
-     * @example
-     * // Get one DNAData
-     * const dNAData = await prisma.dNAData.findUniqueOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUniqueOrThrow<T extends DNADataFindUniqueOrThrowArgs>(args: SelectSubset<T, DNADataFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first DNAData that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataFindFirstArgs} args - Arguments to find a DNAData
-     * @example
-     * // Get one DNAData
-     * const dNAData = await prisma.dNAData.findFirst({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirst<T extends DNADataFindFirstArgs>(args?: SelectSubset<T, DNADataFindFirstArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first DNAData that matches the filter or
-     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataFindFirstOrThrowArgs} args - Arguments to find a DNAData
-     * @example
-     * // Get one DNAData
-     * const dNAData = await prisma.dNAData.findFirstOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirstOrThrow<T extends DNADataFindFirstOrThrowArgs>(args?: SelectSubset<T, DNADataFindFirstOrThrowArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find zero or more DNAData that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataFindManyArgs} args - Arguments to filter and select certain fields only.
-     * @example
-     * // Get all DNAData
-     * const dNAData = await prisma.dNAData.findMany()
-     * 
-     * // Get first 10 DNAData
-     * const dNAData = await prisma.dNAData.findMany({ take: 10 })
-     * 
-     * // Only select the `id`
-     * const dNADataWithIdOnly = await prisma.dNAData.findMany({ select: { id: true } })
-     * 
-     */
-    findMany<T extends DNADataFindManyArgs>(args?: SelectSubset<T, DNADataFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
-
-    /**
-     * Create a DNAData.
-     * @param {DNADataCreateArgs} args - Arguments to create a DNAData.
-     * @example
-     * // Create one DNAData
-     * const DNAData = await prisma.dNAData.create({
-     *   data: {
-     *     // ... data to create a DNAData
-     *   }
-     * })
-     * 
-     */
-    create<T extends DNADataCreateArgs>(args: SelectSubset<T, DNADataCreateArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Create many DNAData.
-     * @param {DNADataCreateManyArgs} args - Arguments to create many DNAData.
-     * @example
-     * // Create many DNAData
-     * const dNAData = await prisma.dNAData.createMany({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     *     
-     */
-    createMany<T extends DNADataCreateManyArgs>(args?: SelectSubset<T, DNADataCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create many DNAData and returns the data saved in the database.
-     * @param {DNADataCreateManyAndReturnArgs} args - Arguments to create many DNAData.
-     * @example
-     * // Create many DNAData
-     * const dNAData = await prisma.dNAData.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many DNAData and only return the `id`
-     * const dNADataWithIdOnly = await prisma.dNAData.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends DNADataCreateManyAndReturnArgs>(args?: SelectSubset<T, DNADataCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Delete a DNAData.
-     * @param {DNADataDeleteArgs} args - Arguments to delete one DNAData.
-     * @example
-     * // Delete one DNAData
-     * const DNAData = await prisma.dNAData.delete({
-     *   where: {
-     *     // ... filter to delete one DNAData
-     *   }
-     * })
-     * 
-     */
-    delete<T extends DNADataDeleteArgs>(args: SelectSubset<T, DNADataDeleteArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Update one DNAData.
-     * @param {DNADataUpdateArgs} args - Arguments to update one DNAData.
-     * @example
-     * // Update one DNAData
-     * const dNAData = await prisma.dNAData.update({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    update<T extends DNADataUpdateArgs>(args: SelectSubset<T, DNADataUpdateArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Delete zero or more DNAData.
-     * @param {DNADataDeleteManyArgs} args - Arguments to filter DNAData to delete.
-     * @example
-     * // Delete a few DNAData
-     * const { count } = await prisma.dNAData.deleteMany({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     * 
-     */
-    deleteMany<T extends DNADataDeleteManyArgs>(args?: SelectSubset<T, DNADataDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more DNAData.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataUpdateManyArgs} args - Arguments to update one or more rows.
-     * @example
-     * // Update many DNAData
-     * const dNAData = await prisma.dNAData.updateMany({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    updateMany<T extends DNADataUpdateManyArgs>(args: SelectSubset<T, DNADataUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more DNAData and returns the data updated in the database.
-     * @param {DNADataUpdateManyAndReturnArgs} args - Arguments to update many DNAData.
-     * @example
-     * // Update many DNAData
-     * const dNAData = await prisma.dNAData.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more DNAData and only return the `id`
-     * const dNADataWithIdOnly = await prisma.dNAData.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends DNADataUpdateManyAndReturnArgs>(args: SelectSubset<T, DNADataUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Create or update one DNAData.
-     * @param {DNADataUpsertArgs} args - Arguments to update or create a DNAData.
-     * @example
-     * // Update or create a DNAData
-     * const dNAData = await prisma.dNAData.upsert({
-     *   create: {
-     *     // ... data to create a DNAData
-     *   },
-     *   update: {
-     *     // ... in case it already exists, update
-     *   },
-     *   where: {
-     *     // ... the filter for the DNAData we want to update
-     *   }
-     * })
-     */
-    upsert<T extends DNADataUpsertArgs>(args: SelectSubset<T, DNADataUpsertArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-
-    /**
-     * Count the number of DNAData.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataCountArgs} args - Arguments to filter DNAData to count.
-     * @example
-     * // Count the number of DNAData
-     * const count = await prisma.dNAData.count({
-     *   where: {
-     *     // ... the filter for the DNAData we want to count
-     *   }
-     * })
-    **/
-    count<T extends DNADataCountArgs>(
-      args?: Subset<T, DNADataCountArgs>,
-    ): Prisma.PrismaPromise<
-      T extends $Utils.Record<'select', any>
-        ? T['select'] extends true
-          ? number
-          : GetScalarType<T['select'], DNADataCountAggregateOutputType>
-        : number
-    >
-
-    /**
-     * Allows you to perform aggregations operations on a DNAData.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
-     * @example
-     * // Ordered by age ascending
-     * // Where email contains prisma.io
-     * // Limited to the 10 users
-     * const aggregations = await prisma.user.aggregate({
-     *   _avg: {
-     *     age: true,
-     *   },
-     *   where: {
-     *     email: {
-     *       contains: "prisma.io",
-     *     },
-     *   },
-     *   orderBy: {
-     *     age: "asc",
-     *   },
-     *   take: 10,
-     * })
-    **/
-    aggregate<T extends DNADataAggregateArgs>(args: Subset<T, DNADataAggregateArgs>): Prisma.PrismaPromise<GetDNADataAggregateType<T>>
-
-    /**
-     * Group by DNAData.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNADataGroupByArgs} args - Group by arguments.
-     * @example
-     * // Group by city, order by createdAt, get count
-     * const result = await prisma.user.groupBy({
-     *   by: ['city', 'createdAt'],
-     *   orderBy: {
-     *     createdAt: true
-     *   },
-     *   _count: {
-     *     _all: true
-     *   },
-     * })
-     * 
-    **/
-    groupBy<
-      T extends DNADataGroupByArgs,
-      HasSelectOrTake extends Or<
-        Extends<'skip', Keys<T>>,
-        Extends<'take', Keys<T>>
-      >,
-      OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: DNADataGroupByArgs['orderBy'] }
-        : { orderBy?: DNADataGroupByArgs['orderBy'] },
-      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
-      ByFields extends MaybeTupleToUnion<T['by']>,
-      ByValid extends Has<ByFields, OrderFields>,
-      HavingFields extends GetHavingFields<T['having']>,
-      HavingValid extends Has<ByFields, HavingFields>,
-      ByEmpty extends T['by'] extends never[] ? True : False,
-      InputErrors extends ByEmpty extends True
-      ? `Error: "by" must not be empty.`
-      : HavingValid extends False
-      ? {
-          [P in HavingFields]: P extends ByFields
-            ? never
-            : P extends string
-            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
-            : [
-                Error,
-                'Field ',
-                P,
-                ` in "having" needs to be provided in "by"`,
-              ]
-        }[HavingFields]
-      : 'take' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "take", you also need to provide "orderBy"'
-      : 'skip' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "skip", you also need to provide "orderBy"'
-      : ByValid extends True
-      ? {}
-      : {
-          [P in OrderFields]: P extends ByFields
-            ? never
-            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-        }[OrderFields]
-    >(args: SubsetIntersection<T, DNADataGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDNADataGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
-  /**
-   * Fields of the DNAData model
-   */
-  readonly fields: DNADataFieldRefs;
-  }
-
-  /**
-   * The delegate class that acts as a "Promise-like" for DNAData.
-   * Why is this prefixed with `Prisma__`?
-   * Because we want to prevent naming conflicts as mentioned in
-   * https://github.com/prisma/prisma-client-js/issues/707
-   */
-  export interface Prisma__DNADataClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
-    readonly [Symbol.toStringTag]: "PrismaPromise"
-    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    variants<T extends DNAData$variantsArgs<ExtArgs> = {}>(args?: Subset<T, DNAData$variantsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    traits<T extends DNAData$traitsArgs<ExtArgs> = {}>(args?: Subset<T, DNAData$traitsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    /**
-     * Attaches callbacks for the resolution and/or rejection of the Promise.
-     * @param onfulfilled The callback to execute when the Promise is resolved.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of which ever callback is executed.
-     */
-    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
-    /**
-     * Attaches a callback for only the rejection of the Promise.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of the callback.
-     */
-    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
-    /**
-     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
-     * resolved value cannot be modified from the callback.
-     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
-     * @returns A Promise for the completion of the callback.
-     */
-    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
-  }
-
-
-
-
-  /**
-   * Fields of the DNAData model
-   */
-  interface DNADataFieldRefs {
-    readonly id: FieldRef<"DNAData", 'String'>
-    readonly userId: FieldRef<"DNAData", 'String'>
-    readonly filename: FieldRef<"DNAData", 'String'>
-    readonly source: FieldRef<"DNAData", 'String'>
-    readonly uploadDate: FieldRef<"DNAData", 'DateTime'>
-    readonly totalVariants: FieldRef<"DNAData", 'Int'>
-    readonly validVariants: FieldRef<"DNAData", 'Int'>
-    readonly processingStatus: FieldRef<"DNAData", 'ProcessingStatus'>
-    readonly processedAt: FieldRef<"DNAData", 'DateTime'>
-    readonly createdAt: FieldRef<"DNAData", 'DateTime'>
-  }
-    
-
-  // Custom InputTypes
-  /**
-   * DNAData findUnique
-   */
-  export type DNADataFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAData to fetch.
-     */
-    where: DNADataWhereUniqueInput
-  }
-
-  /**
-   * DNAData findUniqueOrThrow
-   */
-  export type DNADataFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAData to fetch.
-     */
-    where: DNADataWhereUniqueInput
-  }
-
-  /**
-   * DNAData findFirst
-   */
-  export type DNADataFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAData to fetch.
-     */
-    where?: DNADataWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAData to fetch.
-     */
-    orderBy?: DNADataOrderByWithRelationInput | DNADataOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for DNAData.
-     */
-    cursor?: DNADataWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAData from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAData.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of DNAData.
-     */
-    distinct?: DNADataScalarFieldEnum | DNADataScalarFieldEnum[]
-  }
-
-  /**
-   * DNAData findFirstOrThrow
-   */
-  export type DNADataFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAData to fetch.
-     */
-    where?: DNADataWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAData to fetch.
-     */
-    orderBy?: DNADataOrderByWithRelationInput | DNADataOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for DNAData.
-     */
-    cursor?: DNADataWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAData from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAData.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of DNAData.
-     */
-    distinct?: DNADataScalarFieldEnum | DNADataScalarFieldEnum[]
-  }
-
-  /**
-   * DNAData findMany
-   */
-  export type DNADataFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAData to fetch.
-     */
-    where?: DNADataWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAData to fetch.
-     */
-    orderBy?: DNADataOrderByWithRelationInput | DNADataOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for listing DNAData.
-     */
-    cursor?: DNADataWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAData from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAData.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of DNAData.
-     */
-    distinct?: DNADataScalarFieldEnum | DNADataScalarFieldEnum[]
-  }
-
-  /**
-   * DNAData create
-   */
-  export type DNADataCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * The data needed to create a DNAData.
-     */
-    data: XOR<DNADataCreateInput, DNADataUncheckedCreateInput>
-  }
-
-  /**
-   * DNAData createMany
-   */
-  export type DNADataCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to create many DNAData.
-     */
-    data: DNADataCreateManyInput | DNADataCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
-   * DNAData createManyAndReturn
-   */
-  export type DNADataCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * The data used to create many DNAData.
-     */
-    data: DNADataCreateManyInput | DNADataCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * DNAData update
-   */
-  export type DNADataUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * The data needed to update a DNAData.
-     */
-    data: XOR<DNADataUpdateInput, DNADataUncheckedUpdateInput>
-    /**
-     * Choose, which DNAData to update.
-     */
-    where: DNADataWhereUniqueInput
-  }
-
-  /**
-   * DNAData updateMany
-   */
-  export type DNADataUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update DNAData.
-     */
-    data: XOR<DNADataUpdateManyMutationInput, DNADataUncheckedUpdateManyInput>
-    /**
-     * Filter which DNAData to update
-     */
-    where?: DNADataWhereInput
-    /**
-     * Limit how many DNAData to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * DNAData updateManyAndReturn
-   */
-  export type DNADataUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * The data used to update DNAData.
-     */
-    data: XOR<DNADataUpdateManyMutationInput, DNADataUncheckedUpdateManyInput>
-    /**
-     * Filter which DNAData to update
-     */
-    where?: DNADataWhereInput
-    /**
-     * Limit how many DNAData to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataIncludeUpdateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * DNAData upsert
-   */
-  export type DNADataUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * The filter to search for the DNAData to update in case it exists.
-     */
-    where: DNADataWhereUniqueInput
-    /**
-     * In case the DNAData found by the `where` argument doesn't exist, create a new DNAData with this data.
-     */
-    create: XOR<DNADataCreateInput, DNADataUncheckedCreateInput>
-    /**
-     * In case the DNAData was found with the provided `where` argument, update it with this data.
-     */
-    update: XOR<DNADataUpdateInput, DNADataUncheckedUpdateInput>
-  }
-
-  /**
-   * DNAData delete
-   */
-  export type DNADataDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-    /**
-     * Filter which DNAData to delete.
-     */
-    where: DNADataWhereUniqueInput
-  }
-
-  /**
-   * DNAData deleteMany
-   */
-  export type DNADataDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which DNAData to delete
-     */
-    where?: DNADataWhereInput
-    /**
-     * Limit how many DNAData to delete.
-     */
-    limit?: number
-  }
-
-  /**
-   * DNAData.variants
-   */
-  export type DNAData$variantsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    where?: DNAVariantWhereInput
-    orderBy?: DNAVariantOrderByWithRelationInput | DNAVariantOrderByWithRelationInput[]
-    cursor?: DNAVariantWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: DNAVariantScalarFieldEnum | DNAVariantScalarFieldEnum[]
-  }
-
-  /**
-   * DNAData.traits
-   */
-  export type DNAData$traitsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    where?: GeneticTraitWhereInput
-    orderBy?: GeneticTraitOrderByWithRelationInput | GeneticTraitOrderByWithRelationInput[]
-    cursor?: GeneticTraitWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: GeneticTraitScalarFieldEnum | GeneticTraitScalarFieldEnum[]
-  }
-
-  /**
-   * DNAData without action
-   */
-  export type DNADataDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAData
-     */
-    select?: DNADataSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAData
-     */
-    omit?: DNADataOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNADataInclude<ExtArgs> | null
-  }
-
-
-  /**
-   * Model DNAVariant
-   */
-
-  export type AggregateDNAVariant = {
-    _count: DNAVariantCountAggregateOutputType | null
-    _avg: DNAVariantAvgAggregateOutputType | null
-    _sum: DNAVariantSumAggregateOutputType | null
-    _min: DNAVariantMinAggregateOutputType | null
-    _max: DNAVariantMaxAggregateOutputType | null
-  }
-
-  export type DNAVariantAvgAggregateOutputType = {
-    position: number | null
-  }
-
-  export type DNAVariantSumAggregateOutputType = {
-    position: number | null
-  }
-
-  export type DNAVariantMinAggregateOutputType = {
-    id: string | null
-    dnaDataId: string | null
-    rsid: string | null
-    chromosome: string | null
-    position: number | null
-    genotypeEncrypted: string | null
-    createdAt: Date | null
-  }
-
-  export type DNAVariantMaxAggregateOutputType = {
-    id: string | null
-    dnaDataId: string | null
-    rsid: string | null
-    chromosome: string | null
-    position: number | null
-    genotypeEncrypted: string | null
-    createdAt: Date | null
-  }
-
-  export type DNAVariantCountAggregateOutputType = {
-    id: number
-    dnaDataId: number
-    rsid: number
-    chromosome: number
-    position: number
-    genotypeEncrypted: number
-    createdAt: number
-    _all: number
-  }
-
-
-  export type DNAVariantAvgAggregateInputType = {
-    position?: true
-  }
-
-  export type DNAVariantSumAggregateInputType = {
-    position?: true
-  }
-
-  export type DNAVariantMinAggregateInputType = {
-    id?: true
-    dnaDataId?: true
-    rsid?: true
-    chromosome?: true
-    position?: true
-    genotypeEncrypted?: true
-    createdAt?: true
-  }
-
-  export type DNAVariantMaxAggregateInputType = {
-    id?: true
-    dnaDataId?: true
-    rsid?: true
-    chromosome?: true
-    position?: true
-    genotypeEncrypted?: true
-    createdAt?: true
-  }
-
-  export type DNAVariantCountAggregateInputType = {
-    id?: true
-    dnaDataId?: true
-    rsid?: true
-    chromosome?: true
-    position?: true
-    genotypeEncrypted?: true
-    createdAt?: true
-    _all?: true
-  }
-
-  export type DNAVariantAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which DNAVariant to aggregate.
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAVariants to fetch.
-     */
-    orderBy?: DNAVariantOrderByWithRelationInput | DNAVariantOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the start position
-     */
-    cursor?: DNAVariantWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAVariants from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAVariants.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Count returned DNAVariants
-    **/
-    _count?: true | DNAVariantCountAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to average
-    **/
-    _avg?: DNAVariantAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: DNAVariantSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the minimum value
-    **/
-    _min?: DNAVariantMinAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the maximum value
-    **/
-    _max?: DNAVariantMaxAggregateInputType
-  }
-
-  export type GetDNAVariantAggregateType<T extends DNAVariantAggregateArgs> = {
-        [P in keyof T & keyof AggregateDNAVariant]: P extends '_count' | 'count'
-      ? T[P] extends true
-        ? number
-        : GetScalarType<T[P], AggregateDNAVariant[P]>
-      : GetScalarType<T[P], AggregateDNAVariant[P]>
-  }
-
-
-
-
-  export type DNAVariantGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DNAVariantWhereInput
-    orderBy?: DNAVariantOrderByWithAggregationInput | DNAVariantOrderByWithAggregationInput[]
-    by: DNAVariantScalarFieldEnum[] | DNAVariantScalarFieldEnum
-    having?: DNAVariantScalarWhereWithAggregatesInput
-    take?: number
-    skip?: number
-    _count?: DNAVariantCountAggregateInputType | true
-    _avg?: DNAVariantAvgAggregateInputType
-    _sum?: DNAVariantSumAggregateInputType
-    _min?: DNAVariantMinAggregateInputType
-    _max?: DNAVariantMaxAggregateInputType
-  }
-
-  export type DNAVariantGroupByOutputType = {
-    id: string
-    dnaDataId: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt: Date
-    _count: DNAVariantCountAggregateOutputType | null
-    _avg: DNAVariantAvgAggregateOutputType | null
-    _sum: DNAVariantSumAggregateOutputType | null
-    _min: DNAVariantMinAggregateOutputType | null
-    _max: DNAVariantMaxAggregateOutputType | null
-  }
-
-  type GetDNAVariantGroupByPayload<T extends DNAVariantGroupByArgs> = Prisma.PrismaPromise<
-    Array<
-      PickEnumerable<DNAVariantGroupByOutputType, T['by']> &
-        {
-          [P in ((keyof T) & (keyof DNAVariantGroupByOutputType))]: P extends '_count'
-            ? T[P] extends boolean
-              ? number
-              : GetScalarType<T[P], DNAVariantGroupByOutputType[P]>
-            : GetScalarType<T[P], DNAVariantGroupByOutputType[P]>
-        }
-      >
-    >
-
-
-  export type DNAVariantSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    dnaDataId?: boolean
-    rsid?: boolean
-    chromosome?: boolean
-    position?: boolean
-    genotypeEncrypted?: boolean
-    createdAt?: boolean
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["dNAVariant"]>
-
-  export type DNAVariantSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    dnaDataId?: boolean
-    rsid?: boolean
-    chromosome?: boolean
-    position?: boolean
-    genotypeEncrypted?: boolean
-    createdAt?: boolean
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["dNAVariant"]>
-
-  export type DNAVariantSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    dnaDataId?: boolean
-    rsid?: boolean
-    chromosome?: boolean
-    position?: boolean
-    genotypeEncrypted?: boolean
-    createdAt?: boolean
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["dNAVariant"]>
-
-  export type DNAVariantSelectScalar = {
-    id?: boolean
-    dnaDataId?: boolean
-    rsid?: boolean
-    chromosome?: boolean
-    position?: boolean
-    genotypeEncrypted?: boolean
-    createdAt?: boolean
-  }
-
-  export type DNAVariantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "dnaDataId" | "rsid" | "chromosome" | "position" | "genotypeEncrypted" | "createdAt", ExtArgs["result"]["dNAVariant"]>
-  export type DNAVariantInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }
-  export type DNAVariantIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }
-  export type DNAVariantIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }
-
-  export type $DNAVariantPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "DNAVariant"
-    objects: {
-      dnaData: Prisma.$DNADataPayload<ExtArgs>
-    }
-    scalars: $Extensions.GetPayloadResult<{
-      id: string
-      dnaDataId: string
-      rsid: string
-      chromosome: string
-      position: number
-      genotypeEncrypted: string
-      createdAt: Date
-    }, ExtArgs["result"]["dNAVariant"]>
-    composites: {}
-  }
-
-  type DNAVariantGetPayload<S extends boolean | null | undefined | DNAVariantDefaultArgs> = $Result.GetResult<Prisma.$DNAVariantPayload, S>
-
-  type DNAVariantCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<DNAVariantFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: DNAVariantCountAggregateInputType | true
-    }
-
-  export interface DNAVariantDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DNAVariant'], meta: { name: 'DNAVariant' } }
-    /**
-     * Find zero or one DNAVariant that matches the filter.
-     * @param {DNAVariantFindUniqueArgs} args - Arguments to find a DNAVariant
-     * @example
-     * // Get one DNAVariant
-     * const dNAVariant = await prisma.dNAVariant.findUnique({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUnique<T extends DNAVariantFindUniqueArgs>(args: SelectSubset<T, DNAVariantFindUniqueArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find one DNAVariant that matches the filter or throw an error with `error.code='P2025'`
-     * if no matches were found.
-     * @param {DNAVariantFindUniqueOrThrowArgs} args - Arguments to find a DNAVariant
-     * @example
-     * // Get one DNAVariant
-     * const dNAVariant = await prisma.dNAVariant.findUniqueOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUniqueOrThrow<T extends DNAVariantFindUniqueOrThrowArgs>(args: SelectSubset<T, DNAVariantFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first DNAVariant that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantFindFirstArgs} args - Arguments to find a DNAVariant
-     * @example
-     * // Get one DNAVariant
-     * const dNAVariant = await prisma.dNAVariant.findFirst({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirst<T extends DNAVariantFindFirstArgs>(args?: SelectSubset<T, DNAVariantFindFirstArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first DNAVariant that matches the filter or
-     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantFindFirstOrThrowArgs} args - Arguments to find a DNAVariant
-     * @example
-     * // Get one DNAVariant
-     * const dNAVariant = await prisma.dNAVariant.findFirstOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirstOrThrow<T extends DNAVariantFindFirstOrThrowArgs>(args?: SelectSubset<T, DNAVariantFindFirstOrThrowArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find zero or more DNAVariants that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantFindManyArgs} args - Arguments to filter and select certain fields only.
-     * @example
-     * // Get all DNAVariants
-     * const dNAVariants = await prisma.dNAVariant.findMany()
-     * 
-     * // Get first 10 DNAVariants
-     * const dNAVariants = await prisma.dNAVariant.findMany({ take: 10 })
-     * 
-     * // Only select the `id`
-     * const dNAVariantWithIdOnly = await prisma.dNAVariant.findMany({ select: { id: true } })
-     * 
-     */
-    findMany<T extends DNAVariantFindManyArgs>(args?: SelectSubset<T, DNAVariantFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
-
-    /**
-     * Create a DNAVariant.
-     * @param {DNAVariantCreateArgs} args - Arguments to create a DNAVariant.
-     * @example
-     * // Create one DNAVariant
-     * const DNAVariant = await prisma.dNAVariant.create({
-     *   data: {
-     *     // ... data to create a DNAVariant
-     *   }
-     * })
-     * 
-     */
-    create<T extends DNAVariantCreateArgs>(args: SelectSubset<T, DNAVariantCreateArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Create many DNAVariants.
-     * @param {DNAVariantCreateManyArgs} args - Arguments to create many DNAVariants.
-     * @example
-     * // Create many DNAVariants
-     * const dNAVariant = await prisma.dNAVariant.createMany({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     *     
-     */
-    createMany<T extends DNAVariantCreateManyArgs>(args?: SelectSubset<T, DNAVariantCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create many DNAVariants and returns the data saved in the database.
-     * @param {DNAVariantCreateManyAndReturnArgs} args - Arguments to create many DNAVariants.
-     * @example
-     * // Create many DNAVariants
-     * const dNAVariant = await prisma.dNAVariant.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many DNAVariants and only return the `id`
-     * const dNAVariantWithIdOnly = await prisma.dNAVariant.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends DNAVariantCreateManyAndReturnArgs>(args?: SelectSubset<T, DNAVariantCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Delete a DNAVariant.
-     * @param {DNAVariantDeleteArgs} args - Arguments to delete one DNAVariant.
-     * @example
-     * // Delete one DNAVariant
-     * const DNAVariant = await prisma.dNAVariant.delete({
-     *   where: {
-     *     // ... filter to delete one DNAVariant
-     *   }
-     * })
-     * 
-     */
-    delete<T extends DNAVariantDeleteArgs>(args: SelectSubset<T, DNAVariantDeleteArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Update one DNAVariant.
-     * @param {DNAVariantUpdateArgs} args - Arguments to update one DNAVariant.
-     * @example
-     * // Update one DNAVariant
-     * const dNAVariant = await prisma.dNAVariant.update({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    update<T extends DNAVariantUpdateArgs>(args: SelectSubset<T, DNAVariantUpdateArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Delete zero or more DNAVariants.
-     * @param {DNAVariantDeleteManyArgs} args - Arguments to filter DNAVariants to delete.
-     * @example
-     * // Delete a few DNAVariants
-     * const { count } = await prisma.dNAVariant.deleteMany({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     * 
-     */
-    deleteMany<T extends DNAVariantDeleteManyArgs>(args?: SelectSubset<T, DNAVariantDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more DNAVariants.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantUpdateManyArgs} args - Arguments to update one or more rows.
-     * @example
-     * // Update many DNAVariants
-     * const dNAVariant = await prisma.dNAVariant.updateMany({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    updateMany<T extends DNAVariantUpdateManyArgs>(args: SelectSubset<T, DNAVariantUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more DNAVariants and returns the data updated in the database.
-     * @param {DNAVariantUpdateManyAndReturnArgs} args - Arguments to update many DNAVariants.
-     * @example
-     * // Update many DNAVariants
-     * const dNAVariant = await prisma.dNAVariant.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more DNAVariants and only return the `id`
-     * const dNAVariantWithIdOnly = await prisma.dNAVariant.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends DNAVariantUpdateManyAndReturnArgs>(args: SelectSubset<T, DNAVariantUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Create or update one DNAVariant.
-     * @param {DNAVariantUpsertArgs} args - Arguments to update or create a DNAVariant.
-     * @example
-     * // Update or create a DNAVariant
-     * const dNAVariant = await prisma.dNAVariant.upsert({
-     *   create: {
-     *     // ... data to create a DNAVariant
-     *   },
-     *   update: {
-     *     // ... in case it already exists, update
-     *   },
-     *   where: {
-     *     // ... the filter for the DNAVariant we want to update
-     *   }
-     * })
-     */
-    upsert<T extends DNAVariantUpsertArgs>(args: SelectSubset<T, DNAVariantUpsertArgs<ExtArgs>>): Prisma__DNAVariantClient<$Result.GetResult<Prisma.$DNAVariantPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-
-    /**
-     * Count the number of DNAVariants.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantCountArgs} args - Arguments to filter DNAVariants to count.
-     * @example
-     * // Count the number of DNAVariants
-     * const count = await prisma.dNAVariant.count({
-     *   where: {
-     *     // ... the filter for the DNAVariants we want to count
-     *   }
-     * })
-    **/
-    count<T extends DNAVariantCountArgs>(
-      args?: Subset<T, DNAVariantCountArgs>,
-    ): Prisma.PrismaPromise<
-      T extends $Utils.Record<'select', any>
-        ? T['select'] extends true
-          ? number
-          : GetScalarType<T['select'], DNAVariantCountAggregateOutputType>
-        : number
-    >
-
-    /**
-     * Allows you to perform aggregations operations on a DNAVariant.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
-     * @example
-     * // Ordered by age ascending
-     * // Where email contains prisma.io
-     * // Limited to the 10 users
-     * const aggregations = await prisma.user.aggregate({
-     *   _avg: {
-     *     age: true,
-     *   },
-     *   where: {
-     *     email: {
-     *       contains: "prisma.io",
-     *     },
-     *   },
-     *   orderBy: {
-     *     age: "asc",
-     *   },
-     *   take: 10,
-     * })
-    **/
-    aggregate<T extends DNAVariantAggregateArgs>(args: Subset<T, DNAVariantAggregateArgs>): Prisma.PrismaPromise<GetDNAVariantAggregateType<T>>
-
-    /**
-     * Group by DNAVariant.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {DNAVariantGroupByArgs} args - Group by arguments.
-     * @example
-     * // Group by city, order by createdAt, get count
-     * const result = await prisma.user.groupBy({
-     *   by: ['city', 'createdAt'],
-     *   orderBy: {
-     *     createdAt: true
-     *   },
-     *   _count: {
-     *     _all: true
-     *   },
-     * })
-     * 
-    **/
-    groupBy<
-      T extends DNAVariantGroupByArgs,
-      HasSelectOrTake extends Or<
-        Extends<'skip', Keys<T>>,
-        Extends<'take', Keys<T>>
-      >,
-      OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: DNAVariantGroupByArgs['orderBy'] }
-        : { orderBy?: DNAVariantGroupByArgs['orderBy'] },
-      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
-      ByFields extends MaybeTupleToUnion<T['by']>,
-      ByValid extends Has<ByFields, OrderFields>,
-      HavingFields extends GetHavingFields<T['having']>,
-      HavingValid extends Has<ByFields, HavingFields>,
-      ByEmpty extends T['by'] extends never[] ? True : False,
-      InputErrors extends ByEmpty extends True
-      ? `Error: "by" must not be empty.`
-      : HavingValid extends False
-      ? {
-          [P in HavingFields]: P extends ByFields
-            ? never
-            : P extends string
-            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
-            : [
-                Error,
-                'Field ',
-                P,
-                ` in "having" needs to be provided in "by"`,
-              ]
-        }[HavingFields]
-      : 'take' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "take", you also need to provide "orderBy"'
-      : 'skip' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "skip", you also need to provide "orderBy"'
-      : ByValid extends True
-      ? {}
-      : {
-          [P in OrderFields]: P extends ByFields
-            ? never
-            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-        }[OrderFields]
-    >(args: SubsetIntersection<T, DNAVariantGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDNAVariantGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
-  /**
-   * Fields of the DNAVariant model
-   */
-  readonly fields: DNAVariantFieldRefs;
-  }
-
-  /**
-   * The delegate class that acts as a "Promise-like" for DNAVariant.
-   * Why is this prefixed with `Prisma__`?
-   * Because we want to prevent naming conflicts as mentioned in
-   * https://github.com/prisma/prisma-client-js/issues/707
-   */
-  export interface Prisma__DNAVariantClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
-    readonly [Symbol.toStringTag]: "PrismaPromise"
-    dnaData<T extends DNADataDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DNADataDefaultArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    /**
-     * Attaches callbacks for the resolution and/or rejection of the Promise.
-     * @param onfulfilled The callback to execute when the Promise is resolved.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of which ever callback is executed.
-     */
-    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
-    /**
-     * Attaches a callback for only the rejection of the Promise.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of the callback.
-     */
-    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
-    /**
-     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
-     * resolved value cannot be modified from the callback.
-     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
-     * @returns A Promise for the completion of the callback.
-     */
-    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
-  }
-
-
-
-
-  /**
-   * Fields of the DNAVariant model
-   */
-  interface DNAVariantFieldRefs {
-    readonly id: FieldRef<"DNAVariant", 'String'>
-    readonly dnaDataId: FieldRef<"DNAVariant", 'String'>
-    readonly rsid: FieldRef<"DNAVariant", 'String'>
-    readonly chromosome: FieldRef<"DNAVariant", 'String'>
-    readonly position: FieldRef<"DNAVariant", 'Int'>
-    readonly genotypeEncrypted: FieldRef<"DNAVariant", 'String'>
-    readonly createdAt: FieldRef<"DNAVariant", 'DateTime'>
-  }
-    
-
-  // Custom InputTypes
-  /**
-   * DNAVariant findUnique
-   */
-  export type DNAVariantFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAVariant to fetch.
-     */
-    where: DNAVariantWhereUniqueInput
-  }
-
-  /**
-   * DNAVariant findUniqueOrThrow
-   */
-  export type DNAVariantFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAVariant to fetch.
-     */
-    where: DNAVariantWhereUniqueInput
-  }
-
-  /**
-   * DNAVariant findFirst
-   */
-  export type DNAVariantFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAVariant to fetch.
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAVariants to fetch.
-     */
-    orderBy?: DNAVariantOrderByWithRelationInput | DNAVariantOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for DNAVariants.
-     */
-    cursor?: DNAVariantWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAVariants from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAVariants.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of DNAVariants.
-     */
-    distinct?: DNAVariantScalarFieldEnum | DNAVariantScalarFieldEnum[]
-  }
-
-  /**
-   * DNAVariant findFirstOrThrow
-   */
-  export type DNAVariantFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAVariant to fetch.
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAVariants to fetch.
-     */
-    orderBy?: DNAVariantOrderByWithRelationInput | DNAVariantOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for DNAVariants.
-     */
-    cursor?: DNAVariantWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAVariants from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAVariants.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of DNAVariants.
-     */
-    distinct?: DNAVariantScalarFieldEnum | DNAVariantScalarFieldEnum[]
-  }
-
-  /**
-   * DNAVariant findMany
-   */
-  export type DNAVariantFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * Filter, which DNAVariants to fetch.
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of DNAVariants to fetch.
-     */
-    orderBy?: DNAVariantOrderByWithRelationInput | DNAVariantOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for listing DNAVariants.
-     */
-    cursor?: DNAVariantWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` DNAVariants from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` DNAVariants.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of DNAVariants.
-     */
-    distinct?: DNAVariantScalarFieldEnum | DNAVariantScalarFieldEnum[]
-  }
-
-  /**
-   * DNAVariant create
-   */
-  export type DNAVariantCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * The data needed to create a DNAVariant.
-     */
-    data: XOR<DNAVariantCreateInput, DNAVariantUncheckedCreateInput>
-  }
-
-  /**
-   * DNAVariant createMany
-   */
-  export type DNAVariantCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to create many DNAVariants.
-     */
-    data: DNAVariantCreateManyInput | DNAVariantCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
-   * DNAVariant createManyAndReturn
-   */
-  export type DNAVariantCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * The data used to create many DNAVariants.
-     */
-    data: DNAVariantCreateManyInput | DNAVariantCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * DNAVariant update
-   */
-  export type DNAVariantUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * The data needed to update a DNAVariant.
-     */
-    data: XOR<DNAVariantUpdateInput, DNAVariantUncheckedUpdateInput>
-    /**
-     * Choose, which DNAVariant to update.
-     */
-    where: DNAVariantWhereUniqueInput
-  }
-
-  /**
-   * DNAVariant updateMany
-   */
-  export type DNAVariantUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update DNAVariants.
-     */
-    data: XOR<DNAVariantUpdateManyMutationInput, DNAVariantUncheckedUpdateManyInput>
-    /**
-     * Filter which DNAVariants to update
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * Limit how many DNAVariants to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * DNAVariant updateManyAndReturn
-   */
-  export type DNAVariantUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * The data used to update DNAVariants.
-     */
-    data: XOR<DNAVariantUpdateManyMutationInput, DNAVariantUncheckedUpdateManyInput>
-    /**
-     * Filter which DNAVariants to update
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * Limit how many DNAVariants to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantIncludeUpdateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * DNAVariant upsert
-   */
-  export type DNAVariantUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * The filter to search for the DNAVariant to update in case it exists.
-     */
-    where: DNAVariantWhereUniqueInput
-    /**
-     * In case the DNAVariant found by the `where` argument doesn't exist, create a new DNAVariant with this data.
-     */
-    create: XOR<DNAVariantCreateInput, DNAVariantUncheckedCreateInput>
-    /**
-     * In case the DNAVariant was found with the provided `where` argument, update it with this data.
-     */
-    update: XOR<DNAVariantUpdateInput, DNAVariantUncheckedUpdateInput>
-  }
-
-  /**
-   * DNAVariant delete
-   */
-  export type DNAVariantDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-    /**
-     * Filter which DNAVariant to delete.
-     */
-    where: DNAVariantWhereUniqueInput
-  }
-
-  /**
-   * DNAVariant deleteMany
-   */
-  export type DNAVariantDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which DNAVariants to delete
-     */
-    where?: DNAVariantWhereInput
-    /**
-     * Limit how many DNAVariants to delete.
-     */
-    limit?: number
-  }
-
-  /**
-   * DNAVariant without action
-   */
-  export type DNAVariantDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the DNAVariant
-     */
-    select?: DNAVariantSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the DNAVariant
-     */
-    omit?: DNAVariantOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: DNAVariantInclude<ExtArgs> | null
-  }
-
-
-  /**
-   * Model GeneticTrait
-   */
-
-  export type AggregateGeneticTrait = {
-    _count: GeneticTraitCountAggregateOutputType | null
-    _avg: GeneticTraitAvgAggregateOutputType | null
-    _sum: GeneticTraitSumAggregateOutputType | null
-    _min: GeneticTraitMinAggregateOutputType | null
-    _max: GeneticTraitMaxAggregateOutputType | null
-  }
-
-  export type GeneticTraitAvgAggregateOutputType = {
-    citationCount: number | null
-    confidence: Decimal | null
-  }
-
-  export type GeneticTraitSumAggregateOutputType = {
-    citationCount: number | null
-    confidence: Decimal | null
-  }
-
-  export type GeneticTraitMinAggregateOutputType = {
-    id: string | null
-    dnaDataId: string | null
-    traitName: string | null
-    category: string | null
-    rsid: string | null
-    riskLevel: $Enums.RiskLevel | null
-    descriptionEncrypted: string | null
-    recommendationsEncrypted: string | null
-    citationCount: number | null
-    confidence: Decimal | null
-    createdAt: Date | null
-  }
-
-  export type GeneticTraitMaxAggregateOutputType = {
-    id: string | null
-    dnaDataId: string | null
-    traitName: string | null
-    category: string | null
-    rsid: string | null
-    riskLevel: $Enums.RiskLevel | null
-    descriptionEncrypted: string | null
-    recommendationsEncrypted: string | null
-    citationCount: number | null
-    confidence: Decimal | null
-    createdAt: Date | null
-  }
-
-  export type GeneticTraitCountAggregateOutputType = {
-    id: number
-    dnaDataId: number
-    traitName: number
-    category: number
-    rsid: number
-    riskLevel: number
-    descriptionEncrypted: number
-    recommendationsEncrypted: number
-    citationCount: number
-    confidence: number
-    createdAt: number
-    _all: number
-  }
-
-
-  export type GeneticTraitAvgAggregateInputType = {
-    citationCount?: true
-    confidence?: true
-  }
-
-  export type GeneticTraitSumAggregateInputType = {
-    citationCount?: true
-    confidence?: true
-  }
-
-  export type GeneticTraitMinAggregateInputType = {
-    id?: true
-    dnaDataId?: true
-    traitName?: true
-    category?: true
-    rsid?: true
-    riskLevel?: true
-    descriptionEncrypted?: true
-    recommendationsEncrypted?: true
-    citationCount?: true
-    confidence?: true
-    createdAt?: true
-  }
-
-  export type GeneticTraitMaxAggregateInputType = {
-    id?: true
-    dnaDataId?: true
-    traitName?: true
-    category?: true
-    rsid?: true
-    riskLevel?: true
-    descriptionEncrypted?: true
-    recommendationsEncrypted?: true
-    citationCount?: true
-    confidence?: true
-    createdAt?: true
-  }
-
-  export type GeneticTraitCountAggregateInputType = {
-    id?: true
-    dnaDataId?: true
-    traitName?: true
-    category?: true
-    rsid?: true
-    riskLevel?: true
-    descriptionEncrypted?: true
-    recommendationsEncrypted?: true
-    citationCount?: true
-    confidence?: true
-    createdAt?: true
-    _all?: true
-  }
-
-  export type GeneticTraitAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which GeneticTrait to aggregate.
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of GeneticTraits to fetch.
-     */
-    orderBy?: GeneticTraitOrderByWithRelationInput | GeneticTraitOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the start position
-     */
-    cursor?: GeneticTraitWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` GeneticTraits from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` GeneticTraits.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Count returned GeneticTraits
-    **/
-    _count?: true | GeneticTraitCountAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to average
-    **/
-    _avg?: GeneticTraitAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: GeneticTraitSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the minimum value
-    **/
-    _min?: GeneticTraitMinAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the maximum value
-    **/
-    _max?: GeneticTraitMaxAggregateInputType
-  }
-
-  export type GetGeneticTraitAggregateType<T extends GeneticTraitAggregateArgs> = {
-        [P in keyof T & keyof AggregateGeneticTrait]: P extends '_count' | 'count'
-      ? T[P] extends true
-        ? number
-        : GetScalarType<T[P], AggregateGeneticTrait[P]>
-      : GetScalarType<T[P], AggregateGeneticTrait[P]>
-  }
-
-
-
-
-  export type GeneticTraitGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: GeneticTraitWhereInput
-    orderBy?: GeneticTraitOrderByWithAggregationInput | GeneticTraitOrderByWithAggregationInput[]
-    by: GeneticTraitScalarFieldEnum[] | GeneticTraitScalarFieldEnum
-    having?: GeneticTraitScalarWhereWithAggregatesInput
-    take?: number
-    skip?: number
-    _count?: GeneticTraitCountAggregateInputType | true
-    _avg?: GeneticTraitAvgAggregateInputType
-    _sum?: GeneticTraitSumAggregateInputType
-    _min?: GeneticTraitMinAggregateInputType
-    _max?: GeneticTraitMaxAggregateInputType
-  }
-
-  export type GeneticTraitGroupByOutputType = {
-    id: string
-    dnaDataId: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted: string | null
-    citationCount: number
-    confidence: Decimal
-    createdAt: Date
-    _count: GeneticTraitCountAggregateOutputType | null
-    _avg: GeneticTraitAvgAggregateOutputType | null
-    _sum: GeneticTraitSumAggregateOutputType | null
-    _min: GeneticTraitMinAggregateOutputType | null
-    _max: GeneticTraitMaxAggregateOutputType | null
-  }
-
-  type GetGeneticTraitGroupByPayload<T extends GeneticTraitGroupByArgs> = Prisma.PrismaPromise<
-    Array<
-      PickEnumerable<GeneticTraitGroupByOutputType, T['by']> &
-        {
-          [P in ((keyof T) & (keyof GeneticTraitGroupByOutputType))]: P extends '_count'
-            ? T[P] extends boolean
-              ? number
-              : GetScalarType<T[P], GeneticTraitGroupByOutputType[P]>
-            : GetScalarType<T[P], GeneticTraitGroupByOutputType[P]>
-        }
-      >
-    >
-
-
-  export type GeneticTraitSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    dnaDataId?: boolean
-    traitName?: boolean
-    category?: boolean
-    rsid?: boolean
-    riskLevel?: boolean
-    descriptionEncrypted?: boolean
-    recommendationsEncrypted?: boolean
-    citationCount?: boolean
-    confidence?: boolean
-    createdAt?: boolean
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["geneticTrait"]>
-
-  export type GeneticTraitSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    dnaDataId?: boolean
-    traitName?: boolean
-    category?: boolean
-    rsid?: boolean
-    riskLevel?: boolean
-    descriptionEncrypted?: boolean
-    recommendationsEncrypted?: boolean
-    citationCount?: boolean
-    confidence?: boolean
-    createdAt?: boolean
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["geneticTrait"]>
-
-  export type GeneticTraitSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    dnaDataId?: boolean
-    traitName?: boolean
-    category?: boolean
-    rsid?: boolean
-    riskLevel?: boolean
-    descriptionEncrypted?: boolean
-    recommendationsEncrypted?: boolean
-    citationCount?: boolean
-    confidence?: boolean
-    createdAt?: boolean
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["geneticTrait"]>
-
-  export type GeneticTraitSelectScalar = {
-    id?: boolean
-    dnaDataId?: boolean
-    traitName?: boolean
-    category?: boolean
-    rsid?: boolean
-    riskLevel?: boolean
-    descriptionEncrypted?: boolean
-    recommendationsEncrypted?: boolean
-    citationCount?: boolean
-    confidence?: boolean
-    createdAt?: boolean
-  }
-
-  export type GeneticTraitOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "dnaDataId" | "traitName" | "category" | "rsid" | "riskLevel" | "descriptionEncrypted" | "recommendationsEncrypted" | "citationCount" | "confidence" | "createdAt", ExtArgs["result"]["geneticTrait"]>
-  export type GeneticTraitInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }
-  export type GeneticTraitIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }
-  export type GeneticTraitIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    dnaData?: boolean | DNADataDefaultArgs<ExtArgs>
-  }
-
-  export type $GeneticTraitPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "GeneticTrait"
-    objects: {
-      dnaData: Prisma.$DNADataPayload<ExtArgs>
-    }
-    scalars: $Extensions.GetPayloadResult<{
-      id: string
-      dnaDataId: string
-      traitName: string
-      category: string
-      rsid: string
-      riskLevel: $Enums.RiskLevel
-      descriptionEncrypted: string
-      recommendationsEncrypted: string | null
-      citationCount: number
-      confidence: Prisma.Decimal
-      createdAt: Date
-    }, ExtArgs["result"]["geneticTrait"]>
-    composites: {}
-  }
-
-  type GeneticTraitGetPayload<S extends boolean | null | undefined | GeneticTraitDefaultArgs> = $Result.GetResult<Prisma.$GeneticTraitPayload, S>
-
-  type GeneticTraitCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<GeneticTraitFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: GeneticTraitCountAggregateInputType | true
-    }
-
-  export interface GeneticTraitDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['GeneticTrait'], meta: { name: 'GeneticTrait' } }
-    /**
-     * Find zero or one GeneticTrait that matches the filter.
-     * @param {GeneticTraitFindUniqueArgs} args - Arguments to find a GeneticTrait
-     * @example
-     * // Get one GeneticTrait
-     * const geneticTrait = await prisma.geneticTrait.findUnique({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUnique<T extends GeneticTraitFindUniqueArgs>(args: SelectSubset<T, GeneticTraitFindUniqueArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find one GeneticTrait that matches the filter or throw an error with `error.code='P2025'`
-     * if no matches were found.
-     * @param {GeneticTraitFindUniqueOrThrowArgs} args - Arguments to find a GeneticTrait
-     * @example
-     * // Get one GeneticTrait
-     * const geneticTrait = await prisma.geneticTrait.findUniqueOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUniqueOrThrow<T extends GeneticTraitFindUniqueOrThrowArgs>(args: SelectSubset<T, GeneticTraitFindUniqueOrThrowArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first GeneticTrait that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitFindFirstArgs} args - Arguments to find a GeneticTrait
-     * @example
-     * // Get one GeneticTrait
-     * const geneticTrait = await prisma.geneticTrait.findFirst({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirst<T extends GeneticTraitFindFirstArgs>(args?: SelectSubset<T, GeneticTraitFindFirstArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first GeneticTrait that matches the filter or
-     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitFindFirstOrThrowArgs} args - Arguments to find a GeneticTrait
-     * @example
-     * // Get one GeneticTrait
-     * const geneticTrait = await prisma.geneticTrait.findFirstOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirstOrThrow<T extends GeneticTraitFindFirstOrThrowArgs>(args?: SelectSubset<T, GeneticTraitFindFirstOrThrowArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find zero or more GeneticTraits that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitFindManyArgs} args - Arguments to filter and select certain fields only.
-     * @example
-     * // Get all GeneticTraits
-     * const geneticTraits = await prisma.geneticTrait.findMany()
-     * 
-     * // Get first 10 GeneticTraits
-     * const geneticTraits = await prisma.geneticTrait.findMany({ take: 10 })
-     * 
-     * // Only select the `id`
-     * const geneticTraitWithIdOnly = await prisma.geneticTrait.findMany({ select: { id: true } })
-     * 
-     */
-    findMany<T extends GeneticTraitFindManyArgs>(args?: SelectSubset<T, GeneticTraitFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
-
-    /**
-     * Create a GeneticTrait.
-     * @param {GeneticTraitCreateArgs} args - Arguments to create a GeneticTrait.
-     * @example
-     * // Create one GeneticTrait
-     * const GeneticTrait = await prisma.geneticTrait.create({
-     *   data: {
-     *     // ... data to create a GeneticTrait
-     *   }
-     * })
-     * 
-     */
-    create<T extends GeneticTraitCreateArgs>(args: SelectSubset<T, GeneticTraitCreateArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Create many GeneticTraits.
-     * @param {GeneticTraitCreateManyArgs} args - Arguments to create many GeneticTraits.
-     * @example
-     * // Create many GeneticTraits
-     * const geneticTrait = await prisma.geneticTrait.createMany({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     *     
-     */
-    createMany<T extends GeneticTraitCreateManyArgs>(args?: SelectSubset<T, GeneticTraitCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create many GeneticTraits and returns the data saved in the database.
-     * @param {GeneticTraitCreateManyAndReturnArgs} args - Arguments to create many GeneticTraits.
-     * @example
-     * // Create many GeneticTraits
-     * const geneticTrait = await prisma.geneticTrait.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many GeneticTraits and only return the `id`
-     * const geneticTraitWithIdOnly = await prisma.geneticTrait.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends GeneticTraitCreateManyAndReturnArgs>(args?: SelectSubset<T, GeneticTraitCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Delete a GeneticTrait.
-     * @param {GeneticTraitDeleteArgs} args - Arguments to delete one GeneticTrait.
-     * @example
-     * // Delete one GeneticTrait
-     * const GeneticTrait = await prisma.geneticTrait.delete({
-     *   where: {
-     *     // ... filter to delete one GeneticTrait
-     *   }
-     * })
-     * 
-     */
-    delete<T extends GeneticTraitDeleteArgs>(args: SelectSubset<T, GeneticTraitDeleteArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Update one GeneticTrait.
-     * @param {GeneticTraitUpdateArgs} args - Arguments to update one GeneticTrait.
-     * @example
-     * // Update one GeneticTrait
-     * const geneticTrait = await prisma.geneticTrait.update({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    update<T extends GeneticTraitUpdateArgs>(args: SelectSubset<T, GeneticTraitUpdateArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Delete zero or more GeneticTraits.
-     * @param {GeneticTraitDeleteManyArgs} args - Arguments to filter GeneticTraits to delete.
-     * @example
-     * // Delete a few GeneticTraits
-     * const { count } = await prisma.geneticTrait.deleteMany({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     * 
-     */
-    deleteMany<T extends GeneticTraitDeleteManyArgs>(args?: SelectSubset<T, GeneticTraitDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more GeneticTraits.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitUpdateManyArgs} args - Arguments to update one or more rows.
-     * @example
-     * // Update many GeneticTraits
-     * const geneticTrait = await prisma.geneticTrait.updateMany({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    updateMany<T extends GeneticTraitUpdateManyArgs>(args: SelectSubset<T, GeneticTraitUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more GeneticTraits and returns the data updated in the database.
-     * @param {GeneticTraitUpdateManyAndReturnArgs} args - Arguments to update many GeneticTraits.
-     * @example
-     * // Update many GeneticTraits
-     * const geneticTrait = await prisma.geneticTrait.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more GeneticTraits and only return the `id`
-     * const geneticTraitWithIdOnly = await prisma.geneticTrait.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends GeneticTraitUpdateManyAndReturnArgs>(args: SelectSubset<T, GeneticTraitUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Create or update one GeneticTrait.
-     * @param {GeneticTraitUpsertArgs} args - Arguments to update or create a GeneticTrait.
-     * @example
-     * // Update or create a GeneticTrait
-     * const geneticTrait = await prisma.geneticTrait.upsert({
-     *   create: {
-     *     // ... data to create a GeneticTrait
-     *   },
-     *   update: {
-     *     // ... in case it already exists, update
-     *   },
-     *   where: {
-     *     // ... the filter for the GeneticTrait we want to update
-     *   }
-     * })
-     */
-    upsert<T extends GeneticTraitUpsertArgs>(args: SelectSubset<T, GeneticTraitUpsertArgs<ExtArgs>>): Prisma__GeneticTraitClient<$Result.GetResult<Prisma.$GeneticTraitPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-
-    /**
-     * Count the number of GeneticTraits.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitCountArgs} args - Arguments to filter GeneticTraits to count.
-     * @example
-     * // Count the number of GeneticTraits
-     * const count = await prisma.geneticTrait.count({
-     *   where: {
-     *     // ... the filter for the GeneticTraits we want to count
-     *   }
-     * })
-    **/
-    count<T extends GeneticTraitCountArgs>(
-      args?: Subset<T, GeneticTraitCountArgs>,
-    ): Prisma.PrismaPromise<
-      T extends $Utils.Record<'select', any>
-        ? T['select'] extends true
-          ? number
-          : GetScalarType<T['select'], GeneticTraitCountAggregateOutputType>
-        : number
-    >
-
-    /**
-     * Allows you to perform aggregations operations on a GeneticTrait.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
-     * @example
-     * // Ordered by age ascending
-     * // Where email contains prisma.io
-     * // Limited to the 10 users
-     * const aggregations = await prisma.user.aggregate({
-     *   _avg: {
-     *     age: true,
-     *   },
-     *   where: {
-     *     email: {
-     *       contains: "prisma.io",
-     *     },
-     *   },
-     *   orderBy: {
-     *     age: "asc",
-     *   },
-     *   take: 10,
-     * })
-    **/
-    aggregate<T extends GeneticTraitAggregateArgs>(args: Subset<T, GeneticTraitAggregateArgs>): Prisma.PrismaPromise<GetGeneticTraitAggregateType<T>>
-
-    /**
-     * Group by GeneticTrait.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {GeneticTraitGroupByArgs} args - Group by arguments.
-     * @example
-     * // Group by city, order by createdAt, get count
-     * const result = await prisma.user.groupBy({
-     *   by: ['city', 'createdAt'],
-     *   orderBy: {
-     *     createdAt: true
-     *   },
-     *   _count: {
-     *     _all: true
-     *   },
-     * })
-     * 
-    **/
-    groupBy<
-      T extends GeneticTraitGroupByArgs,
-      HasSelectOrTake extends Or<
-        Extends<'skip', Keys<T>>,
-        Extends<'take', Keys<T>>
-      >,
-      OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: GeneticTraitGroupByArgs['orderBy'] }
-        : { orderBy?: GeneticTraitGroupByArgs['orderBy'] },
-      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
-      ByFields extends MaybeTupleToUnion<T['by']>,
-      ByValid extends Has<ByFields, OrderFields>,
-      HavingFields extends GetHavingFields<T['having']>,
-      HavingValid extends Has<ByFields, HavingFields>,
-      ByEmpty extends T['by'] extends never[] ? True : False,
-      InputErrors extends ByEmpty extends True
-      ? `Error: "by" must not be empty.`
-      : HavingValid extends False
-      ? {
-          [P in HavingFields]: P extends ByFields
-            ? never
-            : P extends string
-            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
-            : [
-                Error,
-                'Field ',
-                P,
-                ` in "having" needs to be provided in "by"`,
-              ]
-        }[HavingFields]
-      : 'take' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "take", you also need to provide "orderBy"'
-      : 'skip' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "skip", you also need to provide "orderBy"'
-      : ByValid extends True
-      ? {}
-      : {
-          [P in OrderFields]: P extends ByFields
-            ? never
-            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-        }[OrderFields]
-    >(args: SubsetIntersection<T, GeneticTraitGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetGeneticTraitGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
-  /**
-   * Fields of the GeneticTrait model
-   */
-  readonly fields: GeneticTraitFieldRefs;
-  }
-
-  /**
-   * The delegate class that acts as a "Promise-like" for GeneticTrait.
-   * Why is this prefixed with `Prisma__`?
-   * Because we want to prevent naming conflicts as mentioned in
-   * https://github.com/prisma/prisma-client-js/issues/707
-   */
-  export interface Prisma__GeneticTraitClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
-    readonly [Symbol.toStringTag]: "PrismaPromise"
-    dnaData<T extends DNADataDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DNADataDefaultArgs<ExtArgs>>): Prisma__DNADataClient<$Result.GetResult<Prisma.$DNADataPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    /**
-     * Attaches callbacks for the resolution and/or rejection of the Promise.
-     * @param onfulfilled The callback to execute when the Promise is resolved.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of which ever callback is executed.
-     */
-    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
-    /**
-     * Attaches a callback for only the rejection of the Promise.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of the callback.
-     */
-    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
-    /**
-     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
-     * resolved value cannot be modified from the callback.
-     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
-     * @returns A Promise for the completion of the callback.
-     */
-    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
-  }
-
-
-
-
-  /**
-   * Fields of the GeneticTrait model
-   */
-  interface GeneticTraitFieldRefs {
-    readonly id: FieldRef<"GeneticTrait", 'String'>
-    readonly dnaDataId: FieldRef<"GeneticTrait", 'String'>
-    readonly traitName: FieldRef<"GeneticTrait", 'String'>
-    readonly category: FieldRef<"GeneticTrait", 'String'>
-    readonly rsid: FieldRef<"GeneticTrait", 'String'>
-    readonly riskLevel: FieldRef<"GeneticTrait", 'RiskLevel'>
-    readonly descriptionEncrypted: FieldRef<"GeneticTrait", 'String'>
-    readonly recommendationsEncrypted: FieldRef<"GeneticTrait", 'String'>
-    readonly citationCount: FieldRef<"GeneticTrait", 'Int'>
-    readonly confidence: FieldRef<"GeneticTrait", 'Decimal'>
-    readonly createdAt: FieldRef<"GeneticTrait", 'DateTime'>
-  }
-    
-
-  // Custom InputTypes
-  /**
-   * GeneticTrait findUnique
-   */
-  export type GeneticTraitFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * Filter, which GeneticTrait to fetch.
-     */
-    where: GeneticTraitWhereUniqueInput
-  }
-
-  /**
-   * GeneticTrait findUniqueOrThrow
-   */
-  export type GeneticTraitFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * Filter, which GeneticTrait to fetch.
-     */
-    where: GeneticTraitWhereUniqueInput
-  }
-
-  /**
-   * GeneticTrait findFirst
-   */
-  export type GeneticTraitFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * Filter, which GeneticTrait to fetch.
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of GeneticTraits to fetch.
-     */
-    orderBy?: GeneticTraitOrderByWithRelationInput | GeneticTraitOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for GeneticTraits.
-     */
-    cursor?: GeneticTraitWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` GeneticTraits from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` GeneticTraits.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of GeneticTraits.
-     */
-    distinct?: GeneticTraitScalarFieldEnum | GeneticTraitScalarFieldEnum[]
-  }
-
-  /**
-   * GeneticTrait findFirstOrThrow
-   */
-  export type GeneticTraitFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * Filter, which GeneticTrait to fetch.
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of GeneticTraits to fetch.
-     */
-    orderBy?: GeneticTraitOrderByWithRelationInput | GeneticTraitOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for GeneticTraits.
-     */
-    cursor?: GeneticTraitWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` GeneticTraits from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` GeneticTraits.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of GeneticTraits.
-     */
-    distinct?: GeneticTraitScalarFieldEnum | GeneticTraitScalarFieldEnum[]
-  }
-
-  /**
-   * GeneticTrait findMany
-   */
-  export type GeneticTraitFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * Filter, which GeneticTraits to fetch.
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of GeneticTraits to fetch.
-     */
-    orderBy?: GeneticTraitOrderByWithRelationInput | GeneticTraitOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for listing GeneticTraits.
-     */
-    cursor?: GeneticTraitWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` GeneticTraits from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` GeneticTraits.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of GeneticTraits.
-     */
-    distinct?: GeneticTraitScalarFieldEnum | GeneticTraitScalarFieldEnum[]
-  }
-
-  /**
-   * GeneticTrait create
-   */
-  export type GeneticTraitCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * The data needed to create a GeneticTrait.
-     */
-    data: XOR<GeneticTraitCreateInput, GeneticTraitUncheckedCreateInput>
-  }
-
-  /**
-   * GeneticTrait createMany
-   */
-  export type GeneticTraitCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to create many GeneticTraits.
-     */
-    data: GeneticTraitCreateManyInput | GeneticTraitCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
-   * GeneticTrait createManyAndReturn
-   */
-  export type GeneticTraitCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * The data used to create many GeneticTraits.
-     */
-    data: GeneticTraitCreateManyInput | GeneticTraitCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * GeneticTrait update
-   */
-  export type GeneticTraitUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * The data needed to update a GeneticTrait.
-     */
-    data: XOR<GeneticTraitUpdateInput, GeneticTraitUncheckedUpdateInput>
-    /**
-     * Choose, which GeneticTrait to update.
-     */
-    where: GeneticTraitWhereUniqueInput
-  }
-
-  /**
-   * GeneticTrait updateMany
-   */
-  export type GeneticTraitUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update GeneticTraits.
-     */
-    data: XOR<GeneticTraitUpdateManyMutationInput, GeneticTraitUncheckedUpdateManyInput>
-    /**
-     * Filter which GeneticTraits to update
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * Limit how many GeneticTraits to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * GeneticTrait updateManyAndReturn
-   */
-  export type GeneticTraitUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * The data used to update GeneticTraits.
-     */
-    data: XOR<GeneticTraitUpdateManyMutationInput, GeneticTraitUncheckedUpdateManyInput>
-    /**
-     * Filter which GeneticTraits to update
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * Limit how many GeneticTraits to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitIncludeUpdateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * GeneticTrait upsert
-   */
-  export type GeneticTraitUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * The filter to search for the GeneticTrait to update in case it exists.
-     */
-    where: GeneticTraitWhereUniqueInput
-    /**
-     * In case the GeneticTrait found by the `where` argument doesn't exist, create a new GeneticTrait with this data.
-     */
-    create: XOR<GeneticTraitCreateInput, GeneticTraitUncheckedCreateInput>
-    /**
-     * In case the GeneticTrait was found with the provided `where` argument, update it with this data.
-     */
-    update: XOR<GeneticTraitUpdateInput, GeneticTraitUncheckedUpdateInput>
-  }
-
-  /**
-   * GeneticTrait delete
-   */
-  export type GeneticTraitDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
-    /**
-     * Filter which GeneticTrait to delete.
-     */
-    where: GeneticTraitWhereUniqueInput
-  }
-
-  /**
-   * GeneticTrait deleteMany
-   */
-  export type GeneticTraitDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which GeneticTraits to delete
-     */
-    where?: GeneticTraitWhereInput
-    /**
-     * Limit how many GeneticTraits to delete.
-     */
-    limit?: number
-  }
-
-  /**
-   * GeneticTrait without action
-   */
-  export type GeneticTraitDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the GeneticTrait
-     */
-    select?: GeneticTraitSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the GeneticTrait
-     */
-    omit?: GeneticTraitOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: GeneticTraitInclude<ExtArgs> | null
   }
 
 
@@ -30789,7 +26871,6 @@ export namespace Prisma {
     patientId: 'patientId',
     canViewBiomarkers: 'canViewBiomarkers',
     canViewInsurance: 'canViewInsurance',
-    canViewDna: 'canViewDna',
     canViewHealthNeeds: 'canViewHealthNeeds',
     canEditData: 'canEditData',
     relationshipType: 'relationshipType',
@@ -31002,52 +27083,6 @@ export namespace Prisma {
   };
 
   export type InsuranceBenefitScalarFieldEnum = (typeof InsuranceBenefitScalarFieldEnum)[keyof typeof InsuranceBenefitScalarFieldEnum]
-
-
-  export const DNADataScalarFieldEnum: {
-    id: 'id',
-    userId: 'userId',
-    filename: 'filename',
-    source: 'source',
-    uploadDate: 'uploadDate',
-    totalVariants: 'totalVariants',
-    validVariants: 'validVariants',
-    processingStatus: 'processingStatus',
-    processedAt: 'processedAt',
-    createdAt: 'createdAt'
-  };
-
-  export type DNADataScalarFieldEnum = (typeof DNADataScalarFieldEnum)[keyof typeof DNADataScalarFieldEnum]
-
-
-  export const DNAVariantScalarFieldEnum: {
-    id: 'id',
-    dnaDataId: 'dnaDataId',
-    rsid: 'rsid',
-    chromosome: 'chromosome',
-    position: 'position',
-    genotypeEncrypted: 'genotypeEncrypted',
-    createdAt: 'createdAt'
-  };
-
-  export type DNAVariantScalarFieldEnum = (typeof DNAVariantScalarFieldEnum)[keyof typeof DNAVariantScalarFieldEnum]
-
-
-  export const GeneticTraitScalarFieldEnum: {
-    id: 'id',
-    dnaDataId: 'dnaDataId',
-    traitName: 'traitName',
-    category: 'category',
-    rsid: 'rsid',
-    riskLevel: 'riskLevel',
-    descriptionEncrypted: 'descriptionEncrypted',
-    recommendationsEncrypted: 'recommendationsEncrypted',
-    citationCount: 'citationCount',
-    confidence: 'confidence',
-    createdAt: 'createdAt'
-  };
-
-  export type GeneticTraitScalarFieldEnum = (typeof GeneticTraitScalarFieldEnum)[keyof typeof GeneticTraitScalarFieldEnum]
 
 
   export const HealthNeedScalarFieldEnum: {
@@ -31411,34 +27446,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'ProcessingStatus'
-   */
-  export type EnumProcessingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProcessingStatus'>
-    
-
-
-  /**
-   * Reference to a field of type 'ProcessingStatus[]'
-   */
-  export type ListEnumProcessingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ProcessingStatus[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'RiskLevel'
-   */
-  export type EnumRiskLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RiskLevel'>
-    
-
-
-  /**
-   * Reference to a field of type 'RiskLevel[]'
-   */
-  export type ListEnumRiskLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RiskLevel[]'>
-    
-
-
-  /**
    * Reference to a field of type 'HealthNeedType'
    */
   export type EnumHealthNeedTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HealthNeedType'>
@@ -31600,7 +27607,6 @@ export namespace Prisma {
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     auditLogs?: AuditLogListRelationFilter
     biomarkers?: BiomarkerListRelationFilter
-    dnaData?: DNADataListRelationFilter
     healthGoals?: HealthGoalListRelationFilter
     healthNeeds?: HealthNeedListRelationFilter
     insurancePlans?: InsurancePlanListRelationFilter
@@ -31645,7 +27651,6 @@ export namespace Prisma {
     lastLoginAt?: SortOrderInput | SortOrder
     auditLogs?: AuditLogOrderByRelationAggregateInput
     biomarkers?: BiomarkerOrderByRelationAggregateInput
-    dnaData?: DNADataOrderByRelationAggregateInput
     healthGoals?: HealthGoalOrderByRelationAggregateInput
     healthNeeds?: HealthNeedOrderByRelationAggregateInput
     insurancePlans?: InsurancePlanOrderByRelationAggregateInput
@@ -31693,7 +27698,6 @@ export namespace Prisma {
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     auditLogs?: AuditLogListRelationFilter
     biomarkers?: BiomarkerListRelationFilter
-    dnaData?: DNADataListRelationFilter
     healthGoals?: HealthGoalListRelationFilter
     healthNeeds?: HealthNeedListRelationFilter
     insurancePlans?: InsurancePlanListRelationFilter
@@ -31928,7 +27932,6 @@ export namespace Prisma {
     patientId?: UuidFilter<"ProviderPatient"> | string
     canViewBiomarkers?: BoolFilter<"ProviderPatient"> | boolean
     canViewInsurance?: BoolFilter<"ProviderPatient"> | boolean
-    canViewDna?: BoolFilter<"ProviderPatient"> | boolean
     canViewHealthNeeds?: BoolFilter<"ProviderPatient"> | boolean
     canEditData?: BoolFilter<"ProviderPatient"> | boolean
     relationshipType?: EnumProviderRelationTypeFilter<"ProviderPatient"> | $Enums.ProviderRelationType
@@ -31948,7 +27951,6 @@ export namespace Prisma {
     patientId?: SortOrder
     canViewBiomarkers?: SortOrder
     canViewInsurance?: SortOrder
-    canViewDna?: SortOrder
     canViewHealthNeeds?: SortOrder
     canEditData?: SortOrder
     relationshipType?: SortOrder
@@ -31972,7 +27974,6 @@ export namespace Prisma {
     patientId?: UuidFilter<"ProviderPatient"> | string
     canViewBiomarkers?: BoolFilter<"ProviderPatient"> | boolean
     canViewInsurance?: BoolFilter<"ProviderPatient"> | boolean
-    canViewDna?: BoolFilter<"ProviderPatient"> | boolean
     canViewHealthNeeds?: BoolFilter<"ProviderPatient"> | boolean
     canEditData?: BoolFilter<"ProviderPatient"> | boolean
     relationshipType?: EnumProviderRelationTypeFilter<"ProviderPatient"> | $Enums.ProviderRelationType
@@ -31992,7 +27993,6 @@ export namespace Prisma {
     patientId?: SortOrder
     canViewBiomarkers?: SortOrder
     canViewInsurance?: SortOrder
-    canViewDna?: SortOrder
     canViewHealthNeeds?: SortOrder
     canEditData?: SortOrder
     relationshipType?: SortOrder
@@ -32016,7 +28016,6 @@ export namespace Prisma {
     patientId?: UuidWithAggregatesFilter<"ProviderPatient"> | string
     canViewBiomarkers?: BoolWithAggregatesFilter<"ProviderPatient"> | boolean
     canViewInsurance?: BoolWithAggregatesFilter<"ProviderPatient"> | boolean
-    canViewDna?: BoolWithAggregatesFilter<"ProviderPatient"> | boolean
     canViewHealthNeeds?: BoolWithAggregatesFilter<"ProviderPatient"> | boolean
     canEditData?: BoolWithAggregatesFilter<"ProviderPatient"> | boolean
     relationshipType?: EnumProviderRelationTypeWithAggregatesFilter<"ProviderPatient"> | $Enums.ProviderRelationType
@@ -33057,248 +29056,6 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"InsuranceBenefit"> | Date | string
   }
 
-  export type DNADataWhereInput = {
-    AND?: DNADataWhereInput | DNADataWhereInput[]
-    OR?: DNADataWhereInput[]
-    NOT?: DNADataWhereInput | DNADataWhereInput[]
-    id?: UuidFilter<"DNAData"> | string
-    userId?: UuidFilter<"DNAData"> | string
-    filename?: StringFilter<"DNAData"> | string
-    source?: StringFilter<"DNAData"> | string
-    uploadDate?: DateTimeFilter<"DNAData"> | Date | string
-    totalVariants?: IntFilter<"DNAData"> | number
-    validVariants?: IntFilter<"DNAData"> | number
-    processingStatus?: EnumProcessingStatusFilter<"DNAData"> | $Enums.ProcessingStatus
-    processedAt?: DateTimeNullableFilter<"DNAData"> | Date | string | null
-    createdAt?: DateTimeFilter<"DNAData"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
-    variants?: DNAVariantListRelationFilter
-    traits?: GeneticTraitListRelationFilter
-  }
-
-  export type DNADataOrderByWithRelationInput = {
-    id?: SortOrder
-    userId?: SortOrder
-    filename?: SortOrder
-    source?: SortOrder
-    uploadDate?: SortOrder
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-    processingStatus?: SortOrder
-    processedAt?: SortOrderInput | SortOrder
-    createdAt?: SortOrder
-    user?: UserOrderByWithRelationInput
-    variants?: DNAVariantOrderByRelationAggregateInput
-    traits?: GeneticTraitOrderByRelationAggregateInput
-  }
-
-  export type DNADataWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
-    AND?: DNADataWhereInput | DNADataWhereInput[]
-    OR?: DNADataWhereInput[]
-    NOT?: DNADataWhereInput | DNADataWhereInput[]
-    userId?: UuidFilter<"DNAData"> | string
-    filename?: StringFilter<"DNAData"> | string
-    source?: StringFilter<"DNAData"> | string
-    uploadDate?: DateTimeFilter<"DNAData"> | Date | string
-    totalVariants?: IntFilter<"DNAData"> | number
-    validVariants?: IntFilter<"DNAData"> | number
-    processingStatus?: EnumProcessingStatusFilter<"DNAData"> | $Enums.ProcessingStatus
-    processedAt?: DateTimeNullableFilter<"DNAData"> | Date | string | null
-    createdAt?: DateTimeFilter<"DNAData"> | Date | string
-    user?: XOR<UserScalarRelationFilter, UserWhereInput>
-    variants?: DNAVariantListRelationFilter
-    traits?: GeneticTraitListRelationFilter
-  }, "id">
-
-  export type DNADataOrderByWithAggregationInput = {
-    id?: SortOrder
-    userId?: SortOrder
-    filename?: SortOrder
-    source?: SortOrder
-    uploadDate?: SortOrder
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-    processingStatus?: SortOrder
-    processedAt?: SortOrderInput | SortOrder
-    createdAt?: SortOrder
-    _count?: DNADataCountOrderByAggregateInput
-    _avg?: DNADataAvgOrderByAggregateInput
-    _max?: DNADataMaxOrderByAggregateInput
-    _min?: DNADataMinOrderByAggregateInput
-    _sum?: DNADataSumOrderByAggregateInput
-  }
-
-  export type DNADataScalarWhereWithAggregatesInput = {
-    AND?: DNADataScalarWhereWithAggregatesInput | DNADataScalarWhereWithAggregatesInput[]
-    OR?: DNADataScalarWhereWithAggregatesInput[]
-    NOT?: DNADataScalarWhereWithAggregatesInput | DNADataScalarWhereWithAggregatesInput[]
-    id?: UuidWithAggregatesFilter<"DNAData"> | string
-    userId?: UuidWithAggregatesFilter<"DNAData"> | string
-    filename?: StringWithAggregatesFilter<"DNAData"> | string
-    source?: StringWithAggregatesFilter<"DNAData"> | string
-    uploadDate?: DateTimeWithAggregatesFilter<"DNAData"> | Date | string
-    totalVariants?: IntWithAggregatesFilter<"DNAData"> | number
-    validVariants?: IntWithAggregatesFilter<"DNAData"> | number
-    processingStatus?: EnumProcessingStatusWithAggregatesFilter<"DNAData"> | $Enums.ProcessingStatus
-    processedAt?: DateTimeNullableWithAggregatesFilter<"DNAData"> | Date | string | null
-    createdAt?: DateTimeWithAggregatesFilter<"DNAData"> | Date | string
-  }
-
-  export type DNAVariantWhereInput = {
-    AND?: DNAVariantWhereInput | DNAVariantWhereInput[]
-    OR?: DNAVariantWhereInput[]
-    NOT?: DNAVariantWhereInput | DNAVariantWhereInput[]
-    id?: UuidFilter<"DNAVariant"> | string
-    dnaDataId?: UuidFilter<"DNAVariant"> | string
-    rsid?: StringFilter<"DNAVariant"> | string
-    chromosome?: StringFilter<"DNAVariant"> | string
-    position?: IntFilter<"DNAVariant"> | number
-    genotypeEncrypted?: StringFilter<"DNAVariant"> | string
-    createdAt?: DateTimeFilter<"DNAVariant"> | Date | string
-    dnaData?: XOR<DNADataScalarRelationFilter, DNADataWhereInput>
-  }
-
-  export type DNAVariantOrderByWithRelationInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    rsid?: SortOrder
-    chromosome?: SortOrder
-    position?: SortOrder
-    genotypeEncrypted?: SortOrder
-    createdAt?: SortOrder
-    dnaData?: DNADataOrderByWithRelationInput
-  }
-
-  export type DNAVariantWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
-    AND?: DNAVariantWhereInput | DNAVariantWhereInput[]
-    OR?: DNAVariantWhereInput[]
-    NOT?: DNAVariantWhereInput | DNAVariantWhereInput[]
-    dnaDataId?: UuidFilter<"DNAVariant"> | string
-    rsid?: StringFilter<"DNAVariant"> | string
-    chromosome?: StringFilter<"DNAVariant"> | string
-    position?: IntFilter<"DNAVariant"> | number
-    genotypeEncrypted?: StringFilter<"DNAVariant"> | string
-    createdAt?: DateTimeFilter<"DNAVariant"> | Date | string
-    dnaData?: XOR<DNADataScalarRelationFilter, DNADataWhereInput>
-  }, "id">
-
-  export type DNAVariantOrderByWithAggregationInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    rsid?: SortOrder
-    chromosome?: SortOrder
-    position?: SortOrder
-    genotypeEncrypted?: SortOrder
-    createdAt?: SortOrder
-    _count?: DNAVariantCountOrderByAggregateInput
-    _avg?: DNAVariantAvgOrderByAggregateInput
-    _max?: DNAVariantMaxOrderByAggregateInput
-    _min?: DNAVariantMinOrderByAggregateInput
-    _sum?: DNAVariantSumOrderByAggregateInput
-  }
-
-  export type DNAVariantScalarWhereWithAggregatesInput = {
-    AND?: DNAVariantScalarWhereWithAggregatesInput | DNAVariantScalarWhereWithAggregatesInput[]
-    OR?: DNAVariantScalarWhereWithAggregatesInput[]
-    NOT?: DNAVariantScalarWhereWithAggregatesInput | DNAVariantScalarWhereWithAggregatesInput[]
-    id?: UuidWithAggregatesFilter<"DNAVariant"> | string
-    dnaDataId?: UuidWithAggregatesFilter<"DNAVariant"> | string
-    rsid?: StringWithAggregatesFilter<"DNAVariant"> | string
-    chromosome?: StringWithAggregatesFilter<"DNAVariant"> | string
-    position?: IntWithAggregatesFilter<"DNAVariant"> | number
-    genotypeEncrypted?: StringWithAggregatesFilter<"DNAVariant"> | string
-    createdAt?: DateTimeWithAggregatesFilter<"DNAVariant"> | Date | string
-  }
-
-  export type GeneticTraitWhereInput = {
-    AND?: GeneticTraitWhereInput | GeneticTraitWhereInput[]
-    OR?: GeneticTraitWhereInput[]
-    NOT?: GeneticTraitWhereInput | GeneticTraitWhereInput[]
-    id?: UuidFilter<"GeneticTrait"> | string
-    dnaDataId?: UuidFilter<"GeneticTrait"> | string
-    traitName?: StringFilter<"GeneticTrait"> | string
-    category?: StringFilter<"GeneticTrait"> | string
-    rsid?: StringFilter<"GeneticTrait"> | string
-    riskLevel?: EnumRiskLevelFilter<"GeneticTrait"> | $Enums.RiskLevel
-    descriptionEncrypted?: StringFilter<"GeneticTrait"> | string
-    recommendationsEncrypted?: StringNullableFilter<"GeneticTrait"> | string | null
-    citationCount?: IntFilter<"GeneticTrait"> | number
-    confidence?: DecimalFilter<"GeneticTrait"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFilter<"GeneticTrait"> | Date | string
-    dnaData?: XOR<DNADataScalarRelationFilter, DNADataWhereInput>
-  }
-
-  export type GeneticTraitOrderByWithRelationInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    traitName?: SortOrder
-    category?: SortOrder
-    rsid?: SortOrder
-    riskLevel?: SortOrder
-    descriptionEncrypted?: SortOrder
-    recommendationsEncrypted?: SortOrderInput | SortOrder
-    citationCount?: SortOrder
-    confidence?: SortOrder
-    createdAt?: SortOrder
-    dnaData?: DNADataOrderByWithRelationInput
-  }
-
-  export type GeneticTraitWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
-    AND?: GeneticTraitWhereInput | GeneticTraitWhereInput[]
-    OR?: GeneticTraitWhereInput[]
-    NOT?: GeneticTraitWhereInput | GeneticTraitWhereInput[]
-    dnaDataId?: UuidFilter<"GeneticTrait"> | string
-    traitName?: StringFilter<"GeneticTrait"> | string
-    category?: StringFilter<"GeneticTrait"> | string
-    rsid?: StringFilter<"GeneticTrait"> | string
-    riskLevel?: EnumRiskLevelFilter<"GeneticTrait"> | $Enums.RiskLevel
-    descriptionEncrypted?: StringFilter<"GeneticTrait"> | string
-    recommendationsEncrypted?: StringNullableFilter<"GeneticTrait"> | string | null
-    citationCount?: IntFilter<"GeneticTrait"> | number
-    confidence?: DecimalFilter<"GeneticTrait"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFilter<"GeneticTrait"> | Date | string
-    dnaData?: XOR<DNADataScalarRelationFilter, DNADataWhereInput>
-  }, "id">
-
-  export type GeneticTraitOrderByWithAggregationInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    traitName?: SortOrder
-    category?: SortOrder
-    rsid?: SortOrder
-    riskLevel?: SortOrder
-    descriptionEncrypted?: SortOrder
-    recommendationsEncrypted?: SortOrderInput | SortOrder
-    citationCount?: SortOrder
-    confidence?: SortOrder
-    createdAt?: SortOrder
-    _count?: GeneticTraitCountOrderByAggregateInput
-    _avg?: GeneticTraitAvgOrderByAggregateInput
-    _max?: GeneticTraitMaxOrderByAggregateInput
-    _min?: GeneticTraitMinOrderByAggregateInput
-    _sum?: GeneticTraitSumOrderByAggregateInput
-  }
-
-  export type GeneticTraitScalarWhereWithAggregatesInput = {
-    AND?: GeneticTraitScalarWhereWithAggregatesInput | GeneticTraitScalarWhereWithAggregatesInput[]
-    OR?: GeneticTraitScalarWhereWithAggregatesInput[]
-    NOT?: GeneticTraitScalarWhereWithAggregatesInput | GeneticTraitScalarWhereWithAggregatesInput[]
-    id?: UuidWithAggregatesFilter<"GeneticTrait"> | string
-    dnaDataId?: UuidWithAggregatesFilter<"GeneticTrait"> | string
-    traitName?: StringWithAggregatesFilter<"GeneticTrait"> | string
-    category?: StringWithAggregatesFilter<"GeneticTrait"> | string
-    rsid?: StringWithAggregatesFilter<"GeneticTrait"> | string
-    riskLevel?: EnumRiskLevelWithAggregatesFilter<"GeneticTrait"> | $Enums.RiskLevel
-    descriptionEncrypted?: StringWithAggregatesFilter<"GeneticTrait"> | string
-    recommendationsEncrypted?: StringNullableWithAggregatesFilter<"GeneticTrait"> | string | null
-    citationCount?: IntWithAggregatesFilter<"GeneticTrait"> | number
-    confidence?: DecimalWithAggregatesFilter<"GeneticTrait"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeWithAggregatesFilter<"GeneticTrait"> | Date | string
-  }
-
   export type HealthNeedWhereInput = {
     AND?: HealthNeedWhereInput | HealthNeedWhereInput[]
     OR?: HealthNeedWhereInput[]
@@ -34195,7 +29952,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -34240,7 +29996,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -34285,7 +30040,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -34330,7 +30084,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -34591,7 +30344,6 @@ export namespace Prisma {
     id?: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -34611,7 +30363,6 @@ export namespace Prisma {
     patientId: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -34627,7 +30378,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -34647,7 +30397,6 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -34665,7 +30414,6 @@ export namespace Prisma {
     patientId: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -34681,7 +30429,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -34699,7 +30446,6 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -36024,270 +31770,6 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type DNADataCreateInput = {
-    id?: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    user: UserCreateNestedOneWithoutDnaDataInput
-    variants?: DNAVariantCreateNestedManyWithoutDnaDataInput
-    traits?: GeneticTraitCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataUncheckedCreateInput = {
-    id?: string
-    userId: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    variants?: DNAVariantUncheckedCreateNestedManyWithoutDnaDataInput
-    traits?: GeneticTraitUncheckedCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutDnaDataNestedInput
-    variants?: DNAVariantUpdateManyWithoutDnaDataNestedInput
-    traits?: GeneticTraitUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    variants?: DNAVariantUncheckedUpdateManyWithoutDnaDataNestedInput
-    traits?: GeneticTraitUncheckedUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataCreateManyInput = {
-    id?: string
-    userId: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-  }
-
-  export type DNADataUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNADataUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNAVariantCreateInput = {
-    id?: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt?: Date | string
-    dnaData: DNADataCreateNestedOneWithoutVariantsInput
-  }
-
-  export type DNAVariantUncheckedCreateInput = {
-    id?: string
-    dnaDataId: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt?: Date | string
-  }
-
-  export type DNAVariantUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    dnaData?: DNADataUpdateOneRequiredWithoutVariantsNestedInput
-  }
-
-  export type DNAVariantUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    dnaDataId?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNAVariantCreateManyInput = {
-    id?: string
-    dnaDataId: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt?: Date | string
-  }
-
-  export type DNAVariantUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNAVariantUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    dnaDataId?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type GeneticTraitCreateInput = {
-    id?: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted?: string | null
-    citationCount?: number
-    confidence: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-    dnaData: DNADataCreateNestedOneWithoutTraitsInput
-  }
-
-  export type GeneticTraitUncheckedCreateInput = {
-    id?: string
-    dnaDataId: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted?: string | null
-    citationCount?: number
-    confidence: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type GeneticTraitUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    dnaData?: DNADataUpdateOneRequiredWithoutTraitsNestedInput
-  }
-
-  export type GeneticTraitUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    dnaDataId?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type GeneticTraitCreateManyInput = {
-    id?: string
-    dnaDataId: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted?: string | null
-    citationCount?: number
-    confidence: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type GeneticTraitUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type GeneticTraitUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    dnaDataId?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
   export type HealthNeedCreateInput = {
     id?: string
     needType: $Enums.HealthNeedType
@@ -37393,12 +32875,6 @@ export namespace Prisma {
     none?: BiomarkerWhereInput
   }
 
-  export type DNADataListRelationFilter = {
-    every?: DNADataWhereInput
-    some?: DNADataWhereInput
-    none?: DNADataWhereInput
-  }
-
   export type HealthGoalListRelationFilter = {
     every?: HealthGoalWhereInput
     some?: HealthGoalWhereInput
@@ -37475,10 +32951,6 @@ export namespace Prisma {
   }
 
   export type BiomarkerOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type DNADataOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -37871,7 +33343,6 @@ export namespace Prisma {
     patientId?: SortOrder
     canViewBiomarkers?: SortOrder
     canViewInsurance?: SortOrder
-    canViewDna?: SortOrder
     canViewHealthNeeds?: SortOrder
     canEditData?: SortOrder
     relationshipType?: SortOrder
@@ -37889,7 +33360,6 @@ export namespace Prisma {
     patientId?: SortOrder
     canViewBiomarkers?: SortOrder
     canViewInsurance?: SortOrder
-    canViewDna?: SortOrder
     canViewHealthNeeds?: SortOrder
     canEditData?: SortOrder
     relationshipType?: SortOrder
@@ -37907,7 +33377,6 @@ export namespace Prisma {
     patientId?: SortOrder
     canViewBiomarkers?: SortOrder
     canViewInsurance?: SortOrder
-    canViewDna?: SortOrder
     canViewHealthNeeds?: SortOrder
     canEditData?: SortOrder
     relationshipType?: SortOrder
@@ -38909,204 +34378,6 @@ export namespace Prisma {
     outNetworkCoinsurance?: SortOrder
   }
 
-  export type EnumProcessingStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.ProcessingStatus | EnumProcessingStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumProcessingStatusFilter<$PrismaModel> | $Enums.ProcessingStatus
-  }
-
-  export type DNAVariantListRelationFilter = {
-    every?: DNAVariantWhereInput
-    some?: DNAVariantWhereInput
-    none?: DNAVariantWhereInput
-  }
-
-  export type GeneticTraitListRelationFilter = {
-    every?: GeneticTraitWhereInput
-    some?: GeneticTraitWhereInput
-    none?: GeneticTraitWhereInput
-  }
-
-  export type DNAVariantOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type GeneticTraitOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type DNADataCountOrderByAggregateInput = {
-    id?: SortOrder
-    userId?: SortOrder
-    filename?: SortOrder
-    source?: SortOrder
-    uploadDate?: SortOrder
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-    processingStatus?: SortOrder
-    processedAt?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type DNADataAvgOrderByAggregateInput = {
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-  }
-
-  export type DNADataMaxOrderByAggregateInput = {
-    id?: SortOrder
-    userId?: SortOrder
-    filename?: SortOrder
-    source?: SortOrder
-    uploadDate?: SortOrder
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-    processingStatus?: SortOrder
-    processedAt?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type DNADataMinOrderByAggregateInput = {
-    id?: SortOrder
-    userId?: SortOrder
-    filename?: SortOrder
-    source?: SortOrder
-    uploadDate?: SortOrder
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-    processingStatus?: SortOrder
-    processedAt?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type DNADataSumOrderByAggregateInput = {
-    totalVariants?: SortOrder
-    validVariants?: SortOrder
-  }
-
-  export type EnumProcessingStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.ProcessingStatus | EnumProcessingStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumProcessingStatusWithAggregatesFilter<$PrismaModel> | $Enums.ProcessingStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumProcessingStatusFilter<$PrismaModel>
-    _max?: NestedEnumProcessingStatusFilter<$PrismaModel>
-  }
-
-  export type DNADataScalarRelationFilter = {
-    is?: DNADataWhereInput
-    isNot?: DNADataWhereInput
-  }
-
-  export type DNAVariantCountOrderByAggregateInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    rsid?: SortOrder
-    chromosome?: SortOrder
-    position?: SortOrder
-    genotypeEncrypted?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type DNAVariantAvgOrderByAggregateInput = {
-    position?: SortOrder
-  }
-
-  export type DNAVariantMaxOrderByAggregateInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    rsid?: SortOrder
-    chromosome?: SortOrder
-    position?: SortOrder
-    genotypeEncrypted?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type DNAVariantMinOrderByAggregateInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    rsid?: SortOrder
-    chromosome?: SortOrder
-    position?: SortOrder
-    genotypeEncrypted?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type DNAVariantSumOrderByAggregateInput = {
-    position?: SortOrder
-  }
-
-  export type EnumRiskLevelFilter<$PrismaModel = never> = {
-    equals?: $Enums.RiskLevel | EnumRiskLevelFieldRefInput<$PrismaModel>
-    in?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    notIn?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    not?: NestedEnumRiskLevelFilter<$PrismaModel> | $Enums.RiskLevel
-  }
-
-  export type GeneticTraitCountOrderByAggregateInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    traitName?: SortOrder
-    category?: SortOrder
-    rsid?: SortOrder
-    riskLevel?: SortOrder
-    descriptionEncrypted?: SortOrder
-    recommendationsEncrypted?: SortOrder
-    citationCount?: SortOrder
-    confidence?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type GeneticTraitAvgOrderByAggregateInput = {
-    citationCount?: SortOrder
-    confidence?: SortOrder
-  }
-
-  export type GeneticTraitMaxOrderByAggregateInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    traitName?: SortOrder
-    category?: SortOrder
-    rsid?: SortOrder
-    riskLevel?: SortOrder
-    descriptionEncrypted?: SortOrder
-    recommendationsEncrypted?: SortOrder
-    citationCount?: SortOrder
-    confidence?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type GeneticTraitMinOrderByAggregateInput = {
-    id?: SortOrder
-    dnaDataId?: SortOrder
-    traitName?: SortOrder
-    category?: SortOrder
-    rsid?: SortOrder
-    riskLevel?: SortOrder
-    descriptionEncrypted?: SortOrder
-    recommendationsEncrypted?: SortOrder
-    citationCount?: SortOrder
-    confidence?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type GeneticTraitSumOrderByAggregateInput = {
-    citationCount?: SortOrder
-    confidence?: SortOrder
-  }
-
-  export type EnumRiskLevelWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.RiskLevel | EnumRiskLevelFieldRefInput<$PrismaModel>
-    in?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    notIn?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    not?: NestedEnumRiskLevelWithAggregatesFilter<$PrismaModel> | $Enums.RiskLevel
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumRiskLevelFilter<$PrismaModel>
-    _max?: NestedEnumRiskLevelFilter<$PrismaModel>
-  }
-
   export type EnumHealthNeedTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.HealthNeedType | EnumHealthNeedTypeFieldRefInput<$PrismaModel>
     in?: $Enums.HealthNeedType[] | ListEnumHealthNeedTypeFieldRefInput<$PrismaModel>
@@ -39777,13 +35048,6 @@ export namespace Prisma {
     connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
   }
 
-  export type DNADataCreateNestedManyWithoutUserInput = {
-    create?: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput> | DNADataCreateWithoutUserInput[] | DNADataUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: DNADataCreateOrConnectWithoutUserInput | DNADataCreateOrConnectWithoutUserInput[]
-    createMany?: DNADataCreateManyUserInputEnvelope
-    connect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-  }
-
   export type HealthGoalCreateNestedManyWithoutUserInput = {
     create?: XOR<HealthGoalCreateWithoutUserInput, HealthGoalUncheckedCreateWithoutUserInput> | HealthGoalCreateWithoutUserInput[] | HealthGoalUncheckedCreateWithoutUserInput[]
     connectOrCreate?: HealthGoalCreateOrConnectWithoutUserInput | HealthGoalCreateOrConnectWithoutUserInput[]
@@ -39880,13 +35144,6 @@ export namespace Prisma {
     connectOrCreate?: BiomarkerCreateOrConnectWithoutUserInput | BiomarkerCreateOrConnectWithoutUserInput[]
     createMany?: BiomarkerCreateManyUserInputEnvelope
     connect?: BiomarkerWhereUniqueInput | BiomarkerWhereUniqueInput[]
-  }
-
-  export type DNADataUncheckedCreateNestedManyWithoutUserInput = {
-    create?: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput> | DNADataCreateWithoutUserInput[] | DNADataUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: DNADataCreateOrConnectWithoutUserInput | DNADataCreateOrConnectWithoutUserInput[]
-    createMany?: DNADataCreateManyUserInputEnvelope
-    connect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
   }
 
   export type HealthGoalUncheckedCreateNestedManyWithoutUserInput = {
@@ -40031,20 +35288,6 @@ export namespace Prisma {
     update?: BiomarkerUpdateWithWhereUniqueWithoutUserInput | BiomarkerUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: BiomarkerUpdateManyWithWhereWithoutUserInput | BiomarkerUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
-  }
-
-  export type DNADataUpdateManyWithoutUserNestedInput = {
-    create?: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput> | DNADataCreateWithoutUserInput[] | DNADataUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: DNADataCreateOrConnectWithoutUserInput | DNADataCreateOrConnectWithoutUserInput[]
-    upsert?: DNADataUpsertWithWhereUniqueWithoutUserInput | DNADataUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: DNADataCreateManyUserInputEnvelope
-    set?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    disconnect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    delete?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    connect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    update?: DNADataUpdateWithWhereUniqueWithoutUserInput | DNADataUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: DNADataUpdateManyWithWhereWithoutUserInput | DNADataUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: DNADataScalarWhereInput | DNADataScalarWhereInput[]
   }
 
   export type HealthGoalUpdateManyWithoutUserNestedInput = {
@@ -40241,20 +35484,6 @@ export namespace Prisma {
     update?: BiomarkerUpdateWithWhereUniqueWithoutUserInput | BiomarkerUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: BiomarkerUpdateManyWithWhereWithoutUserInput | BiomarkerUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: BiomarkerScalarWhereInput | BiomarkerScalarWhereInput[]
-  }
-
-  export type DNADataUncheckedUpdateManyWithoutUserNestedInput = {
-    create?: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput> | DNADataCreateWithoutUserInput[] | DNADataUncheckedCreateWithoutUserInput[]
-    connectOrCreate?: DNADataCreateOrConnectWithoutUserInput | DNADataCreateOrConnectWithoutUserInput[]
-    upsert?: DNADataUpsertWithWhereUniqueWithoutUserInput | DNADataUpsertWithWhereUniqueWithoutUserInput[]
-    createMany?: DNADataCreateManyUserInputEnvelope
-    set?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    disconnect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    delete?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    connect?: DNADataWhereUniqueInput | DNADataWhereUniqueInput[]
-    update?: DNADataUpdateWithWhereUniqueWithoutUserInput | DNADataUpdateWithWhereUniqueWithoutUserInput[]
-    updateMany?: DNADataUpdateManyWithWhereWithoutUserInput | DNADataUpdateManyWithWhereWithoutUserInput[]
-    deleteMany?: DNADataScalarWhereInput | DNADataScalarWhereInput[]
   }
 
   export type HealthGoalUncheckedUpdateManyWithoutUserNestedInput = {
@@ -40857,140 +36086,6 @@ export namespace Prisma {
     upsert?: InsurancePlanUpsertWithoutBenefitsInput
     connect?: InsurancePlanWhereUniqueInput
     update?: XOR<XOR<InsurancePlanUpdateToOneWithWhereWithoutBenefitsInput, InsurancePlanUpdateWithoutBenefitsInput>, InsurancePlanUncheckedUpdateWithoutBenefitsInput>
-  }
-
-  export type UserCreateNestedOneWithoutDnaDataInput = {
-    create?: XOR<UserCreateWithoutDnaDataInput, UserUncheckedCreateWithoutDnaDataInput>
-    connectOrCreate?: UserCreateOrConnectWithoutDnaDataInput
-    connect?: UserWhereUniqueInput
-  }
-
-  export type DNAVariantCreateNestedManyWithoutDnaDataInput = {
-    create?: XOR<DNAVariantCreateWithoutDnaDataInput, DNAVariantUncheckedCreateWithoutDnaDataInput> | DNAVariantCreateWithoutDnaDataInput[] | DNAVariantUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: DNAVariantCreateOrConnectWithoutDnaDataInput | DNAVariantCreateOrConnectWithoutDnaDataInput[]
-    createMany?: DNAVariantCreateManyDnaDataInputEnvelope
-    connect?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-  }
-
-  export type GeneticTraitCreateNestedManyWithoutDnaDataInput = {
-    create?: XOR<GeneticTraitCreateWithoutDnaDataInput, GeneticTraitUncheckedCreateWithoutDnaDataInput> | GeneticTraitCreateWithoutDnaDataInput[] | GeneticTraitUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: GeneticTraitCreateOrConnectWithoutDnaDataInput | GeneticTraitCreateOrConnectWithoutDnaDataInput[]
-    createMany?: GeneticTraitCreateManyDnaDataInputEnvelope
-    connect?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-  }
-
-  export type DNAVariantUncheckedCreateNestedManyWithoutDnaDataInput = {
-    create?: XOR<DNAVariantCreateWithoutDnaDataInput, DNAVariantUncheckedCreateWithoutDnaDataInput> | DNAVariantCreateWithoutDnaDataInput[] | DNAVariantUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: DNAVariantCreateOrConnectWithoutDnaDataInput | DNAVariantCreateOrConnectWithoutDnaDataInput[]
-    createMany?: DNAVariantCreateManyDnaDataInputEnvelope
-    connect?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-  }
-
-  export type GeneticTraitUncheckedCreateNestedManyWithoutDnaDataInput = {
-    create?: XOR<GeneticTraitCreateWithoutDnaDataInput, GeneticTraitUncheckedCreateWithoutDnaDataInput> | GeneticTraitCreateWithoutDnaDataInput[] | GeneticTraitUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: GeneticTraitCreateOrConnectWithoutDnaDataInput | GeneticTraitCreateOrConnectWithoutDnaDataInput[]
-    createMany?: GeneticTraitCreateManyDnaDataInputEnvelope
-    connect?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-  }
-
-  export type EnumProcessingStatusFieldUpdateOperationsInput = {
-    set?: $Enums.ProcessingStatus
-  }
-
-  export type UserUpdateOneRequiredWithoutDnaDataNestedInput = {
-    create?: XOR<UserCreateWithoutDnaDataInput, UserUncheckedCreateWithoutDnaDataInput>
-    connectOrCreate?: UserCreateOrConnectWithoutDnaDataInput
-    upsert?: UserUpsertWithoutDnaDataInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutDnaDataInput, UserUpdateWithoutDnaDataInput>, UserUncheckedUpdateWithoutDnaDataInput>
-  }
-
-  export type DNAVariantUpdateManyWithoutDnaDataNestedInput = {
-    create?: XOR<DNAVariantCreateWithoutDnaDataInput, DNAVariantUncheckedCreateWithoutDnaDataInput> | DNAVariantCreateWithoutDnaDataInput[] | DNAVariantUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: DNAVariantCreateOrConnectWithoutDnaDataInput | DNAVariantCreateOrConnectWithoutDnaDataInput[]
-    upsert?: DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput | DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput[]
-    createMany?: DNAVariantCreateManyDnaDataInputEnvelope
-    set?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    disconnect?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    delete?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    connect?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    update?: DNAVariantUpdateWithWhereUniqueWithoutDnaDataInput | DNAVariantUpdateWithWhereUniqueWithoutDnaDataInput[]
-    updateMany?: DNAVariantUpdateManyWithWhereWithoutDnaDataInput | DNAVariantUpdateManyWithWhereWithoutDnaDataInput[]
-    deleteMany?: DNAVariantScalarWhereInput | DNAVariantScalarWhereInput[]
-  }
-
-  export type GeneticTraitUpdateManyWithoutDnaDataNestedInput = {
-    create?: XOR<GeneticTraitCreateWithoutDnaDataInput, GeneticTraitUncheckedCreateWithoutDnaDataInput> | GeneticTraitCreateWithoutDnaDataInput[] | GeneticTraitUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: GeneticTraitCreateOrConnectWithoutDnaDataInput | GeneticTraitCreateOrConnectWithoutDnaDataInput[]
-    upsert?: GeneticTraitUpsertWithWhereUniqueWithoutDnaDataInput | GeneticTraitUpsertWithWhereUniqueWithoutDnaDataInput[]
-    createMany?: GeneticTraitCreateManyDnaDataInputEnvelope
-    set?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    disconnect?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    delete?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    connect?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    update?: GeneticTraitUpdateWithWhereUniqueWithoutDnaDataInput | GeneticTraitUpdateWithWhereUniqueWithoutDnaDataInput[]
-    updateMany?: GeneticTraitUpdateManyWithWhereWithoutDnaDataInput | GeneticTraitUpdateManyWithWhereWithoutDnaDataInput[]
-    deleteMany?: GeneticTraitScalarWhereInput | GeneticTraitScalarWhereInput[]
-  }
-
-  export type DNAVariantUncheckedUpdateManyWithoutDnaDataNestedInput = {
-    create?: XOR<DNAVariantCreateWithoutDnaDataInput, DNAVariantUncheckedCreateWithoutDnaDataInput> | DNAVariantCreateWithoutDnaDataInput[] | DNAVariantUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: DNAVariantCreateOrConnectWithoutDnaDataInput | DNAVariantCreateOrConnectWithoutDnaDataInput[]
-    upsert?: DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput | DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput[]
-    createMany?: DNAVariantCreateManyDnaDataInputEnvelope
-    set?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    disconnect?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    delete?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    connect?: DNAVariantWhereUniqueInput | DNAVariantWhereUniqueInput[]
-    update?: DNAVariantUpdateWithWhereUniqueWithoutDnaDataInput | DNAVariantUpdateWithWhereUniqueWithoutDnaDataInput[]
-    updateMany?: DNAVariantUpdateManyWithWhereWithoutDnaDataInput | DNAVariantUpdateManyWithWhereWithoutDnaDataInput[]
-    deleteMany?: DNAVariantScalarWhereInput | DNAVariantScalarWhereInput[]
-  }
-
-  export type GeneticTraitUncheckedUpdateManyWithoutDnaDataNestedInput = {
-    create?: XOR<GeneticTraitCreateWithoutDnaDataInput, GeneticTraitUncheckedCreateWithoutDnaDataInput> | GeneticTraitCreateWithoutDnaDataInput[] | GeneticTraitUncheckedCreateWithoutDnaDataInput[]
-    connectOrCreate?: GeneticTraitCreateOrConnectWithoutDnaDataInput | GeneticTraitCreateOrConnectWithoutDnaDataInput[]
-    upsert?: GeneticTraitUpsertWithWhereUniqueWithoutDnaDataInput | GeneticTraitUpsertWithWhereUniqueWithoutDnaDataInput[]
-    createMany?: GeneticTraitCreateManyDnaDataInputEnvelope
-    set?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    disconnect?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    delete?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    connect?: GeneticTraitWhereUniqueInput | GeneticTraitWhereUniqueInput[]
-    update?: GeneticTraitUpdateWithWhereUniqueWithoutDnaDataInput | GeneticTraitUpdateWithWhereUniqueWithoutDnaDataInput[]
-    updateMany?: GeneticTraitUpdateManyWithWhereWithoutDnaDataInput | GeneticTraitUpdateManyWithWhereWithoutDnaDataInput[]
-    deleteMany?: GeneticTraitScalarWhereInput | GeneticTraitScalarWhereInput[]
-  }
-
-  export type DNADataCreateNestedOneWithoutVariantsInput = {
-    create?: XOR<DNADataCreateWithoutVariantsInput, DNADataUncheckedCreateWithoutVariantsInput>
-    connectOrCreate?: DNADataCreateOrConnectWithoutVariantsInput
-    connect?: DNADataWhereUniqueInput
-  }
-
-  export type DNADataUpdateOneRequiredWithoutVariantsNestedInput = {
-    create?: XOR<DNADataCreateWithoutVariantsInput, DNADataUncheckedCreateWithoutVariantsInput>
-    connectOrCreate?: DNADataCreateOrConnectWithoutVariantsInput
-    upsert?: DNADataUpsertWithoutVariantsInput
-    connect?: DNADataWhereUniqueInput
-    update?: XOR<XOR<DNADataUpdateToOneWithWhereWithoutVariantsInput, DNADataUpdateWithoutVariantsInput>, DNADataUncheckedUpdateWithoutVariantsInput>
-  }
-
-  export type DNADataCreateNestedOneWithoutTraitsInput = {
-    create?: XOR<DNADataCreateWithoutTraitsInput, DNADataUncheckedCreateWithoutTraitsInput>
-    connectOrCreate?: DNADataCreateOrConnectWithoutTraitsInput
-    connect?: DNADataWhereUniqueInput
-  }
-
-  export type EnumRiskLevelFieldUpdateOperationsInput = {
-    set?: $Enums.RiskLevel
-  }
-
-  export type DNADataUpdateOneRequiredWithoutTraitsNestedInput = {
-    create?: XOR<DNADataCreateWithoutTraitsInput, DNADataUncheckedCreateWithoutTraitsInput>
-    connectOrCreate?: DNADataCreateOrConnectWithoutTraitsInput
-    upsert?: DNADataUpsertWithoutTraitsInput
-    connect?: DNADataWhereUniqueInput
-    update?: XOR<XOR<DNADataUpdateToOneWithWhereWithoutTraitsInput, DNADataUpdateWithoutTraitsInput>, DNADataUncheckedUpdateWithoutTraitsInput>
   }
 
   export type HealthNeedCreaterelatedBiomarkerIdsInput = {
@@ -41707,40 +36802,6 @@ export namespace Prisma {
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
-  export type NestedEnumProcessingStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.ProcessingStatus | EnumProcessingStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumProcessingStatusFilter<$PrismaModel> | $Enums.ProcessingStatus
-  }
-
-  export type NestedEnumProcessingStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.ProcessingStatus | EnumProcessingStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.ProcessingStatus[] | ListEnumProcessingStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumProcessingStatusWithAggregatesFilter<$PrismaModel> | $Enums.ProcessingStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumProcessingStatusFilter<$PrismaModel>
-    _max?: NestedEnumProcessingStatusFilter<$PrismaModel>
-  }
-
-  export type NestedEnumRiskLevelFilter<$PrismaModel = never> = {
-    equals?: $Enums.RiskLevel | EnumRiskLevelFieldRefInput<$PrismaModel>
-    in?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    notIn?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    not?: NestedEnumRiskLevelFilter<$PrismaModel> | $Enums.RiskLevel
-  }
-
-  export type NestedEnumRiskLevelWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.RiskLevel | EnumRiskLevelFieldRefInput<$PrismaModel>
-    in?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    notIn?: $Enums.RiskLevel[] | ListEnumRiskLevelFieldRefInput<$PrismaModel>
-    not?: NestedEnumRiskLevelWithAggregatesFilter<$PrismaModel> | $Enums.RiskLevel
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumRiskLevelFilter<$PrismaModel>
-    _max?: NestedEnumRiskLevelFilter<$PrismaModel>
-  }
-
   export type NestedEnumHealthNeedTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.HealthNeedType | EnumHealthNeedTypeFieldRefInput<$PrismaModel>
     in?: $Enums.HealthNeedType[] | ListEnumHealthNeedTypeFieldRefInput<$PrismaModel>
@@ -41987,44 +37048,6 @@ export namespace Prisma {
 
   export type BiomarkerCreateManyUserInputEnvelope = {
     data: BiomarkerCreateManyUserInput | BiomarkerCreateManyUserInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type DNADataCreateWithoutUserInput = {
-    id?: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    variants?: DNAVariantCreateNestedManyWithoutDnaDataInput
-    traits?: GeneticTraitCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataUncheckedCreateWithoutUserInput = {
-    id?: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    variants?: DNAVariantUncheckedCreateNestedManyWithoutDnaDataInput
-    traits?: GeneticTraitUncheckedCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataCreateOrConnectWithoutUserInput = {
-    where: DNADataWhereUniqueInput
-    create: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput>
-  }
-
-  export type DNADataCreateManyUserInputEnvelope = {
-    data: DNADataCreateManyUserInput | DNADataCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -42384,7 +37407,6 @@ export namespace Prisma {
     id?: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -42402,7 +37424,6 @@ export namespace Prisma {
     providerId: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -42428,7 +37449,6 @@ export namespace Prisma {
     id?: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -42446,7 +37466,6 @@ export namespace Prisma {
     patientId: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -42809,38 +37828,6 @@ export namespace Prisma {
     userFileId?: UuidNullableFilter<"Biomarker"> | string | null
   }
 
-  export type DNADataUpsertWithWhereUniqueWithoutUserInput = {
-    where: DNADataWhereUniqueInput
-    update: XOR<DNADataUpdateWithoutUserInput, DNADataUncheckedUpdateWithoutUserInput>
-    create: XOR<DNADataCreateWithoutUserInput, DNADataUncheckedCreateWithoutUserInput>
-  }
-
-  export type DNADataUpdateWithWhereUniqueWithoutUserInput = {
-    where: DNADataWhereUniqueInput
-    data: XOR<DNADataUpdateWithoutUserInput, DNADataUncheckedUpdateWithoutUserInput>
-  }
-
-  export type DNADataUpdateManyWithWhereWithoutUserInput = {
-    where: DNADataScalarWhereInput
-    data: XOR<DNADataUpdateManyMutationInput, DNADataUncheckedUpdateManyWithoutUserInput>
-  }
-
-  export type DNADataScalarWhereInput = {
-    AND?: DNADataScalarWhereInput | DNADataScalarWhereInput[]
-    OR?: DNADataScalarWhereInput[]
-    NOT?: DNADataScalarWhereInput | DNADataScalarWhereInput[]
-    id?: UuidFilter<"DNAData"> | string
-    userId?: UuidFilter<"DNAData"> | string
-    filename?: StringFilter<"DNAData"> | string
-    source?: StringFilter<"DNAData"> | string
-    uploadDate?: DateTimeFilter<"DNAData"> | Date | string
-    totalVariants?: IntFilter<"DNAData"> | number
-    validVariants?: IntFilter<"DNAData"> | number
-    processingStatus?: EnumProcessingStatusFilter<"DNAData"> | $Enums.ProcessingStatus
-    processedAt?: DateTimeNullableFilter<"DNAData"> | Date | string | null
-    createdAt?: DateTimeFilter<"DNAData"> | Date | string
-  }
-
   export type HealthGoalUpsertWithWhereUniqueWithoutUserInput = {
     where: HealthGoalWhereUniqueInput
     update: XOR<HealthGoalUpdateWithoutUserInput, HealthGoalUncheckedUpdateWithoutUserInput>
@@ -43082,7 +38069,6 @@ export namespace Prisma {
     patientId?: UuidFilter<"ProviderPatient"> | string
     canViewBiomarkers?: BoolFilter<"ProviderPatient"> | boolean
     canViewInsurance?: BoolFilter<"ProviderPatient"> | boolean
-    canViewDna?: BoolFilter<"ProviderPatient"> | boolean
     canViewHealthNeeds?: BoolFilter<"ProviderPatient"> | boolean
     canEditData?: BoolFilter<"ProviderPatient"> | boolean
     relationshipType?: EnumProviderRelationTypeFilter<"ProviderPatient"> | $Enums.ProviderRelationType
@@ -43374,7 +38360,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -43418,7 +38403,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -43478,7 +38462,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -43522,7 +38505,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -43566,7 +38548,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -43610,7 +38591,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -43670,7 +38650,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -43714,7 +38693,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -43758,7 +38736,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -43802,7 +38779,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -43851,7 +38827,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -43895,7 +38870,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -43955,7 +38929,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -43999,7 +38972,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -44054,7 +39026,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -44098,7 +39069,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -44198,7 +39168,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -44242,7 +39211,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -44318,7 +39286,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -44362,7 +39329,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -44466,7 +39432,6 @@ export namespace Prisma {
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -44510,7 +39475,6 @@ export namespace Prisma {
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -44640,7 +39604,6 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -44684,7 +39647,6 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -44881,7 +39843,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
@@ -44925,7 +39886,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
@@ -45140,7 +40100,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
@@ -45184,7 +40143,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
@@ -45754,468 +40712,6 @@ export namespace Prisma {
     costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutPlanNestedInput
   }
 
-  export type UserCreateWithoutDnaDataInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    notificationPreferences?: JsonNullValueInput | InputJsonValue
-    healthProfileEncrypted?: string | null
-    plan?: string
-    planExpiresAt?: Date | string | null
-    planUpdatedAt?: Date | string | null
-    onboardingCompletedAt?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
-    biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
-    patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
-    providerRelationships?: ProviderPatientCreateNestedManyWithoutProviderInput
-    sessions?: SessionCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyCreateNestedManyWithoutUserInput
-    files?: UserFileCreateNestedManyWithoutUserInput
-    expenseProjections?: ExpenseProjectionCreateNestedManyWithoutUserInput
-    expenseActuals?: ExpenseActualCreateNestedManyWithoutUserInput
-    costAnalyses?: CostAnalysisCreateNestedManyWithoutUserInput
-    labConnections?: LabConnectionCreateNestedManyWithoutUserInput
-  }
-
-  export type UserUncheckedCreateWithoutDnaDataInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    firstNameEncrypted?: string | null
-    lastNameEncrypted?: string | null
-    dateOfBirthEncrypted?: string | null
-    phoneEncrypted?: string | null
-    addressEncrypted?: string | null
-    emailVerified?: boolean
-    emailVerificationToken?: string | null
-    emailVerificationExpires?: Date | string | null
-    passwordResetToken?: string | null
-    passwordResetExpires?: Date | string | null
-    isActive?: boolean
-    role?: $Enums.UserRole
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLogin?: Date | string | null
-    notificationPreferences?: JsonNullValueInput | InputJsonValue
-    healthProfileEncrypted?: string | null
-    plan?: string
-    planExpiresAt?: Date | string | null
-    planUpdatedAt?: Date | string | null
-    onboardingCompletedAt?: Date | string | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    lastLoginAt?: Date | string | null
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
-    biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
-    healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
-    insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
-    patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
-    providerRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutProviderInput
-    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
-    encryptionKeys?: UserEncryptionKeyUncheckedCreateNestedManyWithoutUserInput
-    files?: UserFileUncheckedCreateNestedManyWithoutUserInput
-    expenseProjections?: ExpenseProjectionUncheckedCreateNestedManyWithoutUserInput
-    expenseActuals?: ExpenseActualUncheckedCreateNestedManyWithoutUserInput
-    costAnalyses?: CostAnalysisUncheckedCreateNestedManyWithoutUserInput
-    labConnections?: LabConnectionUncheckedCreateNestedManyWithoutUserInput
-  }
-
-  export type UserCreateOrConnectWithoutDnaDataInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutDnaDataInput, UserUncheckedCreateWithoutDnaDataInput>
-  }
-
-  export type DNAVariantCreateWithoutDnaDataInput = {
-    id?: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt?: Date | string
-  }
-
-  export type DNAVariantUncheckedCreateWithoutDnaDataInput = {
-    id?: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt?: Date | string
-  }
-
-  export type DNAVariantCreateOrConnectWithoutDnaDataInput = {
-    where: DNAVariantWhereUniqueInput
-    create: XOR<DNAVariantCreateWithoutDnaDataInput, DNAVariantUncheckedCreateWithoutDnaDataInput>
-  }
-
-  export type DNAVariantCreateManyDnaDataInputEnvelope = {
-    data: DNAVariantCreateManyDnaDataInput | DNAVariantCreateManyDnaDataInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type GeneticTraitCreateWithoutDnaDataInput = {
-    id?: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted?: string | null
-    citationCount?: number
-    confidence: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type GeneticTraitUncheckedCreateWithoutDnaDataInput = {
-    id?: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted?: string | null
-    citationCount?: number
-    confidence: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type GeneticTraitCreateOrConnectWithoutDnaDataInput = {
-    where: GeneticTraitWhereUniqueInput
-    create: XOR<GeneticTraitCreateWithoutDnaDataInput, GeneticTraitUncheckedCreateWithoutDnaDataInput>
-  }
-
-  export type GeneticTraitCreateManyDnaDataInputEnvelope = {
-    data: GeneticTraitCreateManyDnaDataInput | GeneticTraitCreateManyDnaDataInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type UserUpsertWithoutDnaDataInput = {
-    update: XOR<UserUpdateWithoutDnaDataInput, UserUncheckedUpdateWithoutDnaDataInput>
-    create: XOR<UserCreateWithoutDnaDataInput, UserUncheckedCreateWithoutDnaDataInput>
-    where?: UserWhereInput
-  }
-
-  export type UserUpdateToOneWithWhereWithoutDnaDataInput = {
-    where?: UserWhereInput
-    data: XOR<UserUpdateWithoutDnaDataInput, UserUncheckedUpdateWithoutDnaDataInput>
-  }
-
-  export type UserUpdateWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notificationPreferences?: JsonNullValueInput | InputJsonValue
-    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    plan?: StringFieldUpdateOperationsInput | string
-    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
-    biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
-    patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
-    providerRelationships?: ProviderPatientUpdateManyWithoutProviderNestedInput
-    sessions?: SessionUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUpdateManyWithoutUserNestedInput
-    files?: UserFileUpdateManyWithoutUserNestedInput
-    expenseProjections?: ExpenseProjectionUpdateManyWithoutUserNestedInput
-    expenseActuals?: ExpenseActualUpdateManyWithoutUserNestedInput
-    costAnalyses?: CostAnalysisUpdateManyWithoutUserNestedInput
-    labConnections?: LabConnectionUpdateManyWithoutUserNestedInput
-  }
-
-  export type UserUncheckedUpdateWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    firstNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    lastNameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    dateOfBirthEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    phoneEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    addressEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerified?: BoolFieldUpdateOperationsInput | boolean
-    emailVerificationToken?: NullableStringFieldUpdateOperationsInput | string | null
-    emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
-    passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    notificationPreferences?: JsonNullValueInput | InputJsonValue
-    healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    plan?: StringFieldUpdateOperationsInput | string
-    planExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    planUpdatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
-    biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
-    healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
-    insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
-    patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
-    providerRelationships?: ProviderPatientUncheckedUpdateManyWithoutProviderNestedInput
-    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
-    encryptionKeys?: UserEncryptionKeyUncheckedUpdateManyWithoutUserNestedInput
-    files?: UserFileUncheckedUpdateManyWithoutUserNestedInput
-    expenseProjections?: ExpenseProjectionUncheckedUpdateManyWithoutUserNestedInput
-    expenseActuals?: ExpenseActualUncheckedUpdateManyWithoutUserNestedInput
-    costAnalyses?: CostAnalysisUncheckedUpdateManyWithoutUserNestedInput
-    labConnections?: LabConnectionUncheckedUpdateManyWithoutUserNestedInput
-  }
-
-  export type DNAVariantUpsertWithWhereUniqueWithoutDnaDataInput = {
-    where: DNAVariantWhereUniqueInput
-    update: XOR<DNAVariantUpdateWithoutDnaDataInput, DNAVariantUncheckedUpdateWithoutDnaDataInput>
-    create: XOR<DNAVariantCreateWithoutDnaDataInput, DNAVariantUncheckedCreateWithoutDnaDataInput>
-  }
-
-  export type DNAVariantUpdateWithWhereUniqueWithoutDnaDataInput = {
-    where: DNAVariantWhereUniqueInput
-    data: XOR<DNAVariantUpdateWithoutDnaDataInput, DNAVariantUncheckedUpdateWithoutDnaDataInput>
-  }
-
-  export type DNAVariantUpdateManyWithWhereWithoutDnaDataInput = {
-    where: DNAVariantScalarWhereInput
-    data: XOR<DNAVariantUpdateManyMutationInput, DNAVariantUncheckedUpdateManyWithoutDnaDataInput>
-  }
-
-  export type DNAVariantScalarWhereInput = {
-    AND?: DNAVariantScalarWhereInput | DNAVariantScalarWhereInput[]
-    OR?: DNAVariantScalarWhereInput[]
-    NOT?: DNAVariantScalarWhereInput | DNAVariantScalarWhereInput[]
-    id?: UuidFilter<"DNAVariant"> | string
-    dnaDataId?: UuidFilter<"DNAVariant"> | string
-    rsid?: StringFilter<"DNAVariant"> | string
-    chromosome?: StringFilter<"DNAVariant"> | string
-    position?: IntFilter<"DNAVariant"> | number
-    genotypeEncrypted?: StringFilter<"DNAVariant"> | string
-    createdAt?: DateTimeFilter<"DNAVariant"> | Date | string
-  }
-
-  export type GeneticTraitUpsertWithWhereUniqueWithoutDnaDataInput = {
-    where: GeneticTraitWhereUniqueInput
-    update: XOR<GeneticTraitUpdateWithoutDnaDataInput, GeneticTraitUncheckedUpdateWithoutDnaDataInput>
-    create: XOR<GeneticTraitCreateWithoutDnaDataInput, GeneticTraitUncheckedCreateWithoutDnaDataInput>
-  }
-
-  export type GeneticTraitUpdateWithWhereUniqueWithoutDnaDataInput = {
-    where: GeneticTraitWhereUniqueInput
-    data: XOR<GeneticTraitUpdateWithoutDnaDataInput, GeneticTraitUncheckedUpdateWithoutDnaDataInput>
-  }
-
-  export type GeneticTraitUpdateManyWithWhereWithoutDnaDataInput = {
-    where: GeneticTraitScalarWhereInput
-    data: XOR<GeneticTraitUpdateManyMutationInput, GeneticTraitUncheckedUpdateManyWithoutDnaDataInput>
-  }
-
-  export type GeneticTraitScalarWhereInput = {
-    AND?: GeneticTraitScalarWhereInput | GeneticTraitScalarWhereInput[]
-    OR?: GeneticTraitScalarWhereInput[]
-    NOT?: GeneticTraitScalarWhereInput | GeneticTraitScalarWhereInput[]
-    id?: UuidFilter<"GeneticTrait"> | string
-    dnaDataId?: UuidFilter<"GeneticTrait"> | string
-    traitName?: StringFilter<"GeneticTrait"> | string
-    category?: StringFilter<"GeneticTrait"> | string
-    rsid?: StringFilter<"GeneticTrait"> | string
-    riskLevel?: EnumRiskLevelFilter<"GeneticTrait"> | $Enums.RiskLevel
-    descriptionEncrypted?: StringFilter<"GeneticTrait"> | string
-    recommendationsEncrypted?: StringNullableFilter<"GeneticTrait"> | string | null
-    citationCount?: IntFilter<"GeneticTrait"> | number
-    confidence?: DecimalFilter<"GeneticTrait"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFilter<"GeneticTrait"> | Date | string
-  }
-
-  export type DNADataCreateWithoutVariantsInput = {
-    id?: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    user: UserCreateNestedOneWithoutDnaDataInput
-    traits?: GeneticTraitCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataUncheckedCreateWithoutVariantsInput = {
-    id?: string
-    userId: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    traits?: GeneticTraitUncheckedCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataCreateOrConnectWithoutVariantsInput = {
-    where: DNADataWhereUniqueInput
-    create: XOR<DNADataCreateWithoutVariantsInput, DNADataUncheckedCreateWithoutVariantsInput>
-  }
-
-  export type DNADataUpsertWithoutVariantsInput = {
-    update: XOR<DNADataUpdateWithoutVariantsInput, DNADataUncheckedUpdateWithoutVariantsInput>
-    create: XOR<DNADataCreateWithoutVariantsInput, DNADataUncheckedCreateWithoutVariantsInput>
-    where?: DNADataWhereInput
-  }
-
-  export type DNADataUpdateToOneWithWhereWithoutVariantsInput = {
-    where?: DNADataWhereInput
-    data: XOR<DNADataUpdateWithoutVariantsInput, DNADataUncheckedUpdateWithoutVariantsInput>
-  }
-
-  export type DNADataUpdateWithoutVariantsInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutDnaDataNestedInput
-    traits?: GeneticTraitUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataUncheckedUpdateWithoutVariantsInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    traits?: GeneticTraitUncheckedUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataCreateWithoutTraitsInput = {
-    id?: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    user: UserCreateNestedOneWithoutDnaDataInput
-    variants?: DNAVariantCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataUncheckedCreateWithoutTraitsInput = {
-    id?: string
-    userId: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
-    variants?: DNAVariantUncheckedCreateNestedManyWithoutDnaDataInput
-  }
-
-  export type DNADataCreateOrConnectWithoutTraitsInput = {
-    where: DNADataWhereUniqueInput
-    create: XOR<DNADataCreateWithoutTraitsInput, DNADataUncheckedCreateWithoutTraitsInput>
-  }
-
-  export type DNADataUpsertWithoutTraitsInput = {
-    update: XOR<DNADataUpdateWithoutTraitsInput, DNADataUncheckedUpdateWithoutTraitsInput>
-    create: XOR<DNADataCreateWithoutTraitsInput, DNADataUncheckedCreateWithoutTraitsInput>
-    where?: DNADataWhereInput
-  }
-
-  export type DNADataUpdateToOneWithWhereWithoutTraitsInput = {
-    where?: DNADataWhereInput
-    data: XOR<DNADataUpdateWithoutTraitsInput, DNADataUncheckedUpdateWithoutTraitsInput>
-  }
-
-  export type DNADataUpdateWithoutTraitsInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    user?: UserUpdateOneRequiredWithoutDnaDataNestedInput
-    variants?: DNAVariantUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataUncheckedUpdateWithoutTraitsInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    variants?: DNAVariantUncheckedUpdateManyWithoutDnaDataNestedInput
-  }
-
   export type UserCreateWithoutHealthNeedsInput = {
     id?: string
     email: string
@@ -46246,7 +40742,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
@@ -46290,7 +40785,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
@@ -46350,7 +40844,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
@@ -46394,7 +40887,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
@@ -46464,7 +40956,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientCreateNestedManyWithoutPatientInput
@@ -46508,7 +40999,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
     patientRelationships?: ProviderPatientUncheckedCreateNestedManyWithoutPatientInput
@@ -46596,7 +41086,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUpdateManyWithoutPatientNestedInput
@@ -46640,7 +41129,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
     patientRelationships?: ProviderPatientUncheckedUpdateManyWithoutPatientNestedInput
@@ -46799,7 +41287,6 @@ export namespace Prisma {
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -46843,7 +41330,6 @@ export namespace Prisma {
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -46903,7 +41389,6 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -46947,7 +41432,6 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -46992,7 +41476,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -47036,7 +41519,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -47395,7 +41877,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -47439,7 +41920,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -47756,7 +42236,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -47800,7 +42279,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -48144,7 +42622,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -48188,7 +42665,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -48528,7 +43004,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -48572,7 +43047,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -48883,7 +43357,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -48927,7 +43400,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -49228,7 +43700,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerCreateNestedManyWithoutUserInput
-    dnaData?: DNADataCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanCreateNestedManyWithoutUserInput
@@ -49272,7 +43743,6 @@ export namespace Prisma {
     lastLoginAt?: Date | string | null
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     biomarkers?: BiomarkerUncheckedCreateNestedManyWithoutUserInput
-    dnaData?: DNADataUncheckedCreateNestedManyWithoutUserInput
     healthGoals?: HealthGoalUncheckedCreateNestedManyWithoutUserInput
     healthNeeds?: HealthNeedUncheckedCreateNestedManyWithoutUserInput
     insurancePlans?: InsurancePlanUncheckedCreateNestedManyWithoutUserInput
@@ -49332,7 +43802,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUpdateManyWithoutUserNestedInput
@@ -49376,7 +43845,6 @@ export namespace Prisma {
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     biomarkers?: BiomarkerUncheckedUpdateManyWithoutUserNestedInput
-    dnaData?: DNADataUncheckedUpdateManyWithoutUserNestedInput
     healthGoals?: HealthGoalUncheckedUpdateManyWithoutUserNestedInput
     healthNeeds?: HealthNeedUncheckedUpdateManyWithoutUserNestedInput
     insurancePlans?: InsurancePlanUncheckedUpdateManyWithoutUserNestedInput
@@ -49427,18 +43895,6 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     userFileId?: string | null
-  }
-
-  export type DNADataCreateManyUserInput = {
-    id?: string
-    filename: string
-    source: string
-    uploadDate?: Date | string
-    totalVariants: number
-    validVariants: number
-    processingStatus?: $Enums.ProcessingStatus
-    processedAt?: Date | string | null
-    createdAt?: Date | string
   }
 
   export type HealthGoalCreateManyUserInput = {
@@ -49602,7 +44058,6 @@ export namespace Prisma {
     providerId: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -49619,7 +44074,6 @@ export namespace Prisma {
     patientId: string
     canViewBiomarkers?: boolean
     canViewInsurance?: boolean
-    canViewDna?: boolean
     canViewHealthNeeds?: boolean
     canEditData?: boolean
     relationshipType?: $Enums.ProviderRelationType
@@ -49842,46 +44296,6 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userFileId?: NullableStringFieldUpdateOperationsInput | string | null
-  }
-
-  export type DNADataUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    variants?: DNAVariantUpdateManyWithoutDnaDataNestedInput
-    traits?: GeneticTraitUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataUncheckedUpdateWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    variants?: DNAVariantUncheckedUpdateManyWithoutDnaDataNestedInput
-    traits?: GeneticTraitUncheckedUpdateManyWithoutDnaDataNestedInput
-  }
-
-  export type DNADataUncheckedUpdateManyWithoutUserInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    filename?: StringFieldUpdateOperationsInput | string
-    source?: StringFieldUpdateOperationsInput | string
-    uploadDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    totalVariants?: IntFieldUpdateOperationsInput | number
-    validVariants?: IntFieldUpdateOperationsInput | number
-    processingStatus?: EnumProcessingStatusFieldUpdateOperationsInput | $Enums.ProcessingStatus
-    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type HealthGoalUpdateWithoutUserInput = {
@@ -50366,7 +44780,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -50384,7 +44797,6 @@ export namespace Prisma {
     providerId?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -50401,7 +44813,6 @@ export namespace Prisma {
     providerId?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -50417,7 +44828,6 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -50435,7 +44845,6 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -50452,7 +44861,6 @@ export namespace Prisma {
     patientId?: StringFieldUpdateOperationsInput | string
     canViewBiomarkers?: BoolFieldUpdateOperationsInput | boolean
     canViewInsurance?: BoolFieldUpdateOperationsInput | boolean
-    canViewDna?: BoolFieldUpdateOperationsInput | boolean
     canViewHealthNeeds?: BoolFieldUpdateOperationsInput | boolean
     canEditData?: BoolFieldUpdateOperationsInput | boolean
     relationshipType?: EnumProviderRelationTypeFieldUpdateOperationsInput | $Enums.ProviderRelationType
@@ -51107,94 +45515,6 @@ export namespace Prisma {
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNAVariantCreateManyDnaDataInput = {
-    id?: string
-    rsid: string
-    chromosome: string
-    position: number
-    genotypeEncrypted: string
-    createdAt?: Date | string
-  }
-
-  export type GeneticTraitCreateManyDnaDataInput = {
-    id?: string
-    traitName: string
-    category: string
-    rsid: string
-    riskLevel: $Enums.RiskLevel
-    descriptionEncrypted: string
-    recommendationsEncrypted?: string | null
-    citationCount?: number
-    confidence: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type DNAVariantUpdateWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNAVariantUncheckedUpdateWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DNAVariantUncheckedUpdateManyWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    chromosome?: StringFieldUpdateOperationsInput | string
-    position?: IntFieldUpdateOperationsInput | number
-    genotypeEncrypted?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type GeneticTraitUpdateWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type GeneticTraitUncheckedUpdateWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type GeneticTraitUncheckedUpdateManyWithoutDnaDataInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    traitName?: StringFieldUpdateOperationsInput | string
-    category?: StringFieldUpdateOperationsInput | string
-    rsid?: StringFieldUpdateOperationsInput | string
-    riskLevel?: EnumRiskLevelFieldUpdateOperationsInput | $Enums.RiskLevel
-    descriptionEncrypted?: StringFieldUpdateOperationsInput | string
-    recommendationsEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    citationCount?: IntFieldUpdateOperationsInput | number
-    confidence?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

@@ -153,7 +153,6 @@ router.get(
                 biomarkers: true,
                 insurancePlans: true,
                 healthNeeds: true,
-                dnaData: true,
                 sessions: true,
                 auditLogs: true,
               },
@@ -698,7 +697,7 @@ router.patch(
     const prisma = getPrismaClient();
     const { id } = req.params;
     const adminId = req.user!.id;
-    const { status, canViewBiomarkers, canViewInsurance, canViewDna, canViewHealthNeeds, canEditData } = req.body;
+    const { status, canViewBiomarkers, canViewInsurance, canViewHealthNeeds, canEditData } = req.body;
 
     const auditService = getAuditLogService(prisma);
 
@@ -716,7 +715,6 @@ router.patch(
             ...(status && { status }),
             ...(canViewBiomarkers !== undefined && { canViewBiomarkers }),
             ...(canViewInsurance !== undefined && { canViewInsurance }),
-            ...(canViewDna !== undefined && { canViewDna }),
             ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
             ...(canEditData !== undefined && { canEditData }),
           },
@@ -743,14 +741,12 @@ router.patch(
       status: existing.status,
       canViewBiomarkers: existing.canViewBiomarkers,
       canViewInsurance: existing.canViewInsurance,
-      canViewDna: existing.canViewDna,
       canViewHealthNeeds: existing.canViewHealthNeeds,
       canEditData: existing.canEditData,
     }, {
       status: relationship.status,
       canViewBiomarkers: relationship.canViewBiomarkers,
       canViewInsurance: relationship.canViewInsurance,
-      canViewDna: relationship.canViewDna,
       canViewHealthNeeds: relationship.canViewHealthNeeds,
       canEditData: relationship.canEditData,
     }, { req, userId: adminId }, {

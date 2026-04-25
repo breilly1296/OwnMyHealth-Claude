@@ -25,7 +25,6 @@
  * - Biomarker: values, notes
  * - Insurance: member ID, group ID
  * - Provider-Patient: relationship notes
- * - DNA: genotype data, trait descriptions/recommendations
  * - Health Needs: descriptions
  * - Health Goals: descriptions, progress notes
  * - Expense Tracking: service types, costs, provider names, claim amounts
@@ -435,14 +434,6 @@ export const PHI_FIELDS = {
   // Provider-Patient relationship PHI
   ProviderPatient: [
     'notesEncrypted',
-  ],
-  // DNA/Genetic PHI (schema still supports even if frontend removed)
-  DNAVariant: [
-    'genotypeEncrypted',
-  ],
-  GeneticTrait: [
-    'descriptionEncrypted',
-    'recommendationsEncrypted',
   ],
   // Health needs PHI
   HealthNeed: [

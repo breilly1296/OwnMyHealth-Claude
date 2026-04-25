@@ -22,7 +22,7 @@ export const ROLE_HIERARCHY = {
 export type UserRole = keyof typeof ROLE_HIERARCHY;
 
 // Resource types that can be protected
-export type ResourceType = 'biomarker' | 'insurance' | 'dna' | 'healthNeed' | 'user' | 'providerPatient';
+export type ResourceType = 'biomarker' | 'insurance' | 'healthNeed' | 'user' | 'providerPatient';
 
 // Permission types
 export type Permission = 'read' | 'write' | 'delete' | 'admin';
@@ -32,7 +32,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<ResourceType, Permission[]>> = {
   PATIENT: {
     biomarker: ['read', 'write', 'delete'], // Own data only
     insurance: ['read', 'write', 'delete'], // Own data only
-    dna: ['read', 'write', 'delete'], // Own data only
     healthNeed: ['read', 'write', 'delete'], // Own data only
     user: ['read', 'write'], // Own profile only
     providerPatient: ['read', 'write'], // Can manage own provider relationships
@@ -40,7 +39,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<ResourceType, Permission[]>> = {
   PROVIDER: {
     biomarker: ['read', 'write'], // Patients they have access to
     insurance: ['read'], // Limited access based on relationship
-    dna: ['read'], // Limited access based on relationship
     healthNeed: ['read', 'write'], // Patients they have access to
     user: ['read', 'write'], // Own profile + limited patient info
     providerPatient: ['read', 'write', 'delete'], // Manage own patient relationships
@@ -48,7 +46,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<ResourceType, Permission[]>> = {
   ADMIN: {
     biomarker: ['read', 'write', 'delete', 'admin'],
     insurance: ['read', 'write', 'delete', 'admin'],
-    dna: ['read', 'write', 'delete', 'admin'],
     healthNeed: ['read', 'write', 'delete', 'admin'],
     user: ['read', 'write', 'delete', 'admin'],
     providerPatient: ['read', 'write', 'delete', 'admin'],
@@ -249,11 +246,6 @@ async function checkProviderPatientAccess(
     return false;
   }
 
-  if (resource === 'dna') {
-    if (permission === 'read') return relationship.canViewDna;
-    return false;
-  }
-
   return false;
 }
 
@@ -388,7 +380,6 @@ declare module '../types/index.js' {
       patientId: string;
       canViewBiomarkers: boolean;
       canViewInsurance: boolean;
-      canViewDna: boolean;
       canViewHealthNeeds: boolean;
       canEditData: boolean;
       status: string;

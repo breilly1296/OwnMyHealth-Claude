@@ -265,7 +265,6 @@ interface ExportProviderRelationship {
   role: 'patient' | 'provider';
   canViewBiomarkers: boolean;
   canViewInsurance: boolean;
-  canViewDna: boolean;
   canViewHealthNeeds: boolean;
   canEditData: boolean;
   consentGrantedAt?: string;
@@ -631,7 +630,6 @@ export async function exportUserData(
       role: rel.patientId === userId ? 'patient' : 'provider',
       canViewBiomarkers: rel.canViewBiomarkers,
       canViewInsurance: rel.canViewInsurance,
-      canViewDna: rel.canViewDna,
       canViewHealthNeeds: rel.canViewHealthNeeds,
       canEditData: rel.canEditData,
       consentGrantedAt: rel.consentGrantedAt?.toISOString(),
@@ -800,13 +798,12 @@ export async function deleteAllData(
   // provider relationships → user files → biomarkers/insurance/goals/needs/
   // DNA/lab connections. Cost analyses and expense actuals reference
   // expense projections and insurance plans, so they must be removed first.
-  // BiomarkerHistory + GoalProgressHistory + DNAVariant + GeneticTrait
-  // cascade from their parent rows (verified in schema.prisma) — no
-  // explicit deleteMany needed.
+  // BiomarkerHistory + GoalProgressHistory cascade from their parent rows
+  // (verified in schema.prisma) — no explicit deleteMany needed.
   //
-  // DNAData and LabConnection are user-owned tables that cascade from User
-  // on account-delete (deleteAccount path), but deleteAllData preserves
-  // the User row, so they need an explicit wipe here. LabConnection's
+  // LabConnection is a user-owned table that cascades from User on
+  // account-delete (deleteAccount path), but deleteAllData preserves
+  // the User row, so it needs an explicit wipe here. LabConnection's
   // OAuth tokens stay valid at the upstream provider until the next
   // refresh attempt — best-effort revocation lives in deleteAccount;
   // deleteAllData just severs the local record. Document if a future
@@ -827,7 +824,6 @@ export async function deleteAllData(
       healthNeedCount,
       healthGoalCount,
       userFileCount,
-      dnaDataCount,
       labConnectionCount,
     ] = await Promise.all([
       tx.biomarker.deleteMany({ where: { userId } }).then((r) => r.count),
@@ -835,7 +831,6 @@ export async function deleteAllData(
       tx.healthNeed.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.healthGoal.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.userFile.deleteMany({ where: { userId } }).then((r) => r.count),
-      tx.dNAData.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.labConnection.deleteMany({ where: { userId } }).then((r) => r.count),
     ]);
 
@@ -849,7 +844,6 @@ export async function deleteAllData(
       expenseActualCount,
       expenseProjectionCount,
       providerRelationshipCount,
-      dnaDataCount,
       labConnectionCount,
     };
   });
@@ -865,7 +859,6 @@ export async function deleteAllData(
     deletedExpenseActuals: counts.expenseActualCount,
     deletedExpenseProjections: counts.expenseProjectionCount,
     deletedProviderRelationships: counts.providerRelationshipCount,
-    deletedDnaData: counts.dnaDataCount,
     deletedLabConnections: counts.labConnectionCount,
     deletedGcsObjects: gcsResults.length,
   }, { req, userId });

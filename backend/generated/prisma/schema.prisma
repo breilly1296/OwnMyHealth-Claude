@@ -37,7 +37,6 @@ model User {
   lastLoginAt              DateTime?           @map("last_login_at") @db.Timestamptz(6)
   auditLogs                AuditLog[]
   biomarkers               Biomarker[]
-  dnaData                  DNAData[]
   healthGoals              HealthGoal[]
   healthNeeds              HealthNeed[]
   insurancePlans           InsurancePlan[]
@@ -95,7 +94,6 @@ model ProviderPatient {
   patientId          String                @map("patient_id") @db.Uuid
   canViewBiomarkers  Boolean               @default(true) @map("can_view_biomarkers")
   canViewInsurance   Boolean               @default(false) @map("can_view_insurance")
-  canViewDna         Boolean               @default(false) @map("can_view_dna")
   canViewHealthNeeds Boolean               @default(true) @map("can_view_health_needs")
   canEditData        Boolean               @default(false) @map("can_edit_data")
   relationshipType   ProviderRelationType  @default(PRIMARY_CARE) @map("relationship_type")
@@ -380,60 +378,6 @@ model InsuranceBenefit {
   @@map("insurance_benefits")
 }
 
-model DNAData {
-  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String           @map("user_id") @db.Uuid
-  filename         String           @db.VarChar(255)
-  source           String           @db.VarChar(100)
-  uploadDate       DateTime         @default(now()) @map("upload_date") @db.Timestamptz(6)
-  totalVariants    Int              @map("total_variants")
-  validVariants    Int              @map("valid_variants")
-  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
-  processedAt      DateTime?        @map("processed_at") @db.Timestamptz(6)
-  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  variants         DNAVariant[]
-  traits           GeneticTrait[]
-
-  @@index([userId])
-  @@map("dna_data")
-}
-
-model DNAVariant {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  dnaDataId         String   @map("dna_data_id") @db.Uuid
-  rsid              String   @db.VarChar(20)
-  chromosome        String   @db.VarChar(5)
-  position          Int
-  genotypeEncrypted String   @map("genotype_encrypted")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  dnaData           DNAData  @relation(fields: [dnaDataId], references: [id], onDelete: Cascade)
-
-  @@index([dnaDataId])
-  @@index([rsid])
-  @@map("dna_variants")
-}
-
-model GeneticTrait {
-  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  dnaDataId                String    @map("dna_data_id") @db.Uuid
-  traitName                String    @map("trait_name") @db.VarChar(200)
-  category                 String    @db.VarChar(100)
-  rsid                     String    @db.VarChar(20)
-  riskLevel                RiskLevel @map("risk_level")
-  descriptionEncrypted     String    @map("description_encrypted")
-  recommendationsEncrypted String?   @map("recommendations_encrypted")
-  citationCount            Int       @default(0) @map("citation_count")
-  confidence               Decimal   @db.Decimal(3, 2)
-  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  dnaData                  DNAData   @relation(fields: [dnaDataId], references: [id], onDelete: Cascade)
-
-  @@index([dnaDataId])
-  @@index([category])
-  @@index([riskLevel])
-  @@map("genetic_traits")
-}
-
 model HealthNeed {
   id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId               String           @map("user_id") @db.Uuid
@@ -587,21 +531,6 @@ enum PlanType {
   EPO
   POS
   HDHP
-}
-
-enum ProcessingStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
-enum RiskLevel {
-  HIGH
-  MODERATE
-  LOW
-  PROTECTIVE
-  UNKNOWN
 }
 
 enum HealthNeedType {
