@@ -4,175 +4,259 @@ tags:
   - api
 type: prompt
 priority: 2
+updated: 2026-04-24
 ---
 
 # Generate API_REFERENCE.md
 
+## Required reading before generating
+
+Before writing a single line, read:
+
+1. [`_doc-quality.md`](./_doc-quality.md) — self-containedness, citation, TBD, cross-link, and format rules.
+2. [`_verification-tools.md`](./_verification-tools.md) — Grep/Glob/Read cheat sheet.
+3. [`_phi-inventory.md`](./_phi-inventory.md) — identify endpoints that expose PHI.
+
+This doc must pass the five tests in `_doc-quality.md` before you stop.
+
+---
+
 ## Purpose
-Create or update complete API documentation from the codebase.
 
-## From Codebase (Claude Code)
-
-### Step 1: List All Route Files
-```bash
-ls backend/src/routes/*.ts
-```
-Expected 13 route files:
-- `index.ts` (route mounting)
-- `authRoutes.ts` (12 endpoints: register, login, logout, refresh, demo, me, change-password, verify-email, resend-verification, forgot-password, reset-password, logout-all)
-- `biomarkerRoutes.ts` (10 endpoints: list, summary, categories, get, history, create, batch, update, delete, guidance)
-- `insuranceRoutes.ts` (10 endpoints: plans CRUD, compare, search benefits, upload-sbc, reanalyze, spending)
-- `expenseRoutes.ts` (10 endpoints: projections CRUD, actuals CRUD, analyses list/create)
-- `healthGoalsRoutes.ts` (6 endpoints: list, create, update, delete, log progress, get progress)
-- `healthNeedsRoutes.ts` (5 endpoints: list, create, update, delete, update status)
-- `uploadRoutes.ts` (3 endpoints: lab-report, insurance-sbc, lab-results-ocr)
-- `fileRoutes.ts` (3 endpoints: list, download, delete)
-- `providerRoutes.ts` (6 endpoints: list patients, get patient, request access, get patient biomarkers, get patient health needs, remove patient)
-- `patientRoutes.ts` (3 endpoints: list providers, update permissions, revoke access)
-- `settingsRoutes.ts` (3 endpoints: export-data, delete-data, delete-account)
-- `adminRoutes.ts` (4 endpoints: list users, audit logs, system health, delete user)
-
-### Step 2: For Each Route File
-1. Identify HTTP method and path
-2. Check middleware stack (auth, CSRF, rate limiting, RBAC)
-3. Find controller function
-4. Document request/response shapes
-5. Note rate limiter applied (standard, auth, strict, upload, sensitive, bulk)
-
-### Step 3: Check Controllers
-- `backend/src/controllers/*.ts` (9 controller files)
-- Look for Zod validation schemas
-- Look for response structure
-- Note encrypted fields (decrypted in response, encrypted on write)
-
-### Step 4: Check Middleware
-- `backend/src/middleware/rbac.ts` — which routes require specific roles?
-- `backend/src/middleware/rateLimiter.ts` — which limiters apply to which routes?
-- `backend/src/middleware/demoProtection.ts` — which routes block demo users?
-
-## Questions to Ask
-1. What's the base URL for the API?
-2. How does authentication work?
-3. What's the standard error response format?
-4. Are there any rate limits per endpoint?
-5. Are there any deprecated endpoints?
-6. Which endpoints require specific roles (PROVIDER, ADMIN)?
-7. Which endpoints are blocked for demo accounts?
-
-## Output Format
-
-```markdown
-# OwnMyHealth API Reference
-
-**Base URL:** `https://api.ownmyhealth.io/api/v1`
-**Last Updated:** [Date]
-
-## Authentication
-[How auth works - JWT, cookies, CSRF]
-
-## Error Responses
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Description"
-  }
-}
-```
+Produce `New Project Documents/API_REFERENCE.md` — the **contract-facing reference** for every API endpoint. A reader with only this doc must be able to: call any endpoint with a working `curl`, know the request + response shapes, know which errors it can return, and know what PHI it exposes. The security-stack lens (middleware chain per route) lives in `ROUTING_TABLE.md`; both docs cross-link heavily.
 
 ---
 
-## Health Check
+## Files to review
 
-### GET /health
-Check API status.
-
-**Auth Required:** No
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "...",
-  "checks": { "database": "connected" }
-}
-```
-
----
-
-## Auth Endpoints
-
-### POST /auth/register
-Create a new account.
-
-**Auth Required:** No
-
-**Request:**
-```json
-{
-  "email": "user@example.com",
-  "password": "SecurePass123!"
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "success": true,
-  "data": { "user": { "id": "uuid", "email": "..." } }
-}
-```
-
-[Continue for each endpoint...]
+| File | Why read it |
+|---|---|
+| `backend/src/routes/*.ts` (all 19) | Endpoint enumeration + middleware chain. |
+| `backend/src/routes/index.ts` | Base mount paths. |
+| `backend/src/controllers/*.ts` (all 10) | Handler bodies — request parsing, response shape, `auditLog.log(...)` calls, thrown errors. |
+| `backend/src/middleware/validation.ts` + controller-local schemas | Zod schemas for requests. |
+| `backend/src/middleware/errorHandler.ts` | Error envelope format. |
+| `backend/src/middleware/rateLimiter.ts` | Rate limiter definitions (7 total). |
+| `backend/src/middleware/rbac.ts` | Role hierarchy (PATIENT < PROVIDER < ADMIN). |
+| `backend/src/middleware/demoProtection.ts` | Demo-blocked routes. |
+| `backend/src/services/auditLog.ts` | `AuditAction` enum — what `action` values exist. |
+| `backend/src/services/encryption.ts` | Which fields are encrypted (and thus decrypted in responses). |
 
 ---
 
-## Biomarker Endpoints
-[All biomarker routes — including AI guidance]
+## Required sections
 
-## Insurance Endpoints
-[All insurance routes — including SBC upload, compare, reanalyze]
-
-## Expense Endpoints
-[All expense routes — projections, actuals, AI cost analysis]
-
-## Health Goal Endpoints
-[All goal routes — CRUD + progress tracking]
-
-## Health Need Endpoints
-[All need routes — CRUD + status management]
-
-## Upload Endpoints
-[All upload routes — lab-report, insurance-sbc, lab-results-ocr]
-
-## File Endpoints
-[All file routes — list, download, delete]
-
-## Provider Endpoints
-[All provider routes — patient list, request access, view patient data]
-**Requires:** PROVIDER or ADMIN role
-
-## Patient Consent Endpoints
-[All patient routes — list providers, grant/deny, revoke]
-**Requires:** PATIENT role
-
-## Settings Endpoints
-[All settings routes — export data, delete data, delete account]
-
-## Admin Endpoints
-[All admin routes — user management, audit logs, system health]
-**Requires:** ADMIN role
+1. **Base URL + auth model** — base URL per env, cookie vs Bearer, how `X-CSRF-Token` flows.
+2. **Error envelope** — quote `errorHandler.ts` response shape; enumerate `code` values by scanning thrown errors.
+3. **Global rate limits** — table of all 7 limiters.
+4. **At-a-glance mega-table** (see Required artifacts) — every endpoint, one row.
+5. **Per-endpoint-group sections** (one H2 per route file):
+   - Auth (`authRoutes.ts`)
+   - Biomarkers (`biomarkerRoutes.ts`)
+   - Insurance (`insuranceRoutes.ts`)
+   - Expenses (`expenseRoutes.ts`)
+   - Health goals (`healthGoalsRoutes.ts`)
+   - Health needs (`healthNeedsRoutes.ts`)
+   - Uploads (`uploadRoutes.ts`)
+   - Files (`fileRoutes.ts`)
+   - Provider (`providerRoutes.ts`)
+   - Patient (`patientRoutes.ts`)
+   - Settings (`settingsRoutes.ts`)
+   - Admin (`adminRoutes.ts`)
+   - Onboarding (`onboardingRoutes.ts`)
+   - FHIR (`fhirRoutes.ts`)
+   - AI chat (`aiRoutes.ts`)
+   - Plan (`planRoutes.ts`)
+   - (Any others discovered via Glob — add a section.)
+6. **Health checks** — `GET /health` + any liveness/readiness endpoints.
+7. **Webhooks / external callbacks** — if any (e.g., SendGrid, Stripe-style).
+8. **Related Documents**.
+9. **Prompt drift log**.
 
 ---
 
-## Rate Limits
-| Limiter | Window | Max | Applied To |
-|---------|--------|-----|-----------|
-| standardLimiter | 15 min | 100 | All endpoints |
-| authLimiter | 15 min | 20 | Auth routes |
-| strictAuthLimiter | 15 min | 5 | Login (by email+IP) |
-| uploadLimiter | 1 hour | 20 | File uploads |
-| sensitiveLimiter | 1 hour | 10 | Export, delete operations |
-| bulkOperationLimiter | 1 hour | 30 | Batch creates |
+## Required artifacts
+
+### At-a-glance mega-table
+
+| Method | Path | Auth | CSRF | Rate limiter | RBAC role | RLS wrap | Controller (`file:fn:line`) | Audit event | PHI returned? |
+|---|---|---|---|---|---|---|---|---|---|
+| POST | `/api/v1/auth/login` | public | yes | `authLimiter` + `strictAuthLimiter` | — | — | `authController.login:L74` | `LOGIN_SUCCESS` / `LOGIN_FAIL` | none |
+| GET | `/api/v1/biomarkers` | yes | no (GET) | `standardLimiter` | — | `withRLSContext` | `biomarkerController.list:L22` | `BIOMARKER_LIST` | yes — see `PHI_TAXONOMY.md` |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+
+### Per-endpoint entry (the 10 required fields per entry)
+
+````markdown
+#### `POST /api/v1/biomarkers`
+
+Create a new biomarker reading for the authenticated user.
+
+1. **Route**: `backend/src/routes/biomarkerRoutes.ts:L18`
+2. **Middleware** (in order): `authenticate`, `standardLimiter`, `validate(createBiomarkerSchema)`, `blockDemo`.
+3. **Controller**: `biomarkerController.create` (`backend/src/controllers/biomarkerController.ts:L52`).
+4. **RLS wrap**: `withRLSTransaction(userId, async (tx) => { ... })` — `...:L58-L90`.
+5. **Request (Zod schema)**:
+
+    ```ts
+    // Source: backend/src/controllers/biomarkerController.ts:L42-L48
+    const createBiomarkerSchema = z.object({
+      name: z.string().min(1).max(100),
+      value: z.number(),
+      unit: z.string().min(1).max(20),
+      measuredAt: z.string().datetime(),
+      notes: z.string().max(2000).optional(),
+    });
+    ```
+
+6. **Response (201)**:
+
+    ```json
+    {
+      "success": true,
+      "data": {
+        "id": "cuid...",
+        "name": "...",
+        "value": 5.4,
+        "unit": "mg/dL",
+        "measuredAt": "2026-04-24T10:00:00.000Z"
+      }
+    }
+    ```
+
+7. **Errors**:
+
+    | HTTP | `code` | Origin (file:line) | When |
+    |---|---|---|---|
+    | 400 | `VALIDATION_ERROR` | `validation.ts:Lxx` | Zod schema fails |
+    | 401 | `UNAUTHENTICATED` | `auth.ts:Lxx` | Missing/invalid access token |
+    | 403 | `DEMO_BLOCKED` | `demoProtection.ts:Lxx` | Demo account write attempt |
+    | 429 | `RATE_LIMIT_EXCEEDED` | `rateLimiter.ts:Lxx` | `standardLimiter` exceeded |
+
+8. **Working curl**:
+
+    ```bash
+    curl -X POST https://api.ownmyhealth.io/api/v1/biomarkers \
+      -H "Cookie: access=<jwt>; csrfToken=<token>" \
+      -H "X-CSRF-Token: <token>" \
+      -H "Content-Type: application/json" \
+      -d '{"name":"LDL","value":120,"unit":"mg/dL","measuredAt":"2026-04-24T10:00:00Z"}'
+    ```
+
+9. **Audit log**: `auditLog.log({ action: 'BIOMARKER_CREATE', resourceType: 'Biomarker', resourceId: id, newValues: {...} })` — `biomarkerController.ts:L85`.
+10. **PHI exposure**: write of encrypted `valueEncrypted`, `unitEncrypted`, `notesEncrypted`. Response decrypts. See [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md#biomarker).
+
+**Related**: [`ROUTING_TABLE.md#biomarkerroutes`](./ROUTING_TABLE.md), [`DATA_MODEL.md#biomarker`](./DATA_MODEL.md).
+````
+
+Every endpoint gets this shape. Do not abbreviate — a Claude Project cannot "just read the code."
+
+### Global rate limits table
+
+| Limiter | Window | Max | File:line | Applied to |
+|---|---|---|---|---|
+| `standardLimiter` | 15 min | 100 | `rateLimiter.ts:Lxx` | All endpoints (global) |
+| `authLimiter` | 15 min | 20 | `rateLimiter.ts:Lxx` | Auth routes |
+| `strictAuthLimiter` | 15 min | 5 (failed-only, email:IP) | `rateLimiter.ts:Lxx` | `/auth/login` |
+| `uploadLimiter` | 1 hour | 20 | `rateLimiter.ts:Lxx` | File uploads |
+| `sensitiveLimiter` | 1 hour | 10 | `rateLimiter.ts:Lxx` | Export, delete |
+| `aiLimiter` | 1 hour | N | `rateLimiter.ts:Lxx` | Claude-calling endpoints |
+| `bulkOperationLimiter` | 1 hour | 30 | `rateLimiter.ts:Lxx` | Batch creates |
+
+### Error envelope
+
+Quote from `errorHandler.ts`:
+
+```ts
+// Source: backend/src/middleware/errorHandler.ts:Lxx-Lyy
+res.status(status).json({
+  success: false,
+  error: { code, message, details? },
+});
 ```
+
+Followed by a **full list** of possible `code` values, derived by grepping `new AppError(` and `throw new` in `backend/src/**`. Cross-link to `ERROR_RECOVERY.md` for recovery playbooks.
+
+---
+
+## Acceptance questions
+
+After writing the doc, self-answer each **using only the doc + siblings**:
+
+1. What's the base URL in production vs staging?
+2. How does a browser attach credentials to a request? (cookie names + CSRF header)
+3. What's the exact response shape of `POST /api/v1/auth/login`?
+4. Which endpoints require the PROVIDER role? (count + list)
+5. Which endpoints are blocked for demo accounts?
+6. What rate limiter guards `POST /api/v1/biomarkers/:id/guidance`, and what's the window?
+7. What's the error shape when a Zod schema fails, including the `code`?
+8. What error do you get if you omit the CSRF header on a state-changing request?
+9. Which endpoint returns a signed GCS URL, and how long is it valid for?
+10. What PHI is returned by `GET /api/v1/biomarkers` and what's the decryption path?
+11. How does the refresh-token flow work end-to-end? (sequence of calls)
+12. Which endpoint produces a `BIOMARKER_CREATE` audit event?
+13. What body does `POST /api/v1/insurance/plans/upload-sbc` accept, and what's the max size?
+14. What response does `DELETE /api/v1/settings/account` return on success?
+15. Which endpoint is used by a provider to request access to a patient, and what's the resulting state transition?
+16. What happens when an AI endpoint's rate limit is exceeded — status, body, retry hint?
+17. How many distinct error `code` values exist across the API? (grep result)
+18. What's the total endpoint count? (row count in the mega-table)
+
+---
+
+## No-TBD enforcement
+
+Before marking anything TBD:
+
+- **Endpoint list**: `Grep pattern: "router\\.(get|post|put|patch|delete)\\("` over `backend/src/routes/**`. Every hit = one endpoint.
+- **Request schemas**: read the controller file; grep `z.object({`. If schema lives in a shared file, follow the import.
+- **Response shape**: read the controller return; the response body is whatever `res.json({...})` ships.
+- **Errors**: `Grep pattern: "new AppError\\(|throw new "` over `backend/src/**` to enumerate every `code`.
+- **Rate limiter membership**: read each route file for `aiLimiter`, `uploadLimiter`, etc. and the `rateLimiter.ts` definition.
+- **Audit events**: `Grep pattern: "auditLog\\.log\\("` in the relevant controller.
+- **PHI exposure**: cross-check `encryption.ts` `PHI_FIELDS` against the controller's decrypt path.
+- **Base URL**: check `backend/railway.toml`, `deploy.yml` `env:`, `CORS_ORIGIN` / `FRONTEND_URL` in `config/index.ts`. If prod URL is not in repo, mark `TBD (external: Cloud Run service URL, check `gcloud run services describe`)`.
+
+---
+
+## Cross-links
+
+The generated `API_REFERENCE.md` must link to:
+
+- [`ROUTING_TABLE.md`](./ROUTING_TABLE.md) — same routes, middleware-chain lens.
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — request lifecycle diagram.
+- [`DATA_MODEL.md`](./DATA_MODEL.md) — backing tables for each endpoint.
+- [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) — PHI fields returned.
+- [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) — recovery per error code.
+- [`ENV_VARS.md`](./ENV_VARS.md) — CORS, base URL vars.
+
+---
+
+## Verification (tool usage)
+
+| Task | Tool | How |
+|---|---|---|
+| List route files | Glob | `pattern: "backend/src/routes/*.ts"` |
+| Enumerate endpoints | Grep | `pattern: "router\\.(get|post|put|patch|delete)\\("` |
+| Find Zod schemas | Grep | `pattern: "z\\.object\\("` over `backend/src/**` |
+| Find throws | Grep | `pattern: "new AppError\\(|throw new "` over `backend/src/**` |
+| Find audit events | Grep | `pattern: "auditLog\\.log\\("` over `backend/src/controllers/**` |
+| Read error handler | Read | `backend/src/middleware/errorHandler.ts` |
+| Read rate limiters | Read | `backend/src/middleware/rateLimiter.ts` |
+| Read RBAC helper | Read | `backend/src/middleware/rbac.ts` |
+
+---
+
+## Questions to ask the user (last resort)
+
+Only after exhausting the No-TBD search:
+
+1. Production Cloud Run URL if not in `deploy.yml`.
+2. Any internal/private endpoints used by automation (not in public docs).
+3. Deprecation schedule for any endpoint marked `@deprecated`.
+
+---
+
+## Output: file and location
+
+Write the final document to `New Project Documents/API_REFERENCE.md`.

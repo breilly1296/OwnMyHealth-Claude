@@ -7,12 +7,12 @@
  * @module services/sbcExtraction
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
-import { InternalServerError } from '../middleware/errorHandler.js';
+import { InternalServerError, ValidationError } from '../middleware/errorHandler.js';
 import { trackAIUsage } from './aiCostTracker.js';
 import { extractTextFromPDF } from './pdfTextExtraction.js';
-import { redactPHI } from '../utils/phiRedaction.js';
+import { redactPHI, stripPHIFromText } from '../utils/phiRedaction.js';
+import { getAnthropicClient } from './anthropicClient.js';
 import { config } from '../config/index.js';
 
 // Create extraction-specific logger
@@ -305,26 +305,6 @@ export interface ExtractedInsuranceData {
   extractionConfidence: number;
   warnings?: string[];
   pagesProcessed?: number;
-}
-
-/**
- * Anthropic client singleton
- */
-let anthropicClient: Anthropic | null = null;
-
-/**
- * Get or create Anthropic client
- */
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new InternalServerError('ANTHROPIC_API_KEY environment variable is not set');
-    }
-    anthropicClient = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
-    sbcLogger.info('Initialized Anthropic client for SBC extraction');
-  }
-  return anthropicClient;
 }
 
 /**
@@ -762,13 +742,20 @@ Set pagesProcessed to the number of pages you actually read.
 Return ONLY the JSON object. No other text.`;
 
 /**
- * Extract insurance plan data from an SBC PDF using Claude Sonnet API
+ * Extract insurance plan data from an SBC PDF using Claude Sonnet API.
+ *
+ * Flow (C-7 minimum-necessary): extract text locally via pdf-parse → run
+ * PHI redaction on the text → send text-only prompt to Claude. Raw PDF
+ * bytes never leave the process. Scanned/image-only SBC PDFs are rejected
+ * — no vision fallback by design.
  *
  * @param pdfBuffer - The PDF file as a buffer
+ * @param userId    - The uploading user's ID, attributed to AI-cost tracking
  * @returns Extraction result with comprehensive plan details
  */
 export async function extractInsuranceFromSBC(
-  pdfBuffer: Buffer
+  pdfBuffer: Buffer,
+  userId: string
 ): Promise<ExtractedInsuranceData> {
   const startTime = Date.now();
 
@@ -779,8 +766,8 @@ export async function extractInsuranceFromSBC(
   // C-7 runtime gate — BAA must be acknowledged before PHI leaves the box.
   if (!config.anthropic.baaActive) {
     throw new InternalServerError(
-      'Claude extraction is disabled: ANTHROPIC_BAA_ACTIVE is not set to "true". ' +
-      'Enable after confirming BAA coverage. See SECURITY_STATUS.md C-7.'
+      'Claude API calls with PHI require an active BAA. ' +
+      'Set ANTHROPIC_BAA_ACTIVE=true after confirming BAA coverage. See SECURITY_STATUS.md C-7.'
     );
   }
 
@@ -790,71 +777,48 @@ export async function extractInsuranceFromSBC(
     // Stage A — local text extraction.
     const extracted = await extractTextFromPDF(pdfBuffer);
 
-    // Stage B — redact PHI from the extracted text.
-    const { text: redactedText, firedPatterns } = redactPHI(extracted.text);
-
-    sbcLogger.info('PHI redaction complete', {
-      originalLength: extracted.text.length,
-      redactedLength: redactedText.length,
-      firedPatterns,
-      pdfUsable: extracted.usable,
-      pdfLikelyScanned: extracted.isLikelyScanned,
-    });
-
-    // Stage C — call Claude. SBC PDFs are table-heavy; vision fallback fires
-    // more often than for lab reports, but that is acceptable — the goal is
-    // minimum-necessary, not zero-vision.
-    let response;
-    if (extracted.usable) {
-      sbcLogger.info('Sending PHI-redacted SBC text to Claude Sonnet (minimum-necessary path)', {
-        model: 'claude-sonnet-4-20250514',
-        redactedLength: redactedText.length,
-      });
-      response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 16384,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `${SBC_EXTRACTION_PROMPT}\n\n--- SBC DOCUMENT TEXT (PHI-redacted) ---\n${redactedText}\n\nNote: patient/subscriber identifiers have been redacted as [*_REDACTED] tokens. Do not attempt to reconstruct them.`,
-              },
-            ],
-          },
-        ],
-      });
-    } else {
-      sbcLogger.warn('Text extraction insufficient — falling back to PDF vision', {
+    // Scanned SBCs fall out here — the fallback regex parser at the call
+    // site in controllers/upload/shared.ts picks up the slack.
+    if (!extracted.usable) {
+      sbcLogger.warn('Local SBC text extraction insufficient — refusing to call Claude', {
         textLength: extracted.text.length,
         isLikelyScanned: extracted.isLikelyScanned,
       });
-      const pdfBase64 = pdfBuffer.toString('base64');
-      response = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 16384,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: 'application/pdf',
-                  data: pdfBase64,
-                },
-              },
-              {
-                type: 'text',
-                text: `${SBC_EXTRACTION_PROMPT}\n\nNote: local text extraction was insufficient — treating as scanned PDF. Extract plan details from the document image. Do not include subscriber/member identifiers even if visible.`,
-              },
-            ],
-          },
-        ],
-      });
+      throw new ValidationError(
+        'SBC text extraction did not yield enough readable text (likely a scanned document). ' +
+        'Upload a text-based SBC PDF or re-scan at higher quality.'
+      );
     }
+
+    // Stage B — redact PHI from the extracted text.
+    const { text: redactedText, firedPatterns } = redactPHI(extracted.text);
+
+    sbcLogger.info('PHI redaction applied to SBC text', {
+      originalLength: extracted.text.length,
+      redactedLength: redactedText.length,
+      firedPatterns,
+    });
+
+    // Stage C — call Claude Sonnet with redacted text. No document block.
+    sbcLogger.info('Sending PHI-redacted SBC text to Claude Sonnet', {
+      model: 'claude-sonnet-4-20250514',
+      redactedLength: redactedText.length,
+    });
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 16384,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `${SBC_EXTRACTION_PROMPT}\n\n--- SBC DOCUMENT TEXT (PHI-redacted) ---\n${redactedText}\n\nNote: patient/subscriber identifiers have been redacted as [*_REDACTED] tokens. Do not attempt to reconstruct them.`,
+            },
+          ],
+        },
+      ],
+    });
 
     const processingTimeMs = Date.now() - startTime;
 
@@ -864,7 +828,12 @@ export async function extractInsuranceFromSBC(
       throw new InternalServerError('Claude returned no text content');
     }
 
-    const responseText = textContent.text;
+    // Defense-in-depth: strip any PHI Claude may have echoed back (e.g., a
+    // subscriber name pulled from a vision-path page that slipped past the
+    // banner cover, or a member ID quoted in a warnings string). Matches
+    // the posture in claudeExtraction.ts. Applied before JSON parsing so
+    // parser sees only scrubbed text.
+    const responseText = stripPHIFromText(textContent.text);
     sbcLogger.info('Received Claude SBC response', {
       responseLength: responseText.length,
       processingTimeMs,
@@ -877,7 +846,7 @@ export async function extractInsuranceFromSBC(
       model: response.model,
       inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
-      userId: 'system',
+      userId,
     });
 
     // Parse JSON from response
@@ -952,10 +921,12 @@ export async function extractInsuranceFromSBC(
     }
     result.extractionConfidence = Math.max(0, Math.min(1, result.extractionConfidence));
 
+    // F-19 fix: planName + insurerName are PHI-adjacent (a particular plan
+    // narrows the user pool, especially for employer-specific group plans)
+    // and shouldn't persist in logs. planType (HMO/PPO/etc.) stays — it's
+    // a generic enum and useful for diagnostics.
     sbcLogger.info('Claude SBC extraction complete', {
-      planName: result.planName || 'Unknown',
       planType: result.planType || 'Unknown',
-      insurerName: result.insurerName || 'Unknown',
       benefitsExtracted: result.benefits.length,
       preventiveServicesCount: result.preventiveServices?.length || 0,
       exclusionsCount: result.exclusions?.length || 0,

@@ -24444,7 +24444,7 @@ export namespace Prisma {
     userId: string | null
     planId: string | null
     analysisDate: Date | null
-    claudeResponse: string | null
+    claudeResponseEncrypted: string | null
     totalProjectedOopEncrypted: string | null
     deductibleMetMonth: number | null
     projectedExpensesSnapshotEncrypted: string | null
@@ -24456,7 +24456,7 @@ export namespace Prisma {
     userId: string | null
     planId: string | null
     analysisDate: Date | null
-    claudeResponse: string | null
+    claudeResponseEncrypted: string | null
     totalProjectedOopEncrypted: string | null
     deductibleMetMonth: number | null
     projectedExpensesSnapshotEncrypted: string | null
@@ -24468,7 +24468,7 @@ export namespace Prisma {
     userId: number
     planId: number
     analysisDate: number
-    claudeResponse: number
+    claudeResponseEncrypted: number
     totalProjectedOopEncrypted: number
     deductibleMetMonth: number
     projectedExpensesSnapshotEncrypted: number
@@ -24490,7 +24490,7 @@ export namespace Prisma {
     userId?: true
     planId?: true
     analysisDate?: true
-    claudeResponse?: true
+    claudeResponseEncrypted?: true
     totalProjectedOopEncrypted?: true
     deductibleMetMonth?: true
     projectedExpensesSnapshotEncrypted?: true
@@ -24502,7 +24502,7 @@ export namespace Prisma {
     userId?: true
     planId?: true
     analysisDate?: true
-    claudeResponse?: true
+    claudeResponseEncrypted?: true
     totalProjectedOopEncrypted?: true
     deductibleMetMonth?: true
     projectedExpensesSnapshotEncrypted?: true
@@ -24514,7 +24514,7 @@ export namespace Prisma {
     userId?: true
     planId?: true
     analysisDate?: true
-    claudeResponse?: true
+    claudeResponseEncrypted?: true
     totalProjectedOopEncrypted?: true
     deductibleMetMonth?: true
     projectedExpensesSnapshotEncrypted?: true
@@ -24613,7 +24613,7 @@ export namespace Prisma {
     userId: string
     planId: string
     analysisDate: Date
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted: string | null
     deductibleMetMonth: number | null
     projectedExpensesSnapshotEncrypted: string | null
@@ -24644,7 +24644,7 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     analysisDate?: boolean
-    claudeResponse?: boolean
+    claudeResponseEncrypted?: boolean
     totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
     projectedExpensesSnapshotEncrypted?: boolean
@@ -24658,7 +24658,7 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     analysisDate?: boolean
-    claudeResponse?: boolean
+    claudeResponseEncrypted?: boolean
     totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
     projectedExpensesSnapshotEncrypted?: boolean
@@ -24672,7 +24672,7 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     analysisDate?: boolean
-    claudeResponse?: boolean
+    claudeResponseEncrypted?: boolean
     totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
     projectedExpensesSnapshotEncrypted?: boolean
@@ -24686,14 +24686,14 @@ export namespace Prisma {
     userId?: boolean
     planId?: boolean
     analysisDate?: boolean
-    claudeResponse?: boolean
+    claudeResponseEncrypted?: boolean
     totalProjectedOopEncrypted?: boolean
     deductibleMetMonth?: boolean
     projectedExpensesSnapshotEncrypted?: boolean
     createdAt?: boolean
   }
 
-  export type CostAnalysisOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "analysisDate" | "claudeResponse" | "totalProjectedOopEncrypted" | "deductibleMetMonth" | "projectedExpensesSnapshotEncrypted" | "createdAt", ExtArgs["result"]["costAnalysis"]>
+  export type CostAnalysisOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "planId" | "analysisDate" | "claudeResponseEncrypted" | "totalProjectedOopEncrypted" | "deductibleMetMonth" | "projectedExpensesSnapshotEncrypted" | "createdAt", ExtArgs["result"]["costAnalysis"]>
   export type CostAnalysisInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     plan?: boolean | InsurancePlanDefaultArgs<ExtArgs>
@@ -24718,7 +24718,7 @@ export namespace Prisma {
       userId: string
       planId: string
       analysisDate: Date
-      claudeResponse: string
+      claudeResponseEncrypted: string
       totalProjectedOopEncrypted: string | null
       deductibleMetMonth: number | null
       projectedExpensesSnapshotEncrypted: string | null
@@ -25152,7 +25152,7 @@ export namespace Prisma {
     readonly userId: FieldRef<"CostAnalysis", 'String'>
     readonly planId: FieldRef<"CostAnalysis", 'String'>
     readonly analysisDate: FieldRef<"CostAnalysis", 'DateTime'>
-    readonly claudeResponse: FieldRef<"CostAnalysis", 'String'>
+    readonly claudeResponseEncrypted: FieldRef<"CostAnalysis", 'String'>
     readonly totalProjectedOopEncrypted: FieldRef<"CostAnalysis", 'String'>
     readonly deductibleMetMonth: FieldRef<"CostAnalysis", 'Int'>
     readonly projectedExpensesSnapshotEncrypted: FieldRef<"CostAnalysis", 'String'>
@@ -27223,7 +27223,7 @@ export namespace Prisma {
     userId: 'userId',
     planId: 'planId',
     analysisDate: 'analysisDate',
-    claudeResponse: 'claudeResponse',
+    claudeResponseEncrypted: 'claudeResponseEncrypted',
     totalProjectedOopEncrypted: 'totalProjectedOopEncrypted',
     deductibleMetMonth: 'deductibleMetMonth',
     projectedExpensesSnapshotEncrypted: 'projectedExpensesSnapshotEncrypted',
@@ -29747,7 +29747,7 @@ export namespace Prisma {
     userId?: UuidFilter<"CostAnalysis"> | string
     planId?: UuidFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
-    claudeResponse?: StringFilter<"CostAnalysis"> | string
+    claudeResponseEncrypted?: StringFilter<"CostAnalysis"> | string
     totalProjectedOopEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
     projectedExpensesSnapshotEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
@@ -29761,7 +29761,7 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     analysisDate?: SortOrder
-    claudeResponse?: SortOrder
+    claudeResponseEncrypted?: SortOrder
     totalProjectedOopEncrypted?: SortOrderInput | SortOrder
     deductibleMetMonth?: SortOrderInput | SortOrder
     projectedExpensesSnapshotEncrypted?: SortOrderInput | SortOrder
@@ -29778,7 +29778,7 @@ export namespace Prisma {
     userId?: UuidFilter<"CostAnalysis"> | string
     planId?: UuidFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
-    claudeResponse?: StringFilter<"CostAnalysis"> | string
+    claudeResponseEncrypted?: StringFilter<"CostAnalysis"> | string
     totalProjectedOopEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
     projectedExpensesSnapshotEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
@@ -29792,7 +29792,7 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     analysisDate?: SortOrder
-    claudeResponse?: SortOrder
+    claudeResponseEncrypted?: SortOrder
     totalProjectedOopEncrypted?: SortOrderInput | SortOrder
     deductibleMetMonth?: SortOrderInput | SortOrder
     projectedExpensesSnapshotEncrypted?: SortOrderInput | SortOrder
@@ -29812,7 +29812,7 @@ export namespace Prisma {
     userId?: UuidWithAggregatesFilter<"CostAnalysis"> | string
     planId?: UuidWithAggregatesFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeWithAggregatesFilter<"CostAnalysis"> | Date | string
-    claudeResponse?: StringWithAggregatesFilter<"CostAnalysis"> | string
+    claudeResponseEncrypted?: StringWithAggregatesFilter<"CostAnalysis"> | string
     totalProjectedOopEncrypted?: StringNullableWithAggregatesFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableWithAggregatesFilter<"CostAnalysis"> | number | null
     projectedExpensesSnapshotEncrypted?: StringNullableWithAggregatesFilter<"CostAnalysis"> | string | null
@@ -32556,7 +32556,7 @@ export namespace Prisma {
   export type CostAnalysisCreateInput = {
     id?: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -32570,7 +32570,7 @@ export namespace Prisma {
     userId: string
     planId: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -32580,7 +32580,7 @@ export namespace Prisma {
   export type CostAnalysisUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -32594,7 +32594,7 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -32606,7 +32606,7 @@ export namespace Prisma {
     userId: string
     planId: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -32616,7 +32616,7 @@ export namespace Prisma {
   export type CostAnalysisUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -32628,7 +32628,7 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -34931,7 +34931,7 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     analysisDate?: SortOrder
-    claudeResponse?: SortOrder
+    claudeResponseEncrypted?: SortOrder
     totalProjectedOopEncrypted?: SortOrder
     deductibleMetMonth?: SortOrder
     projectedExpensesSnapshotEncrypted?: SortOrder
@@ -34947,7 +34947,7 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     analysisDate?: SortOrder
-    claudeResponse?: SortOrder
+    claudeResponseEncrypted?: SortOrder
     totalProjectedOopEncrypted?: SortOrder
     deductibleMetMonth?: SortOrder
     projectedExpensesSnapshotEncrypted?: SortOrder
@@ -34959,7 +34959,7 @@ export namespace Prisma {
     userId?: SortOrder
     planId?: SortOrder
     analysisDate?: SortOrder
-    claudeResponse?: SortOrder
+    claudeResponseEncrypted?: SortOrder
     totalProjectedOopEncrypted?: SortOrder
     deductibleMetMonth?: SortOrder
     projectedExpensesSnapshotEncrypted?: SortOrder
@@ -37678,7 +37678,7 @@ export namespace Prisma {
   export type CostAnalysisCreateWithoutUserInput = {
     id?: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -37690,7 +37690,7 @@ export namespace Prisma {
     id?: string
     planId: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -38287,7 +38287,7 @@ export namespace Prisma {
     userId?: UuidFilter<"CostAnalysis"> | string
     planId?: UuidFilter<"CostAnalysis"> | string
     analysisDate?: DateTimeFilter<"CostAnalysis"> | Date | string
-    claudeResponse?: StringFilter<"CostAnalysis"> | string
+    claudeResponseEncrypted?: StringFilter<"CostAnalysis"> | string
     totalProjectedOopEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
     deductibleMetMonth?: IntNullableFilter<"CostAnalysis"> | number | null
     projectedExpensesSnapshotEncrypted?: StringNullableFilter<"CostAnalysis"> | string | null
@@ -39993,7 +39993,7 @@ export namespace Prisma {
   export type CostAnalysisCreateWithoutPlanInput = {
     id?: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -40005,7 +40005,7 @@ export namespace Prisma {
     id?: string
     userId: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -44156,7 +44156,7 @@ export namespace Prisma {
     id?: string
     planId: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -45080,7 +45080,7 @@ export namespace Prisma {
   export type CostAnalysisUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45092,7 +45092,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45103,7 +45103,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     planId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45329,7 +45329,7 @@ export namespace Prisma {
     id?: string
     userId: string
     analysisDate?: Date | string
-    claudeResponse: string
+    claudeResponseEncrypted: string
     totalProjectedOopEncrypted?: string | null
     deductibleMetMonth?: number | null
     projectedExpensesSnapshotEncrypted?: string | null
@@ -45488,7 +45488,7 @@ export namespace Prisma {
   export type CostAnalysisUpdateWithoutPlanInput = {
     id?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45500,7 +45500,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45511,7 +45511,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     analysisDate?: DateTimeFieldUpdateOperationsInput | Date | string
-    claudeResponse?: StringFieldUpdateOperationsInput | string
+    claudeResponseEncrypted?: StringFieldUpdateOperationsInput | string
     totalProjectedOopEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     deductibleMetMonth?: NullableIntFieldUpdateOperationsInput | number | null
     projectedExpensesSnapshotEncrypted?: NullableStringFieldUpdateOperationsInput | string | null

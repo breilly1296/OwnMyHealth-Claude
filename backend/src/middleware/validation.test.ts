@@ -117,6 +117,40 @@ describe('validation middleware', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
 
+    it('does not echo back user-supplied input in validation error details (F-15)', () => {
+      // Pre-fix risk: emitting Zod's full `issue` object surfaces fields like
+      // `received` containing the raw user input (potentially PHI) in the
+      // 422 response. The mapper in validation.ts must keep the response
+      // shape to {field, message, code} only — never the input value.
+      const req = createMockRequest({
+        body: {
+          name: '', // fails minLength
+          email: 'patient.private.address@hospital.example', // fails .email() — must not echo
+        },
+      });
+      const res = createMockResponse();
+
+      validate(testSchema)(req, res, mockNext);
+
+      const error = (mockNext as ReturnType<typeof vi.fn>).mock.calls[0][0] as Error & {
+        details?: Array<Record<string, unknown>>;
+      };
+      expect(error.name).toBe('ValidationError');
+      expect(Array.isArray(error.details)).toBe(true);
+
+      // Each detail entry should expose only the contract-level keys.
+      for (const detail of error.details!) {
+        expect(Object.keys(detail).sort()).toEqual(['code', 'field', 'message'].sort());
+      }
+
+      // Defense-in-depth: the user-supplied email must not appear anywhere
+      // in the serialized error payload (covers any future struct changes).
+      const serialized = JSON.stringify(error.details);
+      expect(serialized).not.toContain('patient.private.address@hospital.example');
+      expect(serialized).not.toMatch(/"received"/);
+      expect(serialized).not.toMatch(/"input"/);
+    });
+
     it('should reject invalid UUID in params', () => {
       const req = createMockRequest({
         params: { id: 'not-a-uuid' },

@@ -150,25 +150,26 @@ describe('analyzeCosts (C-7)', () => {
   });
 
   describe('BAA gate', () => {
-    it('returns 503 and does not call messages.create when baaActive is false', async () => {
+    it('throws ServiceUnavailableError and does not call messages.create when baaActive is false', async () => {
+      // Post-F-22 refactor: analyzeCosts throws typed errors instead of
+      // calling res.status() directly. Routes wrap the handler in
+      // asyncHandler so the central errorHandler maps SERVICE_UNAVAILABLE →
+      // 503 with the standard envelope. We assert the throw + audit + that
+      // no PHI ever transited; the 503-response shape is verified inside
+      // errorHandler's own tests.
       mocks.config.anthropic.baaActive = false;
 
       const req = mockReq('user-1', { planId: 'plan-1' });
       const res = mockRes();
 
-      await analyzeCosts(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(503);
-      const body = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      expect(body).toMatchObject({
-        error: {
-          code: 'SERVICE_UNAVAILABLE',
-          message: expect.stringContaining('ANTHROPIC_BAA_ACTIVE'),
-        },
+      await expect(analyzeCosts(req, res)).rejects.toMatchObject({
+        statusCode: 503,
+        code: 'SERVICE_UNAVAILABLE',
+        message: expect.stringContaining('ANTHROPIC_BAA_ACTIVE'),
       });
 
       expect(mocks.messagesCreate).not.toHaveBeenCalled();
-      // Blocked attempts are audit-logged.
+      // Blocked attempts are still audit-logged before the throw.
       expect(mocks.logAccess).toHaveBeenCalledWith(
         'cost_analysis',
         'plan-1',

@@ -312,6 +312,36 @@ describe('errorHandler middleware', () => {
       });
     });
 
+    it('does not leak the offending field name or value (F-14)', () => {
+      // Pre-fix risk: forwarding `err.meta` to the client would echo
+      // `target: ['email']` and the duplicate value back. The mapper
+      // returns a fixed generic shape with no field-name surface so an
+      // attacker can't probe which column collided (e.g., "is this email
+      // already registered?").
+      const req = createMockRequest();
+      const res = createMockResponse();
+      const error = new Error(
+        'Unique constraint failed on the fields: (`email`)'
+      ) as Error & {
+        code: string;
+        name: string;
+        meta?: { target?: string[] };
+      };
+      error.name = 'PrismaClientKnownRequestError';
+      error.code = 'P2002';
+      error.meta = { target: ['email'] }; // Prisma populates this
+
+      errorHandler(error, req, res, mockNext);
+
+      const body = JSON.stringify(res._json);
+      // The metadata fields Prisma exposes must not appear in the response.
+      expect(body).not.toContain('email');
+      expect(body).not.toContain('target');
+      expect(body).not.toContain('meta');
+      // No `details` key for P2002 — would imply field-level info.
+      expect(res._json.error).not.toHaveProperty('details');
+    });
+
     it('should handle record not found (P2025)', () => {
       const req = createMockRequest();
       const res = createMockResponse();

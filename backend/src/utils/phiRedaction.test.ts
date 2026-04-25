@@ -64,6 +64,35 @@ describe('redactPHI (C-7)', () => {
     expect(firedPatterns).toContain('DOB labeled');
   });
 
+  it('redacts freestanding dates (MM/DD/YYYY) with no DOB prefix', () => {
+    const { text, firedPatterns } = redactPHI('Collected: 04/15/2026');
+    expect(text).toContain('[DATE_REDACTED]');
+    expect(text).not.toContain('04/15/2026');
+    expect(firedPatterns).toContain('Date freestanding');
+  });
+
+  it('redacts freestanding dates with dashes (MM-DD-YYYY)', () => {
+    const { text, firedPatterns } = redactPHI('Service date 01-02-2026');
+    expect(text).toContain('[DATE_REDACTED]');
+    expect(text).not.toContain('01-02-2026');
+    expect(firedPatterns).toContain('Date freestanding');
+  });
+
+  it('redacts freestanding dates with 2-digit year', () => {
+    const { text } = redactPHI('Draw 12/01/25');
+    expect(text).toContain('[DATE_REDACTED]');
+  });
+
+  it('prefers DOB labeled over Date freestanding when label is present', () => {
+    // Order matters: the DOB-labeled pattern must consume "DOB:" + value
+    // before the generic date pattern sees a naked date.
+    const { text, firedPatterns } = redactPHI('DOB: 05/05/1980');
+    expect(text).toContain('[DOB_REDACTED]');
+    expect(text).not.toContain('[DATE_REDACTED]');
+    expect(firedPatterns).toContain('DOB labeled');
+    expect(firedPatterns).not.toContain('Date freestanding');
+  });
+
   it('redacts phone numbers', () => {
     const { text, firedPatterns } = redactPHI('Call (555) 123-4567 for results');
     expect(text).toContain('[PHONE_REDACTED]');
@@ -84,10 +113,12 @@ describe('redactPHI (C-7)', () => {
     expect(firedPatterns).toEqual([]);
   });
 
-  it('preserves lab collection date (not labeled as DOB)', () => {
-    // Pattern "Collected: 04/15/2026" should NOT fire DOB patterns.
-    const { text, firedPatterns } = redactPHI('Collected: 04/15/2026');
-    expect(text).toContain('04/15/2026');
+  it('does not mislabel lab collection date as DOB (uses generic Date pattern)', () => {
+    // C-7 expansion: freestanding dates now redact, but they should route
+    // to the generic "Date freestanding" category, not one of the DOB
+    // patterns — the distinction matters for the audit/diagnostic log.
+    const { firedPatterns } = redactPHI('Collected: 04/15/2026');
+    expect(firedPatterns).toContain('Date freestanding');
     expect(firedPatterns).not.toContain('DOB labeled');
     expect(firedPatterns).not.toContain('DOB contextual');
   });

@@ -16,7 +16,6 @@
  */
 
 import type { Response } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
 import type { AuthenticatedRequest } from '../types/index.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -31,13 +30,20 @@ import { retrieveKnowledge } from '../services/knowledge/knowledgeRetrieval.js';
 import type { KnowledgeDocument } from '../services/knowledge/types.js';
 import { sanitizeForPrompt } from '../middleware/validation.js';
 import { trackAIUsage } from '../services/aiCostTracker.js';
+import { getAnthropicClient } from '../services/anthropicClient.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import { stripPHIFromText } from '../utils/phiRedaction.js';
 
 const RESOURCE_TYPE = 'HealthGuide';
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_OUTPUT_TOKENS = 1000;
 const HISTORY_MAX_MESSAGES = 20; // 10 user/assistant exchanges
+
+// Size of the trailing buffer held back from each SSE flush so PHI patterns
+// that straddle a chunk boundary still match. Longest regex in phiRedaction
+// (street address) runs ~50 chars; 64 leaves slack. Emitted on stream end.
+const PHI_SCRUB_WINDOW = 64;
 
 // Total system-prompt token budget split across instructions + user
 // data + reference knowledge. Leaves room for the user's question,
@@ -47,16 +53,11 @@ const SYSTEM_PROMPT_TOTAL_BUDGET = 4500;
 const SYSTEM_INSTRUCTION_TOKENS = 300;
 const DATA_BUDGET_CAP = 3000;
 
-// Anthropic client singleton — mirrors the pattern in expenseController.
-let anthropicClient: Anthropic | null = null;
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
-    anthropicClient = new Anthropic({ apiKey, timeout: 60_000, maxRetries: 1 });
-  }
-  return anthropicClient;
-}
+// Per-request client options — chat streams can take 30+ seconds end-to-end,
+// so we override the shared client's 30s default to 60s and skip the retry
+// budget (a chat retry would re-stream the whole answer to the user, which
+// is worse UX than a one-shot failure they can re-prompt).
+const CHAT_REQUEST_OPTS = { timeout: 60_000, maxRetries: 1 } as const;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -187,20 +188,50 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
 
   try {
     const client = getAnthropicClient();
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      system: systemPrompt,
-      messages,
-    });
+    const stream = client.messages.stream(
+      {
+        model: MODEL,
+        max_tokens: MAX_OUTPUT_TOKENS,
+        system: systemPrompt,
+        messages,
+      },
+      CHAT_REQUEST_OPTS
+    );
+
+    // Trailing buffer for PHI scrubbing across SSE chunk boundaries. We
+    // hold back the last PHI_SCRUB_WINDOW chars of unflushed text so that a
+    // PHI pattern starting in chunk N and ending in chunk N+1 still matches
+    // when the combined text is run through stripPHIFromText. Introduces a
+    // bounded latency (one buffer length of text stays held) — tolerable
+    // for an educational chat; avoids the higher-risk alternative of
+    // emitting raw chunks and hoping Claude never reflects PHI.
+    let scrubBuffer = '';
 
     for await (const event of stream) {
       // Pass through text deltas to the client. Other event types
       // (content_block_start, content_block_stop, message_start) are
       // noise for the UI and get dropped.
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        writeSSE(res, { type: 'content_block_delta', delta: { text: event.delta.text } });
+        scrubBuffer += event.delta.text;
+        if (scrubBuffer.length > PHI_SCRUB_WINDOW) {
+          const flushLen = scrubBuffer.length - PHI_SCRUB_WINDOW;
+          const toFlush = scrubBuffer.slice(0, flushLen);
+          scrubBuffer = scrubBuffer.slice(flushLen);
+          writeSSE(res, {
+            type: 'content_block_delta',
+            delta: { text: stripPHIFromText(toFlush) },
+          });
+        }
       }
+    }
+
+    // Flush the remaining tail. At EOF there's no more incoming text, so
+    // any PHI pattern in the buffer is fully visible to the scrubber.
+    if (scrubBuffer.length > 0) {
+      writeSSE(res, {
+        type: 'content_block_delta',
+        delta: { text: stripPHIFromText(scrubBuffer) },
+      });
     }
 
     const finalMessage = await stream.finalMessage();

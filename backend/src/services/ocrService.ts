@@ -203,13 +203,14 @@ function convertClaudeBiomarker(claudeBiomarker: ClaudeExtractedBiomarker): Extr
 async function processPDFWithClaude(
   buffer: Buffer,
   mimeType: string,
-  startTime: number
+  startTime: number,
+  userId: string
 ): Promise<OCRResult> {
   ocrLogger.info('Processing PDF with Claude API', {
     bufferSize: buffer.length,
   });
 
-  const claudeResult = await extractBiomarkersWithClaude(buffer);
+  const claudeResult = await extractBiomarkersWithClaude(buffer, userId);
 
   // Convert Claude biomarkers to our format
   const biomarkers: ExtractedBiomarker[] = claudeResult.biomarkers.map(convertClaudeBiomarker);
@@ -358,7 +359,8 @@ async function processImageWithDocumentAI(
 export async function processDocument(
   buffer: Buffer,
   mimeType: string,
-  filename: string
+  filename: string,
+  userId: string
 ): Promise<OCRResult> {
   ocrLogger.info('processDocument called', {
     filename,
@@ -378,7 +380,7 @@ export async function processDocument(
   if (mimeType === 'application/pdf') {
     if (isClaudeExtractionConfigured()) {
       try {
-        return await processPDFWithClaude(buffer, mimeType, startTime);
+        return await processPDFWithClaude(buffer, mimeType, startTime, userId);
       } catch (error) {
         ocrLogger.error('Claude extraction failed, no fallback for PDFs', {
           error: error instanceof Error ? error.message : 'Unknown error',

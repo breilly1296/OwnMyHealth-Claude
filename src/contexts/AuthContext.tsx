@@ -30,9 +30,16 @@
  * @module contexts/AuthContext
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { authApi, clearAuthToken, setOnAuthFailure, type AuthResponse } from '../services/api';
 import { authLogger } from '../utils/logger';
+
+// HIPAA §164.312(a)(2)(iii) — automatic logoff after a predetermined time
+// of inactivity. 15 minutes is the common healthcare baseline; the 2-minute
+// warning gives a user at the keyboard time to extend without surprise.
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const INACTIVITY_WARNING_MS = 13 * 60 * 1000; // 2 minutes before logout
+const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const;
 
 /**
  * User object stored in auth context
@@ -75,6 +82,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [idleWarningVisible, setIdleWarningVisible] = useState(false);
+
+  // Timer refs live outside React state so the ticks don't cause re-renders.
+  // Each activity-event firing resets both timers; we want cheap mutation.
+  const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -166,8 +179,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null);
       clearAuthToken();
+      setIdleWarningVisible(false);
     }
   }, []);
+
+  // Reset both idle timers — called on user activity and when the user
+  // clicks "Stay signed in" on the warning dialog. Memoized so the effect
+  // below doesn't re-subscribe event listeners on every render.
+  const resetIdleTimers = useCallback(() => {
+    if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    setIdleWarningVisible(false);
+    warnTimerRef.current = setTimeout(() => setIdleWarningVisible(true), INACTIVITY_WARNING_MS);
+    logoutTimerRef.current = setTimeout(() => {
+      // Force-reload to login so any in-memory PHI in other open tabs/pages
+      // is discarded; a plain SPA route change would keep the React tree.
+      void logout().finally(() => {
+        window.location.href = '/?sessionExpired=true';
+      });
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [logout]);
+
+  // Inactivity watchdog — only runs while authenticated. Activity events
+  // are the standard HIPAA-scope set: typing, clicking, touching, scrolling.
+  // Mouse MOVE is deliberately excluded — a wandering cursor from an open
+  // tab in another monitor would keep the session alive against HIPAA intent.
+  useEffect(() => {
+    if (!user) {
+      if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      setIdleWarningVisible(false);
+      return;
+    }
+
+    const handleActivity = () => resetIdleTimers();
+    for (const evt of ACTIVITY_EVENTS) {
+      window.addEventListener(evt, handleActivity, { passive: true });
+    }
+    resetIdleTimers();
+
+    return () => {
+      for (const evt of ACTIVITY_EVENTS) {
+        window.removeEventListener(evt, handleActivity);
+      }
+      if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    };
+  }, [user, resetIdleTimers]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -194,7 +252,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearError,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {idleWarningVisible && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="idle-warning-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+        >
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h2
+              id="idle-warning-title"
+              className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+            >
+              Session about to expire
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              You'll be signed out in 2 minutes due to inactivity. HIPAA requires
+              we automatically end idle sessions to protect your health data.
+            </p>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  void logout().finally(() => {
+                    window.location.href = '/?sessionExpired=true';
+                  });
+                }}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                Sign out now
+              </button>
+              <button
+                type="button"
+                onClick={resetIdleTimers}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                autoFocus
+              >
+                Stay signed in
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AuthContext.Provider>
+  );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

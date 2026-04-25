@@ -312,7 +312,20 @@ router.patch(
           },
         });
 
-        return { found: true as const, existing, user };
+        // F-41 fix: when an admin resets a user's password, every existing
+        // session for that user must be invalidated so the affected account
+        // is forced to re-authenticate with the new credential. Without
+        // this, an attacker with a compromised password (the very reason
+        // an admin reset would happen) keeps a valid refresh token and
+        // can outrun the password change. Same transaction so the rotation
+        // is atomic with the hash update.
+        let revokedSessionCount = 0;
+        if (password) {
+          const result = await tx.session.deleteMany({ where: { userId: id } });
+          revokedSessionCount = result.count;
+        }
+
+        return { found: true as const, existing, user, revokedSessionCount };
       },
       { isAdmin: true }
     );
@@ -327,7 +340,7 @@ router.patch(
       });
       throw new NotFoundError('User not found');
     }
-    const { existing, user } = result;
+    const { existing, user, revokedSessionCount } = result;
 
     // Determine if this is a role/permission change (elevated audit significance)
     const isRoleChange = role !== undefined && role !== existing.role;
@@ -348,6 +361,10 @@ router.patch(
       actorType: 'ADMIN',
       targetUserId: id,
       targetEmail: existing.email,
+      // Surface the count of sessions wiped on password reset so an admin
+      // reviewing audit history can see the cascading invalidation actually
+      // ran (and notice if a future regression silently drops it to 0).
+      ...(password && { revokedSessionCount }),
       ...(isRoleChange && { previousRole: existing.role, newRole: role }),
     });
 

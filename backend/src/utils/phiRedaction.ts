@@ -31,18 +31,29 @@ const PHI_PATTERNS: Array<{ name: string; pattern: RegExp; replacement: string }
   },
   { name: 'Email', pattern: /\b[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}\b/g, replacement: '[EMAIL_REDACTED]' },
 
-  // Dates of birth
+  // Dates of birth — labeled form runs first so the "DOB:" prefix itself
+  // is swallowed along with the value; otherwise the generic date pattern
+  // below would leave "DOB:" behind as a dangling label.
   {
     name: 'DOB labeled',
     pattern: /\b(?:DOB|Date of Birth|Birth Date|Born)[:\s]*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/gi,
     replacement: '[DOB_REDACTED]',
   },
   // Freestanding date near the word "birth"/"born" within a small window.
-  // Kept conservative to avoid stripping lab collection dates.
   {
     name: 'DOB contextual',
     pattern: /(?:birth|born)[^\n]{0,20}\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/gi,
     replacement: '[DOB_REDACTED]',
+  },
+  // Any remaining MM/DD/YYYY or MM-DD-YYYY date (also 2-digit year). Lab
+  // reports carry collection, draw, accession, and report dates in clear
+  // view — all re-identifiers under HIPAA §164.514(b)(2)(i)(C) when paired
+  // with other context. Minimum-necessary says strip them before Claude
+  // ever sees them; labDate is extracted from the PDF locally when needed.
+  {
+    name: 'Date freestanding',
+    pattern: /\b(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12]\d|3[01])[/-](?:\d{2}|\d{4})\b/g,
+    replacement: '[DATE_REDACTED]',
   },
 
   // Address — US-style street + suffix

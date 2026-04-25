@@ -90,9 +90,15 @@ router.get(
 );
 
 // DELETE /api/v1/settings/delete-data - Delete all health data
+// blockDemoProfileUpdate refuses the request for the demo account: the demo
+// has a real password (config.demo.password) and would otherwise pass
+// password verification, but wiping the shared demo state would break the
+// demo for every other tester. Same rationale as the other demo blocks on
+// this router (PATCH /profile, /notifications, /health-profile).
 router.delete(
   '/delete-data',
   sensitiveLimiter,
+  blockDemoProfileUpdate,
   validate(schemas.settings.deleteData),
   asyncHandler(settingsController.deleteAllData)
 );
@@ -101,6 +107,8 @@ router.delete(
 router.delete(
   '/delete-account',
   sensitiveLimiter,
+  blockDemoProfileUpdate,
+  validate(schemas.settings.deleteAccount),
   asyncHandler(settingsController.deleteAccount)
 );
 

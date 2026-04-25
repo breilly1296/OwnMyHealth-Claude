@@ -684,6 +684,12 @@ export const schemas = {
       password: z.string().min(1, 'Password is required'),
     }),
 
+    // Mirrors deleteData. Both endpoints irreversibly destroy PHI; both
+    // must require explicit re-auth via password (not just session cookie).
+    deleteAccount: z.object({
+      password: z.string().min(1, 'Password is required'),
+    }),
+
     updateHealthProfile: z.object({
       biologicalSex: z.enum(['male', 'female']).optional(),
       ageRange: z.enum(['18-29', '30-39', '40-49', '50-59', '60-69', '70+']).optional(),

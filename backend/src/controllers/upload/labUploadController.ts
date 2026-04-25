@@ -49,7 +49,7 @@ export async function uploadLabReport(
   const auditService = getAuditLogService(prisma);
 
   // Process the PDF using Claude API for intelligent extraction
-  const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname);
+  const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname, userId);
 
   if (ocrResult.biomarkers.length === 0) {
     await auditService.logAccess(LAB_REPORT_RESOURCE, undefined, { req, userId }, {
@@ -207,7 +207,7 @@ export async function uploadLabResultOCR(
   const userSalt = await getUserEncryptionSalt(userId);
   const auditService = getAuditLogService(prisma);
 
-  const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname);
+  const ocrResult = await processDocument(file.buffer, file.mimetype, file.originalname, userId);
 
   if (ocrResult.biomarkers.length === 0) {
     await auditService.logAccess(LAB_OCR_RESOURCE, undefined, { req, userId }, {
