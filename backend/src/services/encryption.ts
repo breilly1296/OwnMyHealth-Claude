@@ -404,7 +404,10 @@ export function getEncryptionService(): EncryptionService {
 }
 
 // PHI field mappings for each model (must match Prisma schema exactly)
-// IMPORTANT: Keep this in sync with prisma/schema.prisma encrypted fields
+// IMPORTANT: Keep this in sync with prisma/schema.prisma encrypted fields.
+// Drift here means iteration-based sweeps (export, deletion, admin views,
+// audit redaction) silently skip fields. Audited against schema.prisma —
+// every `*Encrypted` column in the schema should appear below.
 export const PHI_FIELDS = {
   // User profile PHI
   User: [
@@ -413,6 +416,7 @@ export const PHI_FIELDS = {
     'dateOfBirthEncrypted',
     'phoneEncrypted',
     'addressEncrypted',
+    'healthProfileEncrypted',
   ],
   // Health data PHI
   Biomarker: [
@@ -448,6 +452,7 @@ export const PHI_FIELDS = {
   // Health goals PHI
   HealthGoal: [
     'descriptionEncrypted',
+    'targetValueEncrypted',
   ],
   GoalProgressHistory: [
     'noteEncrypted',
@@ -474,9 +479,18 @@ export const PHI_FIELDS = {
     'notesEncrypted',
   ],
   CostAnalysis: [
-    'claudeResponse',
+    // Was 'claudeResponse'; renamed to claudeResponseEncrypted in migration
+    // 20260424_align_uuid_defaults_and_rename_claude_response so the field
+    // name advertises that the column is ciphertext.
+    'claudeResponseEncrypted',
     'totalProjectedOopEncrypted',
     'projectedExpensesSnapshotEncrypted',
+  ],
+  // SMART-on-FHIR OAuth tokens — a stolen access token is a direct path to
+  // the user's live PHI at Quest/LabCorp/etc.
+  LabConnection: [
+    'accessTokenEncrypted',
+    'refreshTokenEncrypted',
   ],
 } as const;
 

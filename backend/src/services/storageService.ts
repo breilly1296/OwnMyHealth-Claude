@@ -8,6 +8,7 @@
  */
 
 import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
+import type { Readable } from 'stream';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -16,7 +17,12 @@ const storage = new Storage({
   projectId: config.gcp?.projectId || process.env.GCP_PROJECT_ID,
 });
 
-const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'ownmyhealth-user-files';
+// Read through `config` rather than `process.env` directly so the
+// production fail-fast in `config/index.ts` is the single source of truth
+// for whether GCS_BUCKET_NAME is acceptable. Bypassing config (the prior
+// behavior) would let a misconfigured prod deploy reach this module before
+// the validator ran.
+const BUCKET_NAME = config.gcp.bucketName;
 const SIGNED_URL_EXPIRATION_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
@@ -84,6 +90,26 @@ export async function uploadFile(
     });
     throw new Error('Failed to upload file to storage');
   }
+}
+
+/**
+ * Return a Readable stream of a GCS object.
+ *
+ * Preferred over `getSignedUrl(..., 'read')` for serving PHI downloads to
+ * authenticated users: the signed URL was shareable for 15 minutes with no
+ * IP or session binding, which meant anyone who intercepted the link (browser
+ * history, referrer header, copy-paste into a ticket) could pull PHI without
+ * authenticating. Proxying the bytes through the backend forces every
+ * download to pass authenticate + RLS on the way in, and `Cache-Control:
+ * no-store` on the way out — see `fileController.getFileDownloadUrl`.
+ *
+ * The consumer is responsible for piping to the response and handling
+ * stream errors; this function does not suppress them.
+ */
+export function getFileStream(storageKey: string): Readable {
+  const bucket = storage.bucket(BUCKET_NAME);
+  const file = bucket.file(storageKey);
+  return file.createReadStream();
 }
 
 /**
@@ -230,6 +256,7 @@ export async function fileExists(storageKey: string): Promise<boolean> {
 export const storageService = {
   uploadFile,
   getSignedUrl,
+  getFileStream,
   deleteFile,
   deleteFiles,
   fileExists,

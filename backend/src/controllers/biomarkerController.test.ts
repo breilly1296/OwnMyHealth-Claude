@@ -40,7 +40,11 @@ const mocks = vi.hoisted(() => ({
   auditService: null as unknown,
   encryptionService: null as unknown,
   config: { anthropic: { baaActive: true, apiKey: 'test-key' } },
+  // Post-F-29: route now uses the shared anthropicClient SDK instead of
+  // raw fetch. `fetchMock` stays as the assertion handle (legacy name) and
+  // gets called for every messages.create — see the vi.mock below.
   fetchMock: null as unknown,
+  messagesCreate: null as unknown,
   currentUserId: 'test-user-id',
   // Guidance-path transaction return. Distinct from the default `tx` because
   // the guidance route returns a shaped `{ biomarker, historyRows }` object
@@ -81,6 +85,26 @@ vi.mock('../services/userEncryption.js', () => ({
 
 vi.mock('../services/aiCostTracker.js', () => ({
   trackAIUsage: vi.fn(),
+}));
+
+// Post-F-29: route now uses the shared anthropicClient SDK. Stub
+// `getAnthropicClient` to return a client whose `messages.create` forwards
+// to both `mocks.fetchMock` (legacy alias for "the network call happened")
+// and `mocks.messagesCreate` (the SDK-shaped resolver each test sets).
+vi.mock('../services/anthropicClient.js', () => ({
+  getAnthropicClient: () => ({
+    messages: {
+      create: (...args: unknown[]) => {
+        if (mocks.fetchMock) (mocks.fetchMock as ReturnType<typeof vi.fn>)(...args);
+        if (mocks.messagesCreate) {
+          return (mocks.messagesCreate as ReturnType<typeof vi.fn>)(...args);
+        }
+        return Promise.resolve({ content: [{ type: 'text', text: '' }] });
+      },
+    },
+  }),
+  isEnabled: () => Boolean(process.env.ANTHROPIC_API_KEY),
+  reset: () => undefined,
 }));
 
 vi.mock('../config/index.js', () => ({
@@ -416,7 +440,7 @@ describe('POST /biomarkers/:id/guidance — F-3 IDOR regression', () => {
     };
     mocks.auditService = createMockAuditService();
     mocks.fetchMock = vi.fn();
-    vi.stubGlobal('fetch', mocks.fetchMock);
+    mocks.messagesCreate = vi.fn();
     process.env.ANTHROPIC_API_KEY = 'test-key';
 
     const express = (await import('express')).default;
@@ -500,13 +524,11 @@ describe('POST /biomarkers/:id/guidance — F-3 IDOR regression', () => {
       ],
     };
 
-    (mocks.fetchMock as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        content: [{ type: 'text', text: 'Canned guidance text.' }],
-        model: 'claude-haiku-4-5-20251001',
-        usage: { input_tokens: 10, output_tokens: 20 },
-      }),
+    // SDK shape — no `.ok` / `.json()` indirection.
+    (mocks.messagesCreate as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: 'Canned guidance text.' }],
+      model: 'claude-haiku-4-5-20251001',
+      usage: { input_tokens: 10, output_tokens: 20 },
     });
 
     const res = await request(app)
@@ -527,12 +549,15 @@ describe('POST /biomarkers/:id/guidance — F-3 IDOR regression', () => {
       data: { guidance: 'Canned guidance text.' },
     });
 
-    expect((mocks.fetchMock as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
-    const [url, init] = (mocks.fetchMock as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toBe('https://api.anthropic.com/v1/messages');
-
-    const body = JSON.parse((init as { body: string }).body);
-    const promptText: string = body.messages[0].content;
+    // Post-F-29: SDK call shape. messages.create receives the request body
+    // directly as the first arg; no fetch URL to assert (the SDK manages
+    // that). The fetchMock alias still records the call so legacy
+    // assertions like `not.toHaveBeenCalled()` keep working.
+    expect((mocks.messagesCreate as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+    const callArgs = (mocks.messagesCreate as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      messages: Array<{ content: string }>;
+    };
+    const promptText: string = callArgs.messages[0].content;
 
     // The DB-sourced values appear in the prompt.
     expect(promptText).toContain('HDL Cholesterol');

@@ -2,7 +2,7 @@
  * User Files API
  */
 
-import { apiFetch } from './client';
+import { apiFetch, API_BASE_URL } from './client';
 
 export interface UserFileData {
   id: string;
@@ -31,9 +31,27 @@ export const filesApi = {
     return response.data;
   },
 
-  async getDownloadUrl(id: string): Promise<{ url: string; expiresIn: number }> {
-    const response = await apiFetch<{ url: string; expiresIn: number }>(`/files/${id}/download`);
-    return response.data;
+  /**
+   * Download a file's bytes through the authenticated API.
+   *
+   * Previously this returned a GCS signed URL; the backend now streams the
+   * file itself under session auth + audit logging, so the client downloads
+   * it via fetch and materializes a blob URL for rendering / saving. Blob
+   * URL is revoked by the caller after use to release memory.
+   */
+  async downloadFile(id: string): Promise<{ blobUrl: string; contentType: string }> {
+    const response = await fetch(`${API_BASE_URL}/files/${id}/download`, {
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      const msg = response.status === 404 ? 'File not found' : 'Failed to download file';
+      throw new Error(msg);
+    }
+    const blob = await response.blob();
+    return {
+      blobUrl: URL.createObjectURL(blob),
+      contentType: response.headers.get('Content-Type') || blob.type || 'application/octet-stream',
+    };
   },
 
   async delete(id: string): Promise<void> {

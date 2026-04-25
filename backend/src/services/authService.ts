@@ -1228,13 +1228,17 @@ export function startSessionCleanup(): void {
   if (sessionCleanupInterval) {
     return; // Already running
   }
-  // Run session cleanup every hour
+  // Run session cleanup every 10 minutes. Tighter window than the prior 1-hour
+  // tick so expired rows leave the table fast — narrows the read-window for
+  // anyone with DB access who could otherwise observe recently-revoked tokens
+  // for up to 59 minutes after expiry. `cleanupExpiredSessions` is a single
+  // `deleteMany` under admin RLS context; cheap to run on this cadence.
   sessionCleanupInterval = setInterval(() => {
     cleanupExpiredSessions().catch((error) => {
       logger.error('Session cleanup failed', { prefix: 'Auth', data: { error: String(error) } });
     });
-  }, 60 * 60 * 1000);
-  logger.info('Session cleanup scheduler started', { prefix: 'Auth' });
+  }, 10 * 60 * 1000);
+  logger.info('Session cleanup scheduler started (10-min interval)', { prefix: 'Auth' });
 }
 
 /**

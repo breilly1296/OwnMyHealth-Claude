@@ -5,6 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     root: '.',
+    // Seed NODE_ENV + required secrets before any test's imports run.
+    // Prevents config/index.ts from throwing on missing AUDIT_LOG_SALT et
+    // al. in environments that don't ship a .env (CI).
+    setupFiles: ['./src/testSetup.ts'],
     include: [
       'src/**/*.test.ts',
       'src/**/*.spec.ts',

@@ -107,59 +107,32 @@ export function validateCsrfToken(
     '/marketplace/plans/search',
   ];
 
-  // Skip CSRF for file upload routes - they require Bearer token auth
-  // and are multipart/form-data which is harder to exploit via CSRF
-  const uploadRoutes = [
-    '/upload/lab-report',
-    '/upload/insurance-sbc',
-    '/upload/lab-results-ocr',
-    '/insurance/upload-sbc',
+  // Bearer-only streaming routes. These are intentionally CSRF-exempt
+  // because SSE (`EventSource`) can't attach a custom header, so CSRF
+  // tokens can't ride along. SAFETY: every route in this list MUST be
+  // mounted with `requireBearerAuth` instead of `authenticate`, so the
+  // cookie-auth path is rejected at the route layer. If you add to this
+  // list without switching to `requireBearerAuth`, you reopen a CSRF hole.
+  const bearerOnlyStreamingRoutes = [
+    '/ai/chat',
   ];
 
-  // Skip CSRF for settings routes - they require Bearer token auth
-  // Bearer tokens are not automatically sent by browsers, so CSRF protection is redundant
-  const settingsRoutes = [
-    '/settings/delete-data',
-    '/settings/delete-account',
-    '/settings/export-data',
-  ];
-
-  // Skip CSRF for API routes that require Bearer token auth
-  // These endpoints are protected by JWT which browsers don't send automatically
-  // SECURITY: Bearer tokens are stored in memory (not cookies), so browsers can't
-  // automatically include them in cross-origin requests, making CSRF protection redundant
-  const bearerProtectedRoutes = [
-    '/guidance', // POST /biomarkers/:id/guidance - AI guidance endpoint
-    '/ai/chat',  // POST /ai/chat - Health Guide streaming chat
-  ];
-
-  // Skip CSRF for DELETE operations on user-owned resources
-  // These require Bearer token auth which provides sufficient CSRF protection
-  const deleteRoutes = [
-    '/insurance/plans/', // DELETE /insurance/plans/:id
-  ];
+  // NOTE on upload routes: previously CSRF-exempt with a TODO. The
+  // frontend's `services/uploadUtils.ts` reads csrf_token from the cookie
+  // and attaches it as `X-CSRF-Token` on every upload (verified). The
+  // exemption is now removed so any new upload path that forgets to pipe
+  // through uploadUtils will fail closed instead of silently bypassing
+  // CSRF protection.
 
   const isPublicAuthRoute = publicAuthRoutes.some(route =>
     req.path.endsWith(route)
   );
 
-  const isUploadRoute = uploadRoutes.some(route =>
+  const isBearerOnlyStreamingRoute = bearerOnlyStreamingRoutes.some(route =>
     req.path.endsWith(route)
   );
 
-  const isSettingsRoute = settingsRoutes.some(route =>
-    req.path.endsWith(route)
-  );
-
-  const isBearerProtectedRoute = bearerProtectedRoutes.some(route =>
-    req.path.endsWith(route)
-  );
-
-  const isDeleteRoute = req.method === 'DELETE' && deleteRoutes.some(route =>
-    req.path.includes(route)
-  );
-
-  if (isPublicAuthRoute || isUploadRoute || isSettingsRoute || isBearerProtectedRoute || isDeleteRoute) {
+  if (isPublicAuthRoute || isBearerOnlyStreamingRoute) {
     return next();
   }
 
@@ -172,20 +145,19 @@ export function validateCsrfToken(
   const cookieToken = req.cookies[CSRF_COOKIE_NAME];
   const headerToken = req.headers[CSRF_HEADER_NAME] as string;
 
-  // Validate tokens exist and match
+  // Validate tokens exist
   if (!cookieToken || !headerToken) {
     throw new ForbiddenError('CSRF token missing');
   }
 
-  // Use timing-safe comparison to prevent timing attacks
-  if (cookieToken.length !== headerToken.length) {
-    throw new ForbiddenError('Invalid CSRF token');
-  }
-
-  const tokensMatch = crypto.timingSafeEqual(
-    Buffer.from(cookieToken),
-    Buffer.from(headerToken)
-  );
+  // Constant-time compare without leaking length via an early throw.
+  // `timingSafeEqual` requires equal-length buffers; hashing both inputs
+  // through SHA-256 first normalizes them to a fixed 32-byte length so the
+  // comparison itself runs in constant time even when the two inputs are
+  // different lengths. Pre-hash length is no longer observable via timing.
+  const cookieDigest = crypto.createHash('sha256').update(cookieToken).digest();
+  const headerDigest = crypto.createHash('sha256').update(headerToken).digest();
+  const tokensMatch = crypto.timingSafeEqual(cookieDigest, headerDigest);
 
   if (!tokensMatch) {
     throw new ForbiddenError('Invalid CSRF token');

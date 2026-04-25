@@ -16,6 +16,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // -- Mocked tx — shared handle for both controllers ---------------------------
+// dNAData uses Prisma's lowercase-first delegate naming for DNAData (verified
+// against generated/prisma/index.d.ts); deleteAllData calls
+// tx.dNAData.deleteMany when wiping deprecated genetic data.
 const mockTx = {
   userFile: { findMany: vi.fn(), deleteMany: vi.fn() },
   biomarker: { deleteMany: vi.fn() },
@@ -26,7 +29,8 @@ const mockTx = {
   expenseActual: { deleteMany: vi.fn() },
   expenseProjection: { deleteMany: vi.fn() },
   providerPatient: { deleteMany: vi.fn() },
-  labConnection: { findMany: vi.fn() },
+  labConnection: { findMany: vi.fn(), deleteMany: vi.fn() },
+  dNAData: { deleteMany: vi.fn() },
   user: { findUnique: vi.fn(), delete: vi.fn() },
 };
 
@@ -122,6 +126,8 @@ describe('deleteAllData (C-6)', () => {
     mockTx.expenseActual.deleteMany.mockResolvedValue({ count: 0 });
     mockTx.expenseProjection.deleteMany.mockResolvedValue({ count: 0 });
     mockTx.providerPatient.deleteMany.mockResolvedValue({ count: 0 });
+    mockTx.dNAData.deleteMany.mockResolvedValue({ count: 0 });
+    mockTx.labConnection.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   afterEach(() => {
@@ -393,6 +399,24 @@ describe('exportUserData', () => {
         oopMaxFamily: 10000,
         memberIdEncrypted: 'enc:MEM123',
         groupIdEncrypted: 'enc:GRP456',
+        // Benefits are now included via { include: { benefits: true } } in
+        // exportUserData and surfaced as ExportInsurancePlan.benefits[].
+        benefits: [
+          {
+            serviceName: 'Primary Care Visit',
+            serviceCategory: 'office-visit',
+            inNetworkCovered: true,
+            inNetworkCopay: 25,
+            inNetworkCoinsurance: null,
+            inNetworkDeductible: false,
+            outNetworkCovered: true,
+            outNetworkCopay: null,
+            outNetworkCoinsurance: 40,
+            outNetworkDeductible: true,
+            preAuthRequired: false,
+            limitations: null,
+          },
+        ],
       },
     ]);
 
@@ -470,7 +494,11 @@ describe('exportUserData', () => {
     ex.costAnalysis.findMany.mockResolvedValue([
       {
         id: 'ca1',
-        claudeResponse: 'enc:Your projected OOP is $500',
+        // Renamed 2026-04-24 from `claudeResponse` (migration
+        // 20260424_align_uuid_defaults_and_rename_claude_response). Export
+        // shape still emits the legacy `claudeResponse` field name to keep
+        // the user-facing JSON contract stable.
+        claudeResponseEncrypted: 'enc:Your projected OOP is $500',
         totalProjectedOopEncrypted: 'enc:500',
         analysisDate: now,
       },
@@ -479,6 +507,9 @@ describe('exportUserData', () => {
     ex.userFile.findMany.mockResolvedValue([
       {
         id: 'f1',
+        // storageKey is included in the export so users can correlate
+        // metadata against signed-URL downloads from /files/:id.
+        storageKey: 'user-export-1/f1.pdf',
         originalFilename: 'labs.pdf',
         fileType: 'application/pdf',
         fileSize: 12345,
@@ -751,6 +782,8 @@ describe('deleteAllData — full table cascade', () => {
     mockTx.expenseActual.deleteMany.mockResolvedValue({ count: 6 });
     mockTx.expenseProjection.deleteMany.mockResolvedValue({ count: 7 });
     mockTx.providerPatient.deleteMany.mockResolvedValue({ count: 8 });
+    mockTx.dNAData.deleteMany.mockResolvedValue({ count: 9 });
+    mockTx.labConnection.deleteMany.mockResolvedValue({ count: 10 });
   });
 
   afterEach(() => {
@@ -767,7 +800,9 @@ describe('deleteAllData — full table cascade', () => {
 
     await deleteAllData(req, res);
 
-    // Full cascade — one deleteMany per category.
+    // Full cascade — one deleteMany per category. dNAData and labConnection
+    // are deleted explicitly because deleteAllData preserves the User row,
+    // so their cascade-from-User FK doesn't fire (unlike deleteAccount).
     expect(mockTx.biomarker.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.insurancePlan.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.healthNeed.deleteMany).toHaveBeenCalledTimes(1);
@@ -777,6 +812,8 @@ describe('deleteAllData — full table cascade', () => {
     expect(mockTx.expenseActual.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.expenseProjection.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.providerPatient.deleteMany).toHaveBeenCalledTimes(1);
+    expect(mockTx.dNAData.deleteMany).toHaveBeenCalledTimes(1);
+    expect(mockTx.labConnection.deleteMany).toHaveBeenCalledTimes(1);
 
     // All scoped to this user. providerPatient scopes by OR(patientId, providerId)
     // to also unwind provider-side relationships.
@@ -789,6 +826,8 @@ describe('deleteAllData — full table cascade', () => {
     expect(mockTx.costAnalysis.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.expenseActual.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.expenseProjection.deleteMany).toHaveBeenCalledWith(userScoped);
+    expect(mockTx.dNAData.deleteMany).toHaveBeenCalledWith(userScoped);
+    expect(mockTx.labConnection.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.providerPatient.deleteMany).toHaveBeenCalledWith({
       where: { OR: [{ patientId: 'user-123' }, { providerId: 'user-123' }] },
     });
@@ -807,6 +846,8 @@ describe('deleteAllData — full table cascade', () => {
         deletedExpenseActuals: 6,
         deletedExpenseProjections: 7,
         deletedProviderRelationships: 8,
+        deletedDnaData: 9,
+        deletedLabConnections: 10,
         deletedGcsObjects: 1,
       }),
       expect.any(Object)

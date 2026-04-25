@@ -53,6 +53,7 @@ import { logger } from '../utils/logger.js';
 import { PrismaClient, Prisma } from '../../generated/prisma';
 import { getAuditLogService, AuditLogService } from './auditLog.js';
 import { getEncryptionService, EncryptionService } from './encryption.js';
+import { config } from '../config/index.js';
 
 // Parse database URL from environment
 function getDatabaseConfig() {
@@ -186,8 +187,77 @@ export async function initializeDatabase(): Promise<void> {
     }
   );
 
+  // C-8 PR C — RLS enforcement check. Runs after the connection is alive so
+  // we can query pg_roles under the current login. In production this hard-
+  // exits if BYPASSRLS=true; in non-prod it warns. See assertNoBypassRLS for
+  // the full rationale, and C8_PART3_RUNBOOK.md for the rollout/rollback.
+  await assertNoBypassRLS();
+
   isInitialized = true;
   logger.startup('✓ All database services initialized');
+}
+
+/**
+ * Fail loud if the DB login has BYPASSRLS. Without this, a forgotten
+ * credential rotation back to a superuser silently turns RLS off for
+ * every query — application code keeps working, tests keep passing,
+ * and tenant isolation quietly collapses.
+ *
+ * C-8 PR C semantics (post-cutover):
+ *   - Production with BYPASSRLS=true → log FATAL and process.exit(1).
+ *     There is no opt-out: if the role can bypass RLS in prod, the
+ *     deployment is broken and refusing to start is safer than serving
+ *     unisolated PHI. The transitional `RLS_ENFORCEMENT=strict` flag
+ *     was removed when the omh_app cutover landed.
+ *   - Non-production with BYPASSRLS=true → log WARNING and continue.
+ *     Dev databases are commonly the superuser; staging may not have
+ *     omh_app provisioned yet. The warning makes the unsafe state
+ *     audible without blocking the boot.
+ *   - Either environment with BYPASSRLS=false → log success and continue.
+ */
+async function assertNoBypassRLS(): Promise<void> {
+  if (!prisma) {
+    // Defensive — should be impossible given the caller. A missing client
+    // here would also block everything else, so let the normal failure
+    // paths surface instead of synthesizing a new one.
+    return;
+  }
+
+  let bypass: boolean | undefined;
+  try {
+    const rows = await prisma.$queryRaw<Array<{ rolbypassrls: boolean }>>`
+      SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user
+    `;
+    bypass = rows[0]?.rolbypassrls;
+  } catch (error) {
+    // Network blip / permission error reading pg_roles shouldn't crash
+    // boot just because this assertion couldn't run. Log loudly so ops
+    // notices, but don't block startup — the existing RLS policies still
+    // apply if they were enforced, and the scheduled re-check can catch
+    // a genuine mismatch next time.
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.warn('RLS assertion check failed to run', { data: { error: msg } });
+    return;
+  }
+
+  if (!bypass) {
+    logger.startup('✓ RLS assertion passed: database role does not have BYPASSRLS');
+    return;
+  }
+
+  if (config.isProduction) {
+    logger.error(
+      'FATAL: Production database role has BYPASSRLS. ' +
+      'RLS policies are not enforcing. Refusing to start. ' +
+      'See C8_PART3_RUNBOOK.md.'
+    );
+    process.exit(1);
+  }
+
+  logger.warn(
+    'WARNING: Database role has BYPASSRLS — RLS policies are not enforcing. ' +
+    'This is acceptable in development but must be fixed before production.'
+  );
 }
 
 /**

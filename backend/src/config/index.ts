@@ -40,6 +40,19 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
 
+  // Audit log encryption salt. Pre C-8 this was stored in the system_config
+  // table and read at boot; that coupled startup to an admin-bypass DB call,
+  // which blocks the NOBYPASSRLS role cutover. Moving the salt to an env var
+  // (Secret Manager in prod) removes the dependency entirely.
+  //
+  // Migration note: production already has a historic salt encrypted in
+  // `system_config.audit_encryption_salt`. Before this code is deployed to
+  // prod, an operator must extract that salt (see docs/STAGING.md → "Audit
+  // salt migration") and write the plaintext value to AUDIT_LOG_SALT in
+  // Secret Manager. Rotating the salt silently would make every pre-existing
+  // audit log's encrypted PHI undecryptable — hence the hard-fail below.
+  auditSalt: process.env.AUDIT_LOG_SALT || '',
+
   // Security - JWT Configuration
   // Note: expiresIn values are in seconds (number) for type compatibility with jsonwebtoken.
   // accessSecret / refreshSecret go through requireEnv — no fallback in any environment.
@@ -63,8 +76,15 @@ export const config = {
     httpOnly: true,
     // Cross-domain requires SameSite=none; same-domain can use strict/lax
     // If COOKIE_DOMAIN is set, default to 'none' for cross-domain support
+    // sameSite default rules:
+    //   - explicit COOKIE_SAME_SITE env wins (cross-domain staging sets 'none')
+    //   - cross-domain (COOKIE_DOMAIN set) → 'none' (required for SameSite=none cookies)
+    //   - production same-domain → 'strict' (tightest CSRF posture for first-party deploys)
+    //   - dev same-domain → 'lax' (keeps copy-paste-link flows usable from `npm run dev`)
+    // Was 'lax' on production same-domain too; tightened in F-18 fix. Override
+    // via COOKIE_SAME_SITE if a deploy needs the looser policy temporarily.
     sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
-      (process.env.COOKIE_DOMAIN ? 'none' : (process.env.NODE_ENV === 'production' ? 'lax' : 'lax')),
+      (process.env.COOKIE_DOMAIN ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax')),
     domain: process.env.COOKIE_DOMAIN || undefined,
     maxAge: {
       accessToken: 15 * 60 * 1000, // 15 minutes in ms
@@ -122,6 +142,11 @@ export const config = {
 
   // Google Cloud Platform Configuration
   gcp: {
+    // Bucket name has a dev/staging fallback for local-only flows that don't
+    // actually upload, but production validation below (after the config
+    // object is built) hard-fails if `GCS_BUCKET_NAME` is unset — without
+    // this guard a misconfigured prod deploy would silently write PHI to
+    // someone else's `ownmyhealth-user-files` bucket. F-28 fix.
     bucketName: process.env.GCS_BUCKET_NAME || 'ownmyhealth-user-files',
     projectId: process.env.GCP_PROJECT_ID || '',
     // Path to service account credentials JSON file
@@ -208,6 +233,22 @@ if (config.jwt.refreshSecret.length < MIN_JWT_SECRET_LENGTH) {
   );
 }
 
+// Audit salt validation — fail hard if missing or too short. Silently
+// generating a new salt would render existing audit logs undecryptable, so
+// we refuse to boot rather than risk that. Length check mirrors
+// AuditLogService.initialize()'s prior runtime check (see auditLog.ts).
+const MIN_AUDIT_SALT_LENGTH = 16;
+if (!config.auditSalt || config.auditSalt.length < MIN_AUDIT_SALT_LENGTH) {
+  throw new Error(
+    `AUDIT_LOG_SALT must be set and at least ${MIN_AUDIT_SALT_LENGTH} characters. ` +
+    `Historic audit logs are encrypted with this salt — rotating it breaks decryption. ` +
+    `For new environments, generate with: openssl rand -hex 32. ` +
+    `For existing production envs, extract the plaintext salt from ` +
+    `system_config.audit_encryption_salt (decrypt with PHI_ENCRYPTION_KEY) ` +
+    `before setting AUDIT_LOG_SALT.`
+  );
+}
+
 // C-7 — require explicit acknowledgment of Anthropic BAA coverage before
 // Claude calls are allowed. Production refuses to boot with API key set
 // but BAA flag unset; dev/staging log a prominent warning (the runtime
@@ -284,6 +325,20 @@ if (config.isProduction || config.isStaging) {
   const corsOrigin = config.cors.origin;
   if (Array.isArray(corsOrigin) && corsOrigin.some(o => o.includes('localhost'))) {
     process.stderr.write(`${new Date().toISOString()} WARN [Security] CORS origin contains localhost URLs in ${envLabel}\n`);
+  }
+
+  // F-28: GCS bucket name must be explicitly set in production. The
+  // dev/staging fallback `'ownmyhealth-user-files'` exists so local flows
+  // that don't actually upload still load the config — but writing PHI to
+  // a default bucket name in prod would either land in someone else's
+  // namespace (if the default isn't ours) or silently mis-route across
+  // environments (if the default IS ours). Hard-fail is the only safe call.
+  if (config.isProduction && !process.env.GCS_BUCKET_NAME) {
+    throw new Error(
+      'GCS_BUCKET_NAME must be set in production. The default bucket name ' +
+      'is reserved for dev/staging only — production uploads must name the ' +
+      'bucket explicitly to prevent PHI being written to the wrong namespace.'
+    );
   }
 
   // Demo account: blocked in prod only. Staging needs it for testing.

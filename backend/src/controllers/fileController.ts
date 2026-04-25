@@ -11,7 +11,11 @@ import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
 import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
-import { getSignedUrl, deleteFile as deleteFromStorage } from '../services/storageService.js';
+import {
+  getSignedUrl,
+  getFileStream,
+  deleteFile as deleteFromStorage,
+} from '../services/storageService.js';
 import { logger } from '../utils/logger.js';
 
 const RESOURCE_TYPE = 'UserFile';
@@ -191,8 +195,18 @@ export async function getFile(
 }
 
 /**
- * Get a signed download URL for a file
- * Returns a short-lived (15 min) signed URL for downloading the file
+ * Stream a file's bytes through the backend.
+ *
+ * Previously this endpoint returned a 15-minute GCS signed URL to the
+ * frontend, which the browser then downloaded directly. The signed URL
+ * was unbound — anyone who obtained the link (browser history, referrer
+ * header, a copy-paste into Slack) could pull the PHI with no further
+ * authentication. Proxying the bytes forces every download to pass
+ * authenticate + RLS + ownership checks on the way in.
+ *
+ * Response body is the raw file. Set `Content-Disposition` so the browser
+ * saves it under the original filename; set `Cache-Control: no-store` so
+ * intermediaries and browser caches can't retain PHI.
  */
 export async function getFileDownloadUrl(
   req: AuthenticatedRequest,
@@ -206,7 +220,14 @@ export async function getFileDownloadUrl(
   const file = await withRLSTransaction(userId, async (tx) => {
     return tx.userFile.findFirst({
       where: { id, userId },
-      select: { id: true, storageKey: true, filename: true },
+      select: {
+        id: true,
+        storageKey: true,
+        filename: true,
+        originalFilename: true,
+        fileType: true,
+        fileSize: true,
+      },
     });
   });
 
@@ -214,10 +235,9 @@ export async function getFileDownloadUrl(
     throw new NotFoundError('File not found');
   }
 
-  // Generate signed URL for download
-  const downloadUrl = await getSignedUrl(file.storageKey, 'read');
-
-  // Audit log: EXPORT access (downloading file)
+  // Audit log: EXPORT access (downloading file). Log BEFORE streaming so
+  // the trail is preserved even if the client aborts the transfer
+  // mid-stream — we still disclosed the file to that session.
   const auditService = getAuditLogService(prisma);
   await auditService.logExport(
     RESOURCE_TYPE,
@@ -227,15 +247,47 @@ export async function getFileDownloadUrl(
     { filename: file.filename }
   );
 
-  const response: ApiResponse<{ url: string; expiresIn: number }> = {
-    success: true,
-    data: {
-      url: downloadUrl,
-      expiresIn: 900, // 15 minutes in seconds
-    },
-  };
+  // Sanitize filename for Content-Disposition — strip anything that would
+  // let an attacker inject header delimiters or make the browser render
+  // HTML. The value is wrapped in quotes; strip embedded quotes + CRLF.
+  const safeFilename = (file.originalFilename || file.filename || 'download').replace(
+    /["\r\n\\]/g,
+    '_'
+  );
 
-  res.json(response);
+  res.set({
+    'Content-Type': file.fileType || 'application/octet-stream',
+    'Content-Disposition': `attachment; filename="${safeFilename}"`,
+    'Cache-Control': 'no-store, no-cache, private, must-revalidate',
+    Pragma: 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  if (file.fileSize) {
+    res.set('Content-Length', String(file.fileSize));
+  }
+
+  const stream = getFileStream(file.storageKey);
+  stream.on('error', (error: Error) => {
+    logger.error('GCS stream error during file download', {
+      data: {
+        fileId: id,
+        storageKey: file.storageKey,
+        error: error.message,
+      },
+    });
+    // If headers are already sent we can't send a structured error; the
+    // client will see a truncated response and the error handler
+    // (express) will close the connection. If not yet sent, emit 502.
+    if (!res.headersSent) {
+      res.status(502).json({
+        success: false,
+        error: { code: 'STORAGE_READ_FAILED', message: 'Unable to read file from storage' },
+      });
+    } else {
+      res.end();
+    }
+  });
+  stream.pipe(res);
 }
 
 /**

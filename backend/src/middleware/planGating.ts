@@ -13,7 +13,9 @@
 import { Request, Response, NextFunction } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { checkPlanLimit } from '../services/usageTracker.js';
-import { normalizePlan, type PlanLimits } from '../config/plans.js';
+import { normalizePlan, type PlanLimits, type PlanTier } from '../config/plans.js';
+import { withRLSContext } from '../services/database.js';
+import { logger } from '../utils/logger.js';
 
 type PlanLimitErrorBody = ApiResponse & {
   error: {
@@ -45,10 +47,44 @@ export function requirePlanLimit(limitKey: keyof PlanLimits) {
       return;
     }
 
-    const plan = normalizePlan(authReq.user?.plan);
+    // Read plan from the DB rather than the JWT payload. The JWT carries a
+    // snapshot at issue time and can be up to 15 min stale after an admin
+    // plan change — a downgrade from PRO→FREE would leave premium access open
+    // for the life of the access token. Fresh DB read closes that gap.
+    //
+    // Also enforce planExpiresAt here: if the subscription expired, fall
+    // back to FREE limits. The email scheduler writes planExpiresAt on
+    // upgrades but nothing was consuming it at request time — paid plans
+    // never actually expired. A runtime downgrade keeps billing honest and
+    // tolerates missed cron runs.
+    let effectivePlan: PlanTier;
+    try {
+      // C-8 — user-scoped lookup must run under RLS context. A bare prisma
+      // call would hit a pooled connection without SET LOCAL app.current_user_id,
+      // so under the NOBYPASSRLS role it would return no rows (the user sees
+      // nothing, not even their own plan) and every gated request would wedge.
+      const userRow = await withRLSContext(userId, async (tx) => {
+        return tx.user.findUnique({
+          where: { id: userId },
+          select: { plan: true, planExpiresAt: true },
+        });
+      });
+      effectivePlan = normalizePlan(userRow?.plan);
+      if (userRow?.planExpiresAt && userRow.planExpiresAt.getTime() < Date.now()) {
+        effectivePlan = 'FREE';
+      }
+    } catch (err) {
+      // DB unreachable — fall through to the JWT value rather than wedging
+      // every gated route behind a transient DB outage. Log so the signal
+      // shows up in ops dashboards.
+      logger.warn('Plan lookup failed; falling back to JWT plan', {
+        data: { userId, error: err instanceof Error ? err.message : 'Unknown' },
+      });
+      effectivePlan = normalizePlan(authReq.user?.plan);
+    }
 
     try {
-      const check = await checkPlanLimit(userId, plan, limitKey);
+      const check = await checkPlanLimit(userId, effectivePlan, limitKey);
 
       if (!check.allowed) {
         const body: PlanLimitErrorBody = {

@@ -3,6 +3,7 @@ import { getEncryptionService } from './encryption.js';
 import { withRLSContext } from './database.js';
 import { Request } from 'express';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/index.js';
 
 // Audit log configuration
 const RETENTION_DAYS = 2555; // ~7 years for HIPAA compliance
@@ -103,84 +104,25 @@ export class AuditLogService {
   }
 
   /**
-   * Initialize the audit service with system encryption salt
-   * Call this once at startup
+   * Initialize the audit service with system encryption salt.
+   * Call this once at startup.
    *
-   * CRITICAL: This MUST succeed for HIPAA compliance.
-   * Audit logging is required for all PHI access.
+   * CRITICAL: This MUST succeed for HIPAA compliance. Audit logging is
+   * required for all PHI access.
+   *
+   * The salt now comes from AUDIT_LOG_SALT (validated in config/index.ts) —
+   * no DB access. The previous implementation read the salt from
+   * `system_config` inside an admin RLS context, which blocked the C-8 role
+   * cutover: a NOBYPASSRLS application role can't admin-bypass at startup
+   * before any user session exists. See the AUDIT_LOG_SALT docblock in
+   * config/index.ts for the migration path out of system_config.
    */
   async initialize(): Promise<void> {
-    const encryptionService = getEncryptionService();
-
-    // Run all system_config access inside an admin RLS context. This is the
-    // only pre-auth / boot-time code path that touches system_config, so it
-    // legitimately needs admin bypass — user context doesn't exist yet.
-    //
-    // Without this wrapper, a NOBYPASSRLS application role (see C-8) would
-    // see findUnique return null (admin-only SELECT policy) and the
-    // subsequent create/update would fail the INSERT policy. Today's
-    // superuser DATABASE_URL role bypasses RLS entirely so this is a no-op;
-    // after the C-8 infra cutover migrates DATABASE_URL to a NOBYPASSRLS
-    // role (omh_app), this wrapper becomes load-bearing.
-    await withRLSContext(
-      null,
-      async (tx) => {
-        const config = await tx.systemConfig.findUnique({
-          where: { key: 'audit_encryption_salt' },
-        });
-
-        if (!config) {
-          // First-time init: generate a fresh salt, encrypt it under the
-          // master key, and persist the ciphertext. The salt itself never
-          // hits disk in plaintext.
-          const freshSalt = encryptionService.generateUserSalt();
-          const encryptedSalt = encryptionService.encryptWithMasterKey(freshSalt);
-
-          await tx.systemConfig.create({
-            data: {
-              key: 'audit_encryption_salt',
-              value: encryptedSalt,
-              description: 'Salt used for encrypting audit log values (encrypted under PHI_ENCRYPTION_KEY master key)',
-              isEncrypted: true,
-            },
-          });
-
-          this.systemSalt = freshSalt;
-        } else if (config.isEncrypted) {
-          // Normal post-migration path: stored value is ciphertext, decrypt it.
-          this.systemSalt = encryptionService.decryptWithMasterKey(config.value);
-        } else {
-          // Legacy row from pre-C-2 code: plaintext salt already on disk.
-          // Value must be preserved exactly (rotating it would invalidate
-          // every existing audit log's PHI ciphertext). Re-encrypt in place
-          // so the next boot takes the normal path. Idempotent — no-op
-          // after first success.
-          this.systemSalt = config.value;
-
-          const encryptedSalt = encryptionService.encryptWithMasterKey(this.systemSalt);
-          await tx.systemConfig.update({
-            where: { key: 'audit_encryption_salt' },
-            data: {
-              value: encryptedSalt,
-              isEncrypted: true,
-              description: 'Salt used for encrypting audit log values (encrypted under PHI_ENCRYPTION_KEY master key)',
-            },
-          });
-          logger.startup('✓ Audit encryption salt migrated from plaintext to encrypted storage');
-        }
-      },
-      { isAdmin: true }
-    );
-
-    // Validate the decrypted/plaintext salt, not the ciphertext. No DB
-    // access here — a plain string check; doesn't need the wrapper.
-    if (!this.systemSalt || this.systemSalt.length < 16) {
-      throw new Error(
-        'FATAL: Invalid audit encryption salt. ' +
-        'HIPAA compliance requires a valid encryption salt for audit logs.'
-      );
-    }
-
+    // config.auditSalt is length-validated at module load (config/index.ts
+    // throws if it's missing or < 16 chars), so by the time we get here the
+    // value is safe to use. No DB call, no async work needed — kept async
+    // so the calling contract in database.ts initializeDatabase still works.
+    this.systemSalt = config.auditSalt;
     logger.startup('✓ Audit logging service initialized');
   }
 

@@ -146,7 +146,25 @@ interface ExportBiomarker {
   history: ExportBiomarkerHistoryEntry[];
 }
 
+interface ExportInsuranceBenefit {
+  serviceName: string;
+  serviceCategory: string;
+  inNetworkCovered: boolean;
+  inNetworkCopay: number | null;
+  inNetworkCoinsurance: number | null;
+  inNetworkDeductibleApplies: boolean;
+  outNetworkCovered: boolean;
+  outNetworkCopay: number | null;
+  outNetworkCoinsurance: number | null;
+  outNetworkDeductibleApplies: boolean;
+  preAuthRequired: boolean;
+  limitations?: string;
+}
+
 interface ExportInsurancePlan {
+  // Plan-level identity exposed so per-plan benefits + per-plan expense rows
+  // can be cross-referenced inside the export. Not PHI on its own.
+  id: string;
   planName: string;
   insurerName: string;
   planType: string;
@@ -160,6 +178,7 @@ interface ExportInsurancePlan {
   oopMaxFamily: number;
   memberId?: string;
   groupId?: string;
+  benefits: ExportInsuranceBenefit[];
 }
 
 interface ExportHealthGoal {
@@ -226,6 +245,11 @@ interface ExportCostAnalysis {
 }
 
 interface ExportUserFile {
+  // id + storageKey let the user reconcile metadata against the file
+  // download endpoint. The actual bytes aren't included in the JSON
+  // export — see filesNote in ExportData.
+  id: string;
+  storageKey: string;
   originalFilename: string;
   fileType: string;
   fileSize: number;
@@ -363,6 +387,9 @@ export async function exportUserData(
       }),
       tx.insurancePlan.findMany({
         where: { userId },
+        // Benefits are per-plan child rows; include them so the export is a
+        // complete snapshot the user can take elsewhere.
+        include: { benefits: true },
         orderBy: [{ isPrimary: 'desc' }, { effectiveDate: 'desc' }],
       }),
       tx.healthGoal.findMany({
@@ -466,6 +493,7 @@ export async function exportUserData(
   );
 
   const exportInsurancePlans: ExportInsurancePlan[] = insurancePlans.map((plan) => ({
+    id: plan.id,
     planName: plan.planName,
     insurerName: plan.insurerName,
     planType: plan.planType,
@@ -479,6 +507,22 @@ export async function exportUserData(
     oopMaxFamily: toNumber(plan.oopMaxFamily),
     memberId: plan.memberIdEncrypted ? decrypt(plan.memberIdEncrypted, userSalt) : undefined,
     groupId: plan.groupIdEncrypted ? decrypt(plan.groupIdEncrypted, userSalt) : undefined,
+    benefits: plan.benefits.map((benefit) => ({
+      serviceName: benefit.serviceName,
+      serviceCategory: benefit.serviceCategory,
+      inNetworkCovered: benefit.inNetworkCovered,
+      inNetworkCopay: benefit.inNetworkCopay !== null ? toNumber(benefit.inNetworkCopay) : null,
+      inNetworkCoinsurance:
+        benefit.inNetworkCoinsurance !== null ? toNumber(benefit.inNetworkCoinsurance) : null,
+      inNetworkDeductibleApplies: benefit.inNetworkDeductible,
+      outNetworkCovered: benefit.outNetworkCovered,
+      outNetworkCopay: benefit.outNetworkCopay !== null ? toNumber(benefit.outNetworkCopay) : null,
+      outNetworkCoinsurance:
+        benefit.outNetworkCoinsurance !== null ? toNumber(benefit.outNetworkCoinsurance) : null,
+      outNetworkDeductibleApplies: benefit.outNetworkDeductible,
+      preAuthRequired: benefit.preAuthRequired,
+      limitations: benefit.limitations ?? undefined,
+    })),
   }));
 
   const exportHealthGoals: ExportHealthGoal[] = await processBatch(
@@ -557,7 +601,10 @@ export async function exportUserData(
   const exportCostAnalyses: ExportCostAnalysis[] = await processBatch(
     costAnalyses,
     async (analysis) => ({
-      claudeResponse: decrypt(analysis.claudeResponse, userSalt),
+      // Column renamed in migration 20260424; export shape keeps the
+       // legacy `claudeResponse` name so the JSON export contract for users
+       // who already downloaded their data stays stable.
+      claudeResponse: decrypt(analysis.claudeResponseEncrypted, userSalt),
       totalProjectedOop: tryDecryptNumber(analysis.totalProjectedOopEncrypted, userSalt, decrypt),
       analysisDate: analysis.analysisDate.toISOString(),
     }),
@@ -565,6 +612,8 @@ export async function exportUserData(
   );
 
   const exportUserFiles: ExportUserFile[] = userFiles.map((file) => ({
+    id: file.id,
+    storageKey: file.storageKey,
     originalFilename: file.originalFilename,
     fileType: file.fileType,
     fileSize: file.fileSize,
@@ -748,9 +797,20 @@ export async function deleteAllData(
   // pre-count read.
   //
   // Order: cost analyses → expense actuals → expense projections →
-  // provider relationships → user files → biomarkers/insurance/goals/needs.
-  // Cost analyses and expense actuals reference expense projections and
-  // insurance plans, so they must be removed first.
+  // provider relationships → user files → biomarkers/insurance/goals/needs/
+  // DNA/lab connections. Cost analyses and expense actuals reference
+  // expense projections and insurance plans, so they must be removed first.
+  // BiomarkerHistory + GoalProgressHistory + DNAVariant + GeneticTrait
+  // cascade from their parent rows (verified in schema.prisma) — no
+  // explicit deleteMany needed.
+  //
+  // DNAData and LabConnection are user-owned tables that cascade from User
+  // on account-delete (deleteAccount path), but deleteAllData preserves
+  // the User row, so they need an explicit wipe here. LabConnection's
+  // OAuth tokens stay valid at the upstream provider until the next
+  // refresh attempt — best-effort revocation lives in deleteAccount;
+  // deleteAllData just severs the local record. Document if a future
+  // requirement is "revoke at provider on data-wipe too".
   const counts = await withRLSTransaction(userId, async (tx) => {
     const costAnalysisCount = (await tx.costAnalysis.deleteMany({ where: { userId } })).count;
     const expenseActualCount = (await tx.expenseActual.deleteMany({ where: { userId } })).count;
@@ -767,12 +827,16 @@ export async function deleteAllData(
       healthNeedCount,
       healthGoalCount,
       userFileCount,
+      dnaDataCount,
+      labConnectionCount,
     ] = await Promise.all([
       tx.biomarker.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.insurancePlan.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.healthNeed.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.healthGoal.deleteMany({ where: { userId } }).then((r) => r.count),
       tx.userFile.deleteMany({ where: { userId } }).then((r) => r.count),
+      tx.dNAData.deleteMany({ where: { userId } }).then((r) => r.count),
+      tx.labConnection.deleteMany({ where: { userId } }).then((r) => r.count),
     ]);
 
     return {
@@ -785,6 +849,8 @@ export async function deleteAllData(
       expenseActualCount,
       expenseProjectionCount,
       providerRelationshipCount,
+      dnaDataCount,
+      labConnectionCount,
     };
   });
 
@@ -799,6 +865,8 @@ export async function deleteAllData(
     deletedExpenseActuals: counts.expenseActualCount,
     deletedExpenseProjections: counts.expenseProjectionCount,
     deletedProviderRelationships: counts.providerRelationshipCount,
+    deletedDnaData: counts.dnaDataCount,
+    deletedLabConnections: counts.labConnectionCount,
     deletedGcsObjects: gcsResults.length,
   }, { req, userId });
 

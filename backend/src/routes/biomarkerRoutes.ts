@@ -34,8 +34,10 @@ import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { logger } from '../utils/logger.js';
 import { trackAIUsage } from '../services/aiCostTracker.js';
+import { getAnthropicClient, isEnabled as isAnthropicEnabled } from '../services/anthropicClient.js';
 import { toNumber } from '../utils/numberConversion.js';
 import { config } from '../config/index.js';
+import { stripPHIFromText } from '../utils/phiRedaction.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -127,12 +129,12 @@ router.post(
     const prisma = getPrismaClient();
     const auditService = getAuditLogService(prisma);
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-
     // C-7 BAA gate — refuse before any DB decryption or network call.
-    if (!apiKey || !config.anthropic.baaActive) {
+    // `isAnthropicEnabled()` reads ANTHROPIC_API_KEY without constructing the
+    // SDK client, mirroring the prior check exactly.
+    if (!isAnthropicEnabled() || !config.anthropic.baaActive) {
       logger.warn('Biomarker AI guidance blocked by BAA gate', {
-        data: { hasApiKey: !!apiKey, baaActive: config.anthropic.baaActive },
+        data: { hasApiKey: isAnthropicEnabled(), baaActive: config.anthropic.baaActive },
       });
       await auditService.logAccess('biomarker_ai_guidance', id, { req, userId }, {
         operation: 'GUIDANCE_BLOCKED_NO_BAA',
@@ -216,59 +218,54 @@ Be direct. Under 200 words total.
 
 IMPORTANT: This is for educational purposes only and does not constitute medical advice. Always recommend consulting a healthcare provider for medical decisions.`;
 
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 30_000);
+    // F-29 fix: was a raw `fetch` + `AbortController` against
+    // `api.anthropic.com/v1/messages`. Migrated to the shared SDK client so
+    // timeout / retry / error semantics match the rest of the Anthropic
+    // call sites (claudeExtraction, sbcExtraction, expenseController,
+    // aiChatController). The SDK enforces the 30s default timeout from
+    // `services/anthropicClient.ts`; per-call overrides go through the
+    // second arg to `messages.create({}, { timeout, maxRetries })`.
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        signal: abortController.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 600,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-        }),
+      const client = getAnthropicClient();
+      const response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }],
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error('Anthropic API error', { data: { status: response.status, error: errorText } });
-        return res.status(502).json({
-          success: false,
-          error: 'Failed to get AI guidance',
-        });
-      }
-
-      const data = await response.json() as { content?: Array<{ text?: string }>; model?: string; usage?: { input_tokens: number; output_tokens: number } };
-      const guidance = data.content?.[0]?.text || 'Unable to generate guidance';
+      // Defense-in-depth: strip any PHI Claude may have echoed. The prompt
+      // includes the user's biomarker value + 3 prior history values, and
+      // Claude occasionally quotes them in its "Trend Summary" paragraph.
+      // Matches the response-sanitization pattern in claudeExtraction.ts.
+      const textContent = response.content.find((block) => block.type === 'text');
+      const rawText = textContent && textContent.type === 'text' ? textContent.text : '';
+      const guidance = stripPHIFromText(rawText || 'Unable to generate guidance');
 
       // Track AI usage for cost monitoring
-      if (data.usage) {
+      if (response.usage) {
         trackAIUsage({
           endpoint: 'biomarker-guidance',
-          model: data.model || 'claude-haiku-4-5-20251001',
-          inputTokens: data.usage.input_tokens,
-          outputTokens: data.usage.output_tokens,
+          model: response.model,
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
           userId,
         });
       }
 
-      // Audit log: PHI disclosed to external AI API for guidance
+      // Audit log: PHI disclosed to external AI API for guidance.
+      // F-16 fix: biomarkerName previously included `biomarker.name` in
+      // plaintext metadata. Even though the audit_logs table has encrypted
+      // previous_value/new_value columns, the metadata column is plain
+      // JSON — and biomarker names like "HIV viral load" or "PSA" can
+      // disclose conditions on their own. The biomarker UUID is already
+      // captured in resourceId (the second positional arg below); ops can
+      // join `audit_logs.resource_id → biomarkers.id → name` under
+      // controlled access if a name is needed for an investigation.
       await auditService.logAccess('biomarker_ai_guidance', id, { req, userId }, {
         operation: 'PHI_ACCESS',
         externalApiCall: true,
         provider: 'anthropic',
         model: 'claude-haiku-4-5-20251001',
-        biomarkerName: biomarker.name,
         phiDisclosedFields: ['name', 'value', 'unit', 'normalRange', 'status', 'history'],
       });
 
@@ -277,20 +274,19 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
         data: { guidance },
       });
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (error instanceof Error && (error.name === 'APIConnectionTimeoutError' || errorMessage.includes('timed out'))) {
         logger.error('AI guidance request timed out');
         return res.status(504).json({
           success: false,
           error: 'AI guidance request timed out. Please try again.',
         });
       }
-      logger.error('AI guidance request failed', { data: { error: error instanceof Error ? error.message : String(error) } });
+      logger.error('AI guidance request failed', { data: { error: errorMessage } });
       return res.status(500).json({
         success: false,
         error: 'Failed to generate AI guidance',
       });
-    } finally {
-      clearTimeout(timeoutId);
     }
   })
 );

@@ -116,7 +116,7 @@ model ProviderPatient {
 }
 
 model UserFile {
-  id                   String      @id @default(uuid()) @db.Uuid
+  id                   String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId               String      @map("user_id") @db.Uuid
   filename             String      @db.VarChar(255)
   originalFilename     String      @map("original_filename") @db.VarChar(255)
@@ -680,7 +680,7 @@ enum AuditAction {
 // ===========================
 
 model ExpenseProjection {
-  id                     String   @id @default(uuid()) @db.Uuid
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                 String   @map("user_id") @db.Uuid
   planId                 String   @map("plan_id") @db.Uuid
   serviceTypeEncrypted   String   @map("service_type") @db.Text
@@ -702,7 +702,7 @@ model ExpenseProjection {
 }
 
 model ExpenseActual {
-  id                           String    @id @default(uuid()) @db.Uuid
+  id                           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                       String    @map("user_id") @db.Uuid
   planId                       String    @map("plan_id") @db.Uuid
   projectionId                 String?   @map("projection_id") @db.Uuid
@@ -730,11 +730,16 @@ model ExpenseActual {
 }
 
 model CostAnalysis {
-  id                                 String   @id @default(uuid()) @db.Uuid
+  id                                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                             String   @map("user_id") @db.Uuid
   planId                             String   @map("plan_id") @db.Uuid
   analysisDate                       DateTime @default(now()) @map("analysis_date")
-  claudeResponse                     String   @map("claude_response") @db.Text
+  // Stores AES-256-GCM ciphertext of the Claude response, per-user salt.
+  // Renamed 2026-04-24 from `claudeResponse` to `claudeResponseEncrypted` to
+  // match the project-wide `*Encrypted` naming convention. The DB column is
+  // also renamed (`claude_response` → `claude_response_encrypted`); see
+  // migration `20260424_align_uuid_defaults_and_rename_claude_response`.
+  claudeResponseEncrypted            String   @map("claude_response_encrypted") @db.Text
   totalProjectedOopEncrypted         String?  @map("total_projected_oop") @db.Text
   deductibleMetMonth                 Int?     @map("deductible_met_month")
   projectedExpensesSnapshotEncrypted String?  @map("projected_expenses_snapshot") @db.Text

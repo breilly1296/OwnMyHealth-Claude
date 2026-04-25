@@ -1,173 +1,490 @@
-# OwnMyHealth Known Issues
+# KNOWN_ISSUES.md
 
-**Last scanned:** 2026-04-16
+**Generated**: 2026-04-24
+**Scope**: open bugs, tech debt, deprecated surfaces, code markers, skipped tests, dependency vulnerabilities, and test-coverage gaps across the OwnMyHealth monorepo.
 
-## Critical (Blocks Core Functionality)
-
-### RLS policies inert at runtime (C-8)
-**Symptom:** Database RLS policies defined in migration `20260107_add_rls_policies` are silently bypassed because the app connects as a DB superuser (BYPASSRLS). Tenant isolation is carried by application-level `where: { userId }` filters only.
-**Root Cause:** Runtime connection role has `rolbypassrls = true` in both dev (Cloud SQL `cloudsqlsuperuser`) and prod (Railway vanilla `postgres`).
-**Workaround:** None needed for correctness today (app-level filters carry it), but it's brittle — any missed filter is a live cross-tenant bug.
-**Fix Required:** Create non-superuser `omh_app` role on both DBs; migrate `DATABASE_URL` in Secret Manager; fix `auditService.initialize()` to use `withRLSContext(null, ..., { isAdmin: true })` before cutover; regression-test against the new role.
-**Files:** infrastructure (Cloud SQL, Railway); `backend/src/services/auditLog.ts:106,114`; `DATABASE_URL` in Secret Manager.
-
-(Pre-existing grep note: no TODO/FIXME/HACK/XXX markers tagged as critical, no skipped tests, no `@ts-ignore` directives, and no production `console.log` debug statements that gate functionality. C-8 was surfaced out-of-band during PR #30 regression testing, not by a code grep.)
+> This doc is the **bug and tech-debt ledger** — it is *not* the authoritative security register. Security findings (C-*, F-*) are **mirrored here with a pointer** to `SECURITY_STATUS.md`. Do not re-assess severity here; update `SECURITY_STATUS.md` and reflect back.
 
 ---
 
-## High Priority (Fix Before Beta)
+## Quick answers (TL;DR)
 
-### Display name edit is a no-op (stub)
-**Symptom:** User edits their display name on the Account Settings page; UI shows a saving spinner but nothing is persisted.
-**Source:** `src/components/settings/AccountSettingsPage.tsx:83` — `// TODO: Implement API call to save display name` followed by a 500 ms `setTimeout` placeholder.
-**Priority:** High (user-facing feature appears to work but silently discards input)
-**Fix required:** Add a `PATCH /api/user/profile` (or similar) endpoint and wire `settingsApi.updateDisplayName(name)` into `handleSaveName`.
-
-### Critical npm audit advisory in backend: fast-xml-parser
-**Symptom:** `npm audit` reports one critical vulnerability — `fast-xml-parser has an entity encoding bypass via regex injection in DOCTYPE entity names` (GHSA-m7jm-9gc2-mpf2). Pulled in transitively via `@google-cloud/storage` / `@google-cloud/documentai`.
-**Source:** `backend/npm audit` output.
-**Priority:** High
-**Fix required:** `npm audit fix` in `backend/`; if blocked by peer deps, bump `@google-cloud/*` packages.
-
-### Vite dev-server path traversal and file-read advisories
-**Symptom:** Three high-severity vite advisories (GHSA-4w7w-66w2-5vf9 path traversal, GHSA-v2wj-q39q-566r server.fs.deny bypass, GHSA-p9ff-h696-f583 WebSocket arbitrary file read). Applies to `vite ^7.3.0` (root dev dep).
-**Source:** `package.json:49`; `npm audit` root.
-**Priority:** High (only impacts local dev, but any contributor running `npm run dev` is exposed)
-**Fix required:** Bump `vite` past 7.3.1 when a patched release is available; do not expose the dev server beyond localhost.
-
-### Axios SSRF / metadata-exfiltration advisories (backend)
-**Symptom:** `npm audit` flags axios for "NO_PROXY Hostname Normalization Bypass that Leads to SSRF" and "Unrestricted Cloud Metadata Exfiltration via Header Injection Chain". Axios is a transitive dep of `@anthropic-ai/sdk` / Google Cloud SDKs.
-**Source:** `backend/npm audit` output.
-**Priority:** High (SSRF risk against GCP metadata endpoint from a backend running on Cloud Run)
-**Fix required:** `npm audit fix` in `backend/`; verify the transitive axios version resolves to a patched release.
-
----
-
-## Medium Priority (Fix During Beta)
-
-### Notification preferences stored in localStorage
-**Symptom:** Email / weekly-summary / abnormal-alert toggles are saved to `localStorage.setItem('omh-notifications', ...)`. CLAUDE.md rule: "NEVER use localStorage/sessionStorage for sensitive data". Notification preferences are not PHI, but they are user settings that should follow the user across devices.
-**Source:** `src/components/settings/AccountSettingsPage.tsx:58,94` (comment on line 56 acknowledges "stored in localStorage for now").
-**Priority:** Medium
-**Fix required:** Add a `user_preferences` table/column and `GET/PATCH /api/user/preferences`.
-
-### Backend picomatch / path-to-regexp / qs DoS advisories
-**Symptom:** High-severity ReDoS / DoS advisories in `picomatch`, `path-to-regexp`, and `qs` (the Express 4 query parser). All reachable from request-handling paths.
-**Source:** `backend/npm audit` output.
-**Priority:** Medium (ReDoS requires crafted input; rate limiting partially mitigates)
-**Fix required:** `npm audit fix` in `backend/`; consider upgrading to Express 5 to drop the old `qs` version.
-
-### Backend dompurify moderate advisories (5 open)
-**Symptom:** Five moderate dompurify advisories: mutation-XSS, general XSS, ADD_ATTR URI-validation skip, USE_PROFILES prototype pollution, ADD_TAGS FORBID_TAGS bypass. Pulled in transitively.
-**Source:** `npm audit` root.
-**Priority:** Medium
-**Fix required:** `npm audit fix`; if transitive, audit the consuming package (likely `jspdf-autotable`).
-
-### Frontend debug `console.log` statements shipped to production
-**Symptom:** `AuthContext.tsx` calls `console.log('[AuthContext] Access token refreshed...')`, `'Refresh token invalid...'`, and `'Session restored successfully'` on every mount. Not PHI, but leaks auth-flow detail into the browser console.
-**Source:** `src/contexts/AuthContext.tsx:90, 93, 102`; also `src/services/api/client.ts:103, 166` for CSRF warnings.
-**Priority:** Medium
-**Fix required:** Route through `src/utils/logger.ts` (which already gates on `isProduction`) instead of raw `console.log`.
-
----
-
-## Low Priority (Future Improvements)
-
-### `encryption.test.ts` intermittent flake
-**Symptom:** `src/services/encryption.test.ts > encryptFields / decryptFields > should gracefully handle decryption failures for specific fields` fails roughly 1 in 5-10 full-suite runs with an assertion mismatch on a tampered-ciphertext case. Running the file in isolation (`npx vitest run src/services/encryption.test.ts`) passes every time — looks like test-isolation / parallel-execution state in a crypto-heavy module. Surfaced during the 2026-04-16 session while running sanity checks after the C-2 audit-salt-encryption merge; not caused by any of the C-1..C-6 fixes (reproduces on a clean origin/master checkout).
-**Source:** `backend/src/services/encryption.test.ts`, around the `encryptFields / decryptFields` describe block.
-**Priority:** Low (flake, not a regression; full suite passes on re-run).
-**Fix required:** Investigate whether `mockedLogger` state is leaking across tests, or whether there's a shared EncryptionService singleton being mutated. Candidates: add `vi.clearAllMocks()` in afterEach for that describe, or make the service instance local to the test.
-
-### Backend low-severity advisories (6)
-**Symptom:** Six low-severity advisories in `backend/` (`@tootallnate/once`, `follow-redirects`, `lodash`, misc). Not directly exploitable in our usage but increase supply-chain surface.
-**Source:** `backend/npm audit` — `6 low`.
-**Priority:** Low
-**Fix required:** Batch-resolve during next dependency sweep.
-
-### `nul` files in repo root and `backend/`
-**Symptom:** Stray zero-byte `nul` files at `OwnMyHealth/nul` and `OwnMyHealth/backend/nul` — likely from accidental Windows `> nul` redirects.
-**Source:** Root and backend directory listings.
-**Priority:** Low
-**Fix required:** Delete and add to `.gitignore`.
-
----
-
-## Technical Debt
-
-### Code quality
-
-- [ ] `backend/src/controllers/uploadController.ts` — 1501 lines. By far the largest file in the repo; handles both PDF lab uploads and SBC insurance uploads. Split into `labUploadController.ts` and `sbcUploadController.ts`.
-- [ ] `backend/src/services/authService.ts` — 1028 lines. Register/login/refresh/reset/verify/demo/session-cleanup all in one module. Split along verbs.
-- [ ] `backend/src/services/sbcExtraction.ts` — 1015 lines. Single Claude-prompted extractor; candidate for per-section helpers.
-- [ ] `backend/src/controllers/biomarkerController.ts` — 900 lines.
-- [ ] `backend/src/controllers/insuranceController.ts` — 882 lines.
-- [ ] `backend/src/controllers/authController.ts` — 774 lines.
-- [ ] `backend/src/middleware/validation.ts` — 679 lines of Zod schemas; extract per-resource schema files.
-- [ ] Several frontend components exceed 700 lines: `BiomarkerActionPlan.tsx` (764), `InsurancePlanDetail.tsx` (740), `InsuranceHub.tsx` (736), `EnhancedInsuranceUpload.tsx` (731). Break into subcomponents.
-- [ ] `as any` casts in tests: `src/__tests__/components/Dashboard.test.tsx:131,198,223` — replace with properly typed mock helpers.
-- [ ] No `: any` type annotations in production code (grep confirmed). Keep it that way.
-
-### Missing tests
-
-- [ ] Backend test count: 5 files (`encryption`, `authService`, `auditLog`, `errorHandler`, `validation`). No tests for any controller (auth, biomarker, insurance, expense, file, upload, healthGoals, healthNeeds, settings), no route-level tests, no tests for `claudeExtraction`, `sbcExtraction`, `biomarkerExtractor`, `pdfParser`, `ocrService`, `storageService`, `emailService`, `database` (RLS context), `userEncryption`, `csrf`, `rbac`, `rateLimiter`, `demoProtection`.
-- [ ] Frontend test count: 6 files (`AddMeasurementModal`, `BiomarkerSummary`, `Button`, `Dashboard`, `LoginPage`, `AuthContext`, `useAuth`). No tests for insurance components, trends, upload flows, settings, or any of the ~35 remaining components.
-- [ ] E2E: only `e2e/auth-test.js` and `e2e/auth-complete-test.js` exist — no e2e coverage for biomarker entry, insurance upload, consent sharing, or data export/delete.
-
-### Documentation
-
-- [ ] `AccountSettingsPage.tsx:56` — "Notification settings (stored in localStorage for now)" — inline TODO marker.
-- [ ] `AccountSettingsPage.tsx:83` — `// TODO: Implement API call to save display name`.
-
----
-
-## Dependency health
-
-### Vulnerabilities (`npm audit`)
-
-**Root (`package.json`):** 10 vulnerabilities — 1 critical, 6 high, 3 moderate, 0 low. Critical: `jspdf` HTML injection (direct dep). Highs: `vite` (3 CVEs), `picomatch` (2 CVEs), plus transitive via `serve`/`serve-handler`. Moderates: `dompurify` (5 CVEs), `ajv`, `brace-expansion`, `flatted`, `minimatch`.
-
-**Backend (`backend/package.json`):** 29 vulnerabilities — 1 critical, 15 high, 7 moderate, 6 low. Critical: `fast-xml-parser` entity-encoding bypass (transitive via Google Cloud SDKs). Highs include `axios` (3 CVEs — SSRF / cloud-metadata / DoS), `@hono/node-server`, `fast-xml-parser` (multiple), `picomatch`, `path-to-regexp`, `qs`, `vite`. Moderates include `ajv`, `brace-expansion`, `defu` (prototype pollution), `effect`, `flatted`, `follow-redirects`, `hono`, `lodash`, `multer`.
-
-Both `npm audit fix` reports `fixAvailable: true` for most entries.
-
-### Outdated dependencies (`npm outdated`)
-
-Unable to run — `npm outdated` was denied by the sandbox during this scan. Re-run manually:
-```
-npm outdated
-cd backend && npm outdated
-```
-Known major-version watch items from `package.json` inspection:
-- Backend pins `@prisma/client ^7.0.1` and `prisma ^7.0.1` (recent major).
-- Root pins `vite ^7.3.0`, `vitest ^4.0.14`, `@vitejs/plugin-react ^4.3.1`, React 18 (not 19).
-- Express 4.18.x (Express 5 is GA and closes the `qs` advisory).
-
----
-
-## Deprecated code
-
-The following models remain in `backend/prisma/schema.prisma` but are flagged in CLAUDE.md as "Deprecated (Still in Schema)":
-
-- **`DNAData`** — `schema.prisma:376-393`
-- **`DNAVariant`** — `schema.prisma:395-408`
-- **`GeneticTrait`** — `schema.prisma:410-428`
-
-**Current status:**
-- Schema: models present with relations to `User.dnaData` (line 34) and cascade-delete.
-- Backend: referenced in `services/encryption.ts:393,396` (PHI_FIELDS entries for `DNAVariant` and `GeneticTrait`), `types/index.ts:109` (`DNAVariant` interface), and `routes/adminRoutes.ts:140` (`dnaData: true` in admin user-detail include). Logger pre-configures `dnaLogger` / `dnaControllerLogger` (`utils/logger.ts:141-142`) but those loggers have no callers.
-- Frontend: zero references to `DNAData` / `DNAVariant` / `GeneticTrait` anywhere under `src/`.
-- No removal migration exists.
-
-**Removal plan status:** None found in repo. CLAUDE.md says "consider removing if not planned" — no ADR or migration has been drafted.
-
----
-
-## Priority definitions
-
-| Priority | Definition | Timeline |
+| Question | Answer | Anchor |
 |---|---|---|
-| Critical | Blocks core functionality | Fix immediately |
-| High | Significant feature broken or HIPAA risk | Fix before beta |
-| Medium | Usability issue | Fix during beta |
-| Low | Minor annoyance | Backlog |
+| Most urgent open issue | **C-8: RLS policies inert at runtime** — operator-pending only. Code prerequisites all merged (Parts A/B/C-code/D, integration tests, startup-assertion hard-exits in prod). Awaiting Cloud SQL `omh_app` role provisioning + `DATABASE_URL` rotation. | [Critical](#critical) |
+| TODO / FIXME / HACK / XXX markers | **4 total** (3 backend, 1 frontend). No `FIXME`, `HACK`, or `XXX` — all `TODO`. | [Code-marker inventory](#code-marker-inventory) |
+| Skipped / TODO tests | **0** `it.skip` / `it.todo`. Two **conditional** `describe.skipIf(!hasLiveDb)` blocks: `backend/src/services/rls.test.ts:29` and `backend/src/__tests__/integration/rls-isolation.test.ts:189` (the C-8 PR D multi-tenant suite added 2026-04-24). | [Skipped / TODO tests](#skipped--todo-tests) |
+| `npm audit` — root | **2 moderate**, 0 high, 0 critical (verified 2026-04-25) | [Dependency vulnerabilities](#dependency-vulnerabilities) |
+| `npm audit` — backend | **9 moderate, 2 low**, 0 high, 0 critical (verified 2026-04-25) | [Dependency vulnerabilities](#dependency-vulnerabilities) |
+| Deprecated items flagged | **7** — DNA trio, 5 unused `RoleGuard` wrappers, 3 unused API modules, 2 `railway.toml` files, 1 stray `nul` file, `scratchpad.md.md` | [Deprecated](#deprecated-kept-for-compat) |
+| Controllers with zero tests | `fileController.ts`, `fhirController.ts`, `aiChatController.ts`, `upload/labUploadController.ts`, `upload/sbcUploadController.ts` | [Missing test coverage](#missing-test-coverage) |
+
+---
+
+## Critical
+
+Issues that block core functionality or PHI isolation. Severity mirrors `SECURITY_STATUS.md` — do not re-grade here.
+
+### RLS policies inert at runtime (C-8) — code-complete, operator-pending
+
+- **Severity**: 🟡 Operator-pending (was Critical pre-2026-04-24; reclassified
+  once code prerequisites for all four parts merged).
+- **Symptom**: PostgreSQL RLS policies exist (`backend/prisma/migrations/20260107_add_rls_policies/`) and application code wraps queries in `withRLSContext` / `withRLSTransaction` (`backend/src/services/database.ts:L377-L465`), but the database role that the app connects as has the `BYPASSRLS` attribute in both dev and prod. `SET LOCAL app.current_user_id = ...` runs, policies evaluate — but the role bypasses them, so RLS does not enforce. Only the in-code `userId` filters in controllers and services actually protect tenant isolation **today**.
+- **Root cause**: During Cloud SQL bootstrap the app role was granted `BYPASSRLS`. A non-superuser NOBYPASSRLS role needs to be provisioned, granted table-level rights, and swapped into `DATABASE_URL`.
+- **Workaround**: None at runtime, but the code-side mitigations are now substantial:
+  1. Self-elevation trigger (`20260424_prevent_self_role_elevation/migration.sql`) blocks role/`is_active` mutation by non-admin sessions at the DB layer regardless of BYPASSRLS.
+  2. CI `check-rls-wrappers.sh` (post-2026-04-24) catches model-level + raw-SQL bare-prisma calls in controllers / services / routes / schedulers / middleware / utils.
+  3. Multi-tenant integration suite (`__tests__/integration/rls-isolation.test.ts`) exercises every user-scoped model, admin context, privilege-immutability, and pool-leak invariants when run against a live DB. Skips cleanly without one.
+  4. Startup assertion (`database.ts:200-265`) hard-exits in prod the moment the role rotates and is ever rolled back.
+- **Fix plan**: Operator-only. Provision `omh_app` NOBYPASSRLS role in Cloud SQL → grant table/sequence/function privileges → run live-DB integration suite in staging (`RLS_INTEGRATION_TESTS=true npm run test:integration`) → rotate `DATABASE_URL` in Secret Manager → deploy. Full runbook in [`SECURITY_STATUS.md#c-8`](./SECURITY_STATUS.md).
+- **Tracked in**: [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) C-8 row; user memory `ownmyhealth-project.md`; commit chain through `9727492` (C-1) → `65f9ffb` (Part A) → `a648eb8` (Part B) → `4fa6460` (Part B.2) → `74af20e` (Part B.3) → 2026-04-24 cycle (Parts C-code, D, hardened CI guard, self-elevation trigger).
+- **Files**: `backend/src/services/database.ts:200-265` (startup assertion, post-cycle), `backend/src/services/database.ts:L14-L31` (footgun banner), `backend/src/services/database.ts:L377-L465` (RLS wrappers), `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, `backend/prisma/migrations/20260424_prevent_self_role_elevation/migration.sql`, `backend/src/__tests__/integration/rls-isolation.test.ts`, Cloud SQL role config (external to repo — resolve in GCP console).
+
+---
+
+## High
+
+Significant feature gaps or security concerns that should be resolved before public beta. Security-severity items mirror [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
+
+> **2026-04-24 update**: Every audit-numbered High finding (~22 across `SECURITY_AUDIT_core.md`, `_periphery.md`, `_domain.md`) is closed — see [`SECURITY_STATUS.md` § 3](./SECURITY_STATUS.md#3-closed-in-current-cycle). The Highs listed below are non-audit tech-debt items (drift between docs/code, non-PHI feature gaps); they are local to this ledger and don't appear in the security register.
+
+### Logger redaction gaps let PHI leak through structured logs
+
+- **Severity**: High
+- **Symptom**: `backend/src/utils/logger.ts:L21-L30` `SENSITIVE_FIELDS` redacts a subset of PHI keys, but several encrypted columns slip through because the sanitizer matches on exact (lowercased) key names. Known gaps per [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md):
+  - `firstNameEncrypted`, `lastNameEncrypted` — **not redacted** (PHI_TAXONOMY §7, lines 132, 138).
+  - `dateOfBirthEncrypted` — only `dateOfBirth` matches; the `Encrypted`-suffixed key slips through (PHI_TAXONOMY line 146).
+  - `phoneEncrypted` / `phone` — only `phoneNumber` matches; other variants slip through (PHI_TAXONOMY line 154).
+  - `healthProfileEncrypted` — JSON blob of conditions/medications/family history; **not redacted** (PHI_TAXONOMY line 182).
+  - `notesEncrypted` — generic suffix not matched anywhere in `SENSITIVE_FIELDS` (PHI_TAXONOMY lines 223, 276).
+  - `genotypeEncrypted`, `recommendationsEncrypted` — **not redacted** (PHI_TAXONOMY lines 288, 303).
+- **Root cause**: redaction list was authored before the `*Encrypted`-suffix naming convention was standardized; the sanitizer does not strip the suffix before matching.
+- **Workaround**: avoid logging whole Prisma rows in new code. Log `{ id, userId }` only, or destructure to a vetted projection.
+- **Fix plan**: either (a) add every `*Encrypted` suffix variant to `SENSITIVE_FIELDS`, or (b) change the sanitizer to strip `Encrypted` suffix and `_encrypted` column-name suffix before matching. Track as F-series finding in `SECURITY_STATUS.md`.
+- **Files**: `backend/src/utils/logger.ts:L21-L30`, `backend/src/utils/logger.ts:121` (log sink); full gap matrix in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) §7 Drift findings.
+
+### Environment variable name drift — `GCP_PROCESSOR_ID` vs `GOOGLE_DOCUMENT_AI_PROCESSOR_ID`
+
+- **Severity**: High (startup throw if the wrong name is set)
+- **Symptom**: [`ENV_VARS.md#drift-findings`](./ENV_VARS.md) documents that `CLAUDE.md:255-256` and prompt `35-env-vars-doc.md:103` advertise `GOOGLE_DOCUMENT_AI_PROCESSOR_ID` / `GOOGLE_DOCUMENT_AI_LOCATION`, but the code reads `GCP_PROCESSOR_ID` / `GCP_LOCATION` (`backend/src/services/ocrService.ts:85, 115, 116, 452`). A correctly-provisioned env with the documented name still throws at runtime because the code never reads it.
+- **Workaround**: set **both** names in Cloud Run env until code or docs are aligned; `.env.example` should be updated.
+- **Fix plan**: choose canonical name, update the other site. Low-risk code change; higher-risk if any runbook references the old name.
+- **Files**: `backend/src/services/ocrService.ts:L85-L87`, `CLAUDE.md:255-256`, [`ENV_VARS.md`](./ENV_VARS.md) lines 400-401.
+
+### Duplicate route mount — `/insurance/upload-sbc` has no plan-limit gate
+
+- **Severity**: High (feature security / billing correctness)
+- **Symptom**: `POST /api/v1/insurance/upload-sbc` (`backend/src/routes/insuranceRoutes.ts:127`) and `POST /api/v1/upload/insurance-sbc` (`backend/src/routes/uploadRoutes.ts:94`) both resolve to `upload/sbcUploadController.uploadSBC` (per [`ROUTING_TABLE.md#duplicate-route-mounts`](./ROUTING_TABLE.md) lines 709-713). The `/upload/*` variant runs `requirePlanLimit('pdfUploadsPerMonth')`; the `/insurance/upload-sbc` variant does not. A client targeting the legacy path bypasses plan-tier uploads. Both paths are CSRF-exempt (`backend/src/middleware/csrf.ts:117-122`).
+- **Workaround**: consumers (`src/components/insurance/SBCUpload.tsx`) should prefer `/api/v1/upload/insurance-sbc`. Audit API clients for legacy-path usage.
+- **Fix plan**: either remove the `insuranceRoutes.ts:127` mount entirely, or add `requirePlanLimit('pdfUploadsPerMonth')` middleware to that route to reach parity.
+- **Files**: `backend/src/routes/insuranceRoutes.ts:127`, `backend/src/routes/uploadRoutes.ts:94`, `backend/src/middleware/csrf.ts:117-122`, `backend/src/controllers/upload/sbcUploadController.ts:33`.
+
+### `__mocks__/` dirs expected by prompts do not exist
+
+- **Severity**: High (test architecture drift)
+- **Symptom**: Prompt `38-testing-patterns-doc.md` expects `__mocks__/` directories for Anthropic / SendGrid / GCS / Document AI. Glob `**/__mocks__/**` returns no matches ([`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 955). Every mock is an inline `vi.mock(...)` factory, typically with `vi.hoisted(...)`. This is a drift between the prompt and the repo, not a bug — but any future test author following the prompt will create one-off mocks that diverge from the inline catalog.
+- **Workaround**: follow the Mock catalog in `TESTING_PATTERNS.md` (line 953) rather than the prompt.
+- **Fix plan**: update prompt OR extract canonical mock factories into `backend/src/__tests__/mocks/`.
+- **Files**: `TESTING_PATTERNS.md` lines 953-988 (canonical inline-mock catalog).
+
+---
+
+## Medium
+
+Usability issues and tech debt that should be addressed during beta. Non-security tech debt; does not mirror from `SECURITY_STATUS.md`.
+
+### PBKDF2 iteration count is a global constant, not per-user
+
+- **Severity**: Medium
+- **Symptom**: `backend/src/services/encryption.ts:86-87` hardcodes `PBKDF2_ITERATIONS = 600_000` with a `PBKDF2_ITERATIONS_LEGACY = 100_000` fallback. If the auth tag fails to verify at the new count, the code retries at the legacy count. This means any future iteration bump requires the same dual-try scheme forever.
+- **Root cause**: iteration count is not stored per-row or per-user — the deriver just knows the current global value. See the `TODO(key-rotation)` comment at `encryption.ts:81`.
+- **Workaround**: none needed today; the scheme is secure. It is a migration-debt item.
+- **Fix plan**: store iteration count on the `UserSalt` row (or per-ciphertext envelope), write a background re-encryption job, then remove the legacy fallback.
+- **Files**: `backend/src/services/encryption.ts:L78-L87`, `backend/src/services/userEncryption.ts`.
+
+### CSP allows `'unsafe-inline'` for styles
+
+- **Severity**: Medium
+- **Symptom**: `backend/src/app.ts:L125-L134` sets Helmet CSP with `styleSrc: ["'self'", "'unsafe-inline'"]`. Required today because Tailwind and third-party libraries inject runtime `<style>` tags. Leaves a stylesheet-injection XSS vector open — limited in scope (style, not script) but not defense-in-depth ideal.
+- **Workaround**: none.
+- **Fix plan**: per the `TODO(csp-nonce)` at `app.ts:129-132`, add per-request nonce middleware, thread the nonce into `index.html` + React style injection, then drop `'unsafe-inline'`.
+- **Files**: `backend/src/app.ts:L125-L140`.
+
+### CSRF exemption list contains upload paths that already send the token — ✅ RESOLVED 2026-04-24
+
+- **Severity**: Medium → resolved
+- **Symptom (historical)**: `middleware/csrf.ts` exempted four upload routes from CSRF validation, with a `TODO` to remove once all upload clients confirmed to attach the header.
+- **Resolution**: Frontend `uploadUtils.ts` was verified to attach `X-CSRF-Token` on every upload request. The exemption list was removed; only `/ai/chat` (SSE, bearer-only via `requireBearerAuth`) remains exempt. Regression file `backend/src/middleware/csrf.test.ts` (16 cases) covers the contract.
+- **Files**: `backend/src/middleware/csrf.ts` (post-2026-04-24, no upload exemption); `backend/src/middleware/csrf.test.ts` (regression coverage).
+
+### Stripe billing not wired — plan upgrade button is a no-op
+
+- **Severity**: Medium
+- **Symptom**: `src/components/settings/PlanSection.tsx:119` has `// TODO: wire to Stripe checkout when billing goes live.` — the "Upgrade" affordance is present but the handler does not initiate a checkout session.
+- **Workaround**: manual plan changes via admin console.
+- **Fix plan**: integrate Stripe Checkout; backend currently has no `/billing/*` endpoints.
+- **Files**: `src/components/settings/PlanSection.tsx:119`.
+
+### Backend `test:unit` / `test:integration` npm scripts point at non-existent dirs — partially resolved 2026-04-24
+
+- **Severity**: Medium → partially resolved
+- **Symptom (historical)**: Both scripts used the broken `vitest run --dir src/__tests__/{unit,integration}` shape and reported 0 tests silently.
+- **Resolution**: 2026-04-24 — `test:integration` now resolves correctly (`vitest run src/__tests__/integration`) and picks up the new C-8 PR D suite at `src/__tests__/integration/rls-isolation.test.ts`. `test:unit` still points at a non-existent `src/__tests__/unit` directory; remaining work is to either populate that dir or delete the script (low priority — colocated `*.test.ts` next to source is the active convention).
+- **Files**: `backend/package.json:L14-L15`.
+
+### `tesseract.js` manualChunks entry references code that is never imported
+
+- **Severity**: Medium
+- **Symptom**: `vite.config.ts:27-30` carves out a `tesseract.js` manual chunk. Grep `tesseract` over `src/**` shows no match — OCR moved server-side to Google Document AI. Build emits an empty chunk (harmless) but documents an obsolete dep boundary. Per [`FRONTEND_MAP.md`](./FRONTEND_MAP.md) line 654.
+- **Workaround**: none.
+- **Fix plan**: remove the `tesseract.js` entry from `vite.config.ts` and drop the package if it is still in `package.json`.
+- **Files**: `vite.config.ts:27-30`, `package.json` (root).
+
+### E2E fixture PDFs not committed
+
+- **Severity**: Medium
+- **Symptom**: `e2e/biomarker-entry.spec.ts` upload scenarios require PDF fixtures that are not checked in. Fresh clones fail the spec. Per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 1089.
+- **Workaround**: locally generate or copy a 1KB stub PDF.
+- **Fix plan**: commit a stub PDF to `e2e/fixtures/` or document the required fixtures in `e2e/fixtures/README.md`.
+- **Files**: `e2e/biomarker-entry.spec.ts`, `e2e/fixtures/` (missing).
+
+---
+
+## Low
+
+Minor annoyances or backlog items that do not block beta.
+
+### Stray `nul` file at repo root
+
+- **Severity**: Low
+- **Symptom**: `C:/Users/breil/OneDrive/Desktop/OwnMyHealth/nul` — a 106-byte file created by a Windows shell redirection mis-fire (Windows treats `NUL` specially; OneDrive sync'd the actual file). Causes cross-platform oddities and shows up in `ls` output.
+- **Workaround**: ignore.
+- **Fix plan**: delete the file with `git rm -- nul` (quote required because `nul` is a reserved device name on Windows).
+- **Files**: `/nul`.
+
+### Stray `scratchpad.md.md` file at repo root
+
+- **Severity**: Low
+- **Symptom**: `C:/Users/breil/OneDrive/Desktop/OwnMyHealth/scratchpad.md.md` — 1015-byte file with double `.md.md` extension, likely an IDE-save accident.
+- **Workaround**: ignore.
+- **Fix plan**: rename to `scratchpad.md` or delete.
+- **Files**: `/scratchpad.md.md`.
+
+### `BCRYPT_ROUNDS` doc/code default mismatch
+
+- **Severity**: Low
+- **Symptom**: Code default is `13` (`backend/src/config/index.ts:93`); `.env.example:109` and `.env.production.example:61` list `12`. Per [`ENV_VARS.md`](./ENV_VARS.md) line 409. Not a bug — example is softer than code default — but misleads contributors reading the example.
+- **Workaround**: none.
+- **Fix plan**: bump the example comments to `13` or lower the code default to `12`.
+- **Files**: `backend/src/config/index.ts:93`, `backend/.env.example:109`, `backend/.env.production.example:61`.
+
+### `railway.toml` vestigial — both root and backend
+
+- **Severity**: Low (infra cruft)
+- **Symptom**: Two `railway.toml` files exist (`railway.toml` at repo root, `backend/railway.toml`). Live deploy target is GCP Cloud Run via `.github/workflows/deploy.yml`; neither Railway file is referenced by the pipeline. Per [`RUNBOOK.md`](./RUNBOOK.md) line 986 and [`ARCHITECTURE.md`](./ARCHITECTURE.md) line 823. Backend Railway config's health-check path is `/api/v1/health`; Cloud Run Dockerfile uses `/health` — any future Railway reactivation would fail the health check.
+- **Workaround**: none.
+- **Fix plan**: delete both files, OR annotate them as dead infra.
+- **Files**: `railway.toml`, `backend/railway.toml`.
+
+### `DEPLOY.md` describes un-shipped Railway deploy
+
+- **Severity**: Low
+- **Symptom**: Repo-root `DEPLOY.md` still documents Railway deployment (per [`RUNBOOK.md`](./RUNBOOK.md) line 986). Actual prod is Cloud Run.
+- **Workaround**: use `RUNBOOK.md` for deploy instructions.
+- **Fix plan**: rewrite `DEPLOY.md` to match Cloud Run reality or delete in favor of `RUNBOOK.md`.
+- **Files**: `DEPLOY.md`.
+
+### `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` declared, never consumed
+
+- **Severity**: Low
+- **Symptom**: `.env.example:32-33` and `.env.production.example:14-15` declare these vars; no TS consumer imports them. Per [`ENV_VARS.md`](./ENV_VARS.md) lines 74-75, 198-199.
+- **Workaround**: none.
+- **Fix plan**: delete the declarations — Supabase is not a dependency.
+- **Files**: `.env.example:32-33`, `.env.production.example:14-15`.
+
+### `CMS_API_KEY` retired but still in `.env.example`
+
+- **Severity**: Low
+- **Symptom**: `backend/.env.example:176` and `backend/.env.production.example:85` declare `CMS_API_KEY`; retired along with the CMS Marketplace integration. No TS consumer. Per [`ENV_VARS.md`](./ENV_VARS.md) line 76.
+- **Workaround**: none.
+- **Fix plan**: delete the line from both example files.
+- **Files**: `backend/.env.example:176`, `backend/.env.production.example:85`.
+
+---
+
+## Deprecated (kept for compat)
+
+Items marked deprecated or unused but still present in the tree. Removing them is safe but requires a coordinated PR.
+
+| Item | Kind | Location | Status | Removal plan |
+|---|---|---|---|---|
+| `DNAData` | Prisma model | `backend/prisma/schema.prisma:383-400` | Deprecated per CLAUDE.md §Deprecated; no UI, no controller write site. Encrypted columns have no write or read site (per [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) lines 78-79). | Generate a migration that drops `dna_data`, `dna_variants`, `genetic_traits` tables and their `User.dnaData` relation (`schema.prisma:40`). |
+| `DNAVariant` | Prisma model | `backend/prisma/schema.prisma:402-415` | Deprecated | Same migration as above. |
+| `GeneticTrait` | Prisma model | `backend/prisma/schema.prisma:417-435` | Deprecated | Same migration as above. |
+| `RoleGuard` | React component | `src/components/common/RoleGuard.tsx:44` | Exported; **never mounted** in any component (per [`FRONTEND_MAP.md`](./FRONTEND_MAP.md) lines 528, 648-651) | Delete or mount on `ProviderOnly` routes once Provider UI lands. |
+| `PatientOnly` | React component | `src/components/common/RoleGuard.tsx:72` | Never mounted | Same. |
+| `ProviderOnly` | React component | `src/components/common/RoleGuard.tsx:83` | Never mounted | Same. |
+| `AdminOnly` | React component | `src/components/common/RoleGuard.tsx:94` | Never mounted | Same. |
+| `ProviderOrAdmin` | React component | `src/components/common/RoleGuard.tsx:105` | Never mounted | Same. |
+| `providerApi` | API client module | `src/services/api/provider.ts:33-71` | Exported; no component consumer (per [`FRONTEND_MAP.md`](./FRONTEND_MAP.md) lines 484, 642) | Delete or wire to a Provider dashboard page. |
+| `patientApi` | API client module | `src/services/api/patient.ts:39-105` | Exported; no consumer (`FRONTEND_MAP.md` lines 485, 643) | Same. |
+| `adminApi` | API client module | `src/services/api/admin.ts:37-134` | Exported; no consumer (`FRONTEND_MAP.md` lines 486, 644) | Same. |
+| `railway.toml` (root) | Build config | `railway.toml` | Vestigial — Cloud Run is live target | Delete. |
+| `backend/railway.toml` | Build config | `backend/railway.toml` | Same | Delete. |
+| `nul` | Stray file | `/nul` | Shell-redirect artifact | Delete (`git rm -- nul`). |
+| `scratchpad.md.md` | Stray file | `/scratchpad.md.md` | Double-extension artifact | Delete or rename. |
+| `tesseract.js` chunk | Vite config | `vite.config.ts:27-30` | Client-side OCR removed; Document AI now server-side | Remove chunk entry and the package. |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Env var | `.env.example:32-33` | Supabase not a dep | Delete declarations. |
+| `CMS_API_KEY` | Env var | `backend/.env.example:176` | CMS integration retired | Delete declarations. |
+
+---
+
+## Code-marker inventory
+
+Every `TODO`, `FIXME`, `HACK`, and `XXX` marker in `backend/src/**` and `src/**`. Search performed with Grep pattern `TODO|FIXME|HACK|XXX` on 2026-04-24 — **no `FIXME`, `HACK`, or `XXX` occurrences exist** in either tree.
+
+| Marker | File:line | Context (as-written) |
+|---|---|---|
+| TODO | `backend/src/app.ts:129` | `// TODO(csp-nonce): 'unsafe-inline' is required today because Tailwind` (→ [Medium: CSP](#csp-allows-unsafe-inline-for-styles)) |
+| TODO | `backend/src/middleware/csrf.ts:115` | `// TODO: once all upload paths are confirmed to send CSRF headers, remove` (→ [Medium: CSRF exempt list](#csrf-exemption-list-contains-upload-paths-that-already-send-the-token)) |
+| TODO | `backend/src/services/encryption.ts:81` | `* TODO(key-rotation): store the iteration count per user (or per-ciphertext` (→ [Medium: PBKDF2 per-user](#pbkdf2-iteration-count-is-a-global-constant-not-per-user)) |
+| TODO | `src/components/settings/PlanSection.tsx:119` | `// TODO: wire to Stripe checkout when billing goes live.` (→ [Medium: Stripe not wired](#stripe-billing-not-wired--plan-upgrade-button-is-a-no-op)) |
+
+Total: **4 TODO**, 0 FIXME, 0 HACK, 0 XXX. No single file has more than one marker.
+
+---
+
+## Skipped / TODO tests
+
+Searches performed on 2026-04-24:
+
+- `Grep pattern: "\.skip\("` over `backend/src/**/*.test.ts` → no matches
+- `Grep pattern: "\.todo\("` over `backend/src/**/*.test.ts` → no matches
+- `Grep pattern: "\.skip\("` over `src/__tests__/**` → no matches
+- `Grep pattern: "\.skip\("` over `e2e/**` → no matches
+- `Grep pattern: "xit\(|xtest\(|xdescribe\("` over `backend/src/**` and `e2e/**` → no matches (earlier false positives were `process.exit(...)` in non-test files)
+
+Conditional skips only:
+
+| Form | File:line | Condition |
+|---|---|---|
+| `describe.skipIf(!hasLiveDb)` | `backend/src/services/rls.test.ts:29` | Skips the original `RLS tenant isolation` suite when `DATABASE_URL` or `PHI_ENCRYPTION_KEY` is unset. Intentional (unit-only CI stays green); becomes mandatory once the C-8 DB-role cutover lands. See [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 626. |
+| `describe.skipIf(!hasLiveDb)` | `backend/src/__tests__/integration/rls-isolation.test.ts:189` | C-8 PR D multi-tenant integration suite added 2026-04-24. Two-user fixture across every user-scoped model + admin context + privilege-immutability + pool-leak invariants. Stricter live-DB gate than the older suite — opts in via `RLS_INTEGRATION_TESTS=true` so the testSetup default `postgresql://localhost/test` doesn't trigger a real connection. |
+
+Total hard-skipped or `.todo` tests: **0**.
+
+---
+
+## Dependency vulnerabilities
+
+`npm audit --json` run on 2026-04-24 against `C:/Users/breil/OneDrive/Desktop/OwnMyHealth/` and `C:/Users/breil/OneDrive/Desktop/OwnMyHealth/backend/`.
+
+### Severity summary
+
+| Scope | Critical | High | Moderate | Low | Info | Total |
+|---|---:|---:|---:|---:|---:|---:|
+| Root (frontend) | 0 | 0 | 2 | 0 | 0 | **2** |
+| Backend | 0 | 0 | 9 | 2 | 0 | **11** |
+| **Monorepo total** | **0** | **0** | **11** | **2** | **0** | **13** |
+
+### Root — notable advisories
+
+| Package | Severity | Advisory | Fix |
+|---|---|---|---|
+| `postcss` (direct) | moderate | GHSA-qx2v-qp2m-jg93 — XSS via unescaped `</style>` in CSS stringify output | `postcss@>=8.5.10` (`fixAvailable: true`, non-major) |
+| `ajv` (transitive) | moderate | GHSA-2g4f-4pwh-qvx6 — ReDoS when using `$data` option | `ajv@>=6.14.0` (`fixAvailable: true`, non-major) |
+
+### Backend — notable advisories
+
+| Package | Severity | Advisory | Fix | Notes |
+|---|---|---|---|---|
+| `prisma` (direct) | moderate | Chains via `@prisma/dev` → `@hono/node-server` GHSA-92pp-h63x-v22m (middleware bypass via repeated slashes in serveStatic) | `prisma@6.19.3` (**SemVer major**) | Only hits dev-time `@prisma/dev` — production prisma client is unaffected; still flagged because `prisma` CLI is shipped in the backend image build chain. |
+| `@google-cloud/storage` (direct) | moderate | Transitive via `retry-request`, `teeny-request`, `uuid` | `@google-cloud/storage@5.20.4` (**SemVer major**) | Bump is a breaking change; storage API surface has moved since v5. Validate `storageService.ts` against the new SDK before upgrading. |
+| `uuid` (direct) | moderate | GHSA-w5hq-g745-h8pq — missing buffer bounds check in v3/v5/v6 when `buf` is provided | `uuid@14.0.0` (**SemVer major**) | Code uses v4 (random) + passes no `buf` param — exploit path does not apply, but `npm audit` still flags. |
+| `postcss` (transitive) | moderate | GHSA-qx2v-qp2m-jg93 (same as root) | `postcss@>=8.5.10` | Shared with root. |
+| `gaxios` (transitive) | moderate | Via `uuid` | `fixAvailable: true` | Chains through `@google-cloud/storage`. |
+| `retry-request` (transitive) | moderate | Via `teeny-request` | via `@google-cloud/storage@5.20.4` | Same chain. |
+| `teeny-request` (transitive) | moderate | Via `http-proxy-agent`, `uuid` | via `@google-cloud/storage@5.20.4` | Same chain. |
+| `@hono/node-server` (transitive) | moderate | GHSA-92pp-h63x-v22m — middleware bypass via repeated slashes in serveStatic | via `prisma@6.19.3` | Dev-only path. |
+| `@prisma/dev` (transitive) | moderate | Via `@hono/node-server` | via `prisma@6.19.3` | Dev-only. |
+| `@tootallnate/once` (transitive) | low | GHSA-vpq2-c234-7xj6 — incorrect control flow scoping | via `@google-cloud/storage@5.20.4` | Chains through `http-proxy-agent`. |
+| `http-proxy-agent` (transitive) | low | Via `@tootallnate/once` | via `@google-cloud/storage@5.20.4` | Same chain. |
+
+### Remediation plan
+
+1. **Non-major fixes first**: run `npm audit fix` in root (closes `postcss`, `ajv`). Low risk.
+2. **Bump `uuid@14`**: direct dep in `backend/package.json`; exploit path is not hit by current code (no `buf` arg, no v3/5/6 usage), but closes the advisory. Medium risk — v14 is ESM-only, confirm Vitest + Jest interop.
+3. **Bump `@google-cloud/storage@5.20.4`**: major. Blocks closure of 5 advisories. Validate `storageService.ts` signed-URL generation and `uploadObject` signatures against the v5 API.
+4. **Bump `prisma@6.19.3`**: major. Only closes dev-time advisories. Coordinate with `@prisma/client` version.
+
+Zero high / critical advisories exist today in either tree.
+
+---
+
+## Missing test coverage
+
+Derived from [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) plus Glob of `backend/src/**/*.test.ts` vs `backend/src/**/*.ts` on 2026-04-24.
+
+### Controllers
+
+| Controller | File | Has test? | Gap |
+|---|---|---|---|
+| `authController` | `backend/src/controllers/authController.ts` | yes (`authController.test.ts`) | — |
+| `biomarkerController` | `backend/src/controllers/biomarkerController.ts` | yes | — |
+| `expenseController` | `backend/src/controllers/expenseController.ts` | yes | — |
+| `healthGoalsController` | `backend/src/controllers/healthGoalsController.ts` | yes | — |
+| `healthNeedsController` | `backend/src/controllers/healthNeedsController.ts` | yes | — |
+| `settingsController` | `backend/src/controllers/settingsController.ts` | yes | — |
+| `aiChatController` | `backend/src/controllers/aiChatController.ts` | **no** | Streaming SSE + decryption outside transaction (per commit `52507c3`) — zero coverage of error paths. |
+| `fileController` | `backend/src/controllers/fileController.ts` | **no** | GCS signed-URL + download paths untested. |
+| `fhirController` | `backend/src/controllers/fhirController.ts` | **no** | Quest FHIR integration (PR #71) has service tests but no controller test. |
+| `insuranceController` | `backend/src/controllers/insuranceController.ts` | **no** | Plan CRUD + SBC re-analyze paths untested. |
+| `upload/labUploadController` | `backend/src/controllers/upload/labUploadController.ts` | **no** | PDF parsing + OCR branch untested at controller layer. |
+| `upload/sbcUploadController` | `backend/src/controllers/upload/sbcUploadController.ts` | **no** | SBC Claude extraction + plan creation untested at controller layer. |
+
+**6 controllers out of 12** (excluding index/testHelpers/shared) have no tests.
+
+### Routes
+
+Glob: 17 `*Routes.ts` files under `backend/src/routes/`; **2** have route-level tests (`adminRoutes.demoProtection.test.ts`, `biomarkerRoutes.guidance.test.ts`). Per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md), route tests exist only where middleware behavior (demo-protection, rate limit) is the thing under test. Routes without integration tests: `authRoutes`, `expenseRoutes`, `fhirRoutes`, `fileRoutes`, `healthGoalsRoutes`, `healthNeedsRoutes`, `insuranceRoutes`, `onboardingRoutes`, `planRoutes`, `patientRoutes`, `providerRoutes`, `settingsRoutes`, `uploadRoutes`, `aiRoutes`, plus the index barrels.
+
+### Services
+
+| Service | Test exists? | Notes |
+|---|---|---|
+| `authService.ts` | yes | — |
+| `auditLog.ts` | yes | — |
+| `claudeExtraction.ts` | yes | — |
+| `encryption.ts` | yes | — |
+| `userEncryption.ts` | yes | — |
+| `pdfTextExtraction.ts` | yes | — |
+| `sbcExtraction.ts` | yes | — |
+| `database.ts` (`rls.test.ts`) | yes (auto-skipped without live DB) | — |
+| `emailService.ts` | **no** | `authService.register` → SendGrid template send is unasserted. Per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 1085. |
+| `ocrService.ts` | **no** | Google Document AI boundary has zero coverage. Per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 1086. |
+| `storageService.ts` | **no** | GCS signed-URL + bucket ops untested. |
+| `notificationService.ts` | **no** | — |
+| `onboardingService.ts` | **no** | — |
+| `healthProfileService.ts` | **no** | — |
+| `healthContextService.ts` | **no** | Feeds Claude AI health-guide context — untested. |
+| `usageTracker.ts` | **no** | Plan-limit counters untested. |
+| `aiCostTracker.ts` | **no** | Cost accounting untested. |
+| `biomarkerExtractor.ts` | **no** | — |
+| `biomarkerPatterns.ts` | **no** | — |
+| `pdfParser.ts` | **no** | — |
+| `fhir/fhirClient.ts` | **no** | Per PR #71 — Quest FHIR integration; only some paths covered by integration tests. |
+| `fhir/labSyncService.ts` | **no** | — |
+| `fhir/smartAuth.ts` | **no** | — |
+| `fhir/loincMapper.ts` | **no** | — |
+| `knowledge/*.ts` | **no** | 4 files — all new (PR #59) — uncovered. |
+
+### Middleware
+
+| Middleware | Test exists? |
+|---|---|
+| `errorHandler` | yes |
+| `validation` | yes |
+| `rbac` | yes |
+| `auth` | **no** — JWT verify path untested at unit level |
+| `csrf` | yes (`csrf.test.ts`, added 2026-04-24) — covers exemption list, constant-time compare, public-auth pass-through |
+| `rateLimiter` | **no** |
+| `demoProtection` | tested indirectly via `adminRoutes.demoProtection.test.ts` |
+
+### Mock / fixture infra gaps
+
+- No `__mocks__/` directories anywhere (Glob `**/__mocks__/**` empty). Inline `vi.mock(...)` factories only.
+- No `testHelpers/`, `fixtures/`, or `factories/` directories. Only `backend/src/controllers/testHelpers.ts` (single file).
+- No shared `asUser` / `asAdmin` RLS-helper. Each test writes its own stub. Per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 1087.
+
+---
+
+## Fixed issues reference
+
+Recent issues closed — from `git log --oneline` on 2026-04-24. Provides context for anyone triaging a regression. This is **not** a changelog; see [`CHANGELOG.md`](./CHANGELOG.md) (doc pending — see prompt `./17-changelog-doc.md`) for the authoritative list.
+
+| Finding | Status | Closing commit | Summary |
+|---|---|---|---|
+| C-1 — RLS enforcement | Closed (code) | `9727492` — "fix(security): close C-1 — enforce RLS via transaction-scoped SET LOCAL" | Introduced `withRLSContext` / `withRLSTransaction`; **policies still inert at runtime** → tracked as [C-8](#rls-policies-inert-at-runtime-c-8). |
+| C-2 — audit-log salt at rest | Closed | `f6bdc9a` — "fix(security): encrypt audit-log system salt at rest" | — |
+| C-3 — JWT secret fallbacks | Closed | `2808b97` — "fix(security): close C-3 — JWT secret fallbacks removed" | — |
+| C-4 — insecure PHI encryption key accepted in prod | Closed | `ea67ccb` — "fix(security): close C-4 — reject insecure PHI encryption key in all environments" | — |
+| C-5 — `jspdf` CVE | Closed | `4a08802` — "fix(deps): bump jspdf to 4.2.1+ to close CVE-2026-31938 and siblings (C-5)" | — |
+| C-6 — GCS object lifecycle on delete | Closed | `0f7970a` — "fix(security): close C-6 — delete GCS objects on account/data deletion" | — |
+| C-7 — PHI minimization before Claude calls | Closed | `8c19438` + `4fa53a6` — "fix(security): close C-7 — PHI minimization before Claude API calls" (+ remaining gaps) | `4fa53a6` also closed F-3 IDOR. |
+| C-8 Part 1 — `auditService.initialize` RLS wrap | Closed | `65f9ffb` — "fix(security): wrap auditService.initialize in admin RLS context (C-8 Part 1)" | Runtime-role still outstanding. |
+| C-8 Part 2a — cross-user ProviderPatient writes | Closed | `a648eb8` — "fix(security): wrap cross-user ProviderPatient writes in RLS context" | — |
+| C-8 Part 2b-i — authService + userEncryption pre-auth | Closed | `4fa6460` — "fix(security): wrap authService + userEncryption pre-auth paths in RLS context" | — |
+| C-8 Part 2b-ii — adminRoutes + auditLog runtime | Closed | `74af20e` — "fix(security): wrap adminRoutes + auditLog runtime + users-by-email in RLS context" | — |
+| C-8 code prep — audit salt env, bare-prisma sweep, startup assertion | Closed | `4290520` — "feat(c-8): prepare code for RLS role cutover" | Leaves **Part 3 DB role cutover** open. |
+| F-3 IDOR | Closed | `4fa53a6` + `b2b762e` — "fix(security): close F-3/F-4/F-5/F-7 trust gaps" | — |
+| F-4 / F-5 / F-7 trust gaps | Closed | `b2b762e` | Batch close. |
+| F-14 / F-15 | Closed per user memory | PR #30 | See user memory `ownmyhealth-project.md`. |
+| F-21 upload controller split | Closed | `1ab1206` — "refactor(backend): split uploadController into upload/ module + fix F-21" | — |
+| Batch-close 5 High-severity audit findings | Closed | `fb8a864` — "fix(security): batch-close 5 High-severity audit findings (#52)" | — |
+| `/ai/chat` CSRF bypass | Closed | `5e4241e` — "fix(csrf): actually exempt /ai/chat from validation" → `2843339` — "fix(csrf): remove duplicate route-level csrfProtection from /ai/chat" | Two-PR fix; second removed the duplicate. |
+| `/ai/chat` transaction timeout leak (decryption inside transaction) | Closed | `52507c3` — "fix(ai-chat): move decryption out of withRLSContext transaction" | Introduces new risk: aiChatController still has **zero tests** — see [Missing test coverage](#missing-test-coverage). |
+| CORS_ORIGIN parsing | Closed | `64b7d14` + `8deed18` | Prod origins hardcoded as always-allowed. |
+| Dead-code audit | Closed | `eb45a57` — "Cleanup/dead code audit 2026 04 23 (#74)" | Surfaced the unused `RoleGuard` / `providerApi` / `patientApi` / `adminApi` — still not removed (tracked in [Deprecated](#deprecated-kept-for-compat)). |
+| Display-name edit was a no-op | Closed (verified 2026-04-25) | (was never a stub in current code) | Verification surfaced the path is fully wired: `AccountSettingsPage.tsx:121-134` → `settingsApi.updateProfile()` → `PATCH /api/v1/settings/profile` → `settingsController.updateProfile` (encrypts via `firstNameEncrypted`/`lastNameEncrypted`, RLS-scoped via `withRLSContext(userId, ...)`, audit-logged). The original audit note referred to an earlier prototype that didn't ship. New regression test file `controllers/settingsController.updateProfile.test.ts` (6 cases) pins the contract. |
+| Notification settings stored client-side via `localStorage` TODO | Closed (verified 2026-04-25) | (no localStorage path ever shipped) | `NotificationSettingsSection.tsx` calls `settingsApi.getNotifications()` / `settingsApi.updateNotifications(...)` against `GET`/`PATCH /api/v1/settings/notifications`. Preferences live on `User.notificationPreferences` (Json column) and persist across devices. The TODO referenced in the audit doc was closed during the notification-preferences PR; no separate fix was needed. |
+
+**Recently closed issue that introduced new known risk**: `52507c3` ("move decryption out of `withRLSContext` transaction") fixed a 15s transaction timeout on `/ai/chat` but the controller has zero tests, so the new shape of the decryption pipeline is not regression-guarded.
+
+---
+
+## Acceptance questions — self-answered
+
+**Q1. What's the single most important open Critical issue?**
+C-8: RLS policies are inert at runtime because the app connects as a BYPASSRLS role in dev and prod. Controllers still filter by `userId`, so no PHI leak today, but RLS is not actually defending — see [Critical: RLS policies inert at runtime (C-8)](#rls-policies-inert-at-runtime-c-8).
+
+**Q2. How many TODO/FIXME/HACK markers exist, and which file has the most?**
+**4 total** — all `TODO`, no `FIXME`, `HACK`, or `XXX`. Each marker is in a different file; no file has more than one. Files: `backend/src/app.ts`, `backend/src/middleware/csrf.ts`, `backend/src/services/encryption.ts`, `src/components/settings/PlanSection.tsx`. See [Code-marker inventory](#code-marker-inventory).
+
+**Q3. Are any tests currently skipped or marked `.todo`?**
+**No hard skips and no `.todo` tests.** One conditional `describe.skipIf(!hasLiveDb)` at `backend/src/services/rls.test.ts:29` auto-disables the RLS tenant-isolation suite when the live-DB env is absent. See [Skipped / TODO tests](#skipped--todo-tests).
+
+**Q4. What's the `npm audit` severity breakdown?**
+Root (frontend): 0 critical / 0 high / **2 moderate** / 0 low. Backend: 0 critical / 0 high / **9 moderate** / **2 low**. See [Dependency vulnerabilities](#dependency-vulnerabilities) for the full advisory list.
+
+**Q5. Which deprecated models are still in `schema.prisma` and should be dropped?**
+`DNAData` (`schema.prisma:383-400`), `DNAVariant` (`:402-415`), `GeneticTrait` (`:417-435`). Dropped model data has no UI consumer and no controller write site (per [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md)). See [Deprecated](#deprecated-kept-for-compat).
+
+**Q6. Which controllers have no test coverage at all?**
+`aiChatController`, `fileController`, `fhirController`, `insuranceController`, `upload/labUploadController`, `upload/sbcUploadController`. See [Missing test coverage → Controllers](#controllers).
+
+**Q7. What's the workaround for the RLS runtime gap (C-8)?**
+None at runtime — continue filtering by `userId` in controllers; treat `withRLSContext` wrappers as advisory. `rls.test.ts` needs a NOBYPASSRLS role in `DATABASE_URL` to catch regressions. Fix lands with the C-8 Part 3 DB role cutover (`docs/c-8-part-c-runbook.md`). See [Critical: C-8](#rls-policies-inert-at-runtime-c-8).
+
+**Q8. Which recently closed issue introduced new known risk?**
+`52507c3` ("fix(ai-chat): move decryption out of withRLSContext transaction") closed a transaction-timeout bug but left `aiChatController` with **zero tests**, so the new decryption-outside-transaction shape is not regression-guarded. See [Fixed issues reference](#fixed-issues-reference).
+
+**Q9. Is the `nul` stray file still in the tree?**
+**Yes** — `C:/Users/breil/OneDrive/Desktop/OwnMyHealth/nul`, 106 bytes, dated 2026-01-09. Fix: `git rm -- nul`. See [Low: Stray `nul` file](#stray-nul-file-at-repo-root).
+
+**Q10. Which axios / vite advisories are open, and what's the remediation plan?**
+**Zero axios advisories** open in either tree (axios itself is not in the vulnerability list). Vite is not directly flagged; its ecosystem surfaces `postcss` (moderate, non-major fix to `>=8.5.10`) via Tailwind. No critical / high advisories exist. Full plan in [Dependency vulnerabilities → Remediation plan](#remediation-plan).
+
+---
+
+## Related Documents
+
+- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — authoritative source for C-/F-numbered security findings; this doc mirrors severity without re-auditing.
+- [CHANGELOG.md](./CHANGELOG.md) — recently closed items with PR links; [Fixed issues reference](#fixed-issues-reference) above is a derived subset.
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — symptom → root cause for live bugs, including the Railway / Cloud Run deploy drift.
+- [TESTING_PATTERNS.md](./TESTING_PATTERNS.md) — how to close the missing-test gaps; canonical inline `vi.mock(...)` catalog.
+- [DATA_MODEL.md](./DATA_MODEL.md) — full ER diagram including the deprecated DNA models.
+- [FRONTEND_MAP.md](./FRONTEND_MAP.md) — full component + API-client inventory; source of the unused `RoleGuard` / `providerApi` / `patientApi` / `adminApi` drift.
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — logger-redaction gap matrix (§7 Drift findings).
+- [ENV_VARS.md](./ENV_VARS.md) — env-var name drift (`GCP_PROCESSOR_ID` vs `GOOGLE_DOCUMENT_AI_PROCESSOR_ID`), unused `VITE_SUPABASE_*`, retired `CMS_API_KEY`.
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — duplicate `/insurance/upload-sbc` mount analysis.
+- [RUNBOOK.md](./RUNBOOK.md) — live deploy topology; source of the `railway.toml` / `DEPLOY.md` vestigial-infra findings.
+
+---
+
+## Prompt drift log
+
+- Prompt `20-known-issues-doc.md` expects a live `SECURITY_STATUS.md` / `SECURITY_AUDIT_*.md` to mirror. Neither exists under `New Project Documents/` as of 2026-04-24; `SECURITY_STATUS.md` is a sibling doc still in generation (per task `#32`). C-8 mirrored from user memory `ownmyhealth-project.md` and the `docs/c-8-part-c-runbook.md` runbook instead. Security-row citations point at commits and `SECURITY_STATUS.md` as the intended authoritative source — update this doc once the sibling lands.
+- Prompt's "Skipped tests" regex (`\.(skip|todo)\(|xit\(`) matches `process.exit(` on non-test files in this codebase (4 false positives). Refined search to `(it|test|describe)\.(skip|todo)\(|xit\(|xtest\(|xdescribe\(` then `\.skip\(` / `\.todo\(` scoped to `*.test.ts`. Zero true positives.
+- Prompt asks "Which axios / vite advisories are open?" (Acceptance Q10). Neither axios nor vite is currently flagged by `npm audit` — answered "none" with the actual open advisories (postcss, ajv, uuid, @google-cloud/storage chain, prisma chain).
+- Prompt lists `fileController` and `aiChatController` as missing-test examples; also missing are `fhirController`, `insuranceController`, `upload/labUploadController`, `upload/sbcUploadController` — all surfaced in the [Controllers](#controllers) table.
+- `CLAUDE.md:16` says "Testing: Vitest (frontend), **Jest** (backend)"; actual backend runner is **Vitest 4.x** (`backend/package.json:11`, `backend/vitest.config.ts:1`) per [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md) line 1170. Not re-documented here.

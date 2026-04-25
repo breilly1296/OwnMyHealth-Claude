@@ -86,8 +86,8 @@ export async function rotateUserEncryptionKey(userId: string): Promise<{
   const encryptionService = getEncryptionService();
 
   // The withRLSContext wrapper opens a single Prisma transaction, so the
-  // two writes below are atomic — equivalent to the previous explicit
-  // prisma.$transaction([...]) call, just with the RLS SET LOCAL applied.
+  // two writes below are atomic — equivalent to the explicit batch
+  // transaction this helper used to run, just with the RLS SET LOCAL applied.
   return withRLSContext(
     null,
     async (tx) => {

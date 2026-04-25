@@ -1,15 +1,15 @@
 /**
  * C-7 regression tests for claudeExtraction.
  *
- * Two invariants under test:
+ * Three invariants under test:
  *   1. BAA gate — when `config.anthropic.baaActive` is false, the function
  *      throws BEFORE any Anthropic client construction, so no PDF bytes
  *      can transit even if the runtime config drifts.
- *   2. Minimum-necessary path selection — when local text extraction is
- *      usable, `messages.create` is called with a text-only prompt
- *      (no `type: 'document'` block). When extraction is not usable,
- *      the vision fallback attaches a `document` block AND the redacted
- *      text so Claude has a scrubbed reference.
+ *   2. Text-only path — when local text extraction is usable, `messages.create`
+ *      is called with a text-only prompt (no `type: 'document'` block).
+ *      There is deliberately no vision fallback: unusable text throws.
+ *   3. userId attribution — the userId passed by the caller is forwarded
+ *      to `trackAIUsage`, never hardcoded to 'system'.
  *
  * We mock the Anthropic SDK, the PDF text extractor, and aiCostTracker
  * so the test exercises branch selection without a real network call.
@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   messagesCreate: vi.fn(),
   extractTextFromPDF: vi.fn(),
+  trackAIUsage: vi.fn(),
   config: { anthropic: { baaActive: true, apiKey: 'test-key' } },
 }));
 
@@ -37,7 +38,7 @@ vi.mock('./pdfTextExtraction.js', () => ({
   extractTextFromPDF: mocks.extractTextFromPDF,
 }));
 
-vi.mock('./aiCostTracker.js', () => ({ trackAIUsage: vi.fn() }));
+vi.mock('./aiCostTracker.js', () => ({ trackAIUsage: mocks.trackAIUsage }));
 
 vi.mock('../utils/logger.js', () => ({
   logger: {
@@ -90,12 +91,15 @@ const scannedExtraction = {
   isLikelyScanned: true,
 };
 
+const TEST_USER_ID = 'user_test_123';
+
 describe('extractBiomarkersWithClaude (C-7)', () => {
   beforeEach(() => {
     process.env.ANTHROPIC_API_KEY = 'test-key';
     mocks.config.anthropic.baaActive = true;
     mocks.messagesCreate.mockReset();
     mocks.extractTextFromPDF.mockReset();
+    mocks.trackAIUsage.mockReset();
     mocks.messagesCreate.mockResolvedValue(cannedClaudeResponse);
   });
 
@@ -107,8 +111,8 @@ describe('extractBiomarkersWithClaude (C-7)', () => {
     it('throws when ANTHROPIC_BAA_ACTIVE is false, without constructing the Anthropic client', async () => {
       mocks.config.anthropic.baaActive = false;
 
-      await expect(extractBiomarkersWithClaude(Buffer.from('fake'))).rejects.toThrow(
-        /ANTHROPIC_BAA_ACTIVE is not set to "true"/
+      await expect(extractBiomarkersWithClaude(Buffer.from('fake'), TEST_USER_ID)).rejects.toThrow(
+        /ANTHROPIC_BAA_ACTIVE=true/
       );
 
       expect(mocks.extractTextFromPDF).not.toHaveBeenCalled();
@@ -116,11 +120,11 @@ describe('extractBiomarkersWithClaude (C-7)', () => {
     });
   });
 
-  describe('minimum-necessary path selection', () => {
-    it('uses text-only prompt (no document block) when local extraction is usable', async () => {
+  describe('text-only transmission', () => {
+    it('sends a text-only prompt (no document block) when local extraction is usable', async () => {
       mocks.extractTextFromPDF.mockResolvedValue(usableExtraction);
 
-      await extractBiomarkersWithClaude(Buffer.from('fake'));
+      await extractBiomarkersWithClaude(Buffer.from('fake'), TEST_USER_ID);
 
       expect(mocks.messagesCreate).toHaveBeenCalledTimes(1);
       const args = mocks.messagesCreate.mock.calls[0][0];
@@ -137,22 +141,15 @@ describe('extractBiomarkersWithClaude (C-7)', () => {
       expect(textBlocks[0].text).toContain('LAB REPORT TEXT (PHI-redacted)');
     });
 
-    it('falls back to vision (includes document block) when local extraction is not usable', async () => {
+    it('throws (no vision fallback) when local extraction is not usable', async () => {
       mocks.extractTextFromPDF.mockResolvedValue(scannedExtraction);
 
-      await extractBiomarkersWithClaude(Buffer.from('fake'));
+      await expect(
+        extractBiomarkersWithClaude(Buffer.from('fake'), TEST_USER_ID)
+      ).rejects.toThrow(/scanned|readable text/i);
 
-      expect(mocks.messagesCreate).toHaveBeenCalledTimes(1);
-      const args = mocks.messagesCreate.mock.calls[0][0];
-      const content = args.messages[0].content;
-
-      const documentBlocks = content.filter((c: { type: string }) => c.type === 'document');
-      expect(documentBlocks).toHaveLength(1);
-      expect(documentBlocks[0].source.type).toBe('base64');
-      expect(documentBlocks[0].source.media_type).toBe('application/pdf');
-
-      const textBlocks = content.filter((c: { type: string }) => c.type === 'text');
-      expect(textBlocks[0].text).toContain('scanned');
+      // Critically: no request ever hits the Anthropic mock.
+      expect(mocks.messagesCreate).not.toHaveBeenCalled();
     });
   });
 
@@ -160,10 +157,10 @@ describe('extractBiomarkersWithClaude (C-7)', () => {
     it('sends redacted text to Claude, not the raw extracted text', async () => {
       mocks.extractTextFromPDF.mockResolvedValue({
         ...usableExtraction,
-        text: usableExtraction.text + '\nPatient: John M Smith\nSSN: 123-45-6789\nEmail: john@example.com',
+        text: usableExtraction.text + '\nPatient: John M Smith\nSSN: 123-45-6789\nEmail: john@example.com\nCollected: 04/15/2026',
       });
 
-      await extractBiomarkersWithClaude(Buffer.from('fake'));
+      await extractBiomarkersWithClaude(Buffer.from('fake'), TEST_USER_ID);
 
       const args = mocks.messagesCreate.mock.calls[0][0];
       const promptText = args.messages[0].content.find(
@@ -173,9 +170,25 @@ describe('extractBiomarkersWithClaude (C-7)', () => {
       expect(promptText).not.toContain('John M Smith');
       expect(promptText).not.toContain('123-45-6789');
       expect(promptText).not.toContain('john@example.com');
+      expect(promptText).not.toContain('04/15/2026');
       expect(promptText).toContain('[NAME_REDACTED]');
       expect(promptText).toContain('[SSN_REDACTED]');
       expect(promptText).toContain('[EMAIL_REDACTED]');
+      expect(promptText).toContain('[DATE_REDACTED]');
+    });
+  });
+
+  describe('userId attribution', () => {
+    it('forwards the caller-supplied userId to trackAIUsage (never "system")', async () => {
+      mocks.extractTextFromPDF.mockResolvedValue(usableExtraction);
+
+      await extractBiomarkersWithClaude(Buffer.from('fake'), TEST_USER_ID);
+
+      expect(mocks.trackAIUsage).toHaveBeenCalledTimes(1);
+      const usageArgs = mocks.trackAIUsage.mock.calls[0][0];
+      expect(usageArgs.userId).toBe(TEST_USER_ID);
+      expect(usageArgs.userId).not.toBe('system');
+      expect(usageArgs.endpoint).toBe('lab-extraction');
     });
   });
 });

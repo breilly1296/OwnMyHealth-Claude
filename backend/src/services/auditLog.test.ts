@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Request } from 'express';
+
+// C-8 — auditLog.ts now imports `config` which validates env vars at module
+// load. Mock the config module so this test file doesn't depend on a real
+// .env having AUDIT_LOG_SALT (or anything else) set. The salt value here
+// only needs to clear the 16-char minimum.
+vi.mock('../config/index.js', () => ({
+  config: {
+    auditSalt: 'test-audit-salt-for-unit-tests',
+  },
+}));
+
 import { AuditLogService, getAuditLogService, startAuditCleanup, stopAuditCleanup } from './auditLog.js';
 
 // Mock dependencies
@@ -111,87 +122,20 @@ describe('AuditLogService', () => {
   });
 
   describe('initialize()', () => {
-    it('should create new encrypted salt if none exists (fresh-install branch)', async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue(null);
-      mockPrisma.systemConfig.create.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'master-encrypted:generated-salt-1234567890',
-        isEncrypted: true,
-      });
+    // C-8 — initialize() no longer touches system_config; it reads
+    // config.auditSalt (validated at module load). Only behavior left to
+    // test is: it sources the salt from config and doesn't hit the DB.
 
+    it('sources systemSalt from config.auditSalt (no DB call)', async () => {
       await auditService.initialize();
 
-      expect(mockPrisma.systemConfig.findUnique).toHaveBeenCalledWith({
-        where: { key: 'audit_encryption_salt' },
-      });
-      expect(mockPrisma.systemConfig.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          key: 'audit_encryption_salt',
-          value: 'master-encrypted:generated-salt-1234567890',
-          isEncrypted: true,
-        }),
-      });
-      expect(mockPrisma.systemConfig.update).not.toHaveBeenCalled();
-    });
-
-    it('should decrypt existing salt when isEncrypted=true (normal-boot branch)', async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'master-encrypted:existing-salt-abcdef1234',
-        isEncrypted: true,
-      });
-
-      await auditService.initialize();
-
+      // No system_config interaction — whole point of the refactor.
+      expect(mockPrisma.systemConfig.findUnique).not.toHaveBeenCalled();
       expect(mockPrisma.systemConfig.create).not.toHaveBeenCalled();
       expect(mockPrisma.systemConfig.update).not.toHaveBeenCalled();
-    });
-
-    it('should migrate legacy plaintext salt to encrypted storage (legacy branch)', async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'legacy-plaintext-salt-999',
-        isEncrypted: false,
-      });
-      mockPrisma.systemConfig.update.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'master-encrypted:legacy-plaintext-salt-999',
-        isEncrypted: true,
-      });
-
-      await auditService.initialize();
-
-      expect(mockPrisma.systemConfig.create).not.toHaveBeenCalled();
-      expect(mockPrisma.systemConfig.update).toHaveBeenCalledWith({
-        where: { key: 'audit_encryption_salt' },
-        data: expect.objectContaining({
-          value: 'master-encrypted:legacy-plaintext-salt-999',
-          isEncrypted: true,
-        }),
-      });
-    });
-
-    it('should throw if decrypted salt is shorter than 16 chars', async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue({
-        key: 'audit_encryption_salt',
-        value: 'master-encrypted:short',
-        isEncrypted: true,
-      });
-
-      await expect(auditService.initialize()).rejects.toThrow('FATAL: Invalid audit encryption salt');
-    });
-
-    it('calls withRLSContext with isAdmin=true (C-8 Part 1)', async () => {
-      mockPrisma.systemConfig.findUnique.mockResolvedValue(ENCRYPTED_SALT_ROW);
-
-      await auditService.initialize();
-
-      expect(mocks.withRLSContext).toHaveBeenCalledTimes(1);
-      expect(mocks.withRLSContext).toHaveBeenCalledWith(
-        null,
-        expect.any(Function),
-        { isAdmin: true }
-      );
+      // withRLSContext was previously the admin-wrap for system_config; that
+      // call is gone too, so no RLS context is entered during init now.
+      expect(mocks.withRLSContext).not.toHaveBeenCalled();
     });
   });
 

@@ -165,7 +165,10 @@ const corsOptions: cors.CorsOptions = {
   credentials: true, // Required for cross-domain cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-  exposedHeaders: ['X-CSRF-Token'], // Allow frontend to read CSRF token header
+  // No exposedHeaders: the CSRF token is delivered via the csrf_token cookie
+  // (read by the frontend via document.cookie), never echoed in a response
+  // header. Listing 'X-CSRF-Token' in exposedHeaders advertised an interface
+  // the server doesn't implement and was removed in the F-19 fix.
   // Ensure preflight requests are handled properly
   preflightContinue: false,
   optionsSuccessStatus: 204,
@@ -372,6 +375,28 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// F-26 fix: surface unhandled async errors instead of silently continuing.
+// Node 20 default for unhandledRejection is `throw` which becomes
+// `uncaughtException`, but pinning both explicitly:
+//   - Logs through the Cloud-Logging-aware structured logger so the failure
+//     is visible in the same surface as deliberate `logger.error` calls.
+//   - Exits non-zero so Cloud Run's container-restart policy reschedules the
+//     instance — staying up after an unhandled error risks running on
+//     half-initialized state with PHI in scope.
+//   - process.exit only fires once: nested errors during shutdown won't loop.
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error('unhandledRejection — exiting', {
+    data: { error: reason instanceof Error ? reason.message : String(reason) },
+  });
+  process.exit(1);
+});
+process.on('uncaughtException', (error: Error) => {
+  logger.error('uncaughtException — exiting', {
+    data: { error: error.message, stack: error.stack },
+  });
+  process.exit(1);
+});
 
 startServer();
 

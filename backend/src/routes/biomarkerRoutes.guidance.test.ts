@@ -24,6 +24,16 @@ const mocks = vi.hoisted(() => ({
   withRLSTransaction: vi.fn(),
   logAccess: vi.fn(),
   currentUserId: 'user-A',
+  // Post-F-29: route was migrated from raw `fetch` to the shared
+  // anthropicClient SDK. We stub the SDK at the boundary instead of
+  // intercepting fetch — same observable contract for the test (we still
+  // assert "the network call did/didn't happen and got the right prompt"),
+  // but the mock matches the new code path.
+  messagesCreate: vi.fn(),
+  // Kept for back-compat with assertions written against `fetchMock`.
+  // Forwarded from `messagesCreate` so existing `expect(mocks.fetchMock)`
+  // stays meaningful: a call to messages.create is the new "did the
+  // network call happen" signal.
   fetchMock: vi.fn(),
 }));
 
@@ -106,8 +116,21 @@ vi.mock('../controllers/biomarkerController.js', () => ({
   deleteBiomarker: vi.fn(),
 }));
 
-// Replace global fetch with a spy.
-vi.stubGlobal('fetch', mocks.fetchMock);
+// Stub the shared Anthropic client. Both spies fire on every call so
+// existing `expect(mocks.fetchMock)…` assertions still pass — fetchMock
+// is now an alias for "any Anthropic network call from this route".
+vi.mock('../services/anthropicClient.js', () => ({
+  getAnthropicClient: vi.fn(() => ({
+    messages: {
+      create: (...args: unknown[]) => {
+        mocks.fetchMock(...args);
+        return mocks.messagesCreate(...args);
+      },
+    },
+  })),
+  isEnabled: () => Boolean(process.env.ANTHROPIC_API_KEY),
+  reset: vi.fn(),
+}));
 
 // -- Imports AFTER mocks -------------------------------------------------
 import express from 'express';
@@ -150,6 +173,7 @@ describe('POST /biomarkers/:id/guidance (C-7 + F-3)', () => {
     mocks.withRLSTransaction.mockReset();
     mocks.logAccess.mockReset();
     mocks.fetchMock.mockReset();
+    mocks.messagesCreate.mockReset();
     process.env.ANTHROPIC_API_KEY = 'test-key';
   });
 
@@ -228,13 +252,11 @@ describe('POST /biomarkers/:id/guidance (C-7 + F-3)', () => {
         ],
       }));
 
-      mocks.fetchMock.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: 'Canned guidance text.' }],
-          model: 'claude-haiku-4-5-20251001',
-          usage: { input_tokens: 10, output_tokens: 20 },
-        }),
+      // Post-F-29: SDK call shape (no `.ok` / `.json()` indirection).
+      mocks.messagesCreate.mockResolvedValue({
+        content: [{ type: 'text', text: 'Canned guidance text.' }],
+        model: 'claude-haiku-4-5-20251001',
+        usage: { input_tokens: 10, output_tokens: 20 },
       });
 
       const app = buildApp();
@@ -251,11 +273,15 @@ describe('POST /biomarkers/:id/guidance (C-7 + F-3)', () => {
         data: { guidance: 'Canned guidance text.' },
       });
 
-      expect(mocks.fetchMock).toHaveBeenCalledTimes(1);
-      const [url, init] = mocks.fetchMock.mock.calls[0];
-      expect(url).toBe('https://api.anthropic.com/v1/messages');
-      const body = JSON.parse((init as { body: string }).body);
-      const promptText = body.messages[0].content as string;
+      // Post-F-29: assert against the SDK call shape. messages.create
+      // receives `{ model, max_tokens, messages: [{ role, content }] }` as
+      // the first arg; no `https://api.anthropic.com/v1/messages` URL to
+      // check (the SDK manages that). Prompt text is at messages[0].content.
+      expect(mocks.messagesCreate).toHaveBeenCalledTimes(1);
+      const callArgs = mocks.messagesCreate.mock.calls[0][0] as {
+        messages: Array<{ content: string }>;
+      };
+      const promptText = callArgs.messages[0].content;
 
       // DB-decrypted values are in the prompt.
       expect(promptText).toContain('HDL Cholesterol');
@@ -274,6 +300,19 @@ describe('POST /biomarkers/:id/guidance (C-7 + F-3)', () => {
         expect.any(Object),
         expect.objectContaining({ operation: 'PHI_ACCESS' })
       );
+
+      // F-16 fix: the audit metadata must NOT contain the biomarker name
+      // in plaintext. The resourceId (positional arg #2 = the UUID) is
+      // already enough for traceability; storing names like "HIV viral
+      // load" in plaintext metadata leaks condition info that the
+      // encrypted PHI columns are supposed to protect.
+      const phiAccessCall = mocks.logAccess.mock.calls.find(
+        (c) => c[3]?.operation === 'PHI_ACCESS'
+      );
+      expect(phiAccessCall).toBeDefined();
+      const auditMetadata = phiAccessCall![3] as Record<string, unknown>;
+      expect(auditMetadata).not.toHaveProperty('biomarkerName');
+      expect(JSON.stringify(auditMetadata)).not.toContain('HDL Cholesterol');
     });
   });
 });
