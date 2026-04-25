@@ -195,9 +195,12 @@ export default function LoginPage({
 
         {/* Mobile Value Proposition */}
         <div className="lg:hidden px-6 py-6 border-b border-slate-800 bg-slate-900/50">
-          <p className="text-xl font-bold text-white mb-4 text-center">
+          <p className="text-xl font-bold text-white mb-2 text-center">
             Take control of your
             <span className="bg-gradient-to-r from-brand-400 to-wellness-400 bg-clip-text text-transparent"> health data</span>
+          </p>
+          <p className="text-slate-400 text-sm mt-2 mb-4 text-center">
+            Upload lab reports, track biomarkers, analyze trends, and understand your insurance coverage — all in one private, encrypted dashboard.
           </p>
 
           {/* Condensed Feature Pills */}
