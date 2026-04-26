@@ -41,9 +41,12 @@ export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSumm
       )
     : null;
 
-  const percentage = categoryBiomarkers.length > 0
+  // No data ≠ healthy. When the category is empty we show neutral
+  // placeholders instead of fabricating a 100%-in-range / "All Clear" story.
+  const hasData = categoryBiomarkers.length > 0;
+  const percentage = hasData
     ? Math.round((inRange.length / categoryBiomarkers.length) * 100)
-    : 100;
+    : null;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -58,13 +61,13 @@ export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSumm
       </div>
 
       {/* In Range */}
-      <div className="bg-wellness-500 rounded-2xl p-5 text-white">
+      <div className={`rounded-2xl p-5 text-white ${hasData ? 'bg-wellness-500' : 'bg-slate-400 dark:bg-slate-600'}`}>
         <div className="flex items-center gap-2 mb-3">
           <CheckCircle className="w-5 h-5 opacity-70" />
           <span className="text-sm font-medium opacity-70">In Range</span>
         </div>
-        <div className="text-3xl font-bold">{inRange.length}</div>
-        <p className="text-sm opacity-60 mt-1">{percentage}% healthy</p>
+        <div className="text-3xl font-bold">{hasData ? inRange.length : '—'}</div>
+        <p className="text-sm opacity-60 mt-1">{hasData ? `${percentage}% healthy` : 'No data yet'}</p>
       </div>
 
       {/* Out of Range */}
@@ -73,23 +76,42 @@ export default function BiomarkerSummary({ biomarkers, category }: BiomarkerSumm
           <AlertCircle className="w-5 h-5 opacity-70" />
           <span className="text-sm font-medium opacity-70">Attention</span>
         </div>
-        <div className="text-3xl font-bold">{outOfRange.length}</div>
-        <p className="text-sm opacity-60 mt-1">need review</p>
+        <div className="text-3xl font-bold">{hasData ? outOfRange.length : '—'}</div>
+        <p className="text-sm opacity-60 mt-1">{hasData ? 'need review' : 'No data yet'}</p>
       </div>
 
-      {/* Latest Concern or All Clear */}
-      <div className={`rounded-2xl p-5 ${mostRecentOutOfRange ? 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800' : 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'}`}>
+      {/* Status: Latest Concern, All Clear, or No Data */}
+      <div className={`rounded-2xl p-5 ${
+        !hasData
+          ? 'bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700'
+          : mostRecentOutOfRange
+            ? 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
+            : 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
+      }`}>
         <div className="flex items-center gap-2 mb-2">
-          {mostRecentOutOfRange ? (
+          {!hasData ? (
+            <AlertCircle className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+          ) : mostRecentOutOfRange ? (
             <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           ) : (
             <CheckCircle className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           )}
-          <span className={`text-xs font-medium ${mostRecentOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
+          <span className={`text-xs font-medium ${
+            !hasData
+              ? 'text-slate-500 dark:text-slate-400'
+              : mostRecentOutOfRange
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-blue-600 dark:text-blue-400'
+          }`}>
             {mostRecentOutOfRange ? 'Latest Concern' : 'Status'}
           </span>
         </div>
-        {mostRecentOutOfRange ? (
+        {!hasData ? (
+          <div>
+            <p className="font-semibold text-slate-700 dark:text-slate-200">No data yet</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Upload a lab report to begin tracking</p>
+          </div>
+        ) : mostRecentOutOfRange ? (
           <div>
             <p className="font-semibold text-slate-900 dark:text-white truncate">{mostRecentOutOfRange.name}</p>
             <p className="text-sm text-amber-700 dark:text-amber-400">

@@ -193,25 +193,42 @@ export function DashboardContent({
           <p className="text-sm text-slate-500 dark:text-slate-400">Total Biomarkers</p>
         </div>
 
-        {/* In Range */}
+        {/* In Range — neutral styling at zero so an empty dataset doesn't
+            read as "healthy". */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-8 h-8 rounded-full bg-wellness-100 dark:bg-wellness-900/30 flex items-center justify-center">
-              <div className="w-3 h-3 rounded-full bg-wellness-500" />
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              stats.totalCount > 0
+                ? 'bg-wellness-100 dark:bg-wellness-900/30'
+                : 'bg-slate-100 dark:bg-slate-700'
+            }`}>
+              <div className={`w-3 h-3 rounded-full ${
+                stats.totalCount > 0 ? 'bg-wellness-500' : 'bg-slate-400 dark:bg-slate-500'
+              }`} />
             </div>
-            <span className="text-3xl font-bold text-wellness-600 dark:text-wellness-400">
-              {stats.inRangeCount}
+            <span className={`text-3xl font-bold ${
+              stats.totalCount > 0
+                ? 'text-wellness-600 dark:text-wellness-400'
+                : 'text-slate-400 dark:text-slate-500'
+            }`}>
+              {stats.totalCount > 0 ? stats.inRangeCount : '—'}
             </span>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">In Range</p>
         </div>
 
-        {/* Out of Range */}
+        {/* Out of Range — neutral styling at zero (no data ≠ all-good). */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
-            <AlertCircle className="w-8 h-8 text-red-400" />
-            <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-              {stats.outOfRangeCount}
+            <AlertCircle className={`w-8 h-8 ${
+              stats.totalCount > 0 ? 'text-red-400' : 'text-slate-400 dark:text-slate-500'
+            }`} />
+            <span className={`text-3xl font-bold ${
+              stats.totalCount > 0
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-slate-400 dark:text-slate-500'
+            }`}>
+              {stats.totalCount > 0 ? stats.outOfRangeCount : '—'}
             </span>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Needs Attention</p>

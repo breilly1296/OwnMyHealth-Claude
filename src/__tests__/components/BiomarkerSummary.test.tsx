@@ -117,11 +117,13 @@ describe('BiomarkerSummary', () => {
       expect(trackedSection?.textContent).toContain('0');
     });
 
-    it('should show 100% healthy when no biomarkers (edge case)', () => {
+    it('should show neutral "No data yet" placeholder when no biomarkers', () => {
       render(<BiomarkerSummary biomarkers={[]} category="Blood" />);
 
-      // Default to 100% when no biomarkers
-      expect(screen.getByText(/100% healthy/i)).toBeInTheDocument();
+      // No data ≠ healthy. We must NOT fabricate a 100%/All Clear story.
+      expect(screen.queryByText(/100% healthy/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('All Clear')).not.toBeInTheDocument();
+      expect(screen.getAllByText(/no data yet/i).length).toBeGreaterThan(0);
     });
 
     it('should show "All Clear" status when no out of range biomarkers', () => {
