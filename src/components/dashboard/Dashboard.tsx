@@ -56,6 +56,32 @@ import { initialBiomarkers as sampleBiomarkers, navGroups, categories } from '..
 // Auth
 import { useAuth } from '../../contexts/AuthContext';
 
+// URL <-> category sync. Top-level nav only — biomarker subcategories
+// (Blood, Hormones, etc.) stay state-only for now.
+const pathToCategoryMap: Record<string, string> = {
+  '/insurance': 'Insurance',
+  '/knowledge-base': 'Knowledge Base',
+  '/files': 'Files',
+  '/trends': 'Trends',
+  '/goals': 'Goals',
+  '/needs': 'Needs',
+  '/health-guide': 'Health Guide',
+  '/settings': 'Account Settings',
+};
+
+const categoryToPathMap: Record<string, string> = {
+  'Overview': '/',
+  'Dashboard': '/',
+  'Insurance': '/insurance',
+  'Knowledge Base': '/knowledge-base',
+  'Files': '/files',
+  'Trends': '/trends',
+  'Goals': '/goals',
+  'Needs': '/needs',
+  'Health Guide': '/health-guide',
+  'Account Settings': '/settings',
+};
+
 /** Loading fallback for lazy-loaded pages */
 function PageLoadSpinner() {
   return (
@@ -87,8 +113,11 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   const modals = useModals();
   const errorNotification = useErrorNotification();
 
-  // Navigation state
-  const [selectedCategory, setSelectedCategory] = useState<string>('Overview');
+  // Navigation state — initialize from URL so deep links land on the right
+  // page instead of always defaulting to Overview.
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    () => pathToCategoryMap[window.location.pathname] || 'Overview'
+  );
   const [selectedBiomarker, setSelectedBiomarker] = useState<Biomarker | null>(null);
   const [trendBiomarker, setTrendBiomarker] = useState<Biomarker | null>(null);
   const [selectedBiomarkerForInsurance, setSelectedBiomarkerForInsurance] = useState<Biomarker | null>(null);
@@ -157,7 +186,27 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   const handleCategorySelect = useCallback((category: string) => {
     setSelectedCategory(category);
     setSelectedBiomarker(null);
+    const newPath = categoryToPathMap[category] || '/';
+    if (window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
+    }
   }, []);
+
+  // Browser back/forward — keep selectedCategory in sync with URL.
+  useEffect(() => {
+    const handlePopState = () => {
+      setSelectedCategory(pathToCategoryMap[window.location.pathname] || 'Overview');
+      setSelectedBiomarker(null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Reflect the current page in the tab title.
+  useEffect(() => {
+    const isHome = selectedCategory === 'Overview' || selectedCategory === 'Dashboard';
+    document.title = isHome ? 'OwnMyHealth' : `${selectedCategory} — OwnMyHealth`;
+  }, [selectedCategory]);
 
   const handleTrendClick = useCallback((biomarker: Biomarker, e: React.MouseEvent) => {
     e.stopPropagation();
