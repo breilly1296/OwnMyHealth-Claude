@@ -86,7 +86,7 @@ export default function ResetPasswordPage({
           </div>
         </header>
 
-        <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <main id="main-content" className="flex-1 flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md">
             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl p-8 text-center">
               <div className="w-16 h-16 bg-wellness-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -120,7 +120,7 @@ export default function ResetPasswordPage({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+      <main id="main-content" className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl p-8">
             <div className="text-center mb-8">

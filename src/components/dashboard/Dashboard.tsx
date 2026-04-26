@@ -56,31 +56,9 @@ import { initialBiomarkers as sampleBiomarkers, navGroups, categories } from '..
 // Auth
 import { useAuth } from '../../contexts/AuthContext';
 
-// URL <-> category sync. Top-level nav only — biomarker subcategories
-// (Blood, Hormones, etc.) stay state-only for now.
-const pathToCategoryMap: Record<string, string> = {
-  '/insurance': 'Insurance',
-  '/knowledge-base': 'Knowledge Base',
-  '/files': 'Files',
-  '/trends': 'Trends',
-  '/goals': 'Goals',
-  '/needs': 'Needs',
-  '/health-guide': 'Health Guide',
-  '/settings': 'Account Settings',
-};
-
-const categoryToPathMap: Record<string, string> = {
-  'Overview': '/',
-  'Dashboard': '/',
-  'Insurance': '/insurance',
-  'Knowledge Base': '/knowledge-base',
-  'Files': '/files',
-  'Trends': '/trends',
-  'Goals': '/goals',
-  'Needs': '/needs',
-  'Health Guide': '/health-guide',
-  'Account Settings': '/settings',
-};
+// URL <-> category sync. Maps live in categoryRouting.ts so the sidebar
+// can compute proper link `href` values without duplicating the table.
+import { pathToCategoryMap, categoryToPathMap } from './categoryRouting';
 
 /** Loading fallback for lazy-loaded pages */
 function PageLoadSpinner() {
@@ -342,7 +320,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
         />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 md:p-8">
+        <main id="main-content" className="flex-1 p-4 md:p-8">
           {!onboardingChecked ? (
             <PageLoadSpinner />
           ) : showOnboarding && onboardingStatus ? (

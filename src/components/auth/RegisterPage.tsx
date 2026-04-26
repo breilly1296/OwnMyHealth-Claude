@@ -123,7 +123,7 @@ export default function RegisterPage({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+      <main id="main-content" className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Register Card */}
           <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl p-8">

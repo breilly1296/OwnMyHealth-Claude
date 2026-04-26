@@ -66,9 +66,12 @@ export function DashboardHeader({
               <Heart className="w-5 h-5 text-white" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+              {/* Brand wordmark — visually a heading but not the page heading.
+                  The page h1 lives in DashboardContent / CategoryContent so
+                  screen readers announce a single, accurate page title. */}
+              <span className="block text-lg font-bold text-slate-900 dark:text-white">
                 OwnMyHealth
-              </h1>
+              </span>
               <p className="text-2xs text-slate-500 dark:text-slate-400 -mt-0.5">
                 Your Health Dashboard
               </p>

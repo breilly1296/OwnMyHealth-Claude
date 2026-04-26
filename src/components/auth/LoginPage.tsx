@@ -237,7 +237,7 @@ export default function LoginPage({
         </div>
 
         {/* Login Form Container */}
-        <main className="flex-1 flex items-center justify-center px-6 py-8 lg:py-12 lg:px-12">
+        <main id="main-content" className="flex-1 flex items-center justify-center px-6 py-8 lg:py-12 lg:px-12">
           <div className="w-full max-w-md">
             {/* Welcome Text */}
             <div className="text-center mb-8">

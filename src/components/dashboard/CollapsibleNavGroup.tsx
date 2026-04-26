@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { BiomarkerCategory, NavGroup } from '../../types';
 import CategoryTab from './CategoryTab';
 import { getIcon } from './getIcon';
+import { categoryToPathMap } from './categoryRouting';
 
 interface CollapsibleNavGroupProps {
   group: NavGroup;
@@ -58,6 +59,7 @@ export default function CollapsibleNavGroup({
             isActive={selectedCategory === category.name}
             onClick={() => onCategorySelect(category.name)}
             count={categoryCounts[category.name]}
+            href={categoryToPathMap[category.name]}
           />
         ))}
       </div>
@@ -114,6 +116,7 @@ export default function CollapsibleNavGroup({
               isActive={selectedCategory === category.name}
               onClick={() => onCategorySelect(category.name)}
               count={categoryCounts[category.name]}
+              href={categoryToPathMap[category.name]}
             />
           ))}
         </div>

@@ -278,6 +278,15 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
+          {/* Skip link — first focusable element in the tab order. Visible
+              only when keyboard-focused; jumps past the header/sidebar
+              to the page's <main id="main-content">. */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-cyan-500 focus:text-white focus:px-4 focus:py-2 focus:rounded"
+          >
+            Skip to main content
+          </a>
           <AppContent />
         </AuthProvider>
       </ThemeProvider>
