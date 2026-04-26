@@ -26,9 +26,9 @@ const InsurancePlanCompare = lazy(() => import('../insurance/InsurancePlanCompar
 function ModalLoadSpinner() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-xl">
+      <div className="bg-slate-800 rounded-xl p-6 shadow-xl">
         <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto" />
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Loading...</p>
+        <p className="text-sm text-slate-400 mt-2">Loading...</p>
       </div>
     </div>
   );
