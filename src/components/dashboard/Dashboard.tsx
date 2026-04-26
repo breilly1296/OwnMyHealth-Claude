@@ -274,10 +274,14 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   const specialPages = ['Insurance', 'Knowledge Base', 'Files', 'Trends', 'Goals', 'Needs', 'Health Guide', 'Account Settings'];
   const isSpecialPage = specialPages.includes(selectedCategory);
 
-  // Loading state
+  // Loading state. `fixed inset-0` (rather than min-h-screen + width-auto)
+  // guarantees the splash covers the entire viewport edge-to-edge — using
+  // min-h-screen alone left a thin strip on the right/bottom in a
+  // different shade because the wrapper inherited a narrower width from
+  // the React tree above.
   if (isLoading && biomarkers.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="fixed inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-950 z-40">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-brand-500 mx-auto mb-4" />
           <p className="text-slate-500 dark:text-slate-400">Loading your health data...</p>

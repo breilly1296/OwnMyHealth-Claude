@@ -38,15 +38,15 @@ export default function InsuranceKnowledgeBase({ plans }: InsuranceKnowledgeBase
     return (
       <div className="animate-fade-in max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Knowledge Base</h1>
-          <p className="text-slate-500 mt-1">Search and analyze your insurance coverage</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Knowledge Base</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Search and analyze your insurance coverage</p>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-12 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <Database className="w-8 h-8 text-purple-500" />
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-12 text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Database className="w-8 h-8 text-purple-500 dark:text-purple-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No Insurance Plans Yet</h3>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Insurance Plans Yet</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
             Upload your insurance documents to build your knowledge base.
           </p>
           <button className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl hover:from-purple-600 hover:to-indigo-700 shadow-lg shadow-purple-500/25 transition-all duration-200">

@@ -53,6 +53,27 @@ const TIER_BADGE_CLASSES: Record<PlanTier, string> = {
   TEAM: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
 };
 
+/** Human-readable consequence message when a usage row hits its cap. */
+function overLimitMessage(key: keyof PlanLimits, planName: string): string {
+  const upgradeHint = 'Upgrade to Pro for unlimited tracking.';
+  switch (key) {
+    case 'maxBiomarkers':
+      return `You've reached the ${planName} plan limit. New uploads won't extract additional biomarkers. ${upgradeHint}`;
+    case 'insurancePlans':
+      return `You've reached the ${planName} plan limit. Adding another insurance plan requires removing an existing one or upgrading.`;
+    case 'pdfUploadsPerMonth':
+      return `You've used all your PDF uploads for this month on the ${planName} plan. ${upgradeHint}`;
+    case 'aiChatsPerDay':
+      return `You've used all your AI Health Guide chats for today on the ${planName} plan. They reset tomorrow, or upgrade for unlimited.`;
+    case 'aiGuidancePerDay':
+      return `You've used all your biomarker AI guidance requests for today on the ${planName} plan. They reset tomorrow, or upgrade for unlimited.`;
+    case 'costAnalysisPerMonth':
+      return `You've used all your cost analyses for this month on the ${planName} plan. ${upgradeHint}`;
+    default:
+      return `You've reached the ${planName} plan limit for this feature. ${upgradeHint}`;
+  }
+}
+
 export default function PlanSection({ onError }: PlanSectionProps) {
   const [data, setData] = useState<CurrentPlanData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,11 +174,12 @@ export default function PlanSection({ onError }: PlanSectionProps) {
             const usage = data.usage[row.usageKey];
             const unlimited = isPlanLimitUnlimited(limit);
             const ratio = unlimited || limit === 0 ? 0 : Math.min(1, usage / limit);
+            const overLimit = !unlimited && usage >= limit;
             return (
               <div key={row.limitKey}>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-slate-700 dark:text-slate-300">{row.label}</span>
-                  <span className="text-slate-500 dark:text-slate-400">
+                  <span className={overLimit ? 'text-red-600 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}>
                     {unlimited ? `${usage} · unlimited` : `${usage} / ${limit} ${row.period}`}
                   </span>
                 </div>
@@ -175,6 +197,14 @@ export default function PlanSection({ onError }: PlanSectionProps) {
                     style={{ width: unlimited ? '100%' : `${Math.max(2, ratio * 100)}%` }}
                   />
                 </div>
+                {/* Tell the user what hitting the cap actually means. The
+                    red bar alone doesn't communicate the consequence — the
+                    feature just stops working with no explanation. */}
+                {overLimit && (
+                  <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+                    {overLimitMessage(row.limitKey, data.planName)}
+                  </p>
+                )}
               </div>
             );
           })}

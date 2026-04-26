@@ -68,8 +68,11 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
 
   const emailLocal = user?.email?.split('@')[0] || '';
 
-  // Profile state
-  const [displayName, setDisplayName] = useState(emailLocal);
+  // Profile state. Start blank — the email-local fallback only kicks in
+  // *after* the profile fetch resolves and we know there's no real name.
+  // Initializing with emailLocal caused the field to flash the email
+  // username before the real "First Last" rendered.
+  const [displayName, setDisplayName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -202,7 +205,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 overflow-x-hidden">
       {/* Header */}
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -295,6 +298,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
                   Read-only
                 </span>
               </div>
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                Email changes aren't supported yet. Contact support if you need to update your email.
+              </p>
             </div>
 
             {/* Change Password */}
@@ -378,7 +384,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
           </div>
           <div className="p-4 md:p-6 space-y-4">
             {/* Export Data */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 py-2 min-w-0">
               <div>
                 <p className="font-medium text-slate-900 dark:text-white">Export All My Data</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Download all your health data as JSON</p>
@@ -400,7 +406,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
             </div>
 
             {/* Delete All Data */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 border-t border-slate-100 dark:border-slate-700 pt-4">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 py-2 border-t border-slate-100 dark:border-slate-700 pt-4 min-w-0">
               <div>
                 <p className="font-medium text-slate-900 dark:text-white">Delete All My Data</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Permanently delete all health records</p>
@@ -415,7 +421,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
             </div>
 
             {/* Delete Account */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 border-t border-slate-100 dark:border-slate-700 pt-4">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 py-2 border-t border-slate-100 dark:border-slate-700 pt-4 min-w-0">
               <div>
                 <p className="font-medium text-red-600 dark:text-red-400">Delete My Account</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Permanently delete your account and all data</p>

@@ -44,7 +44,7 @@ const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPa
 /** Loading fallback for lazy-loaded components */
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="fixed inset-0 bg-slate-950 flex items-center justify-center z-40">
       <div className="text-center">
         <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/25">
           <Heart className="w-8 h-8 text-white" />
@@ -162,7 +162,7 @@ function AppContent() {
   // Show loading screen while checking auth status
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center z-40">
         <div className="text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/25">
             <Heart className="w-8 h-8 text-white" />
