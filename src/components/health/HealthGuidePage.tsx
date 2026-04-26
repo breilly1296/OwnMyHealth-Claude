@@ -26,6 +26,9 @@ import {
 } from '../../services/api';
 import { renderMarkdown } from '../../utils/renderMarkdown';
 
+/** Error codes from /ai/chat that mean "don't bother retrying". */
+const TERMINAL_ERROR_CODES = new Set(['SERVICE_UNAVAILABLE', 'PLAN_LIMIT_EXCEEDED']);
+
 interface HealthGuidePageProps {
   biomarkers?: Biomarker[];
   insurancePlans?: InsurancePlan[];
@@ -60,6 +63,9 @@ interface DisplayMessage {
   streaming?: boolean;
   /** True when the message ended via error and we want to show retry. */
   error?: boolean;
+  /** True for terminal errors (e.g., feature disabled, plan limit) where
+   *  retrying produces the same outcome — suppress the Retry button. */
+  terminalError?: boolean;
 }
 
 const HISTORY_CAP = 20; // must match backend Zod max
@@ -186,6 +192,8 @@ export default function HealthGuidePage({
           setIsStreaming(false);
         },
         onError: (err) => {
+          const code = err.code;
+          const isTerminal = !!code && TERMINAL_ERROR_CODES.has(code);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
@@ -193,6 +201,7 @@ export default function HealthGuidePage({
                     ...m,
                     streaming: false,
                     error: true,
+                    terminalError: isTerminal,
                     content:
                       m.content ||
                       err.message ||
@@ -477,13 +486,18 @@ function MessageBubble({ message, onRetry }: { message: DisplayMessage; onRetry:
             </div>
           )}
         </div>
-        {message.error && (
+        {message.error && !message.terminalError && (
           <button
             onClick={onRetry}
             className="mt-1.5 text-xs text-red-600 dark:text-red-400 hover:underline"
           >
             Retry
           </button>
+        )}
+        {message.error && message.terminalError && (
+          <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+            Retrying won't help — this feature is unavailable on your account.
+          </p>
         )}
         {!message.error && !message.streaming && (
           <p className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-1.5">

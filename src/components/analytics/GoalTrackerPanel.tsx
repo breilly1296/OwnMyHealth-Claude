@@ -41,7 +41,9 @@ import {
   type HealthGoalData,
   type CreateHealthGoalData,
   type GoalsSummary,
+  type HealthGoalSuggestion,
 } from '../../services/api';
+import { extractErrorMessage } from '../../utils/errorHelpers';
 
 interface GoalTrackerPanelProps {
   biomarkers: Biomarker[];
@@ -170,9 +172,7 @@ function clientSuggestionsFromBiomarkers(biomarkers: Biomarker[]): ClientSuggest
 export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalTrackerPanelProps) {
   const [goals, setGoals] = useState<HealthGoalWithHistory[]>([]);
   const [summary, setSummary] = useState<GoalsSummary | null>(null);
-  const [serverSuggestions, setServerSuggestions] = useState<
-    { name: string; description: string; category: string; unit: string; direction: string }[]
-  >([]);
+  const [serverSuggestions, setServerSuggestions] = useState<HealthGoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,7 +199,7 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
       setGoals((goalsData as HealthGoalWithHistory[]) || []);
       if (summaryData) setSummary(summaryData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load goals');
+      setError(extractErrorMessage(err, 'Failed to load goals'));
       setGoals([]);
     } finally {
       setIsLoading(false);
@@ -267,7 +267,7 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
       setGoals((prev) => prev.filter((g) => g.id !== id));
       if (selectedGoal?.id === id) setSelectedGoal(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete goal');
+      setError(extractErrorMessage(err, 'Failed to delete goal'));
     } finally {
       setMutatingId(null);
     }
@@ -279,7 +279,7 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
       const updated = (await healthGoalsApi.update(id, { status })) as HealthGoalWithHistory;
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status');
+      setError(extractErrorMessage(err, 'Failed to update status'));
     } finally {
       setMutatingId(null);
     }
@@ -291,7 +291,7 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
       const updated = (await healthGoalsApi.updateProgress(id, { value, note })) as HealthGoalWithHistory;
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update progress');
+      setError(extractErrorMessage(err, 'Failed to update progress'));
     } finally {
       setMutatingId(null);
     }
@@ -304,27 +304,51 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
       setShowCreateModal(false);
       setCreatePrefill(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create goal');
+      setError(extractErrorMessage(err, 'Failed to create goal'));
       throw err;
     }
   };
 
-  const handleAddFromSuggestion = (suggestion: ClientSuggestion | typeof serverSuggestions[number]) => {
+  const handleAddFromSuggestion = (suggestion: ClientSuggestion | HealthGoalSuggestion) => {
     const today = new Date().toISOString().split('T')[0];
     const targetDate = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const isClient = 'biomarkerId' in suggestion;
-    setCreatePrefill({
-      name: suggestion.name,
-      description: suggestion.description,
-      category: suggestion.category,
-      unit: suggestion.unit,
-      direction: suggestion.direction as GoalDirection,
-      targetValue: isClient ? suggestion.targetValue : 0,
-      startValue: isClient ? suggestion.currentValue : undefined,
-      startDate: today,
-      targetDate,
-      relatedBiomarkerId: isClient ? suggestion.biomarkerId : undefined,
-    });
+
+    if (isClient) {
+      setCreatePrefill({
+        name: suggestion.name,
+        description: suggestion.description,
+        category: suggestion.category,
+        unit: suggestion.unit,
+        direction: suggestion.direction as GoalDirection,
+        targetValue: suggestion.targetValue,
+        startValue: suggestion.currentValue,
+        startDate: today,
+        targetDate,
+        relatedBiomarkerId: suggestion.biomarkerId,
+      });
+    } else {
+      // Server suggestion: targetValue is precomputed (midpoint of normal
+      // range) and relatedBiomarkerId points at the user's biomarker so
+      // we can pull the current value as startValue without a round-trip.
+      // Empty relatedBiomarkerId means it's a generic non-biomarker
+      // suggestion (e.g., "Maintain Healthy Blood Pressure").
+      const linkedBiomarker = suggestion.relatedBiomarkerId
+        ? biomarkerById.get(suggestion.relatedBiomarkerId)
+        : undefined;
+      setCreatePrefill({
+        name: suggestion.name,
+        description: suggestion.description,
+        category: suggestion.category,
+        unit: suggestion.unit,
+        direction: suggestion.direction as GoalDirection,
+        targetValue: suggestion.targetValue,
+        startValue: linkedBiomarker?.value,
+        startDate: today,
+        targetDate,
+        relatedBiomarkerId: suggestion.relatedBiomarkerId || undefined,
+      });
+    }
     setShowCreateModal(true);
   };
 
@@ -954,7 +978,7 @@ function CreateGoalModal({ biomarkers, prefill, onClose, onSubmit }: CreateGoalM
         relatedBiomarkerId: form.relatedBiomarkerId || undefined,
       });
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to create goal');
+      setFormError(extractErrorMessage(err, 'Failed to create goal'));
     } finally {
       setIsSubmitting(false);
     }

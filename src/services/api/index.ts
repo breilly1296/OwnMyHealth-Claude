@@ -42,6 +42,7 @@ export type {
   UpdateHealthGoalData,
   GoalProgressUpdate,
   GoalsSummary,
+  HealthGoalSuggestion,
 } from './healthGoals';
 
 // Upload API

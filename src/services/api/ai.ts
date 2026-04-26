@@ -23,13 +23,32 @@ export interface ChatUsage {
   outputTokens: number;
 }
 
+/**
+ * Error shape we attach extra context to when the chat stream fails.
+ * Callers can read `code` to decide whether retry makes sense (timeouts
+ * are retriable; `SERVICE_UNAVAILABLE` is not).
+ */
+export type ChatStreamError = Error & {
+  code?: string;
+  planLimit?: { limit: number; current: number; feature: string; upgradeRequired: boolean };
+};
+
 export interface ChatStreamCallbacks {
   onChunk: (text: string) => void;
   onComplete: (usage: ChatUsage) => void;
-  onError: (error: Error) => void;
+  onError: (error: ChatStreamError) => void;
   /** Optional AbortSignal to cancel the stream (e.g. user clicks "Stop"). */
   signal?: AbortSignal;
 }
+
+/**
+ * Hard ceiling for a single chat round-trip. Beyond this, we surface a
+ * timeout error instead of letting the connection hang. Anthropic's
+ * server-side timeout is longer than what proxies/Cloud Run will hold,
+ * so without this the user sees an indefinite spinner when the upstream
+ * stalls. 60s is comfortably above a normal answer's tail latency.
+ */
+const CHAT_TIMEOUT_MS = 60_000;
 
 function parseSSELines(buffer: string): { events: string[]; rest: string } {
   // SSE events are separated by \n\n. We return fully-closed events and
@@ -69,6 +88,23 @@ export const aiApi = {
   ): Promise<void> {
     const { onChunk, onComplete, onError, signal } = callbacks;
 
+    // Compose a chained AbortController: caller's signal OR our timeout
+    // can both abort the in-flight stream. We track which one fired so
+    // the catch block can distinguish a user-cancel from a timeout.
+    let timedOut = false;
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      timeoutController.abort();
+    }, CHAT_TIMEOUT_MS);
+    if (signal) {
+      if (signal.aborted) {
+        timeoutController.abort();
+      } else {
+        signal.addEventListener('abort', () => timeoutController.abort(), { once: true });
+      }
+    }
+
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -80,7 +116,7 @@ export const aiApi = {
       const response = await fetch(`${API_BASE_URL}/ai/chat`, {
         method: 'POST',
         credentials: 'include',
-        signal,
+        signal: timeoutController.signal,
         headers,
         body: JSON.stringify({ message, conversationHistory }),
       });
@@ -134,8 +170,10 @@ export const aiApi = {
       let buffer = '';
       let receivedUsage: ChatUsage = { inputTokens: 0, outputTokens: 0 };
       let streamError: string | null = null;
+      let receivedAnyContent = false;
+      let receivedMessageStop = false;
 
-       
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -150,8 +188,10 @@ export const aiApi = {
           try {
             const parsed = JSON.parse(payload);
             if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              receivedAnyContent = true;
               onChunk(parsed.delta.text as string);
             } else if (parsed.type === 'message_stop' && parsed.usage) {
+              receivedMessageStop = true;
               receivedUsage = {
                 inputTokens: parsed.usage.input_tokens ?? 0,
                 outputTokens: parsed.usage.output_tokens ?? 0,
@@ -169,14 +209,29 @@ export const aiApi = {
         onError(new Error(streamError));
         return;
       }
+      // Silent close: backend dropped the connection without sending a
+      // `message_stop` or an explicit error frame, and we never streamed
+      // any tokens. Treat this as an error rather than a happy completion
+      // — otherwise the UI shows an empty assistant bubble with no signal
+      // that anything went wrong.
+      if (!receivedMessageStop && !receivedAnyContent) {
+        onError(new Error('The Health Guide stopped responding. Please try again.'));
+        return;
+      }
       onComplete(receivedUsage);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
+        if (timedOut) {
+          onError(new Error('The Health Guide took too long to respond. Please try again.'));
+          return;
+        }
         // Caller-initiated cancel — surface as a completion, not an error.
         onComplete({ inputTokens: 0, outputTokens: 0 });
         return;
       }
       onError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 };

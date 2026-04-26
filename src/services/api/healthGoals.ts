@@ -116,8 +116,28 @@ export const healthGoalsApi = {
     return response.data;
   },
 
-  async getSuggestions(): Promise<{ name: string; description: string; category: string; unit: string; direction: string }[]> {
-    const response = await apiFetch<{ name: string; description: string; category: string; unit: string; direction: string }[]>('/health-goals/suggestions');
+  async getSuggestions(): Promise<HealthGoalSuggestion[]> {
+    const response = await apiFetch<HealthGoalSuggestion[]>('/health-goals/suggestions');
     return response.data;
   },
 };
+
+/**
+ * Server-generated goal suggestion. The backend computes `targetValue` as
+ * the midpoint of the linked biomarker's normal range and includes
+ * `relatedBiomarkerId` so the UI can pre-fill the create-goal form
+ * without round-tripping to compute it.
+ *
+ * `relatedBiomarkerId` is an empty string for generic suggestions
+ * (e.g., "Maintain Healthy Blood Pressure") that aren't tied to a
+ * specific user biomarker.
+ */
+export interface HealthGoalSuggestion {
+  name: string;
+  description: string;
+  category: string;
+  unit: string;
+  direction: string;
+  targetValue: number;
+  relatedBiomarkerId: string;
+}

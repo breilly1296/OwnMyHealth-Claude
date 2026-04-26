@@ -14,6 +14,20 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, AlertTriangle, Loader2 } from 'lucide-react';
 import { settingsApi } from '../../services/api';
 import type { EmailNotificationPreferences, NotificationPreferences } from '../../services/api';
+import { extractErrorMessage } from '../../utils/errorHelpers';
+
+// Server should always include the nested `email.*` shape, but if a stale
+// or partial response comes back we render off these defaults instead of
+// blank toggles. All-false means the user can intentionally enable each
+// channel from a known state.
+const DEFAULT_EMAIL_PREFS: EmailNotificationPreferences = {
+  enabled: false,
+  newResults: false,
+  outOfRangeAlerts: false,
+  goalReminders: false,
+  weeklySummary: false,
+  planExpiring: false,
+};
 
 interface NotificationSettingsSectionProps {
   onError?: (message: string) => void;
@@ -56,7 +70,7 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
         if (!cancelled) setPrefs(p);
       } catch (err) {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : 'Failed to load notification preferences';
+        const message = extractErrorMessage(err, 'Failed to load notification preferences');
         setLoadError(message);
         onErrorRef.current?.(message);
       } finally {
@@ -71,13 +85,16 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
   async function handleToggle(key: keyof EmailNotificationPreferences) {
     if (!prefs || savingKey) return;
     const previous = prefs;
-    const nextValue = !prefs.email[key];
+    const currentEmail = prefs.email ?? DEFAULT_EMAIL_PREFS;
+    const nextValue = !currentEmail[key];
     // Optimistic update — both the nested source of truth and the legacy
     // flat aliases (kept in sync so other consumers of this response stay
-    // consistent).
+    // consistent). Falls back to DEFAULT_EMAIL_PREFS if the server omitted
+    // the nested shape; otherwise toggles render off `undefined` and
+    // clicking them does nothing visible.
     setPrefs({
       ...prefs,
-      email: { ...prefs.email, [key]: nextValue },
+      email: { ...currentEmail, [key]: nextValue },
       emailNotifications: key === 'enabled' ? nextValue : prefs.emailNotifications,
       weeklySummary: key === 'weeklySummary' ? nextValue : prefs.weeklySummary,
       abnormalAlerts: key === 'outOfRangeAlerts' ? nextValue : prefs.abnormalAlerts,
@@ -88,8 +105,7 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
-      const message = err instanceof Error ? err.message : 'Failed to update preference';
-      onError?.(message);
+      onError?.(extractErrorMessage(err, 'Failed to update preference'));
     } finally {
       setSavingKey(null);
     }
@@ -130,6 +146,11 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
             </button>
           </div>
         ) : (
+          (() => {
+            // Tolerate a server response without the nested `email` shape —
+            // render off DEFAULT_EMAIL_PREFS so toggles aren't `undefined`.
+            const emailPrefs = prefs.email ?? DEFAULT_EMAIL_PREFS;
+            return (
           <>
             {/* Master switch — disables all sub-toggles visually. Stored values
                 are kept so flipping back on restores the user's previous choices. */}
@@ -139,19 +160,19 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
                 <p className="text-sm text-slate-500 dark:text-slate-400">Master switch for all emails</p>
               </div>
               <Toggle
-                value={prefs.email.enabled}
+                value={emailPrefs.enabled}
                 onToggle={() => handleToggle('enabled')}
                 disabled={savingKey === 'enabled'}
               />
             </div>
 
             {TOGGLE_ROWS.map((row) => {
-              const value = prefs.email[row.key];
-              const disabled = !prefs.email.enabled || savingKey === row.key;
+              const value = emailPrefs[row.key];
+              const disabled = !emailPrefs.enabled || savingKey === row.key;
               return (
                 <div
                   key={row.key}
-                  className={`flex items-center justify-between py-2 ${!prefs.email.enabled ? 'opacity-50' : ''}`}
+                  className={`flex items-center justify-between py-2 ${!emailPrefs.enabled ? 'opacity-50' : ''}`}
                 >
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">{row.label}</p>
@@ -166,6 +187,8 @@ export default function NotificationSettingsSection({ onError }: NotificationSet
               );
             })}
           </>
+            );
+          })()
         )}
       </div>
     </section>

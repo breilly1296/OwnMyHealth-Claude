@@ -33,6 +33,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { settingsApi } from '../../services/api';
 import { logger } from '../../utils/logger';
+import { extractErrorMessage } from '../../utils/errorHelpers';
 
 const settingsLogger = logger.createLogger('Settings');
 import ChangePasswordModal from './ChangePasswordModal';
@@ -107,7 +108,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
         setDisplayName(composeDisplayName(profile.firstName, profile.lastName, emailLocal));
       } catch (err) {
         if (cancelled) return;
-        setProfileLoadError(err instanceof Error ? err.message : 'Failed to load profile');
+        setProfileLoadError(extractErrorMessage(err, 'Failed to load profile'));
       } finally {
         if (!cancelled) setIsLoadingProfile(false);
       }
@@ -127,7 +128,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
       setIsEditingName(false);
       showToast('Display name updated', 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to update display name', 'error');
+      showToast(extractErrorMessage(err, 'Failed to update display name'), 'error');
     } finally {
       setIsSavingName(false);
     }
@@ -149,9 +150,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (err) {
-      settingsLogger.error('Data export failed', {
-        error: err instanceof Error ? err.message : 'Unknown',
-      });
+      const message = extractErrorMessage(err, 'Data export failed');
+      settingsLogger.error('Data export failed', { error: message });
+      showToast(message, 'error');
     } finally {
       setIsExporting(false);
     }
@@ -174,8 +175,9 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
         onBack();
       }, 1500);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete data');
-      setToast({ message: err instanceof Error ? err.message : 'Failed to delete data', type: 'error' });
+      const message = extractErrorMessage(err, 'Failed to delete data');
+      setDeleteError(message);
+      setToast({ message, type: 'error' });
     } finally {
       setIsDeleting(false);
     }
@@ -193,7 +195,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
       // Redirect to login after account deletion
       window.location.href = '/';
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account');
+      setDeleteError(extractErrorMessage(err, 'Failed to delete account'));
     } finally {
       setIsDeleting(false);
     }
