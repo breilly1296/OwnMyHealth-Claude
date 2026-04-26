@@ -303,11 +303,12 @@ export default function HealthGuidePage({
             suggestions={suggestions}
             onSuggestionClick={handleSuggestionClick}
             disabled={isStreaming}
-            hasNoData={
-              (biomarkers?.length ?? 0) === 0 &&
-              (insurancePlans?.length ?? 0) === 0 &&
-              !healthProfile
-            }
+            // Only show the "upload labs" prompt when there's no biomarker
+            // data at all. If the user has biomarkers (even without an
+            // insurance plan or health profile), we should encourage them
+            // to ask a question, not nag them to upload something they
+            // already have.
+            hasNoData={(biomarkers?.length ?? 0) === 0}
             onOpenLabUpload={onOpenLabUpload}
             onNavigateToSettings={onNavigateToSettings}
           />
@@ -387,10 +388,10 @@ function EmptyState({
         </div>
         <div className="max-w-md">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            The Health Guide works best with your health data.
+            Upload a lab report to get personalized insights.
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Upload a lab report or set up your health profile to get personalized insights.
+            The Health Guide answers questions grounded in your tracked biomarkers, so it needs at least one report to work with.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-2">
@@ -422,11 +423,10 @@ function EmptyState({
       </div>
       <div className="max-w-md">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-          Welcome! I'm your Health Guide.
+          Ask a question about your biomarkers to get started.
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          I have access to your biomarkers, insurance, expenses, goals, and tracked health needs.
-          Ask me anything about your health data.
+          The Health Guide has access to your biomarkers, insurance, expenses, goals, and tracked health needs.
         </p>
       </div>
       <div className="w-full mt-2">

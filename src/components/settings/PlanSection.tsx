@@ -180,27 +180,48 @@ export default function PlanSection({ onError }: PlanSectionProps) {
           })}
         </div>
 
-        {/* Feature list */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Included</h3>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {FEATURE_ROWS.map((row) => {
-              const enabled = data.limits[row.key] === true;
-              return (
-                <li key={row.key} className="flex items-center gap-2 text-sm">
-                  {enabled ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  )}
-                  <span className={enabled ? 'text-slate-700 dark:text-slate-300' : 'text-slate-500 dark:text-slate-500 line-through'}>
-                    {row.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        {/* Feature list — split into "Included on <plan>" and "Upgrade to
+            unlock" so users can see at a glance what they have vs what
+            requires an upgrade. The previous single-list view mixed
+            check marks and strike-through Xs, which read as confusing. */}
+        {(() => {
+          const includedRows = FEATURE_ROWS.filter((row) => data.limits[row.key] === true);
+          const lockedRows = FEATURE_ROWS.filter((row) => data.limits[row.key] !== true);
+          return (
+            <div className="space-y-5">
+              {includedRows.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Included on {data.planName}
+                  </h3>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {includedRows.map((row) => (
+                      <li key={row.key} className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span className="text-slate-700 dark:text-slate-300">{row.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {lockedRows.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Upgrade to unlock
+                  </h3>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {lockedRows.map((row) => (
+                      <li key={row.key} className="flex items-center gap-2 text-sm">
+                        <XCircle className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="text-slate-500 dark:text-slate-400">{row.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }, [data, loading, loadError, onError]);

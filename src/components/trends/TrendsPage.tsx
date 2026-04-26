@@ -284,11 +284,13 @@ export default function TrendsPage({ biomarkers }: TrendsPageProps) {
       {processedBiomarkers.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700">
           <TrendingUp className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Biomarkers Found</h3>
-          <p className="text-slate-500 dark:text-slate-400">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            {selectedCategory !== 'All' ? 'Nothing to chart yet' : 'Track changes over time'}
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
             {selectedCategory !== 'All'
-              ? `No biomarkers in the "${selectedCategory}" category.`
-              : 'Add biomarkers to start tracking trends.'}
+              ? `You don't have any biomarkers in the "${selectedCategory}" category yet. Upload a lab report to populate it.`
+              : 'Once you have 2+ readings of a biomarker, trend charts will appear here. Upload another lab report to start seeing how your numbers move.'}
           </p>
         </div>
       ) : (

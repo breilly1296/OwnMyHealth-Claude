@@ -106,9 +106,19 @@ export default function RecentActivity({
       })
       .filter((i): i is ActivityItem => i !== null);
 
-    return [...biomarkerItems, ...planItems]
-      .sort((a, b) => b.at - a.at)
-      .slice(0, maxItems);
+    // Defensive dedupe: an upstream re-import or a backend join sometimes
+    // surfaces the same plan/biomarker twice. Collapse by (kind, id) so
+    // the feed never shows a literal duplicate row.
+    const seen = new Set<string>();
+    const merged: ActivityItem[] = [];
+    for (const item of [...biomarkerItems, ...planItems]) {
+      const key = `${item.kind}:${item.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(item);
+    }
+
+    return merged.sort((a, b) => b.at - a.at).slice(0, maxItems);
   }, [biomarkers, insurancePlans, maxItems]);
 
   if (items.length === 0) {

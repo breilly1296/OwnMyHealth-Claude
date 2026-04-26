@@ -181,6 +181,7 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
   const [selectedGoal, setSelectedGoal] = useState<HealthGoalWithHistory | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<Partial<CreateHealthGoalData> | null>(null);
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
 
   const biomarkerById = useMemo(() => {
     const map = new Map<string, Biomarker>();
@@ -450,7 +451,13 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
       )}
 
       {/* Suggestions */}
-      {!isLoadingSuggestions && effectiveSuggestions.length > 0 && (
+      {!isLoadingSuggestions && effectiveSuggestions.length > 0 && (() => {
+        const initialVisible = 3;
+        const visibleSuggestions = showAllSuggestions
+          ? effectiveSuggestions
+          : effectiveSuggestions.slice(0, initialVisible);
+        const hasMore = effectiveSuggestions.length > initialVisible;
+        return (
         <div className="bg-gradient-to-br from-brand-50 to-purple-50 dark:from-slate-800 dark:to-slate-800 rounded-2xl border border-brand-200/60 dark:border-slate-700 p-6">
           <h3 className="font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-brand-500" />
@@ -462,7 +469,7 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
               : 'Based on your out-of-range biomarkers'}
           </p>
           <div className="space-y-3">
-            {effectiveSuggestions.slice(0, 3).map((suggestion, idx) => (
+            {visibleSuggestions.map((suggestion, idx) => (
               <div
                 key={idx}
                 className="bg-white/80 dark:bg-slate-800/80 backdrop-blur p-4 rounded-xl border border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-3"
@@ -482,8 +489,19 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
               </div>
             ))}
           </div>
+          {hasMore && (
+            <button
+              onClick={() => setShowAllSuggestions((v) => !v)}
+              className="mt-4 text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+            >
+              {showAllSuggestions
+                ? 'Show fewer'
+                : `View all ${effectiveSuggestions.length} suggestions`}
+            </button>
+          )}
         </div>
-      )}
+        );
+      })()}
 
       {/* Empty state */}
       {!isLoading && goals.length === 0 && effectiveSuggestions.length === 0 && (

@@ -5,8 +5,10 @@
  * Uses CollapsibleNavGroup for organized category navigation.
  */
 
-import { Heart, Zap, X, Shield, AlertCircle, TrendingUp, FileUp } from 'lucide-react';
+import { Heart, Zap, X, Shield, AlertCircle, TrendingUp, FileUp, Settings } from 'lucide-react';
 import CollapsibleNavGroup from './CollapsibleNavGroup';
+import CategoryTab from './CategoryTab';
+import { categoryToPathMap } from './categoryRouting';
 import type { BiomarkerCategory, Biomarker, InsurancePlan, NavGroup } from '../../types';
 
 interface SidebarStats {
@@ -139,6 +141,19 @@ export function DashboardSidebar({
           />
         );
       })}
+
+      {/* Settings — pinned to the bottom of the sidebar so it's reachable
+          without opening the avatar dropdown. The avatar menu still works;
+          this is the secondary path users naturally look for first. */}
+      <div className="pt-2 mt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+        <CategoryTab
+          category="Settings"
+          icon={<Settings className="w-4 h-4" />}
+          isActive={selectedCategory === 'Account Settings'}
+          onClick={() => onSelect('Account Settings')}
+          href={categoryToPathMap['Account Settings']}
+        />
+      </div>
     </nav>
   );
 
