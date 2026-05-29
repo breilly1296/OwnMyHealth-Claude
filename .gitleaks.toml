@@ -1,0 +1,20 @@
+# gitleaks configuration for OwnMyHealth CI secret scanning.
+#
+# Extends the default ruleset and allowlists the tracked .env*.example
+# templates, which intentionally carry placeholder (non-secret) values, plus
+# obvious CHANGE_ME placeholders. A real secret committed to any other tracked
+# file fails the CI "Security Audit" job.
+title = "OwnMyHealth gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Template env files hold placeholders, not real secrets"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\..+\.example$''',
+]
+regexes = [
+  '''CHANGE_ME[A-Za-z0-9_]*''',
+]
