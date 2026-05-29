@@ -35,60 +35,82 @@ router.get(
     const prisma = getPrismaClient();
     const providerId = req.user!.id;
 
-    // Admin RLS context: the joined `patient` User is another tenant,
-    // so provider's own session would be denied by users_select_own. The
-    // providerId filter on ProviderPatient + the ACTIVE/PENDING status
-    // filter bound disclosure to the provider's own relationships.
-    const relationships = await withRLSContext(
-      null,
+    // Provider RLS context (P7). Two reads, intentionally NOT a join:
+    //  1. The provider's own provider_patients rows (provider_patients_select).
+    //  2. Patient identity {id,email} ONLY for ACTIVE, unexpired relationships,
+    //     in a separate query with a minimal column select.
+    //
+    // We deliberately avoid `include: { patient }` here: `patient` is a REQUIRED
+    // relation in the schema, but under provider RLS the patient User row is
+    // hidden for PENDING/expired relationships — and Prisma throws on a required
+    // relation whose target row is RLS-filtered out, which would 500 the whole
+    // list for any provider with a pending request. The expiry filter below also
+    // keeps the app-layer gate in parity with has_active_consent so a BYPASSRLS
+    // (dev/staging) role can't surface an expired-consent patient's email.
+    const now = new Date();
+    const { relationships, patientsById } = await withRLSContext(
+      providerId,
       async (tx) => {
-        return tx.providerPatient.findMany({
+        const rels = await tx.providerPatient.findMany({
           where: {
             providerId,
             status: { in: ['ACTIVE', 'PENDING'] },
           },
-          include: {
-            patient: {
-              select: {
-                id: true,
-                email: true,
-                firstNameEncrypted: true,
-                lastNameEncrypted: true,
-                createdAt: true,
-              },
-            },
-          },
           orderBy: { createdAt: 'desc' },
         });
+
+        const activeUnexpiredIds = rels
+          .filter(
+            (r) =>
+              r.status === 'ACTIVE' &&
+              !(r.consentExpiresAt && new Date(r.consentExpiresAt) < now),
+          )
+          .map((r) => r.patientId);
+
+        const patients = activeUnexpiredIds.length
+          ? await tx.user.findMany({
+              where: { id: { in: activeUnexpiredIds } },
+              // Minimal, non-secret select. users_select_provider authorizes the
+              // whole row at the DB layer (RLS is row-level, not column-level),
+              // so the column allowlist here is the field-minimization gate —
+              // never select password_hash / *_token in provider context.
+              select: { id: true, email: true, createdAt: true },
+            })
+          : [];
+
+        return {
+          relationships: rels,
+          patientsById: new Map(patients.map((p) => [p.id, p])),
+        };
       },
-      { isAdmin: true },
     );
 
-    // Transform to response format. PENDING relationships (and any other
-    // non-ACTIVE status) must not leak the patient's email — consent hasn't
-    // been granted yet, so only the provider's own typed-in email is
-    // confirmable, not the patient's stored one.
-    const result = relationships.map((rel) => ({
-      relationshipId: rel.id,
-      patientId: rel.patientId,
-      patient: {
-        id: rel.patient.id,
-        email: rel.status === 'ACTIVE' ? rel.patient.email : undefined,
-        // Note: firstName/lastName would need decryption in a real app
-        createdAt: rel.patient.createdAt,
-      },
-      permissions: {
-        canViewBiomarkers: rel.canViewBiomarkers,
-        canViewInsurance: rel.canViewInsurance,
-        canViewHealthNeeds: rel.canViewHealthNeeds,
-        canEditData: rel.canEditData,
-      },
-      relationshipType: rel.relationshipType,
-      status: rel.status,
-      consentGrantedAt: rel.consentGrantedAt,
-      consentExpiresAt: rel.consentExpiresAt,
-      createdAt: rel.createdAt,
-    }));
+    // Transform to response format. Email + createdAt are present only for
+    // ACTIVE, unexpired relationships (the keys present in patientsById);
+    // PENDING and expired relationships disclose neither.
+    const result = relationships.map((rel) => {
+      const pt = patientsById.get(rel.patientId);
+      return {
+        relationshipId: rel.id,
+        patientId: rel.patientId,
+        patient: {
+          id: rel.patientId,
+          email: pt?.email,
+          createdAt: pt?.createdAt,
+        },
+        permissions: {
+          canViewBiomarkers: rel.canViewBiomarkers,
+          canViewInsurance: rel.canViewInsurance,
+          canViewHealthNeeds: rel.canViewHealthNeeds,
+          canEditData: rel.canEditData,
+        },
+        relationshipType: rel.relationshipType,
+        status: rel.status,
+        consentGrantedAt: rel.consentGrantedAt,
+        consentExpiresAt: rel.consentExpiresAt,
+        createdAt: rel.createdAt,
+      };
+    });
 
     // Audit log: Provider listing their patients
     const auditService = getAuditLogService(prisma);
@@ -275,13 +297,13 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    // Admin context: relationship lookup + cross-tenant User read.
-    // Application-level enforcement (relationship.status, consent expiry,
-    // account-state filter) is the authorization — this just wraps the SQL
-    // in an RLS-honoring transaction so a NOBYPASSRLS role can't silently
-    // return no rows when policies evaluate against a NULL user id.
+    // Provider RLS context (P7): the patient's User row is now read through the
+    // users_select_provider policy (visible only for an ACTIVE, unexpired
+    // consent relationship). The app-layer checks below stay the primary gate +
+    // audit driver; RLS is the backstop that turns a missed check into a
+    // no-disclosure instead of a silent cross-tenant leak.
     const { relationship, patient } = await withRLSContext(
-      null,
+      providerId,
       async (tx) => {
         const rel = await tx.providerPatient.findUnique({
           where: {
@@ -316,7 +338,6 @@ router.get(
             : null;
         return { relationship: rel, patient: pt };
       },
-      { isAdmin: true },
     );
 
     const auditService = getAuditLogService(prisma);
@@ -399,12 +420,13 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    // Admin context wraps all three reads: relationship, patient account
-    // state, and the patient's biomarkers. Cross-tenant access bounded by
-    // the application-level canViewBiomarkers + status + consent checks
-    // below. See GET /patients/:patientId for the same pattern.
+    // Provider RLS context (P7): biomarkers_select already carries an
+    // `OR has_provider_access(user_id, 'view_biomarkers')` branch, so under the
+    // provider's session the DB returns biomarker rows ONLY for an ACTIVE,
+    // unexpired, can_view_biomarkers relationship — a true backstop matching the
+    // app-layer checks below (which remain the primary gate + audit driver).
     const { relationship, patient, biomarkers } = await withRLSContext(
-      null,
+      providerId,
       async (tx) => {
         const rel = await tx.providerPatient.findUnique({
           where: {
@@ -443,7 +465,6 @@ router.get(
         });
         return { relationship: rel, patient: pt, biomarkers: rows };
       },
-      { isAdmin: true },
     );
 
     const auditService = getAuditLogService(prisma);
@@ -543,11 +564,12 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    // Admin context wraps relationship + patient state + health needs.
-    // See /patients/:patientId/biomarkers for the same pattern and
-    // authorization-in-app-layer rationale.
+    // Provider RLS context (P7): health_needs_select carries an
+    // `OR has_provider_access(user_id, 'view_health_needs')` branch, so the DB
+    // returns rows only for an ACTIVE, unexpired, can_view_health_needs
+    // relationship. App-layer checks below stay the primary gate + audit driver.
     const { relationship, patient, healthNeeds } = await withRLSContext(
-      null,
+      providerId,
       async (tx) => {
         const rel = await tx.providerPatient.findUnique({
           where: {
@@ -583,7 +605,6 @@ router.get(
         });
         return { relationship: rel, patient: pt, healthNeeds: rows };
       },
-      { isAdmin: true },
     );
 
     const auditService = getAuditLogService(prisma);
