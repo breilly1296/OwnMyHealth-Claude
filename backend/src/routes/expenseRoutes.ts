@@ -9,6 +9,8 @@ import { authenticate } from '../middleware/auth.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
+import { requirePlanLimit } from '../middleware/planGating.js';
+import { aiSpendGuard } from '../middleware/aiSpendGuard.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import {
@@ -109,7 +111,9 @@ router.delete(
 router.post(
   '/analyze',
   aiLimiter,
+  aiSpendGuard,
   blockDemoAI,
+  requirePlanLimit('costAnalysisPerMonth'),
   csrfProtection,
   validate(schemas.expense.analyzeCosts),
   asyncHandler(analyzeCosts)

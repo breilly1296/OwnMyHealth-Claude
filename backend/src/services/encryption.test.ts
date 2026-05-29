@@ -187,11 +187,16 @@ describe('encryption.ts', () => {
       expect(service.decryptWithMasterKey(encrypted2)).toBe(plaintext);
     });
 
+    // Flip the first char to a GUARANTEED-different one. Hardcoding a fixed
+    // letter was flaky: when the (base64) segment already started with that
+    // letter the "tamper" was a no-op and decryption wrongly succeeded.
+    const flipFirst = (s: string) => (s[0] === 'A' ? 'B' : 'A') + s.substring(1);
+
     it('should fail decryption if ciphertext is tampered with', () => {
       const plaintext = 'Data to be tampered.';
       const encrypted = service.encryptWithMasterKey(plaintext);
       const parts = encrypted.split(':');
-      const tamperedCiphertext = parts[0] + ':' + parts[1] + ':' + 'A' + parts[2].substring(1); // Tamper ciphertext
+      const tamperedCiphertext = parts[0] + ':' + parts[1] + ':' + flipFirst(parts[2]);
       expect(() => service.decryptWithMasterKey(tamperedCiphertext)).toThrow();
     });
 
@@ -199,7 +204,7 @@ describe('encryption.ts', () => {
       const plaintext = 'Data to be tampered.';
       const encrypted = service.encryptWithMasterKey(plaintext);
       const parts = encrypted.split(':');
-      const tamperedAuthTag = parts[0] + ':' + 'B' + parts[1].substring(1) + ':' + parts[2]; // Tamper authTag
+      const tamperedAuthTag = parts[0] + ':' + flipFirst(parts[1]) + ':' + parts[2];
       expect(() => service.decryptWithMasterKey(tamperedAuthTag)).toThrow();
     });
 
@@ -207,7 +212,7 @@ describe('encryption.ts', () => {
       const plaintext = 'Data to be tampered.';
       const encrypted = service.encryptWithMasterKey(plaintext);
       const parts = encrypted.split(':');
-      const tamperedIv = 'C' + parts[0].substring(1) + ':' + parts[1] + ':' + parts[2]; // Tamper IV
+      const tamperedIv = flipFirst(parts[0]) + ':' + parts[1] + ':' + parts[2];
       expect(() => service.decryptWithMasterKey(tamperedIv)).toThrow();
     });
   });
@@ -282,7 +287,10 @@ describe('encryption.ts', () => {
       const plaintext = 'User data to be tampered.';
       const encrypted = service.encrypt(plaintext, userSalt);
       const parts = encrypted.split(':');
-      const tamperedCiphertext = parts[0] + ':' + parts[1] + ':' + 'X' + parts[2].substring(1);
+      // Guaranteed-different first char (see flipFirst note above) — avoids the
+      // flaky no-op when the segment already starts with the chosen letter.
+      const ct = parts[2];
+      const tamperedCiphertext = parts[0] + ':' + parts[1] + ':' + (ct[0] === 'A' ? 'B' : 'A') + ct.substring(1);
       expect(() => service.decrypt(tamperedCiphertext, userSalt)).toThrow();
     });
   });
@@ -436,9 +444,13 @@ describe('encryption.ts', () => {
       const fieldsToEncrypt = ['name', 'email'];
       const encryptedData = service.encryptFields(data, fieldsToEncrypt, userSalt);
 
-      // Tamper one of the encrypted fields
-      const tamperedEncryptedEmail = (encryptedData.email as string).replace('A', 'Z');
-      const tamperedData = { ...encryptedData, email: tamperedEncryptedEmail };
+      // Tamper one of the encrypted fields. Flip the first char of the
+      // ciphertext segment so the mutation is GUARANTEED — a blind
+      // .replace('A', 'Z') was a no-op (and thus flaky) whenever the encoded
+      // string happened to contain no 'A'.
+      const emailParts = (encryptedData.email as string).split(':');
+      emailParts[2] = (emailParts[2][0] === 'A' ? 'B' : 'A') + emailParts[2].substring(1);
+      const tamperedData = { ...encryptedData, email: emailParts.join(':') };
 
       const decryptedData = service.decryptFields(tamperedData, fieldsToEncrypt, userSalt);
 

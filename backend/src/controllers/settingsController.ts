@@ -286,6 +286,7 @@ interface ExportUserProfile {
 interface ExportData {
   exportDate: string;
   user: ExportUserProfile;
+  healthProfile: UserHealthProfile;
   biomarkers: ExportBiomarker[];
   insurancePlans: ExportInsurancePlan[];
   healthGoals: ExportHealthGoal[];
@@ -436,6 +437,12 @@ export async function exportUserData(
   });
 
   const decrypt = (cipher: string, salt: string) => encryptionService.decrypt(cipher, salt);
+
+  // Self-reported health profile (conditions, medications, family history,
+  // etc.) is PHI the user explicitly entered and feeds the AI — it must be in
+  // a §164.524 right-of-access export. getDecryptedHealthProfile returns the
+  // empty shape when none is set, so the export is always well-formed.
+  const healthProfile = await getDecryptedHealthProfile(userId);
 
   const userProfile: ExportUserProfile = {
     email: user.email,
@@ -655,6 +662,7 @@ export async function exportUserData(
   const exportData: ExportData = {
     exportDate: new Date().toISOString(),
     user: userProfile,
+    healthProfile,
     biomarkers: decryptedBiomarkers,
     insurancePlans: exportInsurancePlans,
     healthGoals: exportHealthGoals,
@@ -693,6 +701,8 @@ export async function exportUserData(
     costAnalysisCount: exportCostAnalyses.length,
     fileCount: exportUserFiles.length,
     providerRelationshipCount: exportProviderRelationships.length,
+    healthProfileConditionCount: healthProfile.conditions.length,
+    healthProfileMedicationCount: healthProfile.medications.length,
   });
 
   const response: ApiResponse<ExportData> = {

@@ -27,6 +27,7 @@ import { asyncHandler, NotFoundError } from '../middleware/errorHandler.js';
 import { bulkOperationLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import { requirePlanLimit } from '../middleware/planGating.js';
+import { aiSpendGuard } from '../middleware/aiSpendGuard.js';
 import * as biomarkerController from '../controllers/biomarkerController.js';
 import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
@@ -119,6 +120,7 @@ router.delete(
 router.post(
   '/:id/guidance',
   aiLimiter,
+  aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('aiGuidancePerDay'),
   validate(schemas.uuidParam, 'params'),
