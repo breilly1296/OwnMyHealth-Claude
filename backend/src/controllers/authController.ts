@@ -264,27 +264,19 @@ export async function login(
       return;
     }
 
-    // Include remaining attempts if applicable
+    // Invalid credentials for an EXISTING account. Do NOT leak
+    // `remainingAttempts` (or a per-account countdown) to the client: it is a
+    // clean account-existence oracle — a non-existent email falls through to
+    // the generic 401 below with no details, so the presence of `details`
+    // would reveal "this email is registered". Keep the count server-side for
+    // the audit trail and lockout accounting only; return the SAME uniform 401.
     if (result.remainingAttempts !== undefined) {
-      // Audit log: login failed - invalid credentials
       await auditService.logAuth('LOGIN_FAILED', { req }, {
         email,
         reason: 'INVALID_CREDENTIALS',
         remainingAttempts: result.remainingAttempts,
       });
-
-      const response: ApiResponse = {
-        success: false,
-        error: {
-          code: 'INVALID_CREDENTIALS',
-          message: result.error || 'Invalid email or password',
-          details: {
-            remainingAttempts: result.remainingAttempts,
-          },
-        },
-      };
-      res.status(401).json(response);
-      return;
+      throw new UnauthorizedError('Invalid email or password');
     }
 
     // Audit log: login failed - generic
