@@ -98,6 +98,16 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
           canViewBiomarkers: true,
         },
       });
+      // PENDING relationship providerOk -> userB: has_active_consent is false
+      // for PENDING, so providerOk must NOT be able to read userB's identity.
+      await tx.providerPatient.create({
+        data: {
+          providerId: providerOk.id,
+          patientId: userB.id,
+          status: 'PENDING',
+          canViewBiomarkers: true,
+        },
+      });
     });
   });
 
@@ -177,6 +187,32 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       const rows = await readUserAMarker(userA.id);
       expect(rows).toHaveLength(1);
       expect(rows[0].userId).toBe(userA.id);
+    });
+
+    // users_select_provider policy (P7): a consented provider can read the
+    // patient's minimal identity {id,email}; a non-consented provider cannot.
+    it('a consented provider can read the patient user row {id,email}', async () => {
+      const row = await withRLSContext(providerOk.id, async (tx) =>
+        tx.user.findUnique({ where: { id: userA.id }, select: { id: true, email: true } })
+      );
+      expect(row).not.toBeNull();
+      expect(row?.id).toBe(userA.id);
+      expect(row?.email).toBe(userA.email);
+    });
+
+    it('a non-consented provider cannot read the patient user row', async () => {
+      const row = await withRLSContext(providerNo.id, async (tx) =>
+        tx.user.findUnique({ where: { id: userA.id }, select: { id: true, email: true } })
+      );
+      expect(row).toBeNull();
+    });
+
+    it('a PENDING relationship does NOT expose the patient user row', async () => {
+      // providerOk has an ACTIVE consent over userA but only PENDING over userB.
+      const row = await withRLSContext(providerOk.id, async (tx) =>
+        tx.user.findUnique({ where: { id: userB.id }, select: { id: true, email: true } })
+      );
+      expect(row).toBeNull();
     });
 
     // Runs last — mutates the shared consent row to an expired state.
