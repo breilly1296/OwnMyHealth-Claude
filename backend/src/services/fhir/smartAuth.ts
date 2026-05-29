@@ -15,6 +15,7 @@
 import { createHash, randomBytes } from 'crypto';
 import type { SMARTConfiguration, SMARTTokenResponse } from './types.js';
 import { logger } from '../../utils/logger.js';
+import { assertAllowedFhirUrl } from './urlSafety.js';
 
 export interface SMARTConfig {
   clientId: string;
@@ -25,6 +26,27 @@ export interface SMARTConfig {
   authorizeUrl?: string;
   tokenUrl?: string;
   scopes: string[];
+  /**
+   * Hosts (besides the FHIR base host) that the SMART authorize/token/revoke
+   * endpoints may legitimately live on — the SMART auth server can differ from
+   * the FHIR server. The patient Bearer token and OAuth client_secret are only
+   * ever sent to the FHIR base host or a host in this allowlist. Empty means
+   * "auth endpoints must be on the FHIR base host".
+   */
+  allowedAuthHosts?: string[];
+}
+
+/**
+ * Guard a SMART endpoint URL before sending the client_secret / code to it.
+ * Confines it to the FHIR base host or the configured auth-host allowlist —
+ * a malicious /.well-known response can't redirect the secret to an attacker.
+ */
+function assertSmartEndpoint(smartConfig: SMARTConfig, urlStr: string, label: string): string {
+  return assertAllowedFhirUrl(urlStr, {
+    baseUrl: smartConfig.fhirBaseUrl,
+    extraAllowedHosts: smartConfig.allowedAuthHosts,
+    label,
+  }).toString();
 }
 
 export interface TokenSet {
@@ -73,7 +95,8 @@ function base64UrlEncode(buf: Buffer): string {
  * Returns just the authorize + token URLs — everything else is optional.
  */
 export async function discoverEndpoints(
-  fhirBaseUrl: string
+  fhirBaseUrl: string,
+  allowedAuthHosts: string[] = []
 ): Promise<{ authorizeUrl: string; tokenUrl: string }> {
   const url = `${fhirBaseUrl.replace(/\/$/, '')}/.well-known/smart-configuration`;
   const response = await fetch(url, {
@@ -88,9 +111,19 @@ export async function discoverEndpoints(
   if (!config.authorization_endpoint || !config.token_endpoint) {
     throw new Error('SMART configuration missing authorization_endpoint or token_endpoint');
   }
+  // The endpoints come from the server's well-known doc (attacker-influenceable
+  // on a compromised/MITM'd FHIR server). Confine them to the trusted host set
+  // before we ever redirect the user or POST the client_secret to them.
+  const policy = { baseUrl: fhirBaseUrl, extraAllowedHosts: allowedAuthHosts };
   return {
-    authorizeUrl: config.authorization_endpoint,
-    tokenUrl: config.token_endpoint,
+    authorizeUrl: assertAllowedFhirUrl(config.authorization_endpoint, {
+      ...policy,
+      label: 'SMART authorization_endpoint',
+    }).toString(),
+    tokenUrl: assertAllowedFhirUrl(config.token_endpoint, {
+      ...policy,
+      label: 'SMART token_endpoint',
+    }).toString(),
   };
 }
 
@@ -131,6 +164,7 @@ export async function exchangeCodeForToken(
   if (!smartConfig.tokenUrl) {
     throw new Error('tokenUrl not resolved — call discoverEndpoints first');
   }
+  const tokenUrl = assertSmartEndpoint(smartConfig, smartConfig.tokenUrl, 'SMART token endpoint (code exchange)');
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
@@ -149,7 +183,7 @@ export async function exchangeCodeForToken(
     headers.Authorization = `Basic ${creds}`;
   }
 
-  const response = await fetch(smartConfig.tokenUrl, {
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers,
     body: body.toString(),
@@ -174,6 +208,7 @@ export async function refreshAccessToken(
   if (!smartConfig.tokenUrl) {
     throw new Error('tokenUrl not resolved — call discoverEndpoints first');
   }
+  const tokenUrl = assertSmartEndpoint(smartConfig, smartConfig.tokenUrl, 'SMART token endpoint (refresh)');
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
@@ -188,7 +223,7 @@ export async function refreshAccessToken(
     headers.Authorization = `Basic ${creds}`;
   }
 
-  const response = await fetch(smartConfig.tokenUrl, {
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers,
     body: body.toString(),
@@ -250,8 +285,12 @@ export async function revokeToken(
       headers.Authorization = `Basic ${creds}`;
     }
     // Use the token endpoint URL replaced with 'revoke' as a fallback —
-    // if that 404s, swallow.
-    const revokeUrl = smartConfig.tokenUrl.replace(/\/token$/, '/revoke');
+    // if that 404s, swallow. Re-validate the host before sending the token.
+    const revokeUrl = assertSmartEndpoint(
+      smartConfig,
+      smartConfig.tokenUrl.replace(/\/token$/, '/revoke'),
+      'SMART revoke endpoint'
+    );
     const response = await fetch(revokeUrl, { method: 'POST', headers, body: body.toString() });
     if (!response.ok) {
       logger.warn('Token revocation request failed', {

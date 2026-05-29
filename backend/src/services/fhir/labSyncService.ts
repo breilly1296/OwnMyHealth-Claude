@@ -61,6 +61,7 @@ function questSMARTConfig(): SMARTConfig {
     clientSecret: config.quest.clientSecret || undefined,
     redirectUri: config.quest.redirectUri,
     fhirBaseUrl: config.quest.fhirBaseUrl,
+    allowedAuthHosts: config.quest.authHosts,
     scopes: [
       'launch/patient',
       'patient/Observation.read',
@@ -78,7 +79,7 @@ function smartConfigForProvider(provider: string): SMARTConfig {
 
 async function resolveEndpoints(smart: SMARTConfig): Promise<SMARTConfig> {
   if (smart.authorizeUrl && smart.tokenUrl) return smart;
-  const { authorizeUrl, tokenUrl } = await discoverEndpoints(smart.fhirBaseUrl);
+  const { authorizeUrl, tokenUrl } = await discoverEndpoints(smart.fhirBaseUrl, smart.allowedAuthHosts);
   return { ...smart, authorizeUrl, tokenUrl };
 }
 
