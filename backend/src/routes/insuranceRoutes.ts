@@ -26,6 +26,8 @@ import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler, BadRequestError } from '../middleware/errorHandler.js';
 import { uploadLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
+import { requirePlanLimit } from '../middleware/planGating.js';
+import { aiSpendGuard } from '../middleware/aiSpendGuard.js';
 import * as insuranceController from '../controllers/insuranceController.js';
 import { uploadSBC, reanalyzePlan } from '../controllers/upload/index.js';
 import { updateCurrentSpending } from '../controllers/expenseController.js';
@@ -118,6 +120,8 @@ router.put(
   blockDemoAI,
   uploadLimiter,
   aiLimiter,
+  aiSpendGuard,
+  requirePlanLimit('pdfUploadsPerMonth'),
   upload.single('file'),
   asyncHandler(reanalyzePlan)
 );
@@ -129,6 +133,8 @@ router.post(
   blockDemoAI,
   uploadLimiter,
   aiLimiter,
+  aiSpendGuard,
+  requirePlanLimit('pdfUploadsPerMonth'),
   upload.single('file'),
   asyncHandler(uploadSBC)
 );

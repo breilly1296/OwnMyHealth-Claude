@@ -129,6 +129,20 @@ export interface ExportProviderRelationship {
   notes?: string;
 }
 
+/** Self-reported health profile included in the data export (mirrors the
+ *  backend UserHealthProfile). */
+export interface ExportHealthProfile {
+  biologicalSex?: string;
+  ageRange?: string;
+  conditions: { name: string; status: string; diagnosedYear?: number }[];
+  medications: { name: string; purpose?: string }[];
+  familyHistory: string[];
+  smokingStatus?: string;
+  exerciseLevel?: string;
+  additionalContext?: string;
+  updatedAt?: string;
+}
+
 export interface UserExportData {
   exportDate: string;
   user: {
@@ -141,6 +155,7 @@ export interface UserExportData {
     phone?: string;
     address?: string;
   };
+  healthProfile: ExportHealthProfile;
   biomarkers: ExportBiomarker[];
   insurancePlans: ExportInsurancePlan[];
   healthGoals: ExportHealthGoal[];

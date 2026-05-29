@@ -162,6 +162,18 @@ export const config = {
     baaActive: process.env.ANTHROPIC_BAA_ACTIVE === 'true',
   },
 
+  // AI spend circuit breaker. Rolling per-UTC-day budgets enforced by the
+  // aiSpendGuard middleware (accumulator updated by aiCostTracker). 0 = the
+  // cap is disabled. NOTE: the accumulator is in-memory/per-instance, so under
+  // Cloud Run autoscale the effective ceiling is N×budget (same limitation as
+  // the rate limiters; bounded by --max-instances). Move to a shared store
+  // (Memorystore) for multi-instance precision. A backstop against runaway
+  // Anthropic billing from a buggy loop, compromised key, or abusive account.
+  ai: {
+    dailyBudgetUsd: Number(process.env.AI_DAILY_BUDGET_USD ?? '50'),
+    userDailyBudgetUsd: Number(process.env.AI_USER_DAILY_BUDGET_USD ?? '5'),
+  },
+
   // Quest Diagnostics SMART on FHIR integration.
   // Credentials are optional — the feature is disabled unless clientId is set.
   // In development without sandbox credentials, set QUEST_FHIR_BASE_URL to the
