@@ -17,6 +17,7 @@
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 import { logger } from '../utils/logger.js';
 import { InternalServerError, BadRequestError } from '../middleware/errorHandler.js';
+import { config } from '../config/index.js';
 import {
   type ExtractedBiomarker,
   ALL_BIOMARKERS,
@@ -265,6 +266,19 @@ async function processImageWithDocumentAI(
   mimeType: string,
   startTime: number
 ): Promise<OCRResult> {
+  // BAA gate — refuse before any image bytes leave the box. Unlike PDF text
+  // (which is locally extracted + PHI-redacted before any AI call), image OCR
+  // sends the raw pixels to Google Document AI, and those pixels carry full
+  // demographics (name/DOB/MRN/address) that no text redaction can reach. So
+  // a Google Cloud BAA covering Document AI must be explicitly acknowledged.
+  if (!config.gcp.documentAiBaaActive) {
+    throw new InternalServerError(
+      'Document AI image OCR requires an active BAA. Image bytes contain patient ' +
+      'demographics that redaction cannot scrub. Set GOOGLE_BAA_ACTIVE=true after ' +
+      'confirming Google Cloud BAA coverage for Document AI. See SECURITY_STATUS.md.'
+    );
+  }
+
   ocrLogger.info('Processing image with Document AI OCR', {
     mimeType,
     sizeBytes: buffer.length,
