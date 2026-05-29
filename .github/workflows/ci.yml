@@ -115,6 +115,70 @@ jobs:
       - name: RLS wrapper guard
         run: bash scripts/check-rls-wrappers.sh
 
+  # RLS regression — runs the tenant-isolation + provider-consent suite against
+  # a REAL Postgres connected as a NOBYPASSRLS role, so Row-Level Security
+  # policies are actually enforced (dev/staging connect as a BYPASSRLS
+  # superuser, which silently disables RLS and lets policy regressions ship).
+  rls:
+    name: RLS Regression (NOBYPASSRLS)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: omh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d omh"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      # Migrations run as the superuser — it must own the tables so the separate
+      # NOBYPASSRLS app role actually has RLS enforced against it.
+      SUPERUSER_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/omh
+      # Tests connect as the NOBYPASSRLS role.
+      DATABASE_URL: postgresql://omh_app:test@localhost:5432/omh
+      # Test-only key (never used to encrypt real PHI). The RLS suite inserts
+      # literal placeholder ciphertext and never decrypts, but config/encryption
+      # init requires a valid 64-hex key to be present.
+      PHI_ENCRYPTION_KEY: '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      - name: Apply migrations (as superuser)
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ env.SUPERUSER_DATABASE_URL }}
+
+      - name: Provision NOBYPASSRLS test role
+        run: psql "$SUPERUSER_DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/rls-test-role.sql
+
+      - name: Run RLS regression suite (as omh_app, RLS enforced)
+        run: npm run test:rls
+
   # TODO: Add E2E test job once staging DB is available in CI.
   # The Playwright specs under /e2e/*.spec.ts exercise the full auth +
   # biomarker + health-guide + export + settings flows against a running
