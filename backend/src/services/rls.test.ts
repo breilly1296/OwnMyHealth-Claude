@@ -30,6 +30,10 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
   const userA = { id: randomUUID(), email: `rls-a-${Date.now()}@test.local` };
   const userB = { id: randomUUID(), email: `rls-b-${Date.now()}@test.local` };
   const markerNames = ['__RLS_TEST_A__', '__RLS_TEST_B__'];
+  // Provider-consent fixtures (userA plays the patient). providerOk holds an
+  // ACTIVE biomarker-consent over userA; providerNo holds none.
+  const providerOk = { id: randomUUID(), email: `rls-prov-ok-${Date.now()}@test.local` };
+  const providerNo = { id: randomUUID(), email: `rls-prov-no-${Date.now()}@test.local` };
 
   beforeAll(async () => {
     // Lazy-init Prisma only. initializeDatabase() would also kick off
@@ -78,13 +82,34 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
           measurementDate: new Date(),
         },
       });
+
+      // Provider users + an ACTIVE biomarker-consent from providerOk over userA.
+      await tx.user.create({
+        data: { id: providerOk.id, email: providerOk.email, passwordHash: 'test-hash-not-used' },
+      });
+      await tx.user.create({
+        data: { id: providerNo.id, email: providerNo.email, passwordHash: 'test-hash-not-used' },
+      });
+      await tx.providerPatient.create({
+        data: {
+          providerId: providerOk.id,
+          patientId: userA.id,
+          status: 'ACTIVE',
+          canViewBiomarkers: true,
+        },
+      });
     });
   });
 
   afterAll(async () => {
     await withRLSContext(null, async (tx) => {
+      await tx.providerPatient.deleteMany({
+        where: { providerId: { in: [providerOk.id, providerNo.id] } },
+      });
       await tx.biomarker.deleteMany({ where: { name: { in: markerNames } } });
-      await tx.user.deleteMany({ where: { id: { in: [userA.id, userB.id] } } });
+      await tx.user.deleteMany({
+        where: { id: { in: [userA.id, userB.id, providerOk.id, providerNo.id] } },
+      });
     });
     await disconnectDatabase();
   });
@@ -123,5 +148,47 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
     );
     expect(aRows.map((r) => r.userId)).toEqual([userA.id]);
     expect(bRows.map((r) => r.userId)).toEqual([userB.id]);
+  });
+
+  // Consent-scoped cross-tenant access through the has_provider_access() policy
+  // branch. This is the path that was silently broken: the function referenced
+  // the dropped provider_patients.can_view_dna column and threw for ANY
+  // permission_type under a NOBYPASSRLS role — which also breaks the own-data
+  // reads above (the biomarkers_select policy evaluates has_provider_access for
+  // every non-owned row). Fixed by migration 20260529_fix_has_provider_access.
+  describe('provider-consent access (has_provider_access)', () => {
+    const readUserAMarker = (asUserId: string) =>
+      withRLSContext(asUserId, async (tx) =>
+        tx.biomarker.findMany({ where: { name: markerNames[0] } })
+      );
+
+    it('a consented provider reads the patient biomarker via the policy', async () => {
+      const rows = await readUserAMarker(providerOk.id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].userId).toBe(userA.id);
+    });
+
+    it('a provider with NO consent relationship sees nothing', async () => {
+      const rows = await readUserAMarker(providerNo.id);
+      expect(rows).toHaveLength(0);
+    });
+
+    it('the patient still sees their own biomarker (provider consent does not affect owner view)', async () => {
+      const rows = await readUserAMarker(userA.id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].userId).toBe(userA.id);
+    });
+
+    // Runs last — mutates the shared consent row to an expired state.
+    it('access is revoked once consent expires', async () => {
+      await withRLSContext(null, async (tx) => {
+        await tx.providerPatient.updateMany({
+          where: { providerId: providerOk.id, patientId: userA.id },
+          data: { consentExpiresAt: new Date(Date.now() - 60_000) },
+        });
+      });
+      const rows = await readUserAMarker(providerOk.id);
+      expect(rows).toHaveLength(0);
+    });
   });
 });
