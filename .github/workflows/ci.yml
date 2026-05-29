@@ -102,6 +102,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      # Fail if a real secret (API key, PEM, hex PHI key, SG./sk-ant- token)
+      # is committed to any tracked file. The .env*.example templates carry
+      # placeholders and are allowlisted in .gitleaks.toml. Scans the current
+      # tree (--no-git) so the gate is deterministic and not tripped by history.
+      - name: Secret scan (gitleaks)
+        run: |
+          GL_VERSION=8.21.2
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
+
       - name: Audit frontend dependencies
         run: npm audit --audit-level=high
 

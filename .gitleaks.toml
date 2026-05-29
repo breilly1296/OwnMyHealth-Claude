@@ -1,0 +1,32 @@
+# gitleaks configuration for OwnMyHealth CI secret scanning.
+#
+# Extends the default ruleset and allowlists the tracked .env*.example
+# templates, which intentionally carry placeholder (non-secret) values, plus
+# obvious CHANGE_ME placeholders. A real secret committed to any other tracked
+# file fails the CI "Security Audit" job.
+title = "OwnMyHealth gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Templates, test fixtures, and audit docs hold placeholders / fake keys, not real secrets"
+paths = [
+  # env templates (placeholders only)
+  '''(^|/)\.env\.example$''',
+  '''(^|/)\.env\..+\.example$''',
+  # test files + test infra carry fake fixtures (keys, hashes, tokens) by design
+  '''.*\.test\.ts$''',
+  '''(^|/)testSetup\.ts$''',
+  '''(^|/)testHelpers\.ts$''',
+  '''(^|/)__tests__/''',
+  '''(^|/)e2e/''',
+  # the audit/reference doc layer cites example keys in prose
+  '''(^|/)New Project Documents/''',
+]
+regexes = [
+  '''CHANGE_ME[A-Za-z0-9_]*''',
+  # Well-known test-only PHI key used in the RLS CI job + docs — it never
+  # encrypts real PHI. Allowlisted so it doesn't trip the generic-api-key rule.
+  '''00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff''',
+]
