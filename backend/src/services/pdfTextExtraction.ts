@@ -17,6 +17,7 @@
 // @ts-expect-error — pdf-parse has no @types package
 import pdfParse from 'pdf-parse';
 import { logger } from '../utils/logger.js';
+import { secureParsePdf } from '../utils/securePdfParsing.js';
 
 const textExtractionLogger = logger.createServiceLogger('PDFTextExtraction');
 
@@ -32,9 +33,17 @@ export interface PDFTextExtractionResult {
   isLikelyScanned: boolean;
 }
 
-export async function extractTextFromPDF(buffer: Buffer): Promise<PDFTextExtractionResult> {
+export async function extractTextFromPDF(
+  buffer: Buffer,
+  filename = 'upload.pdf'
+): Promise<PDFTextExtractionResult> {
   try {
-    const result = await pdfParse(buffer);
+    // Route through the hardened parser so the PRIMARY (Claude) upload path
+    // gets the same PDF-bomb DoS protection the regex fallback already had:
+    // header validation + a 30s parse timeout + a 100MB heap-growth guard.
+    // Previously this called pdfParse(buffer) directly with no bound, so a
+    // crafted ~10MB PDF could hang the event loop or OOM the instance.
+    const result = await secureParsePdf(buffer, filename, (b: Buffer) => pdfParse(b));
     const text = result.text ?? '';
     const lineCount = text.split('\n').filter((l: string) => l.trim().length > 0).length;
     const usable = text.length >= MIN_USABLE_CHARS && lineCount >= MIN_USABLE_LINES;
@@ -55,6 +64,12 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<PDFTextExtract
       isLikelyScanned,
     };
   } catch (error) {
+    // secureParsePdf throws for invalid headers, corrupt/encrypted files,
+    // parse timeouts, or excessive memory growth (a likely bomb). The
+    // resource bound has already been enforced by the time we get here, so
+    // we degrade to "no usable text" and let the caller route to its
+    // fallback (OCR for lab uploads, regex parser for SBC) instead of
+    // surfacing a 5xx for what is most often an unusable/scanned document.
     textExtractionLogger.warn('PDF text extraction failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });

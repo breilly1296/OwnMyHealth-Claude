@@ -218,11 +218,29 @@ if (!config.isDevelopment || process.env.DISABLE_CSRF !== 'true') {
 // Rate limiting
 app.use(standardLimiter);
 
-// Request logging
+// Request logging.
+//
+// Production must NOT use morgan('combined'): its `:url` token writes the
+// full request line — including query strings — to stdout, which Cloud Run
+// ships verbatim into Cloud Logging, bypassing the logger PHI sanitizer.
+// Single-use email-verification and password-reset tokens travel as
+// `?token=...` query params, so 'combined' would persist live,
+// account-takeover-grade secrets in the logs. We log the path only (query
+// stripped) and omit the Referer field, which can itself carry a reset-link.
+morgan.token('urlpath', (req) => {
+  const r = req as { originalUrl?: string; url?: string };
+  return (r.originalUrl || r.url || '').split('?')[0];
+});
+
+const PROD_LOG_FORMAT =
+  ':remote-addr - :remote-user [:date[clf]] ":method :urlpath HTTP/:http-version" :status :res[content-length] ":user-agent"';
+
 if (config.isDevelopment) {
+  // Dev runs locally; query strings in the terminal are useful for debugging
+  // (e.g. clicking the verification link) and never reach Cloud Logging.
   app.use(morgan('dev'));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan(PROD_LOG_FORMAT));
 }
 
 // Body parsing

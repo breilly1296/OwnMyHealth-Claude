@@ -38,6 +38,7 @@ import { DashboardContent } from './DashboardContent';
 import { CategoryContent } from './CategoryContent';
 import { DashboardModals } from './DashboardModals';
 import { ErrorToast } from '../common/ErrorToast';
+import { ErrorBoundary } from '../common';
 
 // Lazy-loaded pages (only loaded when navigating to them)
 const InsuranceHub = lazy(() => import('../insurance/InsuranceHub'));
@@ -114,6 +115,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
     handleInsurancePlanExtracted,
     handleDeleteInsurancePlan,
     refreshBiomarkers,
+    refreshInsurancePlans,
   } = useBiomarkerData({
     user,
     initialBiomarkers: isDemoMode ? sampleBiomarkers : [],
@@ -214,7 +216,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
               onSmartUpload={() => modals.open('enhancedUpload')}
               onViewPlanDetails={() => modals.open('insuranceViewer')}
               onDeletePlan={handleDeleteInsurancePlan}
-              onRefresh={refreshBiomarkers}
+              onRefresh={refreshInsurancePlans}
             />
           </Suspense>
         );
@@ -325,6 +327,25 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
 
         {/* Main Content */}
         <main id="main-content" className="flex-1 p-4 md:p-8">
+          {/* Granular boundary: a render error in one page must not unmount
+              the whole app (header/sidebar stay alive). Keyed by category so
+              navigating to another section remounts and recovers. */}
+          <ErrorBoundary
+            key={selectedCategory}
+            fallback={
+              <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="max-w-md text-center">
+                  <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2">
+                    This section ran into a problem
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Try selecting a different section from the menu, or reload the
+                    page. Your data is safe.
+                  </p>
+                </div>
+              </div>
+            }
+          >
           {!onboardingChecked ? (
             <PageLoadSpinner />
           ) : showOnboarding && onboardingStatus ? (
@@ -372,11 +393,13 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
               onOpenPDFUpload={() => modals.open('pdfUpload')}
             />
           )}
+          </ErrorBoundary>
         </main>
       </div>
 
-      {/* Modals */}
-      <DashboardModals
+      {/* Modals — wrapped so a modal render error can't take down the shell. */}
+      <ErrorBoundary fallback={null}>
+        <DashboardModals
         isOpen={modals.isOpen}
         close={modals.close}
         selectedCategory={selectedCategory}
@@ -390,7 +413,8 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
         onInsurancePlanExtracted={handleInsurancePlanExtracted}
         onCloseTrendModal={handleCloseTrendModal}
         onCloseInsurancePanel={() => setSelectedBiomarkerForInsurance(null)}
-      />
+        />
+      </ErrorBoundary>
     </div>
   );
 }

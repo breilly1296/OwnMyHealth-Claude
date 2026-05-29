@@ -5,6 +5,10 @@
  * (usable text, empty/scanned, extraction error), plus the
  * defensive-default contract (any thrown error produces a
  * usable=false result rather than propagating).
+ *
+ * Buffers must start with a valid `%PDF-` header: extraction now routes
+ * through secureParsePdf, which validates the header (PDF-bomb DoS guard)
+ * before invoking pdf-parse.
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -19,12 +23,23 @@ vi.mock('../utils/logger.js', () => ({
       debug: vi.fn(),
     }),
   },
+  // securePdfParsing.ts (now in the extraction path) logs via pdfLogger.
+  pdfLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
 }));
 
 import { extractTextFromPDF } from './pdfTextExtraction.js';
 import pdfParse from 'pdf-parse';
 
 const mockedPdfParse = vi.mocked(pdfParse);
+
+// A minimal buffer with a valid PDF header so secureParsePdf's header
+// validation passes and the (mocked) pdf-parse path is exercised.
+const VALID_PDF = Buffer.from('%PDF-1.4\n%mock pdf body\n');
 
 describe('extractTextFromPDF (C-7)', () => {
   afterEach(() => {
@@ -42,7 +57,7 @@ describe('extractTextFromPDF (C-7)', () => {
       version: '1.10.100',
     } as Awaited<ReturnType<typeof pdfParse>>);
 
-    const result = await extractTextFromPDF(Buffer.from('fake'));
+    const result = await extractTextFromPDF(VALID_PDF);
 
     expect(result.usable).toBe(true);
     expect(result.isLikelyScanned).toBe(false);
@@ -59,7 +74,7 @@ describe('extractTextFromPDF (C-7)', () => {
       version: '1.10.100',
     } as Awaited<ReturnType<typeof pdfParse>>);
 
-    const result = await extractTextFromPDF(Buffer.from('fake'));
+    const result = await extractTextFromPDF(VALID_PDF);
 
     expect(result.usable).toBe(false);
     expect(result.isLikelyScanned).toBe(true);
@@ -77,7 +92,7 @@ describe('extractTextFromPDF (C-7)', () => {
       version: '1.10.100',
     } as Awaited<ReturnType<typeof pdfParse>>);
 
-    const result = await extractTextFromPDF(Buffer.from('fake'));
+    const result = await extractTextFromPDF(VALID_PDF);
 
     expect(result.usable).toBe(false);
     // 500 chars is above the scanned threshold, so this isn't flagged as scanned —
@@ -88,11 +103,21 @@ describe('extractTextFromPDF (C-7)', () => {
   it('handles pdf-parse errors gracefully without throwing', async () => {
     mockedPdfParse.mockRejectedValue(new Error('corrupt PDF'));
 
-    const result = await extractTextFromPDF(Buffer.from('fake'));
+    const result = await extractTextFromPDF(VALID_PDF);
 
     expect(result.usable).toBe(false);
     expect(result.text).toBe('');
     expect(result.pageCount).toBe(0);
     expect(result.isLikelyScanned).toBe(true);
+  });
+
+  it('rejects a buffer without a valid PDF header before parsing (DoS guard)', async () => {
+    // secureParsePdf validates the %PDF- header first; a non-PDF buffer never
+    // reaches pdf-parse and degrades to an unusable result.
+    const result = await extractTextFromPDF(Buffer.from('this is not a pdf at all'));
+
+    expect(result.usable).toBe(false);
+    expect(result.isLikelyScanned).toBe(true);
+    expect(mockedPdfParse).not.toHaveBeenCalled();
   });
 });

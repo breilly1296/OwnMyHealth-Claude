@@ -660,8 +660,8 @@ function checkInsuranceCoverage(action: ActionItem, insurancePlans: InsurancePla
   }
 
   // Find matching benefits in insurance plans
-  const matchingBenefits = insurancePlans.flatMap(plan => 
-    plan.benefits.filter(benefit => {
+  const matchingBenefits = insurancePlans.flatMap(plan =>
+    (plan.benefits ?? []).filter(benefit => {
       const benefitName = benefit.serviceName.toLowerCase();
       const actionKeywords = action.keywords.map(k => k.toLowerCase());
       

@@ -62,7 +62,6 @@ export {
 export {
   storageService,
   uploadFile,
-  getSignedUrl,
   deleteFile,
   fileExists,
 } from './storageService.js';

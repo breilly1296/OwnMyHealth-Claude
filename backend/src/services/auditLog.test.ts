@@ -208,12 +208,23 @@ describe('AuditLogService', () => {
       });
     });
 
-    it('should handle create log errors gracefully', async () => {
+    it('should FAIL CLOSED when a create-audit write fails (HIPAA §164.312(b))', async () => {
       mockPrisma.auditLog.create.mockRejectedValue(new Error('Database error'));
 
-      // Should not throw
+      // A PHI mutation must not complete with no durable audit record — the
+      // audit failure re-throws so the caller surfaces an error.
       await expect(
         auditService.logCreate('Biomarker', 'bio-1', { test: 'data' }, { userId: 'user-1' })
+      ).rejects.toThrow(/audit log/i);
+    });
+
+    it('should stay best-effort (NOT throw) when a read-audit write fails', async () => {
+      mockPrisma.auditLog.create.mockRejectedValue(new Error('Database error'));
+
+      // Read audits are best-effort: a transient audit hiccup must not deny a
+      // legitimate read. logAccess swallows the error.
+      await expect(
+        auditService.logAccess('Biomarker', 'bio-1', { userId: 'user-1' })
       ).resolves.toBeUndefined();
     });
   });

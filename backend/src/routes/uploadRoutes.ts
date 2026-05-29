@@ -14,7 +14,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { asyncHandler, BadRequestError } from '../middleware/errorHandler.js';
 import { uploadLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import { requirePlanLimit } from '../middleware/planGating.js';
@@ -37,7 +37,7 @@ const upload = multer({
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF files are accepted'));
+      cb(new BadRequestError('Only PDF files are accepted'));
     }
   },
 });
@@ -62,7 +62,7 @@ const uploadOCR = multer({
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF and image files (PNG, JPG, TIFF) are accepted'));
+      cb(new BadRequestError('Only PDF and image files (PNG, JPG, TIFF) are accepted'));
     }
   },
 });

@@ -128,23 +128,60 @@ function prismaUserToUser(prismaUser: PrismaUser): User {
 // ============================================
 // In-Memory Token Blacklist (for access token revocation)
 //
-// In-memory only — won't survive a server restart or scale to more than
-// one instance. The 15-min access token expiry is the real safety net; this
-// Set just closes the window for the current instance (a logged-out user's
-// access token stops working immediately on THIS node, even though another
-// replica may still accept it until the JWT expires). Replace with Redis
-// when the deployment fans out beyond one Cloud Run instance at a time.
+// Keyed by the raw access-token string → its `exp` (epoch ms). In-memory
+// only: it does NOT survive a restart or span instances, so under horizontal
+// scale a revoked token can still be honored by another replica until its
+// 15-min expiry. Move to a shared store (Redis/Memorystore) when the
+// deployment fans out beyond one Cloud Run instance — see SECURITY_STATUS.
+//
+// Entries are swept once past their own expiry (piggybacking the
+// session-cleanup interval) so the map can't grow without bound — after
+// expiry jwt.verify() rejects the token anyway, so retaining it is pointless.
 // ============================================
 
-const revokedTokens: Set<string> = new Set();
+const revokedTokens: Map<string, number> = new Map();
 
 /**
  * Add an access token to the in-memory revocation set. Called from the
- * logout controller so the current instance's `verifyAccessToken` rejects
- * it immediately rather than waiting for natural JWT expiry.
+ * logout / logout-all / password-change controllers so the route-auth
+ * middleware (`isTokenRevoked`) rejects it immediately rather than waiting
+ * for natural JWT expiry. Records the token's own `exp` so the sweep can
+ * evict it once it can no longer be valid.
  */
 export function revokeAccessToken(token: string): void {
-  if (token) revokedTokens.add(token);
+  if (!token) return;
+  // Conservative fallback: assume a full access-token lifetime if we can't
+  // read the token's exp (e.g. malformed). decode() does not verify, which
+  // is fine — the token already passed auth to reach a revoke call site.
+  let expMs = Date.now() + 15 * 60 * 1000;
+  try {
+    const decoded = jwt.decode(token) as { exp?: number } | null;
+    if (decoded?.exp) expMs = decoded.exp * 1000;
+  } catch {
+    // keep the conservative fallback
+  }
+  revokedTokens.set(token, expMs);
+}
+
+/**
+ * True if the given access token has been explicitly revoked (and not yet
+ * swept). Consulted by the auth middleware on every protected request so a
+ * logged-out / rotated token stops authenticating immediately on this node.
+ */
+export function isTokenRevoked(token: string): boolean {
+  return revokedTokens.has(token);
+}
+
+/**
+ * Evict revoked-token entries whose expiry has passed. Invoked from the
+ * session-cleanup interval so the blacklist stays bounded on long-lived
+ * instances.
+ */
+export function sweepRevokedTokens(): void {
+  const now = Date.now();
+  for (const [token, expMs] of revokedTokens) {
+    if (expMs <= now) revokedTokens.delete(token);
+  }
 }
 
 // ============================================
@@ -1234,6 +1271,9 @@ export function startSessionCleanup(): void {
   // for up to 59 minutes after expiry. `cleanupExpiredSessions` is a single
   // `deleteMany` under admin RLS context; cheap to run on this cadence.
   sessionCleanupInterval = setInterval(() => {
+    // Evict expired entries from the in-memory access-token blacklist so it
+    // stays bounded; then prune expired DB sessions.
+    sweepRevokedTokens();
     cleanupExpiredSessions().catch((error) => {
       logger.error('Session cleanup failed', { prefix: 'Auth', data: { error: String(error) } });
     });

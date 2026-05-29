@@ -4,6 +4,7 @@ import { withRLSContext } from './database.js';
 import { Request } from 'express';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
+import { InternalServerError } from '../middleware/errorHandler.js';
 
 // Audit log configuration
 const RETENTION_DAYS = 2555; // ~7 years for HIPAA compliance
@@ -68,6 +69,14 @@ interface AuditLogEntry {
   userAgent?: string;
   sessionId?: string;
   metadata?: AuditMetadata;
+  /**
+   * When true, a failed audit write RE-THROWS so the calling PHI operation
+   * fails closed rather than completing with no durable audit record
+   * (HIPAA §164.312(b)). Set for create/update/delete/export. Read and
+   * auth-event audits stay best-effort (logged but not fatal) so a transient
+   * audit hiccup can't deny legitimate reads or logins.
+   */
+  failClosed?: boolean;
 }
 
 interface AuditContext {
@@ -246,6 +255,15 @@ export class AuditLogService {
           },
         },
       });
+
+      // Fail closed for PHI mutations (create/update/delete/export): re-throw
+      // so the operation surfaces an error instead of completing with no
+      // durable audit trail. Read/auth audits remain best-effort.
+      if (entry.failClosed) {
+        throw new InternalServerError(
+          'Operation could not be securely recorded in the audit log and was not completed.'
+        );
+      }
     }
   }
 
@@ -292,6 +310,7 @@ export class AuditLogService {
       newValue,
       ...this.contextFields(context),
       metadata,
+      failClosed: true,
     });
   }
 
@@ -316,6 +335,7 @@ export class AuditLogService {
       newValue,
       ...this.contextFields(context),
       metadata,
+      failClosed: true,
     });
   }
 
@@ -338,6 +358,7 @@ export class AuditLogService {
       previousValue,
       ...this.contextFields(context),
       metadata,
+      failClosed: true,
     });
   }
 
@@ -401,6 +422,7 @@ export class AuditLogService {
         recordCount: resourceIds.length,
         resourceIds: resourceIds.slice(0, 100), // Limit stored IDs
       },
+      failClosed: true,
     });
   }
 

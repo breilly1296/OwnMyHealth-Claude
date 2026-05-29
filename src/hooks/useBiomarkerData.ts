@@ -41,6 +41,7 @@ interface UseBiomarkerDataReturn {
   handleInsurancePlanExtracted: (plan: InsurancePlan) => Promise<void>;
   handleDeleteInsurancePlan: (planId: string) => Promise<void>;
   refreshBiomarkers: () => Promise<void>;
+  refreshInsurancePlans: () => Promise<void>;
 }
 
 /**
@@ -214,6 +215,24 @@ export function useBiomarkerData({
       onErrorRef.current(errorMsg);
     } finally {
       setIsLoading(false);
+    }
+  }, [user]);
+
+  // Manual refresh for insurance plans (e.g. after adding/editing a plan via
+  // a modal). Previously InsuranceHub.onRefresh was wired to refreshBiomarkers,
+  // so a newly added plan never appeared until a full page reload.
+  const refreshInsurancePlans = useCallback(async () => {
+    if (DEMO_MODE || !user) {
+      return;
+    }
+    try {
+      const plans = await insuranceApi.getPlans();
+      const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
+      setInsurancePlans(transformedPlans);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to refresh insurance plans';
+      dashboardLogger.error('Error refreshing insurance plans', { error: errorMsg });
+      onErrorRef.current(errorMsg);
     }
   }, [user]);
 
@@ -413,5 +432,6 @@ export function useBiomarkerData({
     handleInsurancePlanExtracted,
     handleDeleteInsurancePlan,
     refreshBiomarkers,
+    refreshInsurancePlans,
   };
 }

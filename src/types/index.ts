@@ -124,7 +124,6 @@ export interface UserFile {
   extractionConfidence: number | null;
   categories: string[];
   createdAt: string;
-  downloadUrl?: string;
 }
 
 // Insurance SBC Types

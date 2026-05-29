@@ -114,7 +114,7 @@ export async function createProjection(req: AuthenticatedRequest, res: Response)
     notes: projection.notesEncrypted ? encryption.decrypt(projection.notesEncrypted, userSalt) : null,
   };
 
-  res.status(201).json(decrypted);
+  res.status(201).json({ success: true, data: decrypted });
 }
 
 /**
@@ -231,7 +231,7 @@ export async function updateProjection(req: AuthenticatedRequest, res: Response)
     notes: updated.notesEncrypted ? encryption.decrypt(updated.notesEncrypted, userSalt) : null,
   };
 
-  res.json(decrypted);
+  res.json({ success: true, data: decrypted });
 }
 
 /**
@@ -369,7 +369,7 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
     claimStatus: claimStatus ?? 'processed',
   }, { req, userId });
 
-  res.status(201).json(decryptActual(actual, encryption, userSalt));
+  res.status(201).json({ success: true, data: decryptActual(actual, encryption, userSalt) });
 }
 
 /**
@@ -490,7 +490,7 @@ export async function updateActual(req: AuthenticatedRequest, res: Response): Pr
     fieldsUpdated: Object.keys(updateData),
   }, { req, userId });
 
-  res.json(decryptActual(updated, encryption, userSalt));
+  res.json({ success: true, data: decryptActual(updated, encryption, userSalt) });
 }
 
 /**
@@ -702,11 +702,14 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
 
   // Return decrypted analysis
   res.json({
-    id: analysis.id,
-    analysisDate: analysis.analysisDate,
-    claudeResponse,
-    totalProjectedOop,
-    deductibleMetMonth,
+    success: true,
+    data: {
+      id: analysis.id,
+      analysisDate: analysis.analysisDate,
+      claudeResponse,
+      totalProjectedOop,
+      deductibleMetMonth,
+    },
   });
 }
 
@@ -753,7 +756,7 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
     planId: (planId as string) || 'all',
   });
 
-  res.json(decrypted);
+  res.json({ success: true, data: decrypted });
 }
 
 // ============================================

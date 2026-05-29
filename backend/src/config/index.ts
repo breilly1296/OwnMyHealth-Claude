@@ -350,6 +350,19 @@ if (config.isProduction || config.isStaging) {
     );
   }
 
+  // SendGrid sandbox mode validates requests but NEVER delivers, while the
+  // app still reports success. If it leaks into production (e.g. a copied
+  // staging env), every verification and password-reset email is silently
+  // dropped — new users can never verify and locked-out users can never
+  // reset. Hard-fail rather than ship a prod that can't send auth email.
+  if (config.isProduction && process.env.SENDGRID_SANDBOX_MODE === 'true') {
+    throw new Error(
+      'SENDGRID_SANDBOX_MODE cannot be true in production. Sandbox mode validates ' +
+      'but never delivers email, silently breaking verification and password reset. ' +
+      'Remove SENDGRID_SANDBOX_MODE or set it to false.'
+    );
+  }
+
   // Non-fatal warnings for optional service credentials
   // These services degrade gracefully but should be configured for full functionality
   if (!process.env.ANTHROPIC_API_KEY) {

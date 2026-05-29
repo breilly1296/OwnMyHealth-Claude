@@ -7,7 +7,7 @@
  * @module services/storageService
  */
 
-import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
+import { Storage } from '@google-cloud/storage';
 import type { Readable } from 'stream';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
@@ -23,7 +23,6 @@ const storage = new Storage({
 // behavior) would let a misconfigured prod deploy reach this module before
 // the validator ran.
 const BUCKET_NAME = config.gcp.bucketName;
-const SIGNED_URL_EXPIRATION_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
  * Get file extension from MIME type
@@ -110,52 +109,6 @@ export function getFileStream(storageKey: string): Readable {
   const bucket = storage.bucket(BUCKET_NAME);
   const file = bucket.file(storageKey);
   return file.createReadStream();
-}
-
-/**
- * Generate a signed URL for file access
- *
- * @param storageKey - Path to file in GCS bucket
- * @param action - 'read' for download, 'write' for upload
- * @param expirationMs - URL expiration time in milliseconds (default: 15 minutes)
- * @returns Signed URL for file access
- */
-export async function getSignedUrl(
-  storageKey: string,
-  action: 'read' | 'write' = 'read',
-  expirationMs: number = SIGNED_URL_EXPIRATION_MS
-): Promise<string> {
-  try {
-    const bucket = storage.bucket(BUCKET_NAME);
-    const file = bucket.file(storageKey);
-
-    const options: GetSignedUrlConfig = {
-      version: 'v4',
-      action: action,
-      expires: Date.now() + expirationMs,
-    };
-
-    const [signedUrl] = await file.getSignedUrl(options);
-
-    logger.debug('Generated signed URL', {
-      data: {
-        storageKey,
-        action,
-        expiresIn: `${expirationMs / 1000}s`,
-      },
-    });
-
-    return signedUrl;
-  } catch (error) {
-    logger.error('Failed to generate signed URL', {
-      data: {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        storageKey,
-        action,
-      },
-    });
-    throw new Error('Failed to generate file access URL');
-  }
 }
 
 /**
@@ -255,7 +208,6 @@ export async function fileExists(storageKey: string): Promise<boolean> {
  */
 export const storageService = {
   uploadFile,
-  getSignedUrl,
   getFileStream,
   deleteFile,
   deleteFiles,
