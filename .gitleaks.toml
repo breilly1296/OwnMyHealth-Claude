@@ -15,8 +15,12 @@ paths = [
   # env templates (placeholders only)
   '''(^|/)\.env\.example$''',
   '''(^|/)\.env\..+\.example$''',
-  # test files carry fake fixtures (keys, hashes, tokens) by design
+  # test files + test infra carry fake fixtures (keys, hashes, tokens) by design
   '''.*\.test\.ts$''',
+  '''(^|/)testSetup\.ts$''',
+  '''(^|/)testHelpers\.ts$''',
+  '''(^|/)__tests__/''',
+  '''(^|/)e2e/''',
   # the audit/reference doc layer cites example keys in prose
   '''(^|/)New Project Documents/''',
 ]
