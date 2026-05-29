@@ -7,6 +7,7 @@ import { requireBearerAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import { requirePlanLimit } from '../middleware/planGating.js';
+import { aiSpendGuard } from '../middleware/aiSpendGuard.js';
 import { validate, schemas } from '../middleware/validation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { handleAIChat } from '../controllers/aiChatController.js';
@@ -28,6 +29,7 @@ router.use(requireBearerAuth);
 router.post(
   '/chat',
   aiLimiter,
+  aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('aiChatsPerDay'),
   validate(schemas.ai.chat),

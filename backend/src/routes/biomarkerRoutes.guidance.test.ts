@@ -68,6 +68,8 @@ vi.mock('../services/userEncryption.js', () => ({
 
 vi.mock('../services/aiCostTracker.js', () => ({
   trackAIUsage: vi.fn(),
+  // aiSpendGuard middleware (now on the guidance route) reads this.
+  isAISpendExceeded: vi.fn(() => ({ exceeded: false, scope: null })),
 }));
 
 vi.mock('../utils/logger.js', () => ({
