@@ -229,7 +229,13 @@ describe('AuthContext', () => {
       });
     });
 
-    it('should set loading during login', async () => {
+    it('does NOT flip the global isLoading during an in-flight login', async () => {
+      // login() intentionally leaves the context's isLoading untouched: App.tsx
+      // renders a full-screen spinner while isLoading is true, which would
+      // unmount LoginPage mid-submit and wipe the email field on failure.
+      // In-flight login UI is the caller's concern (App's own isAuthLoading).
+      // This test locks in that behavior so a refactor can't reintroduce the
+      // login-page-unmount bug.
       let resolveLogin: (value: any) => void;
       vi.mocked(authApi.login).mockImplementation(
         () =>
@@ -248,17 +254,15 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('is-loading').textContent).toBe('false');
       });
 
-      // Start login
-      act(() => {
+      // Start login — the promise stays pending.
+      await act(async () => {
         screen.getByTestId('login-btn').click();
       });
 
-      // Should be loading
-      await waitFor(() => {
-        expect(screen.getByTestId('is-loading').textContent).toBe('true');
-      });
+      // Global loading flag must remain false while the login is in flight.
+      expect(screen.getByTestId('is-loading').textContent).toBe('false');
 
-      // Complete login
+      // Complete login; still no global loading flip.
       await act(async () => {
         resolveLogin!({
           user: { id: '1', email: 'test@example.com', role: 'user' },
@@ -266,9 +270,7 @@ describe('AuthContext', () => {
         });
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('is-loading').textContent).toBe('false');
-      });
+      expect(screen.getByTestId('is-loading').textContent).toBe('false');
     });
   });
 

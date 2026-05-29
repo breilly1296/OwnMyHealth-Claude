@@ -32,7 +32,7 @@ describe('LoginPage', () => {
 
       expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
@@ -76,7 +76,13 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
+      // Submit the form directly: jsdom enforces HTML5 `required` on a
+      // click-submit, short-circuiting before the component's own validation
+      // runs. Mirrors the invalid-email test below.
+      const form = submitButton.closest('form');
+      if (form) {
+        fireEvent.submit(form);
+      }
 
       await waitFor(() => {
         expect(screen.getByText(/email is required/i)).toBeInTheDocument();
@@ -92,7 +98,10 @@ describe('LoginPage', () => {
       await userEvent.type(emailInput, 'test@example.com');
 
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
+      const form = submitButton.closest('form');
+      if (form) {
+        fireEvent.submit(form);
+      }
 
       await waitFor(() => {
         expect(screen.getByText(/password is required/i)).toBeInTheDocument();
@@ -105,7 +114,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
       const form = emailInput.closest('form');
 
       // Use fireEvent to set values
@@ -129,7 +138,10 @@ describe('LoginPage', () => {
 
       // First, trigger validation error
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
+      const form = submitButton.closest('form');
+      if (form) {
+        fireEvent.submit(form);
+      }
 
       await waitFor(() => {
         expect(screen.getByText(/email is required/i)).toBeInTheDocument();
@@ -137,13 +149,15 @@ describe('LoginPage', () => {
 
       // Now fill in fields properly
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       await userEvent.type(emailInput, 'test@example.com');
       await userEvent.type(passwordInput, 'password123');
 
       mockOnLogin.mockResolvedValue(undefined);
-      fireEvent.click(submitButton);
+      if (form) {
+        fireEvent.submit(form);
+      }
 
       await waitFor(() => {
         expect(screen.queryByText(/email is required/i)).not.toBeInTheDocument();
@@ -157,7 +171,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       await userEvent.type(emailInput, 'test@example.com');
       await userEvent.type(passwordInput, 'mypassword123');
@@ -196,7 +210,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       await userEvent.type(emailInput, 'test@example.com');
       await userEvent.type(passwordInput, 'password123');
@@ -237,7 +251,10 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} error="Server error" />);
 
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
+      const form = submitButton.closest('form');
+      if (form) {
+        fireEvent.submit(form);
+      }
 
       await waitFor(() => {
         expect(screen.getByText(/email is required/i)).toBeInTheDocument();
@@ -250,7 +267,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} isLoading={true} />);
 
       expect(screen.getByLabelText(/email address/i)).toBeDisabled();
-      expect(screen.getByLabelText(/password/i)).toBeDisabled();
+      expect(screen.getByLabelText(/^password/i)).toBeDisabled();
     });
 
     it('should disable submit button when loading', () => {
@@ -276,7 +293,7 @@ describe('LoginPage', () => {
     it('should toggle password visibility', async () => {
       render(<LoginPage {...defaultProps} />);
 
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
       expect(passwordInput).toHaveAttribute('type', 'password');
 
       // Find the toggle button (eye icon)
@@ -306,7 +323,7 @@ describe('LoginPage', () => {
     it('should update password value on input', async () => {
       render(<LoginPage {...defaultProps} />);
 
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
       await userEvent.type(passwordInput, 'mypassword');
 
       expect(passwordInput).toHaveValue('mypassword');
@@ -316,7 +333,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       expect(emailInput).toHaveAttribute('autocomplete', 'email');
       expect(passwordInput).toHaveAttribute('autocomplete', 'current-password');
@@ -327,7 +344,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       // Type email with leading/trailing spaces - validation uses trim()
       await userEvent.type(emailInput, '  test@example.com  ');
@@ -349,7 +366,7 @@ describe('LoginPage', () => {
       render(<LoginPage {...defaultProps} />);
 
       const emailInput = screen.getByLabelText(/email address/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       expect(emailInput).toHaveAttribute('id', 'email');
       expect(passwordInput).toHaveAttribute('id', 'password');

@@ -16,9 +16,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // -- Mocked tx — shared handle for both controllers ---------------------------
-// dNAData uses Prisma's lowercase-first delegate naming for DNAData (verified
-// against generated/prisma/index.d.ts); deleteAllData calls
-// tx.dNAData.deleteMany when wiping deprecated genetic data.
 const mockTx = {
   userFile: { findMany: vi.fn(), deleteMany: vi.fn() },
   biomarker: { deleteMany: vi.fn() },
@@ -30,7 +27,6 @@ const mockTx = {
   expenseProjection: { deleteMany: vi.fn() },
   providerPatient: { deleteMany: vi.fn() },
   labConnection: { findMany: vi.fn(), deleteMany: vi.fn() },
-  dNAData: { deleteMany: vi.fn() },
   user: { findUnique: vi.fn(), delete: vi.fn() },
 };
 
@@ -126,7 +122,6 @@ describe('deleteAllData (C-6)', () => {
     mockTx.expenseActual.deleteMany.mockResolvedValue({ count: 0 });
     mockTx.expenseProjection.deleteMany.mockResolvedValue({ count: 0 });
     mockTx.providerPatient.deleteMany.mockResolvedValue({ count: 0 });
-    mockTx.dNAData.deleteMany.mockResolvedValue({ count: 0 });
     mockTx.labConnection.deleteMany.mockResolvedValue({ count: 0 });
   });
 
@@ -781,7 +776,6 @@ describe('deleteAllData — full table cascade', () => {
     mockTx.expenseActual.deleteMany.mockResolvedValue({ count: 6 });
     mockTx.expenseProjection.deleteMany.mockResolvedValue({ count: 7 });
     mockTx.providerPatient.deleteMany.mockResolvedValue({ count: 8 });
-    mockTx.dNAData.deleteMany.mockResolvedValue({ count: 9 });
     mockTx.labConnection.deleteMany.mockResolvedValue({ count: 10 });
   });
 
@@ -799,9 +793,9 @@ describe('deleteAllData — full table cascade', () => {
 
     await deleteAllData(req, res);
 
-    // Full cascade — one deleteMany per category. dNAData and labConnection
-    // are deleted explicitly because deleteAllData preserves the User row,
-    // so their cascade-from-User FK doesn't fire (unlike deleteAccount).
+    // Full cascade — one deleteMany per category. labConnection is deleted
+    // explicitly because deleteAllData preserves the User row, so its
+    // cascade-from-User FK doesn't fire (unlike deleteAccount).
     expect(mockTx.biomarker.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.insurancePlan.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.healthNeed.deleteMany).toHaveBeenCalledTimes(1);
@@ -811,7 +805,6 @@ describe('deleteAllData — full table cascade', () => {
     expect(mockTx.expenseActual.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.expenseProjection.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.providerPatient.deleteMany).toHaveBeenCalledTimes(1);
-    expect(mockTx.dNAData.deleteMany).toHaveBeenCalledTimes(1);
     expect(mockTx.labConnection.deleteMany).toHaveBeenCalledTimes(1);
 
     // All scoped to this user. providerPatient scopes by OR(patientId, providerId)
@@ -825,7 +818,6 @@ describe('deleteAllData — full table cascade', () => {
     expect(mockTx.costAnalysis.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.expenseActual.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.expenseProjection.deleteMany).toHaveBeenCalledWith(userScoped);
-    expect(mockTx.dNAData.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.labConnection.deleteMany).toHaveBeenCalledWith(userScoped);
     expect(mockTx.providerPatient.deleteMany).toHaveBeenCalledWith({
       where: { OR: [{ patientId: 'user-123' }, { providerId: 'user-123' }] },
@@ -845,7 +837,6 @@ describe('deleteAllData — full table cascade', () => {
         deletedExpenseActuals: 6,
         deletedExpenseProjections: 7,
         deletedProviderRelationships: 8,
-        deletedDnaData: 9,
         deletedLabConnections: 10,
         deletedGcsObjects: 1,
       }),
