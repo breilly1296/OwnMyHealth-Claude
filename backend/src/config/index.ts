@@ -151,6 +151,11 @@ export const config = {
     projectId: process.env.GCP_PROJECT_ID || '',
     // Path to service account credentials JSON file
     credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
+    // BAA gate for Google Document AI (image OCR), mirroring the Anthropic
+    // C-7 gate. Image bytes carry patient demographics (name/DOB/MRN in the
+    // pixels) that text/banner redaction cannot reach, so they must not be
+    // sent to Document AI unless a Google Cloud BAA covering it is confirmed.
+    documentAiBaaActive: process.env.GOOGLE_BAA_ACTIVE === 'true',
   },
 
   // Anthropic Claude API (see C-7 — BAA gate for PHI disclosure)
@@ -285,6 +290,26 @@ if (config.anthropic.apiKey && !config.anthropic.baaActive) {
     process.stderr.write(
       '⚠️  ANTHROPIC_BAA_ACTIVE is not set to "true". Claude calls will be blocked by the runtime gate. ' +
       'Set ANTHROPIC_BAA_ACTIVE=true after confirming BAA coverage.\n'
+    );
+  }
+}
+
+// Document AI BAA gate — same posture as Anthropic. Image OCR ships raw image
+// bytes (full demographics in the pixels) to Google Document AI, which text
+// redaction cannot scrub. If a Document AI processor is configured but the BAA
+// flag is unset, production refuses to boot; dev/staging warn (the runtime gate
+// in ocrService.processImageWithDocumentAI is the load-bearing check there).
+if (process.env.GCP_PROCESSOR_ID && !config.gcp.documentAiBaaActive) {
+  if (config.isProduction) {
+    throw new Error(
+      'GOOGLE_BAA_ACTIVE must be set to "true" in production when GCP_PROCESSOR_ID is configured. ' +
+      'It asserts a signed Google Cloud BAA covering Document AI is in effect. ' +
+      'If no BAA is in place, unset GCP_PROCESSOR_ID to disable image OCR.'
+    );
+  } else {
+    process.stderr.write(
+      '⚠️  GOOGLE_BAA_ACTIVE is not set to "true". Document AI image OCR will be blocked by the runtime gate. ' +
+      'Set GOOGLE_BAA_ACTIVE=true after confirming Google Cloud BAA coverage for Document AI.\n'
     );
   }
 }
