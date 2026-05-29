@@ -10,11 +10,19 @@ title = "OwnMyHealth gitleaks config"
 useDefault = true
 
 [allowlist]
-description = "Template env files hold placeholders, not real secrets"
+description = "Templates, test fixtures, and audit docs hold placeholders / fake keys, not real secrets"
 paths = [
+  # env templates (placeholders only)
   '''(^|/)\.env\.example$''',
   '''(^|/)\.env\..+\.example$''',
+  # test files carry fake fixtures (keys, hashes, tokens) by design
+  '''.*\.test\.ts$''',
+  # the audit/reference doc layer cites example keys in prose
+  '''(^|/)New Project Documents/''',
 ]
 regexes = [
   '''CHANGE_ME[A-Za-z0-9_]*''',
+  # Well-known test-only PHI key used in the RLS CI job + docs — it never
+  # encrypts real PHI. Allowlisted so it doesn't trip the generic-api-key rule.
+  '''00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff''',
 ]
