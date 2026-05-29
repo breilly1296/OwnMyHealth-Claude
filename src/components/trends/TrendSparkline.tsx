@@ -13,7 +13,7 @@
  * @module components/trends/TrendSparkline
  */
 
-import { useMemo } from 'react';
+import { useMemo, useId } from 'react';
 import {
   Line,
   ResponsiveContainer,
@@ -81,9 +81,14 @@ export default function TrendSparkline({
     return points;
   }, [data, currentValue, currentDate, normalRange]);
 
-  // Unique gradient IDs
-  const gradientId = `sparkline-gradient-${Date.now()}`;
-  const normalRangeId = `sparkline-normal-${Date.now()}`;
+  // Stable, per-instance unique gradient IDs. Date.now() produced identical
+  // ids for sparklines rendered in the same tick (duplicate DOM ids →
+  // url(#id) resolves to the first match → gradient bleed across charts) and
+  // changed every render. useId() is unique per instance and stable. Strip
+  // the colons React emits so the value is safe inside an SVG url(#...) ref.
+  const uid = useId().replace(/:/g, '');
+  const gradientId = `sparkline-gradient-${uid}`;
+  const normalRangeId = `sparkline-normal-${uid}`;
 
   // Line color based on status
   const lineColor = isOutOfRange ? '#ef4444' : '#3b82f6';

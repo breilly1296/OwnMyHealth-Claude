@@ -349,9 +349,9 @@ export default function RegisterPage({
               <Shield className="w-4 h-4" />
               <span>
                 By creating an account, you agree to our{' '}
-                <a href="/terms" target="_blank" className="underline text-cyan-400 hover:text-cyan-300">Terms of Service</a>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">Terms of Service</a>
                 {' '}and{' '}
-                <a href="/privacy" target="_blank" className="underline text-cyan-400 hover:text-cyan-300">Privacy Policy</a>.
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">Privacy Policy</a>.
               </span>
             </div>
             <p className="mt-2 text-xs text-slate-600">Your health data is encrypted and secure.</p>

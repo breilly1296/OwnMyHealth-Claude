@@ -210,13 +210,13 @@ export default function BiomarkerInsurancePanel({ biomarker, insurancePlans, onC
                       <div className="flex items-center">
                         <DollarSign className="w-4 h-4 text-gray-500 mr-1" />
                         <span className="text-gray-600">
-                          Deductible: ${plan.costs.find(c => c.type === 'Deductible')?.amount.toLocaleString() || 'N/A'}
+                          Deductible: ${(plan.costs ?? []).find(c => c.type === 'Deductible')?.amount.toLocaleString() || 'N/A'}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <Shield className="w-4 h-4 text-gray-500 mr-1" />
                         <span className="text-gray-600">
-                          Out-of-pocket max: ${plan.costs.find(c => c.type === 'Out-of-Pocket Maximum')?.amount.toLocaleString() || 'N/A'}
+                          Out-of-pocket max: ${(plan.costs ?? []).find(c => c.type === 'Out-of-Pocket Maximum')?.amount.toLocaleString() || 'N/A'}
                         </span>
                       </div>
                     </div>
@@ -516,7 +516,7 @@ function findMatchingBenefits(services: RecommendedServiceInfo[], insurancePlans
     let bestMatchScore = 0;
     
     for (const plan of insurancePlans) {
-      for (const benefit of plan.benefits) {
+      for (const benefit of (plan.benefits ?? [])) {
         let matchScore = 0;
         
         // Check service name against benefit name

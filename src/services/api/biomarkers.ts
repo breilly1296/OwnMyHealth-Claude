@@ -116,9 +116,12 @@ export const biomarkersApi = {
   },
 
   async getGuidance(id: string): Promise<{ guidance: string }> {
-    const response = await apiFetch<{ guidance: string }>(`/biomarkers/${id}/guidance`, {
-      method: 'POST',
-    });
+    const response = await apiFetch<{ guidance: string }>(
+      `/biomarkers/${id}/guidance`,
+      { method: 'POST' },
+      60000 // 60s — this triggers a server-side Claude generation; match the
+            // other AI endpoints (analyzeCosts, SBC upload) instead of the 30s default
+    );
     return response.data;
   },
 };

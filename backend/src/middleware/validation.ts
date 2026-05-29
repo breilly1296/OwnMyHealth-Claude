@@ -232,6 +232,11 @@ export const schemas = {
     id: uuid,
   }),
 
+  // UUID parameter for routes using :connectionId (FHIR sync)
+  connectionIdParam: z.object({
+    connectionId: uuid,
+  }),
+
   // Patient ID parameter (for :patientId routes)
   patientIdParam: z.object({
     patientId: uuid,
@@ -625,6 +630,14 @@ export const schemas = {
       planId: uuid.optional(),
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
       limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),
+    }),
+
+    // PUT /insurance/plans/:id/spending — writes into Decimal PHI columns
+    // (deductibleMetIndividual / oopMetIndividual), so reject non-numeric,
+    // negative, NaN/Infinity, and over-precision values at the boundary.
+    updateSpending: z.object({
+      deductibleMet: finiteNumber.pipe(z.number().min(0).max(999999.99)),
+      oopMet: finiteNumber.pipe(z.number().min(0).max(999999.99)),
     }),
   },
 

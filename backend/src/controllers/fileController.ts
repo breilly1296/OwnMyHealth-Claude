@@ -12,7 +12,6 @@ import { NotFoundError } from '../middleware/errorHandler.js';
 import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import {
-  getSignedUrl,
   getFileStream,
   deleteFile as deleteFromStorage,
 } from '../services/storageService.js';
@@ -34,7 +33,6 @@ interface UserFileResponse {
   extractionConfidence: number | null;
   categories: string[];
   createdAt: string;
-  downloadUrl?: string;
 }
 
 /**
@@ -121,7 +119,14 @@ export async function getFiles(
 }
 
 /**
- * Get a single file by ID with signed download URL
+ * Get a single file's metadata by ID.
+ *
+ * Returns metadata ONLY. This endpoint used to mint a 15-minute GCS signed
+ * URL (`downloadUrl`), which was an unbound capture-replay vector — anyone
+ * who obtained the link (browser history, referrer, a paste into a ticket)
+ * could pull the raw PHI with no authentication for 15 minutes. The single
+ * PHI-egress path is now the audited, no-store proxy stream in
+ * `getFileDownloadUrl` (GET /files/:id/download).
  */
 export async function getFile(
   req: AuthenticatedRequest,
@@ -150,20 +155,6 @@ export async function getFile(
   // Get unique categories from linked biomarkers
   const categories = [...new Set(file.biomarkers.map((b) => b.category))];
 
-  // Generate signed URL for download
-  let downloadUrl: string | undefined;
-  try {
-    downloadUrl = await getSignedUrl(file.storageKey, 'read');
-  } catch (error) {
-    logger.error('Failed to generate signed URL for file', {
-      data: {
-        fileId: id,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-    });
-    // Don't fail the request, just omit the URL
-  }
-
   const fileResponse: UserFileResponse = {
     id: file.id,
     filename: file.filename,
@@ -179,7 +170,6 @@ export async function getFile(
       : null,
     categories,
     createdAt: file.createdAt.toISOString(),
-    downloadUrl,
   };
 
   // Audit log: READ access to single file

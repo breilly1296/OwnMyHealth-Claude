@@ -162,6 +162,16 @@ export function errorHandler(
     apply(handleJWTError(err));
   } else if (err instanceof SyntaxError && 'body' in err) {
     apply({ statusCode: 400, code: 'INVALID_JSON', message: 'Request body contains invalid JSON' });
+  } else if (err.name === 'MulterError') {
+    // multer upload errors (file too large, too many files, wrong field).
+    // Map to accurate client-error codes so an oversize/invalid upload stops
+    // surfacing as an opaque 500 and polluting 5xx logs/alerts.
+    const multerCode = (err as Error & { code?: string }).code;
+    if (multerCode === 'LIMIT_FILE_SIZE') {
+      apply({ statusCode: 413, code: 'FILE_TOO_LARGE', message: 'File too large. Maximum upload size is 10MB.' });
+    } else {
+      apply({ statusCode: 400, code: 'UPLOAD_ERROR', message: 'File upload failed. Check the file and try again.' });
+    }
   }
 
   // Always log errors (with different levels based on severity)

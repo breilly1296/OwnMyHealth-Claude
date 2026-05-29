@@ -280,8 +280,10 @@ cd .. && npm run dev           # Frontend (port 5173)
 ```env
 # Required
 DATABASE_URL=postgresql://user:pass@host:5432/ownmyhealth
-JWT_SECRET=<32+ character secret>
+JWT_ACCESS_SECRET=<32+ character secret>
+JWT_REFRESH_SECRET=<32+ character secret>
 PHI_ENCRYPTION_KEY=<64 hex characters>
+AUDIT_LOG_SALT=<64 hex characters>
 
 # Optional
 NODE_ENV=development

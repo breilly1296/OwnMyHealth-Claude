@@ -376,9 +376,12 @@ export async function createHealthGoal(
     ? encryptionService.encrypt(description, userSalt)
     : null;
 
-  // Calculate initial progress
+  // Calculate initial progress. Use a presence check, NOT truthiness — a
+  // currentValue of 0 is a legitimate measurement (e.g. a DECREASE goal
+  // already at 0 against a positive target should read 100%, not 0%).
+  const hasCurrentValue = currentValue !== undefined && currentValue !== null;
   const startValue = currentValue ?? targetValue;
-  const progress = currentValue
+  const progress = hasCurrentValue
     ? calculateProgress(startValue, currentValue, targetValue, direction || 'DECREASE')
     : 0;
 
@@ -489,6 +492,18 @@ export async function updateHealthGoal(
         targetValue.toString(),
         userSalt,
       );
+      // Recompute progress against the NEW target — otherwise the stored
+      // percentage (derived from the old target) is stale until the user
+      // logs another value. currentValue/startValue are Prisma Decimal
+      // columns, so coerce to number for calculateProgress.
+      if (existingGoal.currentValue !== null && existingGoal.currentValue !== undefined) {
+        const curr = Number(existingGoal.currentValue);
+        const start =
+          existingGoal.startValue !== null && existingGoal.startValue !== undefined
+            ? Number(existingGoal.startValue)
+            : curr;
+        updateData.progress = calculateProgress(start, curr, targetValue, existingGoal.direction);
+      }
     }
     if (targetDate !== undefined) updateData.targetDate = new Date(targetDate);
     if (milestones !== undefined) updateData.milestones = JSON.stringify(milestones);
@@ -497,6 +512,10 @@ export async function updateHealthGoal(
       updateData.status = status;
       if (status === 'ACHIEVED' || status === 'FAILED' || status === 'CANCELLED') {
         updateData.completedAt = new Date();
+      } else if (status === 'ACTIVE' || status === 'PAUSED') {
+        // Reverting out of a terminal state: clear the stale completion stamp
+        // so the goal no longer shows as "completed at <date>" while active.
+        updateData.completedAt = null;
       }
     }
 

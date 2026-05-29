@@ -14,6 +14,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
 import { UnauthorizedError } from './errorHandler.js';
+import { isTokenRevoked } from '../services/authService.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 interface JwtPayload {
@@ -79,6 +80,14 @@ export function authenticate(
       throw new UnauthorizedError('Authentication required');
     }
 
+    // Reject explicitly-revoked tokens (logout / logout-all / password change).
+    // The blacklist is the only thing that stops a still-valid access token
+    // before its 15-min natural expiry, so this check MUST run on every
+    // protected route — not just in the unused verifyAccessToken helper.
+    if (isTokenRevoked(token)) {
+      throw new UnauthorizedError('Session has been revoked. Please log in again.');
+    }
+
     // Verify token using access secret
     const decoded = jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;
 
@@ -123,6 +132,11 @@ export function optionalAuth(
     const token = extractToken(req);
 
     if (!token) {
+      return next();
+    }
+
+    // A revoked token means "no authenticated user" for optional auth.
+    if (isTokenRevoked(token)) {
       return next();
     }
 
@@ -173,6 +187,11 @@ export function requireBearerAuth(
 
     if (!token) {
       throw new UnauthorizedError('Bearer token required');
+    }
+
+    // Reject explicitly-revoked tokens — see authenticate().
+    if (isTokenRevoked(token)) {
+      throw new UnauthorizedError('Session has been revoked. Please log in again.');
     }
 
     const decoded = jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;

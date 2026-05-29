@@ -522,7 +522,8 @@ export async function changePassword(
   const sessionMetadata = getSessionMetadata(req);
   const tokens = await generateTokens(updatedUser!, sessionMetadata);
   setAccessTokenCookie(res, tokens.accessToken);
-  setRefreshTokenCookie(res, tokens.refreshToken);
+  // Preserve the demo session's extended cookie duration on re-issue.
+  setRefreshTokenCookie(res, tokens.refreshToken, isDemoUser(updatedUser!));
 
   // Audit log: password change
   const auditService = getAuditService();

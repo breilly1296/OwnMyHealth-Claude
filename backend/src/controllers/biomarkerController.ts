@@ -480,7 +480,15 @@ export async function bulkCreateBiomarkers(
       if (typeof input.value !== 'number' || isNaN(input.value)) {
         throw new Error(`Invalid value: ${input.value}`);
       }
-      if (!input.normalRange?.min || !input.normalRange?.max) {
+      // Presence/finiteness check — NOT truthiness. A normal-range bound of 0
+      // is common in lab reference ranges (e.g. 0–x); the old `!min || !max`
+      // check silently dropped those legitimate rows.
+      if (
+        input.normalRange?.min === undefined ||
+        input.normalRange?.max === undefined ||
+        !Number.isFinite(input.normalRange.min) ||
+        !Number.isFinite(input.normalRange.max)
+      ) {
         throw new Error('Missing normal range min/max');
       }
 

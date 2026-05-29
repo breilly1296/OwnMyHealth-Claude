@@ -8,6 +8,7 @@ import { csrfProtection } from '../middleware/csrf.js';
 import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { validate, schemas } from '../middleware/validation.js';
 import * as fhir from '../controllers/fhirController.js';
 
 const router = Router();
@@ -38,6 +39,7 @@ router.get('/connections', asyncHandler(fhir.listConnections));
 // POST /api/v1/fhir/sync/:connectionId
 router.post(
   '/sync/:connectionId',
+  validate(schemas.connectionIdParam, 'params'),
   sensitiveLimiter,
   blockDemoAI,
   csrfProtection,
@@ -47,6 +49,7 @@ router.post(
 // DELETE /api/v1/fhir/connections/:id
 router.delete(
   '/connections/:id',
+  validate(schemas.uuidParam, 'params'),
   sensitiveLimiter,
   blockDemoAI,
   csrfProtection,

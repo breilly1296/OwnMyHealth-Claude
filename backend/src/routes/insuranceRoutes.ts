@@ -23,7 +23,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { validate, schemas } from '../middleware/validation.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { asyncHandler, BadRequestError } from '../middleware/errorHandler.js';
 import { uploadLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import * as insuranceController from '../controllers/insuranceController.js';
@@ -43,7 +43,7 @@ const upload = multer({
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF files are accepted'));
+      cb(new BadRequestError('Only PDF files are accepted'));
     }
   },
 });
@@ -137,6 +137,7 @@ router.post(
 router.put(
   '/plans/:id/spending',
   validate(schemas.uuidParam, 'params'),
+  validate(schemas.expense.updateSpending),
   asyncHandler(updateCurrentSpending)
 );
 

@@ -13,7 +13,7 @@ Privacy-first HIPAA-compliant health biomarker tracking platform with insurance 
 - **OCR**: Google Document AI (scanned lab reports)
 - **Email**: SendGrid (verification, password reset)
 - **File Storage**: Google Cloud Storage (lab reports, SBC documents)
-- **Testing**: Vitest (frontend), Jest (backend)
+- **Testing**: Vitest (frontend and backend)
 - **Deployment**: GCP Cloud Run (backend) + GCS bucket (frontend) + Cloud SQL (database)
 
 ## Current Features
@@ -34,10 +34,6 @@ Privacy-first HIPAA-compliant health biomarker tracking platform with insurance 
 - ~~Health Scoring~~ - 0-100 health scores, risk assessments (dashboard shows "Biomarkers in Range %" instead — a simple in-range ratio, not the removed scoring system)
 - ~~CMS Marketplace Integration~~ - healthcare.gov plan search
 - ~~Provider Directory~~ - doctor search and recommendations
-
-## Deprecated (Still in Schema)
-These models remain in `schema.prisma` but are not actively used in the UI:
-- **DNA/Genetics**: DNAData, DNAVariant, GeneticTrait models — consider removing if not planned
 
 ## Project Structure
 ```
@@ -87,7 +83,7 @@ backend/src/
 ├── middleware/          # Security middleware (8 files)
 │   ├── auth.ts         # JWT verification
 │   ├── csrf.ts         # CSRF double-submit cookie
-│   ├── rateLimiter.ts  # 6 named rate limiters
+│   ├── rateLimiter.ts  # 8 named rate limiters
 │   ├── rbac.ts         # Role-based access control
 │   ├── demoProtection.ts # Demo account restrictions
 │   └── ...
@@ -128,7 +124,6 @@ Must match Prisma schema exactly. Current encrypted fields:
 - Health Goals/Progress: descriptions, notes, target values
 - Health Needs: description
 - Provider-Patient: relationship notes
-- DNA/Genetic: raw data, variant descriptions, trait names
 - Expenses: descriptions, amounts, provider names, notes (all monetary fields stored as `*Encrypted` String columns with AES-256-GCM ciphertext, not Decimal — see migration `20260206_fix_expense_encryption_types`)
 - AI Responses: guidance content, analysis results
 - Audit Log: previous/new values (encrypted PHI snapshots)
@@ -193,7 +188,7 @@ const biomarkers = await withRLSContext(userId, async () => {
 | `backend/src/middleware/auth.ts` | JWT verification, route protection |
 | `backend/src/middleware/csrf.ts` | CSRF double-submit cookie validation |
 | `backend/src/middleware/rbac.ts` | Role-based access control (PATIENT/PROVIDER/ADMIN) |
-| `backend/src/middleware/rateLimiter.ts` | 6 named rate limiters |
+| `backend/src/middleware/rateLimiter.ts` | 8 named rate limiters |
 | `backend/src/middleware/demoProtection.ts` | Demo account restrictions |
 | `backend/src/config/index.ts` | All environment variables (20+) |
 | `src/contexts/AuthContext.tsx` | Frontend auth state management |
@@ -211,7 +206,7 @@ npm run test         # Run Vitest tests
 cd backend
 npm run dev          # Start dev server (port 3001)
 npm run build        # Compile TypeScript
-npm run test         # Run Jest tests
+npm run test         # Run Vitest tests
 
 # Database
 npx prisma generate  # Generate Prisma client
@@ -238,27 +233,28 @@ npx prisma studio    # Database GUI
 ```
 # Critical Secrets
 DATABASE_URL=postgresql://...
-JWT_SECRET=<256-bit secret>
+JWT_ACCESS_SECRET=<256-bit secret>
 JWT_REFRESH_SECRET=<256-bit secret>
 PHI_ENCRYPTION_KEY=<64 hex chars>
+AUDIT_LOG_SALT=<hex salt, >=64 hex chars>
 ANTHROPIC_API_KEY=<api-key>
 SENDGRID_API_KEY=<api-key>
-GOOGLE_CLOUD_PROJECT=<project-id>
+GCP_PROJECT_ID=<project-id>
 
 # Configuration
 NODE_ENV=development|production
 PORT=3001
 CORS_ORIGIN=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
-SENDGRID_FROM_EMAIL=<verified-sender>
+EMAIL_FROM=<verified-sender>
 GCS_BUCKET_NAME=<bucket-name>
-GOOGLE_DOCUMENT_AI_PROCESSOR_ID=<processor-id>
-GOOGLE_DOCUMENT_AI_LOCATION=<location>
+GCP_PROCESSOR_ID=<processor-id>
+GCP_LOCATION=<location>
 
 # Security
-CSRF_SECRET=<secret>
+# (CSRF uses a double-submit cookie — there is NO server-side CSRF secret)
 RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX=100
+RATE_LIMIT_MAX_REQUESTS=100
 
 # Demo (development only)
 DEMO_ACCOUNT_ENABLED=true|false

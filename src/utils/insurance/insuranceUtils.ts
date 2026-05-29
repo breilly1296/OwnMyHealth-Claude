@@ -187,8 +187,13 @@ export function transformPlanForDisplay(plan: InsurancePlan): InsurancePlan {
 
   return {
     ...plan,
-    benefits: benefits.length > 0 ? benefits : plan.benefits,
-    costs: costs.length > 0 ? costs : plan.costs,
+    // Always coerce to arrays. The InsurancePlan type declares benefits/costs
+    // as required arrays, but a sparsely-extracted plan can have empty locally
+    // built arrays AND undefined incoming plan.benefits/plan.costs — returning
+    // undefined here crashed consumers that iterate them (BiomarkerInsurancePanel,
+    // BiomarkerActionPlan).
+    benefits: benefits.length > 0 ? benefits : (plan.benefits ?? []),
+    costs: costs.length > 0 ? costs : (plan.costs ?? []),
     limitations: plan.limitations || [],
     network: plan.network || { geographicCoverage: [] },
   };

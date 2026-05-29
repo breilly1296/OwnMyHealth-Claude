@@ -59,17 +59,13 @@ export default function FilesPage({ onUploadClick }: FilesPageProps) {
   const handleView = useCallback(async (file: UserFile) => {
     try {
       const { blobUrl } = await filesApi.downloadFile(file.id);
-      const win = window.open(blobUrl, '_blank');
-      // Revoke once the new tab has loaded (or after a timeout if the open
-      // was blocked / navigated away). Browsers need the URL alive while the
-      // tab is rendering it.
-      const revoke = () => URL.revokeObjectURL(blobUrl);
-      if (win) {
-        win.addEventListener('load', revoke, { once: true });
-        setTimeout(revoke, 60_000); // safety net
-      } else {
-        revoke();
-      }
+      // Open with 'noopener' so the opened blob document (derived from a
+      // user-uploaded file) can't reach back into this PHI-bearing tab via
+      // window.opener. With 'noopener' the returned handle is null, so we
+      // can't hook the tab's load event — revoke on a fixed timeout instead.
+      // The browser keeps the blob alive while the tab renders it.
+      window.open(blobUrl, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to open file');
     }

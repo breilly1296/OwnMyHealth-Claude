@@ -17,17 +17,11 @@ export interface UserFileData {
   extractionConfidence: number | null;
   categories: string[];
   createdAt: string;
-  downloadUrl?: string;
 }
 
 export const filesApi = {
   async getAll(): Promise<UserFileData[]> {
     const response = await apiFetch<UserFileData[]>('/files');
-    return response.data;
-  },
-
-  async getById(id: string): Promise<UserFileData> {
-    const response = await apiFetch<UserFileData>(`/files/${id}`);
     return response.data;
   },
 
