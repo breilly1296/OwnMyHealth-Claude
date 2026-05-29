@@ -13,6 +13,7 @@ import type {
   FHIRDiagnosticReport,
   FHIRPatient,
 } from './types.js';
+import { assertAllowedFhirUrl } from './urlSafety.js';
 
 export interface ListParams {
   dateFrom?: string; // FHIR date param, e.g. '2026-01-01'
@@ -28,7 +29,19 @@ export class FHIRClient {
   constructor(private baseUrl: string, private accessToken: string) {}
 
   private async request<T>(path: string, absolute?: boolean): Promise<T> {
-    const url = absolute ? path : `${this.baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+    let url: string;
+    if (absolute) {
+      // `path` is a server-supplied absolute URL (a pagination `next` link) and
+      // we attach the patient's Bearer token below — so it MUST stay on the
+      // trusted FHIR host. Blocks SSRF (e.g. to an internal metadata service)
+      // and token exfiltration to an attacker host. Throws on violation.
+      url = assertAllowedFhirUrl(path, {
+        baseUrl: this.baseUrl,
+        label: 'FHIR pagination URL',
+      }).toString();
+    } else {
+      url = `${this.baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
     try {

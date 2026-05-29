@@ -190,6 +190,14 @@ export const config = {
     frontendSuccessRedirect:
       process.env.QUEST_FHIR_SUCCESS_REDIRECT ||
       'http://localhost:5173/settings?labConnected=quest',
+    // SSRF/exfil allowlist: extra hosts (besides the FHIR base host) the SMART
+    // authorize/token/revoke endpoints may live on. Comma-separated. Empty ⇒
+    // those endpoints must be on the FHIR base host. The patient Bearer token
+    // and OAuth client_secret are only ever sent to these hosts.
+    authHosts: (process.env.QUEST_FHIR_AUTH_HOSTS || '')
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean),
   },
 
   // API Versioning
