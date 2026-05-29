@@ -102,6 +102,10 @@ export type {
   CurrentPlanData,
 } from './plan';
 
+// FHIR / Lab Connections API
+export { fhirApi } from './fhir';
+export type { LabConnectionSummary, LabSyncResult } from './fhir';
+
 // Expenses API
 export { expensesApi } from './expenses';
 export type {
