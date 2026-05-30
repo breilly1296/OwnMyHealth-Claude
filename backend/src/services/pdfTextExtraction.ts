@@ -14,7 +14,7 @@
  * @module services/pdfTextExtraction
  */
 
-// @ts-expect-error — pdf-parse has no @types package
+// Typed via the @types/pdf-parse dev dependency (audit #32) — no @ts-expect-error needed.
 import pdfParse from 'pdf-parse';
 import { logger } from '../utils/logger.js';
 import { secureParsePdf } from '../utils/securePdfParsing.js';
