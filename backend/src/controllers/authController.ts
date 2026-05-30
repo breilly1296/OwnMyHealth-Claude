@@ -18,6 +18,7 @@ import { getAuditLogService } from '../services/auditLog.js';
 import logger from '../utils/logger.js';
 import {
   createUser,
+  hashPassword,
   findUserById,
   findUserByEmail,
   emailExists,
@@ -181,12 +182,18 @@ export async function register(
 
   // Account-enumeration defense (#18): NEVER reveal whether the email is
   // already registered. Both branches below return the SAME generic response
-  // (and the same 201 status). When the email already exists we email the
-  // real owner a notice instead of leaking existence through the API. The
-  // bcrypt cost of createUser on the new-user path is the only residual timing
-  // difference; the explicit response-level oracle (the old 400 "Email already
-  // registered") is removed.
+  // (and the same 201 status) AND incur the same dominant cost (one bcrypt
+  // hash + one email send), so neither the response nor the latency leaks
+  // existence. When the email already exists we email the real owner a notice
+  // instead of leaking through the API. The explicit response-level oracle
+  // (the old 400 "Email already registered") is removed.
   if (await emailExists(email)) {
+    // Timing-attack defense: the new-user path runs bcrypt via createUser, so
+    // run an equivalent throwaway hash here (discarded) to equalize latency —
+    // mirrors the login flow's timing-safe dummy compare. Without this an
+    // attacker could distinguish existing vs new emails by response time.
+    await hashPassword(password);
+
     // Best-effort notice to the existing owner. Never block the response or
     // change its shape on failure — that would re-introduce the oracle.
     await sendAccountExistsEmail(email).catch((err) => {

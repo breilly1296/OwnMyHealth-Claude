@@ -29,6 +29,7 @@ vi.mock('../services/auditLog.js', () => ({
 vi.mock('../services/authService.js', () => ({
   emailExists: vi.fn(),
   createUser: vi.fn(),
+  hashPassword: vi.fn().mockResolvedValue('$2a$13$dummyhashfortiming'),
   validatePasswordStrength: vi.fn(() => ({ valid: true, errors: [] })),
 }));
 
@@ -39,11 +40,12 @@ vi.mock('../services/emailService.js', () => ({
 }));
 
 import { register } from './authController.js';
-import { emailExists, createUser } from '../services/authService.js';
+import { emailExists, createUser, hashPassword } from '../services/authService.js';
 import { sendVerificationEmail, sendAccountExistsEmail } from '../services/emailService.js';
 
 const emailExistsMock = vi.mocked(emailExists);
 const createUserMock = vi.mocked(createUser);
+const hashPasswordMock = vi.mocked(hashPassword);
 const sendVerificationEmailMock = vi.mocked(sendVerificationEmail);
 const sendAccountExistsEmailMock = vi.mocked(sendAccountExistsEmail);
 
@@ -97,6 +99,9 @@ describe('register — account enumeration (#18)', () => {
     expect(createUserMock).not.toHaveBeenCalled();
     expect(sendVerificationEmailMock).not.toHaveBeenCalled();
     expect(sendAccountExistsEmailMock).toHaveBeenCalledWith('taken@example.com');
+    // Timing-attack defense: a throwaway bcrypt hash must run on this path too,
+    // so latency matches the new-user path (which hashes via createUser).
+    expect(hashPasswordMock).toHaveBeenCalledWith(STRONG_PASSWORD);
     expect(lastStatus(res)).toBe(201);
 
     const payload = lastJson(res);
