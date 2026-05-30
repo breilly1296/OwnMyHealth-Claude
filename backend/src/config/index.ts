@@ -126,6 +126,16 @@ export const config = {
     url: process.env.REDIS_URL || '',
   },
 
+  // Scheduled maintenance (audit #38). When AUDIT_CLEANUP_TOKEN is set, the
+  // audit-retention cleanup is driven by Cloud Scheduler hitting
+  // POST /api/v1/internal/audit-cleanup (authenticated by this shared secret)
+  // and the in-process 24h setInterval is disabled — the interval rarely fires
+  // on scale-to-zero Cloud Run. Unset → in-process interval (current behavior),
+  // and the endpoint returns 404.
+  scheduler: {
+    auditCleanupToken: process.env.AUDIT_CLEANUP_TOKEN || '',
+  },
+
   // Demo Account Configuration
   // SECURITY: No hardcoded fallbacks - must be explicitly configured via env vars
   demo: {

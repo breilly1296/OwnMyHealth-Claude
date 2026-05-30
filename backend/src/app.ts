@@ -47,6 +47,7 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
+import internalRoutes from './routes/internalRoutes.js';
 import { standardLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { csrfProtection, csrfTokenHandler } from './middleware/csrf.js';
@@ -262,6 +263,10 @@ app.use('/api', (_req, res, next) => {
 
 // API routes
 app.use(`/api/${config.apiVersion}`, routes);
+
+// Internal/maintenance routes (Cloud Scheduler — audit #38). Shared-secret
+// auth, CSRF-exempt; each endpoint 404s unless its secret is configured.
+app.use(`/api/${config.apiVersion}/internal`, internalRoutes);
 
 // Dev-only mock FHIR server — lets the Quest SMART-on-FHIR integration
 // be exercised end-to-end locally without real sandbox credentials.
