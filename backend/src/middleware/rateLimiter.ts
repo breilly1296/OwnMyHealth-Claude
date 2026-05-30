@@ -2,18 +2,20 @@ import rateLimit from 'express-rate-limit';
 import type { Request } from 'express';
 import { config } from '../config/index.js';
 import type { ApiResponse } from '../types/index.js';
+import { createRateLimitStore } from './rateLimitStore.js';
 
-// KNOWN LIMITATION: In-memory rate-limit store is per-instance.
-// On Cloud Run with N instances, an attacker can hit each instance up to N
-// times the stated limit before any bucket fills. Mitigated today by pinning
-// Cloud Run to a low `--max-instances` (see deploy config). When we scale
-// beyond ~3 instances, replace MemoryStore with `rate-limit-redis` backed by
-// Cloud Memorystore so counters are shared across instances. Not fixed now
-// because Redis is a new piece of infra and the current traffic fits on one
-// instance — see audit HIGH finding on rate-limiter dilution.
+// STORE: in-process MemoryStore by default → per-instance counters, so on
+// Cloud Run with N instances the effective ceiling is N×limit (audit #37).
+// Setting REDIS_URL switches every limiter below to a SHARED Redis store
+// (Cloud Memorystore) keyed by a distinct prefix, so counters are consistent
+// across instances and the rate-limit posture no longer depends on the
+// `--max-instances` pin. `createRateLimitStore` returns undefined when
+// REDIS_URL is unset, leaving the MemoryStore default in place (current
+// behavior). See middleware/rateLimitStore.ts.
 
 // Standard rate limiter for general API endpoints
 export const standardLimiter = rateLimit({
+  store: createRateLimitStore('standard'),
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.maxRequests,
   message: {
@@ -33,6 +35,7 @@ export const standardLimiter = rateLimit({
 
 // Rate limiter for authentication endpoints (registration, etc.)
 export const authLimiter = rateLimit({
+  store: createRateLimitStore('auth'),
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 attempts per window
   message: {
@@ -48,6 +51,7 @@ export const authLimiter = rateLimit({
 
 // Strict rate limiter for login specifically (brute force protection)
 export const strictAuthLimiter = rateLimit({
+  store: createRateLimitStore('strict-auth'),
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Only 5 login attempts per window
   message: {
@@ -70,6 +74,7 @@ export const strictAuthLimiter = rateLimit({
 
 // Upload rate limiter for file uploads
 export const uploadLimiter = rateLimit({
+  store: createRateLimitStore('upload'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20, // 20 uploads per hour
   message: {
@@ -85,6 +90,7 @@ export const uploadLimiter = rateLimit({
 
 // Sensitive operations rate limiter
 export const sensitiveLimiter = rateLimit({
+  store: createRateLimitStore('sensitive'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 requests per hour
   message: {
@@ -100,6 +106,7 @@ export const sensitiveLimiter = rateLimit({
 
 // AI endpoint rate limiter (Claude API calls are expensive)
 export const aiLimiter = rateLimit({
+  store: createRateLimitStore('ai'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 AI requests per hour per user
   message: {
@@ -124,6 +131,7 @@ export const aiLimiter = rateLimit({
 // the plan-tier ceiling on legitimate practice growth (a provider adding
 // 10 patients/hour to their roster is plausible; 100/hour is enumeration).
 export const providerAccessRequestLimiter = rateLimit({
+  store: createRateLimitStore('provider-access-request'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
   message: {
@@ -147,6 +155,7 @@ export const providerAccessRequestLimiter = rateLimit({
 
 // Bulk operations rate limiter (for batch creates, imports)
 export const bulkOperationLimiter = rateLimit({
+  store: createRateLimitStore('bulk'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 30, // 30 bulk operations per hour
   message: {

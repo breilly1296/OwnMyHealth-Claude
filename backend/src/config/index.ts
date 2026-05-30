@@ -118,6 +118,14 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
 
+  // Redis (optional). When set, the rate limiters use a shared Redis store
+  // (Cloud Memorystore) so counters are consistent across Cloud Run instances
+  // instead of per-instance MemoryStore (audit #37). Unset → MemoryStore
+  // (current behavior). Provision Memorystore + set REDIS_URL to enable.
+  redis: {
+    url: process.env.REDIS_URL || '',
+  },
+
   // Demo Account Configuration
   // SECURITY: No hardcoded fallbacks - must be explicitly configured via env vars
   demo: {
