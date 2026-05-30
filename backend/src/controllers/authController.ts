@@ -18,6 +18,7 @@ import { getAuditLogService } from '../services/auditLog.js';
 import logger from '../utils/logger.js';
 import {
   createUser,
+  hashPassword,
   findUserById,
   findUserByEmail,
   emailExists,
@@ -37,7 +38,18 @@ import {
   User,
   SessionMetadata,
 } from '../services/authService.js';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../services/emailService.js';
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendAccountExistsEmail,
+} from '../services/emailService.js';
+
+// Identical generic response for every registration attempt — whether or not
+// the email already exists — so the API never reveals which addresses have
+// accounts (account enumeration #18). The differentiated signal goes only to
+// the email inbox of the address in question.
+const GENERIC_REGISTER_MESSAGE =
+  'Registration successful. Please check your email to verify your account.';
 
 // ============================================
 // Audit Logging Helper
@@ -166,9 +178,43 @@ export async function register(
     throw new BadRequestError(passwordValidation.errors.join('. '));
   }
 
-  // Check if email already exists
+  const auditService = getAuditService();
+
+  // Account-enumeration defense (#18): NEVER reveal whether the email is
+  // already registered. Both branches below return the SAME generic response
+  // (and the same 201 status) AND incur the same dominant cost (one bcrypt
+  // hash + one email send), so neither the response nor the latency leaks
+  // existence. When the email already exists we email the real owner a notice
+  // instead of leaking through the API. The explicit response-level oracle
+  // (the old 400 "Email already registered") is removed.
   if (await emailExists(email)) {
-    throw new BadRequestError('Email already registered');
+    // Timing-attack defense: the new-user path runs bcrypt via createUser, so
+    // run an equivalent throwaway hash here (discarded) to equalize latency —
+    // mirrors the login flow's timing-safe dummy compare. Without this an
+    // attacker could distinguish existing vs new emails by response time.
+    await hashPassword(password);
+
+    // Best-effort notice to the existing owner. Never block the response or
+    // change its shape on failure — that would re-introduce the oracle.
+    await sendAccountExistsEmail(email).catch((err) => {
+      logger.error('Failed to send account-exists notice', {
+        prefix: 'Auth',
+        data: { error: err instanceof Error ? err.message : 'unknown' },
+      });
+    });
+
+    // Audit the silently-absorbed duplicate attempt (no userId — we don't look
+    // it up, to keep this path cheap and leak-free).
+    await auditService.logAuth('REGISTER', { req }, {
+      email,
+      outcome: 'DUPLICATE_EMAIL_SILENT',
+    });
+
+    res.status(201).json({
+      success: true,
+      data: { message: GENERIC_REGISTER_MESSAGE },
+    } satisfies ApiResponse<{ message: string }>);
+    return;
   }
 
   // Create user (starts as unverified with verification token)
@@ -183,20 +229,17 @@ export async function register(
   // email verification before allowing access.
 
   // Audit log: new user registration
-  const auditService = getAuditService();
   await auditService.logAuth('REGISTER', { req, userId: user.id }, {
     email: user.email,
     role: user.role,
   });
 
-  const response: ApiResponse<{
-    user: { id: string; email: string; role: string };
-    message: string;
-  }> = {
+  // The response intentionally OMITS the user object so it is byte-for-byte
+  // identical to the duplicate-email branch above (account enumeration #18).
+  const response: ApiResponse<{ message: string }> = {
     success: true,
     data: {
-      user: formatUserResponse(user),
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: GENERIC_REGISTER_MESSAGE,
     },
   };
 

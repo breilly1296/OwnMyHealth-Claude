@@ -199,6 +199,83 @@ The OwnMyHealth Team
   return { subject, text, html };
 }
 
+/**
+ * Generate the "account already exists" notice. Sent when someone attempts to
+ * register with an email that already has an account. The registration API
+ * returns the SAME generic response whether or not the email exists (account
+ * enumeration #18), so this email is how the real owner finds out — and how a
+ * recipient who didn't try to register learns no new account was created.
+ */
+function getAccountExistsEmailContent(loginUrl: string): { subject: string; text: string; html: string } {
+  const subject = 'You already have an OwnMyHealth account';
+
+  const text = `
+Someone just tried to create an OwnMyHealth account with this email address.
+
+Good news — you already have an account, so there's nothing more to do. Just sign in:
+
+${loginUrl}
+
+If you've forgotten your password, use the "Forgot password?" link on the sign-in page to reset it.
+
+If this wasn't you, you can safely ignore this email. No new account was created and nothing about your existing account has changed.
+
+Best regards,
+The OwnMyHealth Team
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You already have an account</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #2563eb; margin: 0;">OwnMyHealth</h1>
+    <p style="color: #6b7280; margin: 5px 0 0 0;">Your Health, Your Data, Your Control</p>
+  </div>
+
+  <div style="background: #f9fafb; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+    <h2 style="margin-top: 0; color: #111827;">You already have an account</h2>
+    <p>Someone just tried to create an OwnMyHealth account with this email address. Good news — you already have one, so there's nothing more to do.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        Sign in
+      </a>
+    </div>
+
+    <p style="color: #6b7280; font-size: 14px;">
+      Forgot your password? Use the <strong>Forgot password?</strong> link on the sign-in page to reset it.
+    </p>
+
+    <p style="color: #6b7280; font-size: 14px;">
+      If the button doesn't work, copy and paste this URL into your browser:
+    </p>
+    <p style="word-break: break-all; font-size: 13px; color: #2563eb;">
+      ${loginUrl}
+    </p>
+  </div>
+
+  <div style="background: #f0f9ff; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+    <p style="margin: 0; color: #075985; font-size: 14px;">
+      <strong>Didn't try to register?</strong> You can safely ignore this email. No new account was created and nothing about your existing account has changed.
+    </p>
+  </div>
+
+  <div style="text-align: center; color: #9ca3af; font-size: 12px;">
+    <p>&copy; ${new Date().getFullYear()} OwnMyHealth. All rights reserved.</p>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return { subject, text, html };
+}
+
 // ============================================
 // Email Sending Functions
 // ============================================
@@ -308,6 +385,28 @@ export async function sendPasswordResetEmail(
 }
 
 /**
+ * Send the "account already exists" notice (account enumeration #18).
+ * The login page is the app root; the reset flow is reached from there via the
+ * "Forgot password?" link.
+ */
+export async function sendAccountExistsEmail(
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  const loginUrl = config.email.frontendUrl;
+  const { subject, text, html } = getAccountExistsEmailContent(loginUrl);
+
+  if (config.isDevelopment) {
+    logger.devBox('ACCOUNT EXISTS NOTICE', [
+      `To: ${email}`,
+      `Login URL: ${loginUrl}`,
+      'Sent because a duplicate registration was attempted',
+    ]);
+  }
+
+  return sendEmail(email, subject, text, html);
+}
+
+/**
  * Generic send used by the engagement/notification pipeline.
  *
  * Exposed separately from the typed `sendVerificationEmail` / `sendPasswordResetEmail`
@@ -331,6 +430,7 @@ export async function sendGenericEmail(
 export const emailService = {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendAccountExistsEmail,
   send: sendGenericEmail,
 };
 

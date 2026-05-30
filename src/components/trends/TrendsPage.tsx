@@ -181,6 +181,10 @@ export default function TrendsPage({ biomarkers }: TrendsPageProps) {
           {/* Category Dropdown */}
           <div className="relative">
             <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={isCategoryDropdownOpen}
+              aria-label={`Filter by category, currently ${selectedCategory}`}
               onClick={() => {
                 setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
                 setIsSortDropdownOpen(false);
@@ -236,6 +240,10 @@ export default function TrendsPage({ biomarkers }: TrendsPageProps) {
           {/* Sort Dropdown */}
           <div className="relative md:ml-auto">
             <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={isSortDropdownOpen}
+              aria-label="Sort biomarkers"
               onClick={() => {
                 setIsSortDropdownOpen(!isSortDropdownOpen);
                 setIsCategoryDropdownOpen(false);

@@ -8,6 +8,9 @@ import { Request } from 'express';
 vi.mock('../config/index.js', () => ({
   config: {
     auditSalt: 'test-audit-salt-for-unit-tests',
+    // #38: startAuditCleanup reads this; empty → in-process interval runs
+    // (the behavior the cleanup-scheduler tests below assert).
+    scheduler: { auditCleanupToken: '' },
   },
 }));
 

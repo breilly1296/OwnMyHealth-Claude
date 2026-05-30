@@ -578,6 +578,17 @@ let auditCleanupInterval: ReturnType<typeof setInterval> | null = null;
  * Runs daily to remove logs older than 7-year retention period
  */
 export function startAuditCleanup(prisma: PrismaClient): void {
+  // #38: when retention cleanup is delegated to Cloud Scheduler (a shared-secret
+  // POST to /internal/audit-cleanup), skip the in-process interval. The 24h
+  // setInterval rarely fires on scale-to-zero Cloud Run — the instance is
+  // usually reaped long before 24h, so retention would never run.
+  if (config.scheduler.auditCleanupToken) {
+    logger.info('Audit retention cleanup delegated to Cloud Scheduler; in-process interval disabled', {
+      prefix: 'AuditLog',
+    });
+    return;
+  }
+
   if (auditCleanupInterval) {
     return; // Already running
   }

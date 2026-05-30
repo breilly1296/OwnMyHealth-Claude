@@ -26,8 +26,12 @@
  * @module components/common/Modal
  */
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
+
+// Selector for tabbable elements used by the focus trap.
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ModalProps {
   isOpen: boolean;
@@ -58,29 +62,80 @@ export default function Modal({
   size = 'md',
   showCloseButton = true,
 }: ModalProps) {
-  // Handle escape key
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const subtitleId = useId();
+
+  // Keep onClose in a ref so the effect depends only on `isOpen` — otherwise a
+  // new onClose identity each render would re-run the effect and run its
+  // cleanup (which restores focus) while the modal is still open.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Dialog a11y: Escape to close, focus trap, initial focus into the dialog,
+  // and focus restoration to the opener on close (WAI-ARIA dialog pattern).
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    const dialog = dialogRef.current;
+    // Move focus into the dialog so screen readers announce it (via
+    // aria-labelledby) and keyboard focus is inside the trap.
+    dialog?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialog) return;
+
+      const focusables = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((el) => el.offsetParent !== null);
+      if (focusables.length === 0) {
+        // Nothing tabbable — keep focus on the dialog container.
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === dialog)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
+      // Restore focus to whatever opened the modal.
+      previouslyFocused?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
       <div
-        className={`bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg w-full ${sizeClasses[size]} max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col`}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={subtitle ? subtitleId : undefined}
+        tabIndex={-1}
+        className={`bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg w-full ${sizeClasses[size]} max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col focus:outline-none`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -88,9 +143,9 @@ export default function Modal({
           <div className="flex items-center min-w-0">
             {icon && <div className="mr-3 flex-shrink-0">{icon}</div>}
             <div className="min-w-0">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">{title}</h2>
+              <h2 id={titleId} className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">{title}</h2>
               {subtitle && (
-                <p className="text-sm text-gray-600 dark:text-slate-400 mt-1 truncate">{subtitle}</p>
+                <p id={subtitleId} className="text-sm text-gray-600 dark:text-slate-400 mt-1 truncate">{subtitle}</p>
               )}
             </div>
           </div>
