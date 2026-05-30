@@ -20,6 +20,14 @@ vi.mock('../../services/api', () => ({
     syncConnection: vi.fn(),
     disconnect: vi.fn(),
   },
+  // Real-shape narrowing helper the component imports — a PLAN_LIMIT_EXCEEDED
+  // ApiError with a planLimit payload is the only thing it should treat as a
+  // plan-limit error.
+  isPlanLimitError: (err: unknown) =>
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: string }).code === 'PLAN_LIMIT_EXCEEDED' &&
+    !!(err as { planLimit?: unknown }).planLimit,
 }));
 
 // Import the mocked module after vi.mock so we get the mock functions.
@@ -90,6 +98,57 @@ describe('LabConnectionsSection', () => {
     await waitFor(() => expect(mockedFhir.syncConnection).toHaveBeenCalledWith('conn-1'));
     await waitFor(() =>
       expect(onSuccess).toHaveBeenCalledWith('Imported 3 results, skipped 1.')
+    );
+  });
+
+  it('reports a partial-failure sync as a single combined toast (no clobbered success)', async () => {
+    mockedFhir.listConnections.mockResolvedValue([makeConnection()]);
+    mockedFhir.syncConnection.mockResolvedValue({
+      imported: 2,
+      skipped: 0,
+      unmappedCodes: ['1234-5'],
+      errors: ['boom'],
+    });
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    render(<LabConnectionsSection onSuccess={onSuccess} onError={onError} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /sync now/i }));
+
+    await waitFor(() =>
+      expect(onError).toHaveBeenCalledWith('Imported 2 results, 1 unmapped code. 1 issue during sync.')
+    );
+    // The success toast must NOT also fire — a single slot would clobber it.
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the real server message on sync failure (not a generic fallback)', async () => {
+    mockedFhir.listConnections.mockResolvedValue([makeConnection()]);
+    // apiFetch throws a PLAIN object (not an Error) — extractErrorMessage must unwrap it.
+    mockedFhir.syncConnection.mockRejectedValue({ status: 500, message: 'Quest token expired' });
+    const onError = vi.fn();
+    render(<LabConnectionsSection onError={onError} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /sync now/i }));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('Quest token expired'));
+  });
+
+  it('surfaces the demo-block reason on a 403 connect (not a hardcoded plan-upgrade message)', async () => {
+    // /fhir/connect/quest has no plan gating — the only 403 is the demo block.
+    mockedFhir.connectQuest.mockRejectedValue({
+      status: 403,
+      message: 'AI features are not available in demo mode. Please create a real account.',
+    });
+    const onError = vi.fn();
+    render(<LabConnectionsSection onError={onError} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /connect quest diagnostics/i }));
+
+    await waitFor(() =>
+      expect(onError).toHaveBeenCalledWith(
+        'AI features are not available in demo mode. Please create a real account.'
+      )
     );
   });
 
