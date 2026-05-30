@@ -27,8 +27,9 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import { fhirApi } from '../../services/api';
+import { fhirApi, isPlanLimitError } from '../../services/api';
 import type { LabConnectionSummary, ApiError } from '../../services/api';
+import { extractErrorMessage } from '../../utils/errorHelpers';
 
 interface LabConnectionsSectionProps {
   onError?: (message: string) => void;
@@ -137,20 +138,24 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
       window.history.replaceState({}, document.title, url.pathname + url.search);
     }
 
+    // Surface the OAuth callback result immediately and independently of the
+    // list fetch — the connection already succeeded server-side, so a flaky
+    // GET /connections must not swallow the "connected" confirmation (the URL
+    // markers were just stripped and can't be recovered by a refresh).
+    if (oauthError) {
+      onErrorRef.current?.(oauthCallbackMessage(oauthError));
+    } else if (connected) {
+      onSuccessRef.current?.(
+        `${providerLabel(connected)} connected. Use "Sync now" to import your latest results.`
+      );
+    }
+
     (async () => {
       try {
         await loadConnections();
-        if (cancelled) return;
-        if (oauthError) {
-          onErrorRef.current?.(oauthCallbackMessage(oauthError));
-        } else if (connected) {
-          onSuccessRef.current?.(
-            `${providerLabel(connected)} connected. Use "Sync now" to import your latest results.`
-          );
-        }
       } catch (err) {
         if (cancelled) return;
-        setLoadError(err instanceof Error ? err.message : 'Failed to load lab connections');
+        setLoadError(extractErrorMessage(err, 'Failed to load lab connections'));
       }
     })();
 
@@ -170,14 +175,12 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
       const status = (err as ApiError)?.status;
       if (status === 503) {
         onErrorRef.current?.('Lab connections are not available on this server yet.');
-      } else if (status === 403) {
-        onErrorRef.current?.(
-          err instanceof Error ? err.message : 'Lab connections require a plan upgrade.'
-        );
+      } else if (isPlanLimitError(err)) {
+        onErrorRef.current?.(extractErrorMessage(err, 'Lab connections require a plan upgrade.'));
       } else {
-        onErrorRef.current?.(
-          err instanceof Error ? err.message : 'Could not start the lab connection.'
-        );
+        // Surface the real server reason (e.g. the demo-account block, which is
+        // the only 403 this route emits) instead of a hardcoded message.
+        onErrorRef.current?.(extractErrorMessage(err, 'Could not start the lab connection.'));
       }
       setIsConnecting(false);
     }
@@ -188,17 +191,27 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
     try {
       const result = await fhirApi.syncConnection(id);
       await loadConnections();
-      const skipped = result.skipped ? `, skipped ${result.skipped}` : '';
-      onSuccessRef.current?.(
-        `Imported ${result.imported} result${result.imported === 1 ? '' : 's'}${skipped}.`
-      );
-      if (result.errors.length > 0) {
-        onErrorRef.current?.(
-          `Sync finished with ${result.errors.length} issue${result.errors.length === 1 ? '' : 's'}.`
+
+      // Build ONE toast for the whole outcome. The parent has a single toast
+      // slot, so firing success + error back-to-back would clobber the success
+      // (imported count) and only show the error.
+      const parts = [`Imported ${result.imported} result${result.imported === 1 ? '' : 's'}`];
+      if (result.skipped) parts.push(`skipped ${result.skipped}`);
+      if (result.unmappedCodes.length > 0) {
+        parts.push(
+          `${result.unmappedCodes.length} unmapped code${result.unmappedCodes.length === 1 ? '' : 's'}`
         );
       }
+      const summary = `${parts.join(', ')}.`;
+      if (result.errors.length > 0) {
+        onErrorRef.current?.(
+          `${summary} ${result.errors.length} issue${result.errors.length === 1 ? '' : 's'} during sync.`
+        );
+      } else {
+        onSuccessRef.current?.(summary);
+      }
     } catch (err) {
-      onErrorRef.current?.(err instanceof Error ? err.message : 'Sync failed.');
+      onErrorRef.current?.(extractErrorMessage(err, 'Sync failed.'));
       // Refresh so the card reflects the server-side error status.
       await loadConnections().catch(() => undefined);
     } finally {
@@ -214,7 +227,7 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
       await loadConnections();
       onSuccessRef.current?.('Lab disconnected.');
     } catch (err) {
-      onErrorRef.current?.(err instanceof Error ? err.message : 'Could not disconnect the lab.');
+      onErrorRef.current?.(extractErrorMessage(err, 'Could not disconnect the lab.'));
     } finally {
       setDisconnectingId(null);
     }
@@ -327,7 +340,12 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
                       <button
                         type="button"
                         onClick={() => setConfirmDisconnectId(connection.id)}
-                        disabled={isSyncing || isDisconnecting}
+                        // Gate on LOCAL in-flight state only — never on the
+                        // server's syncStatus. An out-of-process crash can leave
+                        // a row stuck at 'syncing'; gating Disconnect on that
+                        // would lock the only recovery path (the backend
+                        // disconnect itself doesn't check syncStatus).
+                        disabled={syncingId === connection.id || isDisconnecting}
                         className="flex items-center gap-1.5 px-3 py-2 text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
