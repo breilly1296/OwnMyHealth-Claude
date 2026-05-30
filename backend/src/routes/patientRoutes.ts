@@ -245,7 +245,7 @@ router.post(
         canViewHealthNeeds,
         canEditData,
         consentExpiresAt: consentExpiresAt?.toISOString() ?? 'none',
-      }, { req, userId: patientId }, {
+      }, { req, userId: patientId, tx }, {
         operation: 'CONSENT_GRANTED',
         providerId: relationship.providerId,
       });
@@ -305,7 +305,7 @@ router.post(
       }, {
         status: 'DENIED',
         providerId: relationship.providerId,
-      }, { req, userId: patientId }, {
+      }, { req, userId: patientId, tx }, {
         operation: 'CONSENT_DENIED',
         providerId: relationship.providerId,
       });
@@ -395,7 +395,7 @@ router.patch(
         canViewInsurance: updatedRel.canViewInsurance,
         canViewHealthNeeds: updatedRel.canViewHealthNeeds,
         canEditData: updatedRel.canEditData,
-      }, { req, userId: patientId }, {
+      }, { req, userId: patientId, tx }, {
         operation: 'PERMISSIONS_UPDATED',
         providerId: relationship.providerId,
       });
@@ -456,7 +456,7 @@ router.post(
       }, {
         status: 'REVOKED',
         providerId: relationship.providerId,
-      }, { req, userId: patientId }, {
+      }, { req, userId: patientId, tx }, {
         operation: 'CONSENT_REVOKED',
         providerId: relationship.providerId,
       });
@@ -517,7 +517,7 @@ router.delete(
         canViewInsurance: relationship.canViewInsurance,
         canViewHealthNeeds: relationship.canViewHealthNeeds,
         canEditData: relationship.canEditData,
-      }, { req, userId: patientId }, {
+      }, { req, userId: patientId, tx }, {
         operation: 'RELATIONSHIP_DELETED',
         providerId: relationship.providerId,
       });

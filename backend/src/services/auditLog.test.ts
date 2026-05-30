@@ -15,6 +15,7 @@ vi.mock('../config/index.js', () => ({
 }));
 
 import { AuditLogService, getAuditLogService, startAuditCleanup, stopAuditCleanup } from './auditLog.js';
+import { getEncryptionService } from './encryption.js';
 
 // Mock dependencies
 vi.mock('./encryption.js', () => ({
@@ -139,6 +140,84 @@ describe('AuditLogService', () => {
       // withRLSContext was previously the admin-wrap for system_config; that
       // call is gone too, so no RLS context is entered during init now.
       expect(mocks.withRLSContext).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('log() transaction threading (#17)', () => {
+    it('writes the audit row on the caller tx when context.tx is provided (no second connection)', async () => {
+      await auditService.initialize();
+      mocks.withRLSContext.mockClear();
+      const txCreate = vi.fn();
+      const tx = { auditLog: { create: txCreate } };
+
+      await auditService.logUpdate(
+        'provider_consent',
+        'res-1',
+        { status: 'PENDING' },
+        { status: 'ACTIVE' },
+        { userId: 'u1', tx: tx as never }
+      );
+
+      // Written on the caller's tx — atomic with the operation, same connection.
+      expect(txCreate).toHaveBeenCalledTimes(1);
+      // No separate admin connection opened.
+      expect(mocks.withRLSContext).not.toHaveBeenCalled();
+      expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it('opens its own admin withRLSContext when no tx is provided (standalone audit)', async () => {
+      await auditService.initialize();
+      mocks.withRLSContext.mockClear();
+      mockPrisma.auditLog.create.mockClear();
+
+      await auditService.logUpdate(
+        'provider_consent',
+        'res-1',
+        { status: 'PENDING' },
+        { status: 'ACTIVE' },
+        { userId: 'u1' }
+      );
+
+      expect(mocks.withRLSContext).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.auditLog.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-throws fail-closed when the caller-tx audit write fails (atomic abort)', async () => {
+      await auditService.initialize();
+      const tx = {
+        auditLog: { create: vi.fn().mockRejectedValue(new Error('insert failed')) },
+      };
+
+      // logUpdate is failClosed → a failed write must surface so the enclosing
+      // transaction rolls back rather than committing the data with no audit.
+      await expect(
+        auditService.logUpdate('provider_consent', 'res-1', {}, {}, { userId: 'u1', tx: tx as never })
+      ).rejects.toThrow(/could not be securely recorded/i);
+    });
+  });
+
+  describe('log() encryption failure (#28)', () => {
+    it('re-throws fail-closed and writes NO row when value encryption fails (never a sentinel)', async () => {
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockClear();
+      // Make the encryption service throw for this one log call.
+      vi.mocked(getEncryptionService).mockReturnValueOnce({
+        encrypt: vi.fn(() => {
+          throw new Error('KMS unavailable');
+        }),
+        generateUserSalt: vi.fn(() => 'salt'),
+        encryptWithMasterKey: vi.fn((v: string) => v),
+        decryptWithMasterKey: vi.fn((v: string) => v),
+      } as never);
+
+      // logUpdate is failClosed and carries a value snapshot → encryption runs.
+      await expect(
+        auditService.logUpdate('biomarker', 'res-1', { value: 1 }, { value: 2 }, { userId: 'u1' })
+      ).rejects.toThrow(/could not be securely recorded/i);
+
+      // The old behavior wrote a row with a fabricated '[ENCRYPTION_FAILED]'
+      // ciphertext; now no counterfeit row is persisted at all.
+      expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
     });
   });
 
