@@ -12,6 +12,7 @@ vi.mock('../config/index.js', () => ({
 }));
 
 import { AuditLogService, getAuditLogService, startAuditCleanup, stopAuditCleanup } from './auditLog.js';
+import { getEncryptionService } from './encryption.js';
 
 // Mock dependencies
 vi.mock('./encryption.js', () => ({
@@ -189,6 +190,31 @@ describe('AuditLogService', () => {
       await expect(
         auditService.logUpdate('provider_consent', 'res-1', {}, {}, { userId: 'u1', tx: tx as never })
       ).rejects.toThrow(/could not be securely recorded/i);
+    });
+  });
+
+  describe('log() encryption failure (#28)', () => {
+    it('re-throws fail-closed and writes NO row when value encryption fails (never a sentinel)', async () => {
+      await auditService.initialize();
+      mockPrisma.auditLog.create.mockClear();
+      // Make the encryption service throw for this one log call.
+      vi.mocked(getEncryptionService).mockReturnValueOnce({
+        encrypt: vi.fn(() => {
+          throw new Error('KMS unavailable');
+        }),
+        generateUserSalt: vi.fn(() => 'salt'),
+        encryptWithMasterKey: vi.fn((v: string) => v),
+        decryptWithMasterKey: vi.fn((v: string) => v),
+      } as never);
+
+      // logUpdate is failClosed and carries a value snapshot → encryption runs.
+      await expect(
+        auditService.logUpdate('biomarker', 'res-1', { value: 1 }, { value: 2 }, { userId: 'u1' })
+      ).rejects.toThrow(/could not be securely recorded/i);
+
+      // The old behavior wrote a row with a fabricated '[ENCRYPTION_FAILED]'
+      // ciphertext; now no counterfeit row is persisted at all.
+      expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
     });
   });
 

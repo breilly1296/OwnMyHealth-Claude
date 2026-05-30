@@ -219,8 +219,15 @@ export class AuditLogService {
       const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
       return encryptionService.encrypt(stringValue, this.systemSalt);
     } catch (error) {
+      // #28: do NOT persist a fabricated '[ENCRYPTION_FAILED]' ciphertext. That
+      // produced an audit row that looked complete (success=true) but had
+      // silently lost the before/after PHI change-snapshot HIPAA requires, with
+      // no failure signal. Re-throw so log()'s handler fails closed for PHI
+      // mutations (failClosed create/update/delete/export → InternalServerError)
+      // and records a CRITICAL failure otherwise — never a counterfeit ciphertext.
+      // Only value-bearing entries reach here, and those are all failClosed.
       logger.error('Failed to encrypt audit value', { data: { error } });
-      return '[ENCRYPTION_FAILED]';
+      throw error instanceof Error ? error : new Error('Audit value encryption failed');
     }
   }
 
