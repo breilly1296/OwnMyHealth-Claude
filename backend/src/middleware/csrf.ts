@@ -132,7 +132,13 @@ export function validateCsrfToken(
     req.path.endsWith(route)
   );
 
-  if (isPublicAuthRoute || isBearerOnlyStreamingRoute) {
+  // Cloud Scheduler maintenance trigger (audit #38). Authenticated by a
+  // shared-secret X-Cleanup-Token header (constant-time compared in the route
+  // handler), not a session — so the double-submit CSRF cookie can't ride
+  // along. Safe to exempt: it 404s unless the secret is configured.
+  const isSchedulerRoute = req.path.endsWith('/internal/audit-cleanup');
+
+  if (isPublicAuthRoute || isBearerOnlyStreamingRoute || isSchedulerRoute) {
     return next();
   }
 
