@@ -2,7 +2,31 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Biomarker } from '../../types';
 
-export const exportToCSV = (biomarkers: Biomarker[]) => {
+/**
+ * Escape a single value for safe inclusion in a CSV cell. Two protections:
+ *
+ *  1. Formula injection — Excel / Google Sheets evaluate a cell as a formula
+ *     when its first character is `=`, `+`, `-`, `@`, a tab, or a carriage
+ *     return, even inside double quotes. Biomarker name/unit/description are
+ *     free text extracted by OCR / Claude from user-uploaded lab reports, so
+ *     they are attacker-influenceable — and this CSV is explicitly forwarded to
+ *     a clinician. Prefix such values with a single quote to neutralize them.
+ *  2. RFC 4180 — wrap every field in double quotes and double any embedded
+ *     double quote, so commas, newlines, and quotes can't shift/corrupt columns.
+ */
+export const escapeCsvCell = (value: string): string => {
+  let cell = value ?? '';
+  if (/^[=+\-@\t\r]/.test(cell)) {
+    cell = `'${cell}`;
+  }
+  return `"${cell.replace(/"/g, '""')}"`;
+};
+
+/**
+ * Build the CSV text for a set of biomarkers. Pure (no DOM) so it can be unit
+ * tested directly; `exportToCSV` wraps it with the download side effects.
+ */
+export const buildBiomarkerCsv = (biomarkers: Biomarker[]): string => {
   const headers = ['Name', 'Value', 'Unit', 'Normal Range', 'Date', 'Description'];
   const rows = biomarkers.map(biomarker => [
     biomarker.name,
@@ -13,10 +37,12 @@ export const exportToCSV = (biomarkers: Biomarker[]) => {
     biomarker.description || ''
   ]);
 
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-  ].join('\n');
+  // RFC 4180 records are CRLF-delimited.
+  return [headers, ...rows].map(row => row.map(escapeCsvCell).join(',')).join('\r\n');
+};
+
+export const exportToCSV = (biomarkers: Biomarker[]) => {
+  const csvContent = buildBiomarkerCsv(biomarkers);
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
