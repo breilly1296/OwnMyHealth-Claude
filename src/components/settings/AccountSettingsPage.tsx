@@ -40,6 +40,7 @@ import ChangePasswordModal from './ChangePasswordModal';
 import HealthProfileSection from './HealthProfileSection';
 import PlanSection from './PlanSection';
 import NotificationSettingsSection from './NotificationSettingsSection';
+import LabConnectionsSection from './LabConnectionsSection';
 
 function composeDisplayName(firstName: string | null, lastName: string | null, fallback: string): string {
   const parts = [firstName, lastName].filter((p): p is string => !!p && p.trim().length > 0);
@@ -370,6 +371,12 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
         {/* Health Profile Section */}
         <HealthProfileSection
           onError={(message) => showToast(message, 'error')}
+        />
+
+        {/* Connected Labs (SMART-on-FHIR) Section */}
+        <LabConnectionsSection
+          onError={(message) => showToast(message, 'error')}
+          onSuccess={(message) => showToast(message, 'success')}
         />
 
         {/* Data & Privacy Section */}
