@@ -4,9 +4,11 @@
  * Runs on a single in-process setInterval (same pattern as session/audit
  * cleanup). Every tick:
  *   1. If it's Monday 08:00-08:59 UTC, send weekly summaries + goal reminders.
- *   2. Every tick, check for users whose plan expires in ~7 days and
- *      notify them (narrow 1-day window = dedupes to ~one email without
- *      needing a sent-at column).
+ *   2. Once per UTC day, check for users whose plan expires in ~7 days and
+ *      notify them. The once-per-day guard (lastPlanExpiryRunKey) is REQUIRED:
+ *      the tick is hourly, and the expiry window is 1 day wide, so without the
+ *      guard a user would land in the window for ~24 consecutive ticks and get
+ *      ~24 duplicate emails.
  *
  * Dispatch is fire-and-forget per user so one SendGrid failure doesn't
  * stop the batch. Everything routes through notificationService which
@@ -35,7 +37,15 @@ let schedulerInterval: ReturnType<typeof setInterval> | null = null;
  */
 let lastWeeklyRunKey: string | null = null;
 
-function weeklyRunKey(now: Date): string {
+/**
+ * Shared guard so the plan-expiring sweep fires at most once per UTC day.
+ * Without it the hourly tick would re-send to every in-window user ~24×.
+ * Module-scoped, resets on restart (worst case: one extra sweep that day).
+ */
+let lastPlanExpiryRunKey: string | null = null;
+
+/** UTC calendar-day key (YYYY-M-D). Used to dedupe once-per-day sweeps. */
+function utcDayKey(now: Date): string {
   return `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}`;
 }
 
@@ -171,10 +181,11 @@ async function sendGoalReminders(): Promise<void> {
 // ============================================
 
 async function sendPlanExpiringNotifications(): Promise<void> {
-  // Narrow to users whose expiry is between (now + 6d) and (now + 7d). A
-  // single day of width means the daily scheduler sweeps each user exactly
-  // once — no sent-at column required. If the scheduler skips a day we'll
-  // just miss that user's notification; acceptable for v1.
+  // Narrow to users whose expiry is between (now + 6d) and (now + 7d). The
+  // 1-day-wide window combined with the once-per-UTC-day guard in runTick
+  // (lastPlanExpiryRunKey) means each user is swept about once — no sent-at
+  // column required. If the scheduler skips a day we'll just miss that user's
+  // notification; acceptable for v1.
   const now = new Date();
   const rangeStart = new Date(now.getTime() + (PLAN_EXPIRY_WINDOW_DAYS - 1) * 24 * ONE_HOUR_MS);
   const rangeEnd = new Date(now.getTime() + PLAN_EXPIRY_WINDOW_DAYS * 24 * ONE_HOUR_MS);
@@ -218,18 +229,25 @@ async function sendPlanExpiringNotifications(): Promise<void> {
 // Public start/stop
 // ============================================
 
-async function runTick(): Promise<void> {
+// Exported for unit testing the once-per-day dedup; the scheduler invokes it
+// internally via setInterval.
+export async function runTick(): Promise<void> {
   const now = new Date();
   const isMondayMorning = now.getUTCDay() === 1 && now.getUTCHours() === 8;
-  const key = weeklyRunKey(now);
+  const dayKey = utcDayKey(now);
 
   try {
-    if (isMondayMorning && lastWeeklyRunKey !== key) {
-      lastWeeklyRunKey = key;
+    if (isMondayMorning && lastWeeklyRunKey !== dayKey) {
+      lastWeeklyRunKey = dayKey;
       await sendWeeklySummaries();
       await sendGoalReminders();
     }
-    await sendPlanExpiringNotifications();
+    // Once per UTC day (see lastPlanExpiryRunKey) — the hourly tick would
+    // otherwise re-notify each in-window user ~24×.
+    if (lastPlanExpiryRunKey !== dayKey) {
+      lastPlanExpiryRunKey = dayKey;
+      await sendPlanExpiringNotifications();
+    }
   } catch (err) {
     logger.error('[EmailScheduler] Tick failed', {
       data: { error: err instanceof Error ? err.message : String(err) },
