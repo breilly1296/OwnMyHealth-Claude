@@ -18,15 +18,22 @@ import { BIOMARKER_DEFINITIONS, type BiomarkerDefinition } from './data/biomarke
  */
 type PDFParser = (buffer: Buffer) => Promise<PDFParseResult>;
 
-// Dynamic import for pdf-parse to handle CJS/ESM compatibility.
-// pdf-parse ships no types — @ts-expect-error narrows the silencing scope
-// to the single import line rather than an untyped module declaration.
+// pdf-parse is a CommonJS module (`export =`), typed via the @types/pdf-parse
+// dev dependency (so no `@ts-expect-error` is needed). It is dynamically
+// imported to keep loading lazy and to avoid the v1 module-load debug block
+// that reads a bundled test PDF when the module is run as `main`. Under
+// NodeNext + esModuleInterop the callable arrives on `.default`.
+//
+// NOTE (audit #32): pdf-parse@1.1.1 is unmaintained but pure-JS. The obvious
+// upgrade — pdf-parse@2.x — is a `pdfjs-dist` wrapper that requires DOM/native
+// `@napi-rs/canvas` polyfills in Node and fails to load in some environments,
+// so it is a heavier/riskier dependency for this PHI text-extraction path.
+// Migrating off pdf-parse therefore needs a deliberate decision + extraction
+// testing on the deploy target rather than a blind version bump. Pinned to an
+// exact version (no caret) in package.json to bound supply-chain drift.
 async function getPdfParser(): Promise<PDFParser> {
-  // @ts-expect-error — pdf-parse has no @types package
-  const pdfParseModule = await import('pdf-parse');
-  // Handle both default and named exports
-  const pdfParse = (pdfParseModule as { default?: PDFParser }).default ?? pdfParseModule;
-  return pdfParse as PDFParser;
+  const mod = await import('pdf-parse');
+  return mod.default;
 }
 
 // Logger for extraction confidence tracking
