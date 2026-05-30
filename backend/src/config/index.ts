@@ -118,6 +118,14 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
 
+  // Redis (optional). When set, the rate limiters use a shared Redis store
+  // (Cloud Memorystore) so counters are consistent across Cloud Run instances
+  // instead of per-instance MemoryStore (audit #37). Unset → MemoryStore
+  // (current behavior). Provision Memorystore + set REDIS_URL to enable.
+  redis: {
+    url: process.env.REDIS_URL || '',
+  },
+
   // Scheduled maintenance (audit #38). When AUDIT_CLEANUP_TOKEN is set, the
   // audit-retention cleanup is driven by Cloud Scheduler hitting
   // POST /api/v1/internal/audit-cleanup (authenticated by this shared secret)
