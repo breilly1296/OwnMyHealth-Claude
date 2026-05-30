@@ -75,8 +75,13 @@ jobs:
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/test
 
+      # Runs the full colocated unit suite (controllers, services, middleware,
+      # routes, utils — incl. security regression tests). Excludes only
+      # services/rls.test.ts, which needs a live Postgres and runs in the `rls`
+      # job below. Previously this step ran `test:unit` against a nonexistent
+      # dir with --passWithNoTests, so none of these tests gated merges.
       - name: Run unit tests
-        run: npm run test:unit -- --passWithNoTests
+        run: npm run test:ci
 
       - name: Build
         run: npm run build
