@@ -1,4 +1,4 @@
-import { PrismaClient, AuditAction, ActorType } from '../../generated/prisma';
+import { PrismaClient, Prisma, AuditAction, ActorType } from '../../generated/prisma';
 import { getEncryptionService } from './encryption.js';
 import { withRLSContext } from './database.js';
 import { Request } from 'express';
@@ -77,12 +77,26 @@ interface AuditLogEntry {
    * audit hiccup can't deny legitimate reads or logins.
    */
   failClosed?: boolean;
+  /**
+   * When set, the audit row is written on THIS transaction client instead of a
+   * fresh admin connection. Pass the `tx` from an enclosing withRLSContext /
+   * withRLSTransaction callback so the audit row commits or rolls back
+   * atomically with the operation it records, and no second pooled connection
+   * is opened mid-transaction (#17). Omit for standalone audits.
+   */
+  tx?: Prisma.TransactionClient;
 }
 
 interface AuditContext {
   req?: Request;
   userId?: string;
   sessionId?: string;
+  /**
+   * The active transaction client, when logging from inside a withRLSContext /
+   * withRLSTransaction callback. Threaded into the audit write so it's atomic
+   * with the enclosing operation (#17). See AuditLogEntry.tx.
+   */
+  tx?: Prisma.TransactionClient;
 }
 
 /**
@@ -165,18 +179,21 @@ export class AuditLogService {
   }
 
   /**
-   * Build the request-derived fields (ip, user-agent, session) shared by
-   * every public log* method.
+   * Build the context-derived fields (ip, user-agent, session, and the
+   * optional enclosing tx) shared by every public log* method. Threading tx
+   * here means all helpers carry it through to log() without per-method edits.
    */
   private contextFields(context: AuditContext): {
     ipAddress?: string;
     userAgent?: string;
     sessionId?: string;
+    tx?: Prisma.TransactionClient;
   } {
     return {
       ipAddress: context.req ? this.getClientIp(context.req) : undefined,
       userAgent: context.req?.get('user-agent')?.substring(0, 500),
       sessionId: context.sessionId,
+      tx: context.tx,
     };
   }
 
@@ -216,32 +233,40 @@ export class AuditLogService {
       const previousValueEncrypted = this.encryptValue(entry.previousValue);
       const newValueEncrypted = this.encryptValue(entry.newValue);
 
-      // Admin context for consistency with the rest of the file. The
-      // audit_logs_insert policy is WITH CHECK (true) so wrapping isn't
-      // strictly required for RLS to pass — uniform wrapping here makes
-      // the file consistent and sidesteps any ambient current_user_id
-      // that might otherwise affect the transaction's SET LOCAL state.
-      await withRLSContext(
-        null,
-        async (tx) => {
-          await tx.auditLog.create({
-            data: {
-              userId: entry.userId,
-              actorType: entry.actorType,
-              action: entry.action,
-              resourceType: entry.resourceType,
-              resourceId: entry.resourceId,
-              previousValueEncrypted,
-              newValueEncrypted,
-              ipAddress: entry.ipAddress,
-              userAgent: entry.userAgent,
-              sessionId: entry.sessionId,
-              metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
-            },
-          });
-        },
-        { isAdmin: true }
-      );
+      const data = {
+        userId: entry.userId,
+        actorType: entry.actorType,
+        action: entry.action,
+        resourceType: entry.resourceType,
+        resourceId: entry.resourceId,
+        previousValueEncrypted,
+        newValueEncrypted,
+        ipAddress: entry.ipAddress,
+        userAgent: entry.userAgent,
+        sessionId: entry.sessionId,
+        metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+      };
+
+      if (entry.tx) {
+        // Inside an enclosing RLS transaction: write the audit row on the SAME
+        // connection so it commits/rolls back atomically with the operation it
+        // records, and we don't grab a second pooled connection mid-transaction
+        // (which doubles pool usage and risks connectionTimeout stalls). The
+        // audit_logs_insert policy is WITH CHECK (true), so the user-scoped tx
+        // is allowed to insert. (#17)
+        await entry.tx.auditLog.create({ data });
+      } else {
+        // Standalone audit: open an admin context. WITH CHECK (true) means the
+        // wrapping isn't strictly required for RLS, but it keeps the file
+        // uniform and sidesteps any ambient current_user_id affecting SET LOCAL.
+        await withRLSContext(
+          null,
+          async (tx) => {
+            await tx.auditLog.create({ data });
+          },
+          { isAdmin: true }
+        );
+      }
     } catch (error) {
       // Never fail silently on audit logging - this is critical for compliance
       logger.error('CRITICAL: Failed to create audit log entry', {

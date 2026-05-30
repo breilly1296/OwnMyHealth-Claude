@@ -746,12 +746,14 @@ router.delete(
         throw new ForbiddenError('Provider consent has expired');
       }
 
-      // Audit log: Provider removing patient relationship (log before deletion)
+      // Audit log: Provider removing patient relationship (log before deletion).
+      // Threaded onto `tx` so the audit row commits atomically with the delete
+      // and shares the same connection (#17).
       await auditService.logDelete('provider_patient_relationship', relationship.id, {
         patientId,
         relationshipType: relationship.relationshipType,
         status: relationship.status,
-      }, { req, userId: providerId });
+      }, { req, userId: providerId, tx });
 
       await tx.providerPatient.delete({
         where: { id: relationship.id },
