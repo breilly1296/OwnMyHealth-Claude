@@ -183,6 +183,9 @@ interface EnhancedInsuranceUploadProps {
 }
 
 interface ProcessedFile {
+  /** Stable per-upload id. Used to match async results + as the React key,
+   *  so two files with the same name don't collide (#27). */
+  id: string;
   file: File;
   result?: DocumentParsingResult;
   isProcessing: boolean;
@@ -191,7 +194,7 @@ interface ProcessedFile {
 export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtracted }: EnhancedInsuranceUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<ProcessedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -222,6 +225,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
       }
 
       const processedFile: ProcessedFile = {
+        id: crypto.randomUUID(),
         file,
         isProcessing: true
       };
@@ -261,7 +265,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
         };
 
         setUploadedFiles(prev => prev.map(pf =>
-          pf.file.name === file.name
+          pf.id === processedFile.id
             ? { ...pf, result, isProcessing: false }
             : pf
         ));
@@ -279,7 +283,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
           filename: file.name,
         });
         setUploadedFiles(prev => prev.map(pf =>
-          pf.file.name === file.name
+          pf.id === processedFile.id
             ? {
                 ...pf,
                 isProcessing: false,
@@ -356,7 +360,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
     onPlanExtracted(plan);
     onClose();
     setUploadedFiles([]);
-    setSelectedFile(null);
+    setSelectedFileId(null);
   };
 
   const getStatusIcon = (processedFile: ProcessedFile) => {
@@ -396,7 +400,10 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
     let filtered = terms;
     
     if (selectedCategory !== 'All') {
-      filtered = filtered.filter(term => term.category === selectedCategory.toLowerCase());
+      // selectedCategory is one of the term categories themselves (dynamic
+      // options), so an exact match is correct — the old toLowerCase() compare
+      // never matched the capitalized producer categories (#26).
+      filtered = filtered.filter(term => term.category === selectedCategory);
     }
     
     if (searchTerm) {
@@ -487,12 +494,16 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
             </h3>
             
             <div className="overflow-y-auto max-h-96 space-y-4">
-              {uploadedFiles.map((processedFile, index) => {
-                const isExpanded = selectedFile === processedFile.file.name;
+              {uploadedFiles.map((processedFile) => {
+                const isExpanded = selectedFileId === processedFile.id;
                 const result = processedFile.result;
-                
+                // Prefer keyTerms (canonical parser shape) but fall back to
+                // extractedTerms (the SBC producer's field) so the panel renders (#26).
+                const keyTermsList =
+                  result?.extractedData.keyTerms ?? result?.extractedData.extractedTerms ?? [];
+
                 return (
-                  <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div key={processedFile.id} className="border border-gray-200 rounded-lg overflow-hidden">
                     {/* File Header */}
                     <div className="flex items-center justify-between p-4 bg-gray-50">
                       <div className="flex items-center space-x-3 flex-1">
@@ -526,7 +537,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                       <div className="flex items-center space-x-3">
                         {result && result.success && (
                           <button
-                            onClick={() => setSelectedFile(isExpanded ? null : processedFile.file.name)}
+                            onClick={() => setSelectedFileId(isExpanded ? null : processedFile.id)}
                             className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
                           >
                             <Eye className="w-4 h-4 mr-1" />
@@ -587,12 +598,12 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                         </div>
 
                         {/* Key Terms Analysis */}
-                        {result.extractedData.keyTerms && result.extractedData.keyTerms.length > 0 && (
+                        {keyTermsList.length > 0 && (
                           <div className="mt-6">
                             <div className="flex items-center justify-between mb-4">
                               <h4 className="font-medium text-gray-900 flex items-center">
                                 <Brain className="w-4 h-4 mr-2 text-purple-600" />
-                                AI-Extracted Key Terms ({result.extractedData.keyTerms.length})
+                                AI-Extracted Key Terms ({keyTermsList.length})
                               </h4>
                               
                               <div className="flex space-x-2">
@@ -611,17 +622,18 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                                   onChange={(e) => setSelectedCategory(e.target.value)}
                                   className="text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 >
+                                  {/* Options derived from the actual term categories so the
+                                      filter always matches what the producer emits (#26). */}
                                   <option value="All">All Categories</option>
-                                  <option value="cost">Cost</option>
-                                  <option value="coverage">Coverage</option>
-                                  <option value="network">Network</option>
-                                  <option value="procedure">Procedure</option>
+                                  {Array.from(new Set(keyTermsList.map((t) => t.category))).map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
                                 </select>
                               </div>
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto">
-                              {filteredKeyTerms(result.extractedData.keyTerms).map((term, termIndex) => (
+                              {filteredKeyTerms(keyTermsList).map((term, termIndex) => (
                                 <div key={termIndex} className="border border-gray-200 rounded-lg p-3">
                                   <div className="flex items-center justify-between mb-2">
                                     <h5 className="font-medium text-gray-900 text-sm">{term.term}</h5>
@@ -638,7 +650,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                                       </span>
                                     </div>
                                   </div>
-                                  <p className="text-xs text-gray-600 mb-2">{term.definition}</p>
+                                  <p className="text-xs text-gray-600 mb-2">{term.definition ?? term.value}</p>
                                   {term.context && (
                                     <p className="text-xs text-gray-500 italic">"{term.context.substring(0, 100)}..."</p>
                                   )}

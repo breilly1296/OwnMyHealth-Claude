@@ -2,10 +2,10 @@
  * Custom hook for InsuranceKnowledgeBase business logic
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { InsurancePlan } from '../../types';
 import {
-  insuranceKB,
+  InsuranceKnowledgeBase,
   type NormalizedInsurancePlan,
   type PlanSearchCriteria,
   type PlanSearchResult,
@@ -16,19 +16,20 @@ import type { TabType } from './insuranceKnowledgeBaseConstants';
 export function useInsuranceKnowledgeBase(plans: InsurancePlan[]) {
   const [activeTab, setActiveTab] = useState<TabType>('search');
   const [searchQuery, setSearchQuery] = useState('');
-  const [normalizedPlans, setNormalizedPlans] = useState<NormalizedInsurancePlan[]>([]);
   const [searchResults, setSearchResults] = useState<PlanSearchResult[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<BenefitCategory | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<PlanSearchCriteria>({});
 
-  // Initialize knowledge base with plans
-  useEffect(() => {
-    if (plans.length > 0) {
-      const normalized = plans.map(plan => insuranceKB.addPlan(plan));
-      setNormalizedPlans(normalized);
-    }
+  // Build a FRESH knowledge base scoped to exactly the current `plans`.
+  // The previous code fed plans into a module-level singleton that was never
+  // cleared, so deleted or cross-session plans lingered in search results
+  // forever (#25). Rebuilding per `plans` keeps the KB and search in sync.
+  const { kb, normalizedPlans } = useMemo(() => {
+    const instance = new InsuranceKnowledgeBase();
+    const normalized = plans.map(plan => instance.addPlan(plan));
+    return { kb: instance, normalizedPlans: normalized };
   }, [plans]);
 
   // Get unique categories from plans
@@ -44,13 +45,23 @@ export function useInsuranceKnowledgeBase(plans: InsurancePlan[]) {
 
   // Handle search
   const handleSearch = useCallback(() => {
-    if (!searchQuery.trim() && Object.keys(filters).length === 0) {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query && Object.keys(filters).length === 0) {
       setSearchResults([]);
       return;
     }
-    const results = insuranceKB.searchPlans(filters);
+    let results = kb.searchPlans(filters);
+    // searchPlans only takes structured criteria; apply the free-text query
+    // here so the search box actually does something (#25 — it was ignored).
+    if (query) {
+      results = results.filter(
+        r =>
+          r.plan.planName.toLowerCase().includes(query) ||
+          r.plan.insurerName.toLowerCase().includes(query)
+      );
+    }
     setSearchResults(results);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, kb]);
 
   // Clear search results
   const clearSearchResults = useCallback(() => {
