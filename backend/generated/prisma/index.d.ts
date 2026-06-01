@@ -17538,7 +17538,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted: string | null
     category: string
-    targetValue: Decimal
+    targetValue: Decimal | null
     targetValueEncrypted: string | null
     currentValue: Decimal | null
     startValue: Decimal | null
@@ -17706,7 +17706,7 @@ export namespace Prisma {
       name: string
       descriptionEncrypted: string | null
       category: string
-      targetValue: Prisma.Decimal
+      targetValue: Prisma.Decimal | null
       targetValueEncrypted: string | null
       currentValue: Prisma.Decimal | null
       startValue: Prisma.Decimal | null
@@ -29207,7 +29207,7 @@ export namespace Prisma {
     name?: StringFilter<"HealthGoal"> | string
     descriptionEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     category?: StringFilter<"HealthGoal"> | string
-    targetValue?: DecimalFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
@@ -29234,7 +29234,7 @@ export namespace Prisma {
     name?: SortOrder
     descriptionEncrypted?: SortOrderInput | SortOrder
     category?: SortOrder
-    targetValue?: SortOrder
+    targetValue?: SortOrderInput | SortOrder
     targetValueEncrypted?: SortOrderInput | SortOrder
     currentValue?: SortOrderInput | SortOrder
     startValue?: SortOrderInput | SortOrder
@@ -29264,7 +29264,7 @@ export namespace Prisma {
     name?: StringFilter<"HealthGoal"> | string
     descriptionEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     category?: StringFilter<"HealthGoal"> | string
-    targetValue?: DecimalFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
@@ -29291,7 +29291,7 @@ export namespace Prisma {
     name?: SortOrder
     descriptionEncrypted?: SortOrderInput | SortOrder
     category?: SortOrder
-    targetValue?: SortOrder
+    targetValue?: SortOrderInput | SortOrder
     targetValueEncrypted?: SortOrderInput | SortOrder
     currentValue?: SortOrderInput | SortOrder
     startValue?: SortOrderInput | SortOrder
@@ -29324,7 +29324,7 @@ export namespace Prisma {
     name?: StringWithAggregatesFilter<"HealthGoal"> | string
     descriptionEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     category?: StringWithAggregatesFilter<"HealthGoal"> | string
-    targetValue?: DecimalWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
@@ -31950,7 +31950,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -31977,7 +31977,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -32002,7 +32002,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -32029,7 +32029,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -32055,7 +32055,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -32079,7 +32079,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -32104,7 +32104,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -37143,7 +37143,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -37168,7 +37168,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -37940,7 +37940,7 @@ export namespace Prisma {
     name?: StringFilter<"HealthGoal"> | string
     descriptionEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     category?: StringFilter<"HealthGoal"> | string
-    targetValue?: DecimalFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string
+    targetValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
@@ -41342,7 +41342,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -41368,7 +41368,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -41408,7 +41408,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -41434,7 +41434,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44157,7 +44157,7 @@ export namespace Prisma {
     name: string
     descriptionEncrypted?: string | null
     category: string
-    targetValue: Decimal | DecimalJsLike | number | string
+    targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
@@ -44558,7 +44558,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44583,7 +44583,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -44608,7 +44608,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     descriptionEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     category?: StringFieldUpdateOperationsInput | string
-    targetValue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null

@@ -357,13 +357,15 @@ export async function createHealthGoal(
     throw new ValidationError('Missing required fields: name, unit, category, startDate, targetDate');
   }
 
-  // Validate targetValue is a valid number
-  if (targetValue === undefined || targetValue === null || typeof targetValue !== 'number' || isNaN(targetValue)) {
+  // Validate targetValue is a valid, finite number. Number.isFinite rejects
+  // non-numbers, NaN, and ±Infinity in one check (an Infinity target would
+  // poison every downstream progress calculation).
+  if (!Number.isFinite(targetValue)) {
     throw new ValidationError('targetValue must be a valid number');
   }
 
   // Validate currentValue if provided
-  if (currentValue !== undefined && currentValue !== null && (typeof currentValue !== 'number' || isNaN(currentValue))) {
+  if (currentValue !== undefined && currentValue !== null && !Number.isFinite(currentValue)) {
     throw new ValidationError('currentValue must be a valid number when provided');
   }
 
@@ -385,9 +387,10 @@ export async function createHealthGoal(
     ? calculateProgress(startValue, currentValue, targetValue, direction || 'DECREASE')
     : 0;
 
-  // Encrypt targetValue at rest. The plaintext `targetValue` column is
-  // still written for back-compat during the rollout — see the 20260420
-  // migration. New reads prefer the encrypted column.
+  // Encrypt targetValue at rest (M-6). The plaintext `targetValue` Decimal
+  // column is now nullable, so we write ONLY the encrypted column — no
+  // plaintext PHI persisted. The read path (readTargetValue) prefers the
+  // encrypted column and falls back to the legacy plaintext column for old rows.
   const targetValueEncrypted = encryptionService.encrypt(targetValue.toString(), userSalt);
 
   // Transaction ensures goal and initial history are created atomically
@@ -398,7 +401,6 @@ export async function createHealthGoal(
         name,
         descriptionEncrypted,
         category,
-        targetValue,
         targetValueEncrypted,
         currentValue: currentValue ?? null,
         startValue,
@@ -484,10 +486,11 @@ export async function updateHealthGoal(
       updateData.descriptionEncrypted = encryptionService.encrypt(description, userSalt);
     }
     if (targetValue !== undefined) {
-      updateData.targetValue = targetValue;
-      // Keep the encrypted column in sync so future reads use the new value.
-      // The plaintext `targetValue` stays populated during the rollout but
-      // is authoritative only when the encrypted column is null.
+      // Write ONLY the encrypted column. The plaintext `targetValue` Decimal
+      // is no longer updated for changed rows — it survives solely as a
+      // read-path fallback for legacy rows (see readTargetValue). Leaving it
+      // stale here is intentional: once the encrypted column is set,
+      // readTargetValue never consults the plaintext column.
       updateData.targetValueEncrypted = encryptionService.encrypt(
         targetValue.toString(),
         userSalt,

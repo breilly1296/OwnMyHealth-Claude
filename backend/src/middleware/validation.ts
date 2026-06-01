@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodIssue } from 'zod';
 import { ValidationError, BadRequestError } from './errorHandler.js';
+import { ProviderPatientStatus } from '../../generated/prisma/index.js';
 
 /**
  * Validation error detail structure
@@ -123,13 +124,20 @@ const strongPassword = z.string()
   .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character');
 
 /**
- * Date string validation (YYYY-MM-DD or ISO8601)
+ * Date string validation — strict ISO-8601 only.
+ *
+ * Accepts either a calendar date (YYYY-MM-DD) or a full ISO-8601 datetime
+ * (YYYY-MM-DDTHH:mm:ss[.sss][Z|±HH:mm]). The previous implementation accepted
+ * anything `new Date()` could parse (e.g. "Jan 1 2026", "2026/01/01", locale
+ * formats), which caused timezone off-by-one bugs when a loosely-parsed value
+ * was later normalised. We validate the shape with a regex AND confirm the
+ * value is a real calendar date (rejects e.g. 2026-02-30).
  */
+const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})?$/;
 const dateString = z.string()
-  .refine((val) => {
-    const date = new Date(val);
-    return !isNaN(date.getTime());
-  }, 'Invalid date format');
+  .refine((val) => ISO_DATE_ONLY.test(val) || ISO_DATETIME.test(val), 'Invalid date format')
+  .refine((val) => !Number.isNaN(new Date(val).getTime()), 'Invalid date format');
 
 // ============================================
 // Generic Validation Middleware Factory
@@ -201,12 +209,30 @@ export function requireJsonContentType(req: Request, _res: Response, next: NextF
     return next();
   }
 
-  // Skip for empty bodies (some DELETE requests may include body)
-  if (!req.body || Object.keys(req.body).length === 0) {
+  // Determine whether the REQUEST carries a body. We must NOT rely on
+  // req.body alone: the body parser only populates req.body for recognised
+  // content types, so a hostile request could wrap a JSON-shaped payload in a
+  // non-JSON Content-Type, leaving req.body empty and slipping past an
+  // empty-body check — bypassing this enforcement entirely. So we treat the
+  // request as having a body if EITHER the parsed body is non-empty OR the
+  // raw transport headers (Content-Length > 0 / chunked Transfer-Encoding)
+  // indicate a payload was sent.
+  const contentLengthRaw = req.get('Content-Length');
+  const contentLength = contentLengthRaw ? parseInt(contentLengthRaw, 10) : 0;
+  const isChunked = (req.get('Transfer-Encoding') || '').toLowerCase().includes('chunked');
+  const parsedBodyHasContent = !!req.body && Object.keys(req.body).length > 0;
+  const hasBody =
+    parsedBodyHasContent ||
+    (Number.isFinite(contentLength) && contentLength > 0) ||
+    isChunked;
+
+  // Genuinely bodyless POST/PUT/PATCH (e.g. /logout, /refresh, action
+  // triggers) need no Content-Type — let them through.
+  if (!hasBody) {
     return next();
   }
 
-  // Require JSON content type for requests with body
+  // Any request that actually carries a body MUST declare application/json.
   if (!contentType.includes('application/json')) {
     throw new BadRequestError(
       'Content-Type must be application/json for requests with body'
@@ -319,13 +345,13 @@ export const schemas = {
 
     update: z.object({
       name: sanitizedString(1, 100).optional(),
-      value: z.number().min(0).optional(),
+      value: finiteNumber.pipe(z.number().min(0)).optional(),
       unit: sanitizedString(1, 20).optional(),
       category: sanitizedString(1, 50).optional(),
       date: dateString.optional(),
       normalRange: z.object({
-        min: z.number(),
-        max: z.number(),
+        min: finiteNumber,
+        max: finiteNumber,
         source: optionalSanitizedString(100),
       }).optional(),
       notes: optionalSanitizedString(1000),
@@ -336,13 +362,13 @@ export const schemas = {
     batchCreate: z.object({
       biomarkers: z.array(z.object({
         name: sanitizedString(1, 100),
-        value: z.number().min(0),
+        value: finiteNumber.pipe(z.number().min(0)),
         unit: sanitizedString(1, 20),
         category: sanitizedString(1, 50),
         date: dateString,
         normalRange: z.object({
-          min: z.number(),
-          max: z.number(),
+          min: finiteNumber,
+          max: finiteNumber,
           source: optionalSanitizedString(100),
         }),
         notes: optionalSanitizedString(1000),
@@ -417,8 +443,8 @@ export const schemas = {
         }),
         outNetworkCoverage: z.object({
           covered: z.boolean(),
-          copay: z.number().min(0).optional(),
-          coinsurance: z.number().min(0).max(100).optional(),
+          copay: finiteNumber.pipe(z.number().min(0)).optional(),
+          coinsurance: finiteNumber.pipe(z.number().min(0).max(100)).optional(),
           deductibleApplies: z.boolean().optional(),
         }).optional(),
         limitations: optionalSanitizedString(500),
@@ -435,22 +461,22 @@ export const schemas = {
       groupNumber: optionalSanitizedString(100),
       effectiveDate: dateString.optional(),
       terminationDate: dateString.optional(),
-      premium: z.number().min(0).optional(),
-      deductible: z.number().min(0).optional(),
-      deductibleFamily: z.number().min(0).optional(),
-      outOfPocketMax: z.number().min(0).optional(),
-      outOfPocketMaxFamily: z.number().min(0).optional(),
+      premium: finiteNumber.pipe(z.number().min(0)).optional(),
+      deductible: finiteNumber.pipe(z.number().min(0)).optional(),
+      deductibleFamily: finiteNumber.pipe(z.number().min(0)).optional(),
+      outOfPocketMax: finiteNumber.pipe(z.number().min(0)).optional(),
+      outOfPocketMaxFamily: finiteNumber.pipe(z.number().min(0)).optional(),
       // Tracking fields (how much has been paid toward limits)
-      deductibleMetIndividual: z.number().min(0).optional(),
-      deductibleMetFamily: z.number().min(0).optional(),
-      oopMetIndividual: z.number().min(0).optional(),
-      oopMetFamily: z.number().min(0).optional(),
+      deductibleMetIndividual: finiteNumber.pipe(z.number().min(0)).optional(),
+      deductibleMetFamily: finiteNumber.pipe(z.number().min(0)).optional(),
+      oopMetIndividual: finiteNumber.pipe(z.number().min(0)).optional(),
+      oopMetFamily: finiteNumber.pipe(z.number().min(0)).optional(),
       // Copay amounts
-      copayPrimaryCare: z.number().min(0).optional(),
-      copaySpecialist: z.number().min(0).optional(),
-      copayUrgentCare: z.number().min(0).optional(),
-      copayEmergency: z.number().min(0).optional(),
-      coinsuranceRate: z.number().min(0).max(100).optional(),
+      copayPrimaryCare: finiteNumber.pipe(z.number().min(0)).optional(),
+      copaySpecialist: finiteNumber.pipe(z.number().min(0)).optional(),
+      copayUrgentCare: finiteNumber.pipe(z.number().min(0)).optional(),
+      copayEmergency: finiteNumber.pipe(z.number().min(0)).optional(),
+      coinsuranceRate: finiteNumber.pipe(z.number().min(0).max(100)).optional(),
       isActive: z.boolean().optional(),
       isPrimary: z.boolean().optional(),
     }),
@@ -498,15 +524,17 @@ export const schemas = {
       name: sanitizedString(1, 200),
       description: optionalSanitizedString(1000),
       category: z.enum(['WEIGHT', 'FITNESS', 'NUTRITION', 'BIOMARKER', 'MEDICATION', 'LIFESTYLE', 'MENTAL_HEALTH', 'OTHER']),
-      targetValue: z.number(),
-      currentValue: z.number().optional(),
+      // Goal numeric fields map to Decimal(10, 4) columns — max magnitude
+      // 999999.9999. Reject NaN/Infinity and over-range values at the boundary.
+      targetValue: finiteNumber.pipe(z.number().max(999999.9999)),
+      currentValue: finiteNumber.pipe(z.number().max(999999.9999)).optional(),
       unit: sanitizedString(1, 50),
       direction: z.enum(['INCREASE', 'DECREASE', 'MAINTAIN']),
       relatedBiomarkerId: uuid.optional(),
       startDate: dateString,
       targetDate: dateString,
       milestones: z.array(z.object({
-        value: z.number(),
+        value: finiteNumber.pipe(z.number().max(999999.9999)),
         label: sanitizedString(1, 100),
       })).optional(),
       reminderFrequency: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY']).optional(),
@@ -515,12 +543,12 @@ export const schemas = {
     update: z.object({
       name: sanitizedString(1, 200).optional(),
       description: optionalSanitizedString(1000),
-      targetValue: z.number().optional(),
-      currentValue: z.number().optional(),
+      targetValue: finiteNumber.pipe(z.number().max(999999.9999)).optional(),
+      currentValue: finiteNumber.pipe(z.number().max(999999.9999)).optional(),
       targetDate: dateString.optional(),
       status: z.enum(['ACTIVE', 'PAUSED', 'ACHIEVED', 'FAILED', 'CANCELLED']).optional(),
       milestones: z.array(z.object({
-        value: z.number(),
+        value: finiteNumber.pipe(z.number().max(999999.9999)),
         label: sanitizedString(1, 100),
         achieved: z.boolean().optional(),
         achievedAt: dateString.optional(),
@@ -529,7 +557,7 @@ export const schemas = {
     }),
 
     updateProgress: z.object({
-      value: z.number(),
+      value: finiteNumber.pipe(z.number().max(999999.9999)),
       note: optionalSanitizedString(500),
     }),
 
@@ -770,8 +798,8 @@ export const schemas = {
 
     auditLogQuery: z.object({
       userId: uuid.optional(),
-      action: z.string().optional(),
-      resourceType: z.string().optional(),
+      action: z.string().max(100).optional(),
+      resourceType: z.string().max(100).optional(),
       startDate: dateString.optional(),
       endDate: dateString.optional(),
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
@@ -790,6 +818,18 @@ export const schemas = {
     permanentDelete: z.object({
       confirmEmail: z.string().email('Valid email required for confirmation'),
     }),
+
+    // Admin edit of a provider-patient relationship. Status uses the Prisma
+    // ProviderPatientStatus enum; the four permission booleans are optional.
+    // .strict() rejects unknown keys so an admin can't smuggle in unvetted
+    // fields (e.g. consentExpiresAt) through this endpoint.
+    updateProviderRelationship: z.object({
+      status: z.nativeEnum(ProviderPatientStatus).optional(),
+      canViewBiomarkers: z.boolean().optional(),
+      canViewInsurance: z.boolean().optional(),
+      canViewHealthNeeds: z.boolean().optional(),
+      canEditData: z.boolean().optional(),
+    }).strict(),
   },
 };
 

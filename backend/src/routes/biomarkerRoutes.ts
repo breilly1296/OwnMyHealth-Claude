@@ -80,17 +80,28 @@ router.get(
 );
 
 // POST /api/v1/biomarkers - Create biomarker
+// M-21: gate creation behind the user's stored-biomarker limit (maxBiomarkers).
 router.post(
   '/',
+  requirePlanLimit('maxBiomarkers'),
   validate(schemas.biomarker.create),
   asyncHandler(biomarkerController.createBiomarker)
 );
 
 // POST /api/v1/biomarkers/batch - Batch create biomarkers
 // Rate limited to 30/hour to prevent bulk data injection
+// M-21: gate behind the user's stored-biomarker limit (maxBiomarkers).
+// NOTE: requirePlanLimit enforces a per-REQUEST gate, not per-row — it only
+// checks that the user is below maxBiomarkers at request time and has no batch
+// size parameter (checkPlanLimit compares current < limit). A single batch can
+// therefore still push the stored total past the limit by up to (batchSize - 1)
+// rows. Enforcing the exact post-insert total against the batch size requires
+// count-aware support in planGating/usageTracker (owned by another partition);
+// this gate closes the "already-at-limit user keeps adding" hole today.
 router.post(
   '/batch',
   bulkOperationLimiter,
+  requirePlanLimit('maxBiomarkers'),
   validate(schemas.biomarker.batchCreate),
   asyncHandler(biomarkerController.bulkCreateBiomarkers)
 );

@@ -407,7 +407,11 @@ model HealthGoal {
   name                 String                @db.VarChar(200)
   descriptionEncrypted String?               @map("description_encrypted")
   category             String                @db.VarChar(100)
-  targetValue          Decimal               @map("target_value") @db.Decimal(10, 4)
+  // Nullable so rows that already have `targetValueEncrypted` can have the
+  // plaintext twin nulled out to stop leaking PHI (see migration
+  // 20260601_null_plaintext_health_goal_target). Legacy rows without an
+  // encrypted value retain the plaintext until a backfill script re-encrypts.
+  targetValue          Decimal?              @map("target_value") @db.Decimal(10, 4)
   // Encrypted PHI replacement for targetValue. Numeric goals (target
   // cholesterol, weight, A1c) reveal sensitive health conditions on their
   // own; the Decimal column stays for backward-compat reads until a

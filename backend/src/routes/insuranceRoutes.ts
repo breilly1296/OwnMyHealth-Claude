@@ -77,8 +77,10 @@ router.get(
 );
 
 // POST /api/v1/insurance/plans - Create plan
+// M-20: gate active-plan creation behind the user's plan limit (insurancePlans).
 router.post(
   '/plans',
+  requirePlanLimit('insurancePlans'),
   validate(schemas.insurancePlan.create),
   asyncHandler(insuranceController.createInsurancePlan)
 );
