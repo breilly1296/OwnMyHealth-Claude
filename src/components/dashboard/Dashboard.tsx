@@ -217,6 +217,31 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
 
   // Render special pages (non-biomarker categories)
   const renderSpecialPage = () => {
+    // Role gate: if the selected page is role-restricted and the user lacks the
+    // role (e.g. a patient reaching /admin or /my-patients via a deep link),
+    // show an access notice rather than mounting the page shell. The backend
+    // independently 403s the data; this keeps the UI honest too.
+    const cat = categories.find((c) => c.name === selectedCategory);
+    if (cat?.roles && !cat.roles.includes(role)) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="max-w-md text-center">
+            <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2">
+              You don&apos;t have access to this page
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              This section is restricted to {cat.roles.join(' / ').toLowerCase()} accounts.
+            </p>
+            <button
+              onClick={() => handleCategorySelect('Overview')}
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium"
+            >
+              Back to dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
     switch (selectedCategory) {
       case 'Insurance':
         return (

@@ -71,70 +71,13 @@ export async function getUserEncryptionSalt(userId: string): Promise<string> {
   );
 }
 
-/**
- * Rotates a user's encryption key (creates new version, marks old as inactive).
- * Note: This requires re-encrypting all user's PHI with the new key.
- *
- * @param userId - The user's ID
- * @returns Object with old and new salts for re-encryption
- */
-export async function rotateUserEncryptionKey(userId: string): Promise<{
-  oldSalt: string;
-  newSalt: string;
-  newVersion: number;
-}> {
-  const encryptionService = getEncryptionService();
-
-  // The withRLSContext wrapper opens a single Prisma transaction, so the
-  // two writes below are atomic — equivalent to the explicit batch
-  // transaction this helper used to run, just with the RLS SET LOCAL applied.
-  return withRLSContext(
-    null,
-    async (tx) => {
-      const currentKey = await tx.userEncryptionKey.findFirst({
-        where: {
-          userId,
-          keyType: KEY_TYPE,
-          isActive: true,
-        },
-        orderBy: {
-          version: 'desc',
-        },
-      });
-
-      if (!currentKey) {
-        throw new Error('No active encryption key found for user');
-      }
-
-      const oldSalt = encryptionService.decryptWithMasterKey(currentKey.encryptedKey);
-      const newSalt = encryptionService.generateUserSalt();
-      const newVersion = currentKey.version + 1;
-      const keyHash = newSalt.substring(0, 64);
-      const encryptedNewSalt = encryptionService.encryptWithMasterKey(newSalt);
-
-      await tx.userEncryptionKey.update({
-        where: { id: currentKey.id },
-        data: {
-          isActive: false,
-          rotatedAt: new Date(),
-        },
-      });
-      await tx.userEncryptionKey.create({
-        data: {
-          userId,
-          keyType: KEY_TYPE,
-          keyHash,
-          encryptedKey: encryptedNewSalt,
-          version: newVersion,
-          isActive: true,
-        },
-      });
-
-      return { oldSalt, newSalt, newVersion };
-    },
-    { isAdmin: true }
-  );
-}
+// NOTE: A key-rotation helper used to live here. It rotated the key VERSION
+// (new salt, old marked inactive) but did NOT re-encrypt the user's existing
+// PHI, so calling it without a paired full re-encryption pass would have
+// bricked all of that user's encrypted data. It had no callers. Removed to
+// eliminate the footgun; proper key rotation should be a dedicated job that
+// re-encrypts every PHI column across all tables in one transaction. The
+// `KEY_ROTATION` AuditAction enum value is retained for that future work.
 
 /**
  * Validates that a user has an encryption key set up.
