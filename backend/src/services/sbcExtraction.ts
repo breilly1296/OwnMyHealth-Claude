@@ -801,11 +801,11 @@ export async function extractInsuranceFromSBC(
 
     // Stage C — call Claude Sonnet with redacted text. No document block.
     sbcLogger.info('Sending PHI-redacted SBC text to Claude Sonnet', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       redactedLength: redactedText.length,
     });
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 16384,
       messages: [
         {
