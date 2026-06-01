@@ -209,6 +209,8 @@ export const initialBiomarkers: Biomarker[] = [
 // Navigation groups for sidebar organization
 export const navGroups: NavGroup[] = [
   { id: 'overview', label: 'Overview', icon: 'LayoutDashboard', collapsible: false },
+  { id: 'care', label: 'Care Team', icon: 'Users', collapsible: true },
+  { id: 'admin', label: 'Admin', icon: 'ShieldCheck', collapsible: true },
   { id: 'files', label: 'My Reports', icon: 'FolderOpen', collapsible: false },
   { id: 'insurance', label: 'Insurance & Coverage', icon: 'Shield', collapsible: true },
   { id: 'biomarkers', label: 'Biomarkers', icon: 'Activity', collapsible: true },
@@ -222,6 +224,10 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Trends', description: 'View biomarker trends over time', icon: 'TrendingUp', group: 'overview' },
   { name: 'Goals', description: 'Set and track personalized health goals', icon: 'Target', group: 'overview' },
   { name: 'Needs', description: 'Conditions, follow-ups, and recommended services', icon: 'ActivitySquare', group: 'overview' },
+
+  // Care Team - consent-gated provider collaboration
+  { name: 'Care Team', description: 'Manage who can access your health data', icon: 'Users', group: 'care' },
+  { name: 'My Patients', description: 'Patients who have shared data with you', icon: 'Stethoscope', group: 'care', roles: ['PROVIDER', 'ADMIN'] },
 
   // My Reports - File repository
   { name: 'Files', description: 'View and manage uploaded lab reports', icon: 'FileText', group: 'files' },

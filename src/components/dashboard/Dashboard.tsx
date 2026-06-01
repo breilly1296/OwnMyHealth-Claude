@@ -50,6 +50,8 @@ const GoalTrackerPanel = lazy(() => import('../analytics/GoalTrackerPanel'));
 const HealthNeedsPage = lazy(() => import('../health/HealthNeedsPage'));
 const HealthGuidePage = lazy(() => import('../health/HealthGuidePage'));
 const OnboardingWizard = lazy(() => import('../onboarding/OnboardingWizard'));
+const CareTeamPage = lazy(() => import('../provider/CareTeamPage'));
+const MyPatientsPage = lazy(() => import('../provider/MyPatientsPage'));
 
 // Data (for demo mode / fallback)
 import { initialBiomarkers as sampleBiomarkers, navGroups, categories } from '../../data/sampleData';
@@ -125,6 +127,14 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   // Computed stats
   const stats = useBiomarkerStats(biomarkers);
   const filteredBiomarkers = useFilteredBiomarkers(biomarkers, selectedCategory);
+
+  // Role-gated navigation: hide provider/admin sections from patients, and
+  // drop any nav group left empty after filtering (e.g. Admin for non-admins).
+  const role = user?.role ?? 'PATIENT';
+  const visibleCategories = categories.filter((c) => !c.roles || c.roles.includes(role));
+  const visibleNavGroups = navGroups.filter((g) =>
+    visibleCategories.some((c) => c.group === g.id)
+  );
 
   // Onboarding state. Unknown until the first fetch resolves; the wizard
   // renders only when we've confirmed `completed: false`. Demo mode skips
@@ -261,6 +271,18 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
             <HealthNeedsPage biomarkers={biomarkers} />
           </Suspense>
         );
+      case 'Care Team':
+        return (
+          <Suspense fallback={<PageLoadSpinner />}>
+            <CareTeamPage onBack={() => handleCategorySelect('Overview')} />
+          </Suspense>
+        );
+      case 'My Patients':
+        return (
+          <Suspense fallback={<PageLoadSpinner />}>
+            <MyPatientsPage />
+          </Suspense>
+        );
       case 'Account Settings':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
@@ -273,7 +295,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   };
 
   // Determine if showing a special page or biomarker content
-  const specialPages = ['Insurance', 'Knowledge Base', 'Files', 'Trends', 'Goals', 'Needs', 'Health Guide', 'Account Settings'];
+  const specialPages = ['Insurance', 'Knowledge Base', 'Files', 'Trends', 'Goals', 'Needs', 'Health Guide', 'Care Team', 'My Patients', 'Account Settings'];
   const isSpecialPage = specialPages.includes(selectedCategory);
 
   // Loading state. `fixed inset-0` (rather than min-h-screen + width-auto)
@@ -313,8 +335,8 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       <div className="flex">
         {/* Sidebar */}
         <DashboardSidebar
-          navGroups={navGroups}
-          categories={categories}
+          navGroups={visibleNavGroups}
+          categories={visibleCategories}
           selectedCategory={selectedCategory}
           onCategorySelect={handleCategorySelect}
           categoryCounts={stats.categoryCounts}

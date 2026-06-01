@@ -64,11 +64,14 @@ export interface BiomarkerCategory {
   name: string;
   description: string;
   icon: string;
-  group?: 'overview' | 'files' | 'insurance' | 'biomarkers';
+  group?: 'overview' | 'files' | 'insurance' | 'biomarkers' | 'care' | 'admin';
+  /** Optional role gate — when set, only users with one of these roles see
+   *  this nav item. Omitted → visible to everyone. */
+  roles?: string[];
 }
 
 export interface NavGroup {
-  id: 'overview' | 'files' | 'insurance' | 'biomarkers';
+  id: 'overview' | 'files' | 'insurance' | 'biomarkers' | 'care' | 'admin';
   label: string;
   icon: string;
   collapsible: boolean;
