@@ -34,6 +34,13 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
   // ACTIVE biomarker-consent over userA; providerNo holds none.
   const providerOk = { id: randomUUID(), email: `rls-prov-ok-${Date.now()}@test.local` };
   const providerNo = { id: randomUUID(), email: `rls-prov-no-${Date.now()}@test.local` };
+  // Scope + status matrix fixtures, all over userA (the patient):
+  //  - bioNoNeeds: ACTIVE, biomarkers granted but health-needs DENIED (per-scope isolation)
+  //  - revoked / suspended: non-ACTIVE statuses must grant nothing, even with the flags on
+  const providerBioNoNeeds = { id: randomUUID(), email: `rls-prov-bio-${Date.now()}@test.local` };
+  const providerRevoked = { id: randomUUID(), email: `rls-prov-rev-${Date.now()}@test.local` };
+  const providerSuspended = { id: randomUUID(), email: `rls-prov-susp-${Date.now()}@test.local` };
+  const needName = '__RLS_TEST_NEED_A__';
 
   beforeAll(async () => {
     // Lazy-init Prisma only. initializeDatabase() would also kick off
@@ -108,17 +115,72 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
           canViewBiomarkers: true,
         },
       });
+
+      // A health need for userA — exercises the health_needs_select policy,
+      // which gates provider reads on has_provider_access(user_id, 'view_health_needs').
+      await tx.healthNeed.create({
+        data: {
+          userId: userA.id,
+          needType: 'CONDITION',
+          name: needName,
+          descriptionEncrypted: 'ct-need',
+          urgency: 'ROUTINE',
+          relatedBiomarkerIds: [],
+        },
+      });
+
+      // Matrix providers + their relationships over userA.
+      for (const p of [providerBioNoNeeds, providerRevoked, providerSuspended]) {
+        await tx.user.create({
+          data: { id: p.id, email: p.email, passwordHash: 'test-hash-not-used' },
+        });
+      }
+      // ACTIVE but health-needs explicitly denied → biomarkers visible, needs not.
+      await tx.providerPatient.create({
+        data: {
+          providerId: providerBioNoNeeds.id,
+          patientId: userA.id,
+          status: 'ACTIVE',
+          canViewBiomarkers: true,
+          canViewHealthNeeds: false,
+        },
+      });
+      // Non-ACTIVE statuses: flags are on, but status alone must block all access.
+      await tx.providerPatient.create({
+        data: {
+          providerId: providerRevoked.id,
+          patientId: userA.id,
+          status: 'REVOKED',
+          canViewBiomarkers: true,
+          canViewHealthNeeds: true,
+        },
+      });
+      await tx.providerPatient.create({
+        data: {
+          providerId: providerSuspended.id,
+          patientId: userA.id,
+          status: 'SUSPENDED',
+          canViewBiomarkers: true,
+          canViewHealthNeeds: true,
+        },
+      });
     });
   });
 
   afterAll(async () => {
     await withRLSContext(null, async (tx) => {
-      await tx.providerPatient.deleteMany({
-        where: { providerId: { in: [providerOk.id, providerNo.id] } },
-      });
+      const providerIds = [
+        providerOk.id,
+        providerNo.id,
+        providerBioNoNeeds.id,
+        providerRevoked.id,
+        providerSuspended.id,
+      ];
+      await tx.providerPatient.deleteMany({ where: { providerId: { in: providerIds } } });
+      await tx.healthNeed.deleteMany({ where: { name: needName } });
       await tx.biomarker.deleteMany({ where: { name: { in: markerNames } } });
       await tx.user.deleteMany({
-        where: { id: { in: [userA.id, userB.id, providerOk.id, providerNo.id] } },
+        where: { id: { in: [userA.id, userB.id, ...providerIds] } },
       });
     });
     await disconnectDatabase();
@@ -171,6 +233,10 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       withRLSContext(asUserId, async (tx) =>
         tx.biomarker.findMany({ where: { name: markerNames[0] } })
       );
+    const readUserANeed = (asUserId: string) =>
+      withRLSContext(asUserId, async (tx) =>
+        tx.healthNeed.findMany({ where: { name: needName } })
+      );
 
     it('a consented provider reads the patient biomarker via the policy', async () => {
       const rows = await readUserAMarker(providerOk.id);
@@ -213,6 +279,35 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
         tx.user.findUnique({ where: { id: userB.id }, select: { id: true, email: true } })
       );
       expect(row).toBeNull();
+    });
+
+    // ---- health_needs policy + per-scope + non-ACTIVE-status matrix ----
+
+    it('a consented provider reads the patient health need (view_health_needs)', async () => {
+      // providerOk has canViewHealthNeeds = true (schema default).
+      const rows = await readUserANeed(providerOk.id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].userId).toBe(userA.id);
+    });
+
+    it('per-scope isolation: a biomarker-only consent reads biomarkers but NOT health needs', async () => {
+      // canViewBiomarkers = true, canViewHealthNeeds = false on an ACTIVE consent.
+      expect(await readUserAMarker(providerBioNoNeeds.id)).toHaveLength(1);
+      expect(await readUserANeed(providerBioNoNeeds.id)).toHaveLength(0);
+    });
+
+    it('a REVOKED relationship grants nothing — biomarkers, health needs, or identity', async () => {
+      expect(await readUserAMarker(providerRevoked.id)).toHaveLength(0);
+      expect(await readUserANeed(providerRevoked.id)).toHaveLength(0);
+      const row = await withRLSContext(providerRevoked.id, async (tx) =>
+        tx.user.findUnique({ where: { id: userA.id }, select: { id: true } })
+      );
+      expect(row).toBeNull();
+    });
+
+    it('a SUSPENDED relationship grants nothing', async () => {
+      expect(await readUserAMarker(providerSuspended.id)).toHaveLength(0);
+      expect(await readUserANeed(providerSuspended.id)).toHaveLength(0);
     });
 
     // Runs last — mutates the shared consent row to an expired state.
