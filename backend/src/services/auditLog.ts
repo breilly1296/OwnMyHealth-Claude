@@ -406,6 +406,8 @@ export class AuditLogService {
       | 'PASSWORD_RESET_REQUEST'
       | 'PASSWORD_RESET_COMPLETE'
       | 'EMAIL_VERIFICATION'
+      | 'EMAIL_CHANGE_REQUEST'
+      | 'EMAIL_CHANGE_COMPLETE'
       | 'ACCOUNT_LOCKOUT'
       | 'REGISTER',
     context: AuditContext,
@@ -413,7 +415,7 @@ export class AuditLogService {
   ): Promise<void> {
     // Map auth events to AuditAction enum (default UPDATE covers
     // PASSWORD_CHANGE / PASSWORD_RESET_* / EMAIL_VERIFICATION /
-    // ACCOUNT_LOCKOUT).
+    // EMAIL_CHANGE_* / ACCOUNT_LOCKOUT).
     const AUTH_ACTION_MAP: Partial<Record<typeof action, AuditAction>> = {
       LOGIN: 'LOGIN',
       LOGIN_FAILED: 'LOGIN',

@@ -98,6 +98,31 @@ export const authApi = {
     });
   },
 
+  /**
+   * Request a change of the account email. Re-authenticates with the current
+   * password; on success the backend emails a confirmation link to the new
+   * address (and a security notice to the old). The change is not applied until
+   * the link is confirmed via confirmEmailChange().
+   */
+  async requestEmailChange(newEmail: string, currentPassword: string): Promise<{ message: string }> {
+    const response = await apiFetch<{ message: string }>('/auth/change-email', {
+      method: 'POST',
+      body: JSON.stringify({ newEmail, currentPassword }),
+    });
+    return response.data;
+  },
+
+  /**
+   * Confirm a pending email change from the tokenized link. The backend swaps
+   * the address and revokes all sessions, so the user must log in again.
+   */
+  async confirmEmailChange(token: string): Promise<{ message: string }> {
+    const response = await apiFetch<{ message: string }>(
+      `/auth/confirm-email-change?token=${encodeURIComponent(token)}`
+    );
+    return response.data;
+  },
+
   async verifyEmail(token: string): Promise<{ message: string }> {
     const response = await apiFetch<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`);
     return response.data;

@@ -20,6 +20,8 @@ import {
   resendVerification,
   forgotPassword,
   resetPasswordHandler,
+  changeEmailHandler,
+  confirmEmailChangeHandler,
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter, strictAuthLimiter } from '../middleware/rateLimiter.js';
@@ -89,6 +91,15 @@ router.post(
   asyncHandler(resetPasswordHandler)
 );
 
+// Confirm an email change via tokenized link (public; strict rate limiting to
+// prevent token brute-force, mirroring /reset-password).
+router.get(
+  '/confirm-email-change',
+  strictAuthLimiter,
+  validate(schemas.auth.confirmEmailChangeQuery, 'query'),
+  asyncHandler(confirmEmailChangeHandler)
+);
+
 // ============================================
 // Protected Routes (require authentication)
 // ============================================
@@ -108,6 +119,17 @@ router.post(
   authenticate,
   validate(schemas.auth.changePassword),
   asyncHandler(changePassword)
+);
+
+// Request an email-address change (re-auth with current password; sends a
+// confirmation link to the new address + a notice to the old). Strict limiter
+// to throttle the email it triggers and the password re-check.
+router.post(
+  '/change-email',
+  authenticate,
+  strictAuthLimiter,
+  validate(schemas.auth.changeEmail),
+  asyncHandler(changeEmailHandler)
 );
 
 export default router;

@@ -38,6 +38,7 @@ import { extractErrorMessage } from '../../utils/errorHelpers';
 
 const settingsLogger = logger.createLogger('Settings');
 import ChangePasswordModal from './ChangePasswordModal';
+import ChangeEmailModal from './ChangeEmailModal';
 import HealthProfileSection from './HealthProfileSection';
 import PlanSection from './PlanSection';
 import NotificationSettingsSection from './NotificationSettingsSection';
@@ -82,6 +83,8 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
 
   // Password modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  // Email-change modal
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
 
   // Delete confirmation state
@@ -299,22 +302,25 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
               )}
             </div>
 
-            {/* Email (read-only) */}
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Email Address
               </label>
               <div className="flex items-center space-x-3">
-                <div className="flex-1 flex items-center px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl">
-                  <Mail className="w-4 h-4 text-slate-400 mr-3" />
-                  <span className="text-slate-900 dark:text-white">{user?.email}</span>
+                <div className="flex-1 flex items-center px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl min-w-0">
+                  <Mail className="w-4 h-4 text-slate-400 mr-3 flex-shrink-0" />
+                  <span className="text-slate-900 dark:text-white truncate">{user?.email}</span>
                 </div>
-                <span className="text-xs text-slate-500 dark:text-slate-400 px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-lg">
-                  Read-only
-                </span>
+                <button
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="flex-shrink-0 px-4 py-2 text-sm text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+                >
+                  Change
+                </button>
               </div>
               <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                Email changes aren't supported yet. Contact support if you need to update your email.
+                Changing your email requires your password and a confirmation link sent to the new address.
               </p>
             </div>
 
@@ -508,6 +514,13 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
+      />
+
+      {/* Change Email Modal */}
+      <ChangeEmailModal
+        isOpen={isEmailModalOpen}
+        currentEmail={user?.email}
+        onClose={() => setIsEmailModalOpen(false)}
       />
 
       {/* Delete Confirmation Modal */}

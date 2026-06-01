@@ -422,7 +422,7 @@ export class PrismaClient<
    * 
    * Read more in our [docs](https://www.prisma.io/docs/orm/prisma-client/queries/transactions).
    */
-  $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
+  $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { maxWait?: number, timeout?: number, isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
 
   $transaction<R>(fn: (prisma: Omit<PrismaClient, runtime.ITXClientDenyList>) => $Utils.JsPromise<R>, options?: { maxWait?: number, timeout?: number, isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<R>
 
@@ -659,8 +659,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 7.7.0
-   * Query Engine version: 75cbdc1eb7150937890ad5465d861175c6624711
+   * Prisma Client JS version: 7.8.0
+   * Query Engine version: 3c6e192761c0362d496ed980de936e2f3cebcd3a
    */
   export type PrismaVersion = {
     client: string
@@ -2981,6 +2981,9 @@ export namespace Prisma {
     emailVerificationExpires: Date | null
     passwordResetToken: string | null
     passwordResetExpires: Date | null
+    pendingEmail: string | null
+    emailChangeToken: string | null
+    emailChangeExpires: Date | null
     isActive: boolean | null
     role: $Enums.UserRole | null
     failedLoginAttempts: number | null
@@ -3010,6 +3013,9 @@ export namespace Prisma {
     emailVerificationExpires: Date | null
     passwordResetToken: string | null
     passwordResetExpires: Date | null
+    pendingEmail: string | null
+    emailChangeToken: string | null
+    emailChangeExpires: Date | null
     isActive: boolean | null
     role: $Enums.UserRole | null
     failedLoginAttempts: number | null
@@ -3039,6 +3045,9 @@ export namespace Prisma {
     emailVerificationExpires: number
     passwordResetToken: number
     passwordResetExpires: number
+    pendingEmail: number
+    emailChangeToken: number
+    emailChangeExpires: number
     isActive: number
     role: number
     failedLoginAttempts: number
@@ -3079,6 +3088,9 @@ export namespace Prisma {
     emailVerificationExpires?: true
     passwordResetToken?: true
     passwordResetExpires?: true
+    pendingEmail?: true
+    emailChangeToken?: true
+    emailChangeExpires?: true
     isActive?: true
     role?: true
     failedLoginAttempts?: true
@@ -3108,6 +3120,9 @@ export namespace Prisma {
     emailVerificationExpires?: true
     passwordResetToken?: true
     passwordResetExpires?: true
+    pendingEmail?: true
+    emailChangeToken?: true
+    emailChangeExpires?: true
     isActive?: true
     role?: true
     failedLoginAttempts?: true
@@ -3137,6 +3152,9 @@ export namespace Prisma {
     emailVerificationExpires?: true
     passwordResetToken?: true
     passwordResetExpires?: true
+    pendingEmail?: true
+    emailChangeToken?: true
+    emailChangeExpires?: true
     isActive?: true
     role?: true
     failedLoginAttempts?: true
@@ -3254,6 +3272,9 @@ export namespace Prisma {
     emailVerificationExpires: Date | null
     passwordResetToken: string | null
     passwordResetExpires: Date | null
+    pendingEmail: string | null
+    emailChangeToken: string | null
+    emailChangeExpires: Date | null
     isActive: boolean
     role: $Enums.UserRole
     failedLoginAttempts: number
@@ -3303,6 +3324,9 @@ export namespace Prisma {
     emailVerificationExpires?: boolean
     passwordResetToken?: boolean
     passwordResetExpires?: boolean
+    pendingEmail?: boolean
+    emailChangeToken?: boolean
+    emailChangeExpires?: boolean
     isActive?: boolean
     role?: boolean
     failedLoginAttempts?: boolean
@@ -3348,6 +3372,9 @@ export namespace Prisma {
     emailVerificationExpires?: boolean
     passwordResetToken?: boolean
     passwordResetExpires?: boolean
+    pendingEmail?: boolean
+    emailChangeToken?: boolean
+    emailChangeExpires?: boolean
     isActive?: boolean
     role?: boolean
     failedLoginAttempts?: boolean
@@ -3378,6 +3405,9 @@ export namespace Prisma {
     emailVerificationExpires?: boolean
     passwordResetToken?: boolean
     passwordResetExpires?: boolean
+    pendingEmail?: boolean
+    emailChangeToken?: boolean
+    emailChangeExpires?: boolean
     isActive?: boolean
     role?: boolean
     failedLoginAttempts?: boolean
@@ -3408,6 +3438,9 @@ export namespace Prisma {
     emailVerificationExpires?: boolean
     passwordResetToken?: boolean
     passwordResetExpires?: boolean
+    pendingEmail?: boolean
+    emailChangeToken?: boolean
+    emailChangeExpires?: boolean
     isActive?: boolean
     role?: boolean
     failedLoginAttempts?: boolean
@@ -3424,7 +3457,7 @@ export namespace Prisma {
     lastLoginAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "pendingEmail" | "emailChangeToken" | "emailChangeExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
@@ -3477,6 +3510,9 @@ export namespace Prisma {
       emailVerificationExpires: Date | null
       passwordResetToken: string | null
       passwordResetExpires: Date | null
+      pendingEmail: string | null
+      emailChangeToken: string | null
+      emailChangeExpires: Date | null
       isActive: boolean
       role: $Enums.UserRole
       failedLoginAttempts: number
@@ -3941,6 +3977,9 @@ export namespace Prisma {
     readonly emailVerificationExpires: FieldRef<"User", 'DateTime'>
     readonly passwordResetToken: FieldRef<"User", 'String'>
     readonly passwordResetExpires: FieldRef<"User", 'DateTime'>
+    readonly pendingEmail: FieldRef<"User", 'String'>
+    readonly emailChangeToken: FieldRef<"User", 'String'>
+    readonly emailChangeExpires: FieldRef<"User", 'DateTime'>
     readonly isActive: FieldRef<"User", 'Boolean'>
     readonly role: FieldRef<"User", 'UserRole'>
     readonly failedLoginAttempts: FieldRef<"User", 'Int'>
@@ -26818,6 +26857,9 @@ export namespace Prisma {
     emailVerificationExpires: 'emailVerificationExpires',
     passwordResetToken: 'passwordResetToken',
     passwordResetExpires: 'passwordResetExpires',
+    pendingEmail: 'pendingEmail',
+    emailChangeToken: 'emailChangeToken',
+    emailChangeExpires: 'emailChangeExpires',
     isActive: 'isActive',
     role: 'role',
     failedLoginAttempts: 'failedLoginAttempts',
@@ -27591,6 +27633,9 @@ export namespace Prisma {
     emailVerificationExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordResetToken?: StringNullableFilter<"User"> | string | null
     passwordResetExpires?: DateTimeNullableFilter<"User"> | Date | string | null
+    pendingEmail?: StringNullableFilter<"User"> | string | null
+    emailChangeToken?: StringNullableFilter<"User"> | string | null
+    emailChangeExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     isActive?: BoolFilter<"User"> | boolean
     role?: EnumUserRoleFilter<"User"> | $Enums.UserRole
     failedLoginAttempts?: IntFilter<"User"> | number
@@ -27635,6 +27680,9 @@ export namespace Prisma {
     emailVerificationExpires?: SortOrderInput | SortOrder
     passwordResetToken?: SortOrderInput | SortOrder
     passwordResetExpires?: SortOrderInput | SortOrder
+    pendingEmail?: SortOrderInput | SortOrder
+    emailChangeToken?: SortOrderInput | SortOrder
+    emailChangeExpires?: SortOrderInput | SortOrder
     isActive?: SortOrder
     role?: SortOrder
     failedLoginAttempts?: SortOrder
@@ -27670,6 +27718,7 @@ export namespace Prisma {
     email?: string
     emailVerificationToken?: string
     passwordResetToken?: string
+    emailChangeToken?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
@@ -27682,6 +27731,8 @@ export namespace Prisma {
     emailVerified?: BoolFilter<"User"> | boolean
     emailVerificationExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordResetExpires?: DateTimeNullableFilter<"User"> | Date | string | null
+    pendingEmail?: StringNullableFilter<"User"> | string | null
+    emailChangeExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     isActive?: BoolFilter<"User"> | boolean
     role?: EnumUserRoleFilter<"User"> | $Enums.UserRole
     failedLoginAttempts?: IntFilter<"User"> | number
@@ -27710,7 +27761,7 @@ export namespace Prisma {
     expenseActuals?: ExpenseActualListRelationFilter
     costAnalyses?: CostAnalysisListRelationFilter
     labConnections?: LabConnectionListRelationFilter
-  }, "id" | "email" | "emailVerificationToken" | "passwordResetToken">
+  }, "id" | "email" | "emailVerificationToken" | "passwordResetToken" | "emailChangeToken">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
@@ -27726,6 +27777,9 @@ export namespace Prisma {
     emailVerificationExpires?: SortOrderInput | SortOrder
     passwordResetToken?: SortOrderInput | SortOrder
     passwordResetExpires?: SortOrderInput | SortOrder
+    pendingEmail?: SortOrderInput | SortOrder
+    emailChangeToken?: SortOrderInput | SortOrder
+    emailChangeExpires?: SortOrderInput | SortOrder
     isActive?: SortOrder
     role?: SortOrder
     failedLoginAttempts?: SortOrder
@@ -27764,6 +27818,9 @@ export namespace Prisma {
     emailVerificationExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     passwordResetToken?: StringNullableWithAggregatesFilter<"User"> | string | null
     passwordResetExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    pendingEmail?: StringNullableWithAggregatesFilter<"User"> | string | null
+    emailChangeToken?: StringNullableWithAggregatesFilter<"User"> | string | null
+    emailChangeExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     isActive?: BoolWithAggregatesFilter<"User"> | boolean
     role?: EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
     failedLoginAttempts?: IntWithAggregatesFilter<"User"> | number
@@ -29936,6 +29993,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -29980,6 +30040,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -30024,6 +30087,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -30068,6 +30134,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -30112,6 +30181,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -30142,6 +30214,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -30172,6 +30247,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -33012,6 +33090,9 @@ export namespace Prisma {
     emailVerificationExpires?: SortOrder
     passwordResetToken?: SortOrder
     passwordResetExpires?: SortOrder
+    pendingEmail?: SortOrder
+    emailChangeToken?: SortOrder
+    emailChangeExpires?: SortOrder
     isActive?: SortOrder
     role?: SortOrder
     failedLoginAttempts?: SortOrder
@@ -33046,6 +33127,9 @@ export namespace Prisma {
     emailVerificationExpires?: SortOrder
     passwordResetToken?: SortOrder
     passwordResetExpires?: SortOrder
+    pendingEmail?: SortOrder
+    emailChangeToken?: SortOrder
+    emailChangeExpires?: SortOrder
     isActive?: SortOrder
     role?: SortOrder
     failedLoginAttempts?: SortOrder
@@ -33075,6 +33159,9 @@ export namespace Prisma {
     emailVerificationExpires?: SortOrder
     passwordResetToken?: SortOrder
     passwordResetExpires?: SortOrder
+    pendingEmail?: SortOrder
+    emailChangeToken?: SortOrder
+    emailChangeExpires?: SortOrder
     isActive?: SortOrder
     role?: SortOrder
     failedLoginAttempts?: SortOrder
@@ -38344,6 +38431,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38387,6 +38477,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38446,6 +38539,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -38489,6 +38585,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -38532,6 +38631,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38575,6 +38677,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38634,6 +38739,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -38677,6 +38785,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -38720,6 +38831,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38763,6 +38877,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38811,6 +38928,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38854,6 +38974,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -38913,6 +39036,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -38956,6 +39082,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39010,6 +39139,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39053,6 +39185,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39152,6 +39287,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -39195,6 +39333,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -39270,6 +39411,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39313,6 +39457,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39417,6 +39564,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -39460,6 +39610,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -39589,6 +39742,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39632,6 +39788,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -39827,6 +39986,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -39870,6 +40032,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -40084,6 +40249,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -40127,6 +40295,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -40726,6 +40897,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -40769,6 +40943,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -40828,6 +41005,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -40871,6 +41051,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -40940,6 +41123,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -40983,6 +41169,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -41070,6 +41259,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -41113,6 +41305,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -41272,6 +41467,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -41315,6 +41513,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -41374,6 +41575,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -41417,6 +41621,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -41460,6 +41667,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -41503,6 +41713,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -41861,6 +42074,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -41904,6 +42120,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -42220,6 +42439,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -42263,6 +42485,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -42606,6 +42831,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -42649,6 +42877,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -42988,6 +43219,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -43031,6 +43265,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -43341,6 +43578,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -43384,6 +43624,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -43684,6 +43927,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -43727,6 +43973,9 @@ export namespace Prisma {
     emailVerificationExpires?: Date | string | null
     passwordResetToken?: string | null
     passwordResetExpires?: Date | string | null
+    pendingEmail?: string | null
+    emailChangeToken?: string | null
+    emailChangeExpires?: Date | string | null
     isActive?: boolean
     role?: $Enums.UserRole
     failedLoginAttempts?: number
@@ -43786,6 +44035,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
@@ -43829,6 +44081,9 @@ export namespace Prisma {
     emailVerificationExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordResetToken?: NullableStringFieldUpdateOperationsInput | string | null
     passwordResetExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    pendingEmail?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeToken?: NullableStringFieldUpdateOperationsInput | string | null
+    emailChangeExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number

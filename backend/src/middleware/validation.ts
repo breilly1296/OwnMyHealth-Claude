@@ -284,6 +284,15 @@ export const schemas = {
     verifyEmailQuery: z.object({
       token: z.string().min(1, 'Verification token is required'),
     }),
+
+    changeEmail: z.object({
+      newEmail: email,
+      currentPassword: z.string().min(1, 'Current password is required'),
+    }),
+
+    confirmEmailChangeQuery: z.object({
+      token: z.string().min(1, 'Confirmation token is required'),
+    }),
   },
 
   // ============================================
