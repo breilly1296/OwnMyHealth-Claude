@@ -17,6 +17,7 @@ export const pathToCategoryMap: Record<string, string> = {
   '/health-guide': 'Health Guide',
   '/care-team': 'Care Team',
   '/my-patients': 'My Patients',
+  '/admin': 'Admin',
   '/settings': 'Account Settings',
 };
 
@@ -32,6 +33,7 @@ export const categoryToPathMap: Record<string, string> = {
   'Health Guide': '/health-guide',
   'Care Team': '/care-team',
   'My Patients': '/my-patients',
+  Admin: '/admin',
   'Account Settings': '/settings',
 };
 

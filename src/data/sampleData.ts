@@ -229,6 +229,9 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Care Team', description: 'Manage who can access your health data', icon: 'Users', group: 'care' },
   { name: 'My Patients', description: 'Patients who have shared data with you', icon: 'Stethoscope', group: 'care', roles: ['PROVIDER', 'ADMIN'] },
 
+  // Admin - operations console (ADMIN only)
+  { name: 'Admin', description: 'User management, audit log, and system stats', icon: 'ShieldCheck', group: 'admin', roles: ['ADMIN'] },
+
   // My Reports - File repository
   { name: 'Files', description: 'View and manage uploaded lab reports', icon: 'FileText', group: 'files' },
 
