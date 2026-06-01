@@ -509,7 +509,7 @@ export const schemas = {
       targetValue: z.number().optional(),
       currentValue: z.number().optional(),
       targetDate: dateString.optional(),
-      status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'PAUSED', 'ABANDONED']).optional(),
+      status: z.enum(['ACTIVE', 'PAUSED', 'ACHIEVED', 'FAILED', 'CANCELLED']).optional(),
       milestones: z.array(z.object({
         value: z.number(),
         label: sanitizedString(1, 100),
@@ -525,7 +525,7 @@ export const schemas = {
     }),
 
     listQuery: z.object({
-      status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'PAUSED', 'ABANDONED']).optional(),
+      status: z.enum(['ACTIVE', 'PAUSED', 'ACHIEVED', 'FAILED', 'CANCELLED']).optional(),
       category: z.enum(['WEIGHT', 'FITNESS', 'NUTRITION', 'BIOMARKER', 'MEDICATION', 'LIFESTYLE', 'MENTAL_HEALTH', 'OTHER']).optional(),
       // Pagination — clamped here so Prisma never sees unbounded take.
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),

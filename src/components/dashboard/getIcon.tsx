@@ -41,6 +41,11 @@ import {
   Flower2, // Allergy
   Wind, // Blood Gas
   TrendingUp, // Trends
+  // Care team / admin
+  Stethoscope, // My Patients (provider)
+  ShieldCheck, // Admin
+  ScrollText, // Audit log
+  UserCog, // User management
 } from 'lucide-react';
 
 /**
@@ -96,6 +101,11 @@ export function getIcon(iconName: string): JSX.Element {
     FileText: <FileText className="w-5 h-5" />,
     // Trends icon
     TrendingUp: <TrendingUp className="w-5 h-5" />,
+    // Care team / admin
+    Stethoscope: <Stethoscope className="w-5 h-5" />,
+    ShieldCheck: <ShieldCheck className="w-5 h-5" />,
+    ScrollText: <ScrollText className="w-5 h-5" />,
+    UserCog: <UserCog className="w-5 h-5" />,
   };
   return icons[iconName] || <Activity className="w-5 h-5" />;
 }

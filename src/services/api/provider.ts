@@ -45,11 +45,23 @@ export const providerApi = {
 
   async getPatient(patientId: string): Promise<{
     patient: { id: string; email: string; createdAt: string; lastLoginAt: string | null };
-    relationship: ProviderPatientRelationship['permissions'] & { id: string; relationshipType: string };
+    relationship: {
+      id: string;
+      relationshipType: string;
+      permissions: ProviderPatientRelationship['permissions'];
+      consentGrantedAt: string | null;
+      consentExpiresAt: string | null;
+    };
   }> {
     const response = await apiFetch<{
       patient: { id: string; email: string; createdAt: string; lastLoginAt: string | null };
-      relationship: ProviderPatientRelationship['permissions'] & { id: string; relationshipType: string };
+      relationship: {
+        id: string;
+        relationshipType: string;
+        permissions: ProviderPatientRelationship['permissions'];
+        consentGrantedAt: string | null;
+        consentExpiresAt: string | null;
+      };
     }>(`/provider/patients/${patientId}`);
     return response.data;
   },

@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
+import { requirePlanFeature } from '../middleware/planGating.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
 import * as fhir from '../controllers/fhirController.js';
@@ -30,6 +31,7 @@ router.get(
   '/connect/quest',
   sensitiveLimiter,
   blockDemoAI,
+  requirePlanFeature('questFhirIntegration'),
   asyncHandler(fhir.initiateQuestConnect)
 );
 
@@ -42,6 +44,7 @@ router.post(
   validate(schemas.connectionIdParam, 'params'),
   sensitiveLimiter,
   blockDemoAI,
+  requirePlanFeature('questFhirIntegration'),
   csrfProtection,
   asyncHandler(fhir.triggerSync)
 );

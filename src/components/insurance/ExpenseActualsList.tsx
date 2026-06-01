@@ -20,6 +20,10 @@ interface ExpenseActualsListProps {
   /** Render prop hook to inject a shared parent modal; when provided, the
    *  list delegates opening to the parent instead of using its own modal. */
   openExternalModal?: () => void;
+  /** Fired only after a real mutation (create/delete), not on load. Lets the
+   *  parent refetch the plan whose deductible/OOP met-amounts the backend
+   *  recomputes from claims. */
+  onMutated?: () => void;
 }
 
 const STATUS_BADGE: Record<ClaimStatus, string> = {
@@ -57,6 +61,7 @@ export default function ExpenseActualsList({
   planId,
   onActualsChange,
   openExternalModal,
+  onMutated,
 }: ExpenseActualsListProps) {
   const [actuals, setActuals] = useState<ExpenseActualData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +106,7 @@ export default function ExpenseActualsList({
     try {
       await expensesApi.deleteActual(id);
       await load();
+      onMutated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete claim');
     } finally {
@@ -245,6 +251,7 @@ export default function ExpenseActualsList({
           onSuccess={() => {
             setIsModalOpen(false);
             load();
+            onMutated?.();
           }}
           planId={planId}
         />

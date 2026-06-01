@@ -3,8 +3,10 @@
  *
  * Runs on a single in-process setInterval (same pattern as session/audit
  * cleanup). Every tick:
- *   1. If it's Monday 08:00-08:59 UTC, send weekly summaries + goal reminders.
- *   2. Once per UTC day, check for users whose plan expires in ~7 days and
+ *   1. If it's Monday 08:00-08:59 UTC, send weekly summaries.
+ *   2. Once per UTC day, run the goal-reminder sweep — each goal honored at
+ *      its own reminderFrequency cadence (DAILY/WEEKLY/BIWEEKLY/MONTHLY).
+ *   3. Once per UTC day, check for users whose plan expires in ~7 days and
  *      notify them. The once-per-day guard (lastPlanExpiryRunKey) is REQUIRED:
  *      the tick is hourly, and the expiry window is 1 day wide, so without the
  *      guard a user would land in the window for ~24 consecutive ticks and get
@@ -43,6 +45,13 @@ let lastWeeklyRunKey: string | null = null;
  * Module-scoped, resets on restart (worst case: one extra sweep that day).
  */
 let lastPlanExpiryRunKey: string | null = null;
+
+/**
+ * Shared guard so the goal-reminder sweep fires at most once per UTC day.
+ * Each goal is then honored at its own reminderFrequency cadence inside the
+ * sweep (via lastReminderSent). Module-scoped; resets on restart.
+ */
+let lastGoalReminderRunKey: string | null = null;
 
 /** UTC calendar-day key (YYYY-M-D). Used to dedupe once-per-day sweeps. */
 function utcDayKey(now: Date): string {
@@ -133,7 +142,21 @@ async function sendWeeklySummaries(): Promise<void> {
 // Goal reminders
 // ============================================
 
+/**
+ * Per-goal reminder cadence in days, keyed by ReminderFrequency. Goals with no
+ * cadence set fall back to WEEKLY — the behaviour before cadence was honored.
+ */
+const REMINDER_INTERVAL_DAYS: Record<string, number> = {
+  DAILY: 1,
+  WEEKLY: 7,
+  BIWEEKLY: 14,
+  MONTHLY: 30,
+};
+const DEFAULT_REMINDER_INTERVAL_DAYS = 7;
+
 async function sendGoalReminders(): Promise<void> {
+  const nowMs = Date.now();
+
   // Users with at least one active goal. Filter at the DB so we skip users
   // who'd just get an empty reminder.
   const userRows = await withRLSContext(
@@ -153,23 +176,48 @@ async function sendGoalReminders(): Promise<void> {
 
   let sent = 0;
   await runBatched(userRows, 20, async ({ id: userId }) => {
-    const goals = await withRLSContext(userId, async (tx) =>
-      tx.healthGoal.findMany({
+    // Only remind about goals whose cadence has elapsed since the last reminder.
+    const dueGoals = await withRLSContext(userId, async (tx) => {
+      const goals = await tx.healthGoal.findMany({
         where: { userId, status: 'ACTIVE' },
-        select: { name: true, progress: true },
+        select: {
+          id: true,
+          name: true,
+          progress: true,
+          reminderFrequency: true,
+          lastReminderSent: true,
+        },
         orderBy: { targetDate: 'asc' },
-        take: 5,
-      })
-    );
+      });
+      return goals.filter((g) => {
+        const intervalDays =
+          REMINDER_INTERVAL_DAYS[g.reminderFrequency ?? ''] ?? DEFAULT_REMINDER_INTERVAL_DAYS;
+        if (!g.lastReminderSent) return true;
+        const elapsed = nowMs - g.lastReminderSent.getTime();
+        // 1h grace so a daily sweep that drifts slightly still fires on schedule.
+        return elapsed >= intervalDays * 24 * ONE_HOUR_MS - ONE_HOUR_MS;
+      });
+    });
 
-    if (goals.length === 0) return;
+    if (dueGoals.length === 0) return;
 
     await notifyGoalReminder(userId, {
-      goals: goals.map((g) => ({
+      goals: dueGoals.slice(0, 5).map((g) => ({
         name: g.name,
         progressPct: Number(g.progress),
       })),
     });
+
+    // Stamp every due goal so the next reminder respects its cadence. Done
+    // after a successful notify so a send error leaves the goal due to retry.
+    const sentAt = new Date();
+    await withRLSContext(userId, async (tx) => {
+      await tx.healthGoal.updateMany({
+        where: { userId, id: { in: dueGoals.map((g) => g.id) } },
+        data: { lastReminderSent: sentAt },
+      });
+    });
+
     sent += 1;
   });
 
@@ -240,6 +288,11 @@ export async function runTick(): Promise<void> {
     if (isMondayMorning && lastWeeklyRunKey !== dayKey) {
       lastWeeklyRunKey = dayKey;
       await sendWeeklySummaries();
+    }
+    // Goal reminders sweep once per UTC day; each goal is then honored at its
+    // own reminderFrequency cadence inside sendGoalReminders (via lastReminderSent).
+    if (lastGoalReminderRunKey !== dayKey) {
+      lastGoalReminderRunKey = dayKey;
       await sendGoalReminders();
     }
     // Once per UTC day (see lastPlanExpiryRunKey) — the hourly tick would

@@ -26,6 +26,7 @@ import {
   updateHealthNeedStatus,
   deleteHealthNeed,
   analyzeHealthNeeds,
+  getHealthNeedsSummary,
 } from '../controllers/healthNeedsController.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -46,6 +47,10 @@ router.get(
 
 // Analyze health needs (AI-powered)
 router.get('/analyze', aiLimiter, asyncHandler(analyzeHealthNeeds));
+
+// Health needs summary (counts by status/urgency/type).
+// MUST be declared before the '/:id' param route or it would be captured as an id.
+router.get('/summary', asyncHandler(getHealthNeedsSummary));
 
 // Get single health need
 router.get(
