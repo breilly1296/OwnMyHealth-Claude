@@ -705,7 +705,11 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     success: true,
     data: {
       id: analysis.id,
-      analysisDate: analysis.analysisDate,
+      planId: analysis.planId,
+      // Frontend CostAnalysisData reads `createdAt`; the column is named
+      // `analysisDate`. Expose it as createdAt so the UI doesn't render
+      // "Invalid Date".
+      createdAt: analysis.analysisDate,
       claudeResponse,
       totalProjectedOop,
       deductibleMetMonth,
@@ -740,7 +744,8 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
   const decrypted = analyses.map((a) => ({
     id: a.id,
     planId: a.planId,
-    analysisDate: a.analysisDate,
+    // Exposed as createdAt to match the frontend CostAnalysisData contract.
+    createdAt: a.analysisDate,
     claudeResponse: encryption.decrypt(a.claudeResponseEncrypted, userSalt),
     totalProjectedOop: a.totalProjectedOopEncrypted
       ? parseFloat(encryption.decrypt(a.totalProjectedOopEncrypted, userSalt))

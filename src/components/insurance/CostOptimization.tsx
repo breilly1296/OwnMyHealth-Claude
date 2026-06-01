@@ -730,7 +730,7 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
                         {formatDate(analysis.createdAt)}
                       </span>
                       <span className="text-sm text-gray-600 dark:text-slate-400">
-                        Projected OOP: {formatCurrency(analysis.totalProjectedOop)}
+                        Projected OOP: {formatCurrency(analysis.totalProjectedOop ?? 0)}
                       </span>
                     </div>
                     <span className="text-xs text-purple-600 dark:text-purple-400">

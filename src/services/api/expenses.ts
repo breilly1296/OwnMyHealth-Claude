@@ -72,12 +72,15 @@ export interface UpdateExpenseActualData {
 
 export interface CostAnalysisData {
   id: string;
-  userId: string;
   planId: string;
   claudeResponse: string;
-  totalProjectedOop: number;
-  projectedExpensesSnapshot: string;
+  totalProjectedOop: number | null;
   createdAt: string;
+  deductibleMetMonth?: number | null;
+  // Not returned by the API (minimal-necessary): the server holds the
+  // encrypted snapshot and the client already knows its own userId.
+  userId?: string;
+  projectedExpensesSnapshot?: string;
 }
 
 export interface CreateExpenseProjectionData {
