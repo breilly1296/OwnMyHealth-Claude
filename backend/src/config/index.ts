@@ -35,6 +35,30 @@ const isProductionEnv = process.env.NODE_ENV === 'production';
 const isStagingEnv = process.env.NODE_ENV === 'staging';
 const isDevelopmentEnv = !isProductionEnv && !isStagingEnv;
 
+// RT-H1: refuse to silently boot at the dev security tier on a clearly-deployed
+// image. When NODE_ENV is unset the app falls back to 'development' — which
+// loosens cookie SameSite, downgrades the BAA gates from hard-fail to warning,
+// and skips the prod/staging env validation block at the bottom of this file.
+// A deploy that forgets NODE_ENV would therefore run production traffic with
+// dev-grade controls and never know.
+//
+// The deploy paths set NODE_ENV two ways (Dockerfile `ENV NODE_ENV=production`
+// and the Cloud Run `--update-env-vars=NODE_ENV=production`). To catch a future
+// deploy that bypasses both, callers may set OMH_DEPLOY_ENFORCE_PROD=true (the
+// chosen explicit "I am a deployed image" signal). When that flag is on we
+// require NODE_ENV to be an explicit, recognized tier — anything that resolves
+// to the development fallback is a misconfiguration and we hard-fail rather
+// than serve at the dev tier. Local dev never sets this flag, so `npm run dev`
+// is unaffected.
+if (process.env.OMH_DEPLOY_ENFORCE_PROD === 'true' && isDevelopmentEnv) {
+  throw new Error(
+    'OMH_DEPLOY_ENFORCE_PROD is set (this is a deployed image) but NODE_ENV ' +
+    `did not resolve to a deployed tier (got: ${JSON.stringify(process.env.NODE_ENV)}). ` +
+    'Set NODE_ENV=production (or =staging) so the app applies the correct ' +
+    'security tier. Refusing to boot at the development tier in a deployed image.'
+  );
+}
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -290,6 +314,29 @@ if (!config.auditSalt || config.auditSalt.length < MIN_AUDIT_SALT_LENGTH) {
     `system_config.audit_encryption_salt (decrypt with PHI_ENCRYPTION_KEY) ` +
     `before setting AUDIT_LOG_SALT.`
   );
+}
+
+// M-4 — validate the AI spend circuit-breaker budgets at boot. These come from
+// env via `Number(...)`, so a typo like AI_DAILY_BUDGET_USD="5O" (letter O) or a
+// stray sign yields NaN/negative, which would silently neuter the breaker: the
+// `> 0` guards in aiCostTracker.isAISpendExceeded treat NaN and negatives as
+// "scope disabled", so a fat-fingered value disables the cap entirely. 0 is a
+// legitimate value (explicitly disable a scope) and is preserved; we only reject
+// NaN and negatives. Note: the accumulator is still in-memory/per-instance — for
+// multi-instance correctness under Cloud Run autoscale it needs a shared store
+// (REDIS_URL / Memorystore). That's infra and out of scope here (see config.redis
+// and the aiCostTracker module header).
+for (const [key, value] of [
+  ['AI_DAILY_BUDGET_USD', config.ai.dailyBudgetUsd],
+  ['AI_USER_DAILY_BUDGET_USD', config.ai.userDailyBudgetUsd],
+] as const) {
+  if (Number.isNaN(value) || value < 0) {
+    throw new Error(
+      `${key} must be a non-negative number (got: ${JSON.stringify(process.env[key])}). ` +
+      `Use 0 to disable that budget scope. A NaN/negative value would silently ` +
+      `disable the AI spend circuit breaker.`
+    );
+  }
 }
 
 // C-7 — require explicit acknowledgment of Anthropic BAA coverage before

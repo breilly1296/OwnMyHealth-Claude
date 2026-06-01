@@ -4,6 +4,37 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      RT-H2 (in-repo facet): Content-Security-Policy via meta http-equiv.
+      The frontend is a static SPA served from a GCS bucket, and GCS object
+      metadata cannot deliver response security headers — so the headers below
+      ride along inside the HTML instead.
+
+      Vite builds emit a single hashed entry script and CSS, no inline event
+      handlers — so 'script-src self' (no 'unsafe-inline') holds. connect-src
+      lists self plus the prod API origin (api.ownmyhealth.io); staging/dev use
+      different origins and run with their own CSP / no-bucket serving, so this
+      meta targets the production bucket build. If a CDN/LB edge policy is added
+      it should supersede this meta.
+
+      img-src/style-src include 'unsafe-inline' for the inline styles Tailwind/
+      Vite can emit; data: covers the inline SVG favicon and any data-URI images.
+
+      INFRA REMAINDER (cannot be set here — must be set at the serving edge,
+      i.e. Cloud CDN / load balancer or a serving proxy in front of the bucket):
+        - X-Frame-Options / CSP frame-ancestors  (clickjacking; meta-delivered
+          frame-ancestors is ignored by browsers — must be a real header)
+        - Strict-Transport-Security (HSTS)        (HTTPS pinning; header-only)
+        - X-Content-Type-Options: nosniff         (MIME sniffing; header-only)
+      GCS object metadata can't deliver these, so they are tracked as the
+      documented edge-config remainder for RT-H2.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; connect-src 'self' https://api.ownmyhealth.io; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>OwnMyHealth — Take Control of Your Health Data</title>
     <meta name="description" content="Track biomarkers, analyze trends, parse lab reports, and understand insurance coverage. HIPAA-compliant, encrypted, and private." />
     <meta property="og:title" content="OwnMyHealth — Take Control of Your Health Data" />

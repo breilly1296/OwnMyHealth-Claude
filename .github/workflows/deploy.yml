@@ -79,6 +79,14 @@ jobs:
           # See rateLimiter.ts for the per-instance-store limitation. Keep in
           # sync with that comment: raising this cap means switching the
           # limiter store to Redis first.
+          # RT-H1: NODE_ENV=production is set explicitly here (belt) and baked
+          # into the image via ENV in backend/Dockerfile (suspenders). If
+          # NODE_ENV is unset the backend would boot at the dev security tier;
+          # config/index.ts also hard-fails a clearly-deployed image that isn't
+          # production. --update-env-vars (NOT --set-env-vars) is deliberate:
+          # it merges this one key and leaves the secrets/env wired on the
+          # service out-of-band intact, whereas --set-env-vars replaces the
+          # whole set and would wipe them.
           gcloud run deploy ${{ env.SERVICE }} \
             --image "$IMAGE" \
             --region "${{ env.REGION }}" \
@@ -86,6 +94,7 @@ jobs:
             --platform managed \
             --no-traffic \
             --max-instances=3 \
+            --update-env-vars=NODE_ENV=production \
             --tag "$TAG"
 
           NEW_REV=$(gcloud run services describe ${{ env.SERVICE }} \

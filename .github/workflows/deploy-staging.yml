@@ -41,15 +41,17 @@ jobs:
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build and Push Docker Image
+        # M-15: dropped the mutable `:latest` tag so staging matches prod's
+        # SHA-only image addressing (see deploy.yml F-32). The deploy step below
+        # references `:${{ github.sha }}`, so `:latest` was unused and only
+        # risked a hand-rolled invocation pulling a stale image.
         run: |
           IMAGE_BASE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}"
           IMAGE_SHA="${IMAGE_BASE}:${{ github.sha }}"
-          IMAGE_LATEST="${IMAGE_BASE}:latest"
           echo "Building $IMAGE_SHA"
           cd backend
-          docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
+          docker build -t "$IMAGE_SHA" .
           docker push "$IMAGE_SHA"
-          docker push "$IMAGE_LATEST"
 
       # Staging deploys straight to 100% traffic — no canary tag, no
       # gated promote step. If this breaks, it breaks staging only.
@@ -113,7 +115,10 @@ jobs:
         run: npm run build -- --mode staging
 
       - name: Deploy to Cloud Storage
+        # M-15: replaced `gsutil rm -r` + `cp -r` with `rsync -d -r` to match
+        # prod (deploy.yml F-31). The old rm-then-cp shape opened a 404 window
+        # where the SPA's assets were missing; rsync uploads new/changed files
+        # first, then deletes destination-only objects — no missing-asset gap.
         run: |
-          gsutil -m rm -r gs://${{ env.FRONTEND_BUCKET }}/** || true
-          gsutil -m cp -r dist/* gs://${{ env.FRONTEND_BUCKET }}/
+          gsutil -m rsync -d -r dist/ gs://${{ env.FRONTEND_BUCKET }}/
           gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://${{ env.FRONTEND_BUCKET }}/index.html

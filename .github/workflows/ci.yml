@@ -117,11 +117,16 @@ jobs:
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
+      # M-17: lowered the audit gate from --audit-level=high to =moderate so
+      # moderate-severity advisories (e.g. ReDoS, prototype-pollution in deps
+      # handling PHI) block a merge instead of slipping through. Not running
+      # `npm audit fix --force` — that can pull in breaking major bumps; fixes
+      # go through reviewed dependency PRs.
       - name: Audit frontend dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=moderate
 
       - name: Audit backend dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=moderate
         working-directory: backend
 
       # Fail the build if any controller/service bypasses RLS by calling the
