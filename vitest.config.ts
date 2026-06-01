@@ -16,6 +16,13 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/backend/**',
+      // OneDrive sync-conflict duplicates (" (1)") are stale copies that test
+      // against older component APIs and aren't tracked/pushed — exclude them so
+      // local `npm test` matches CI (mirrors the tsconfig dup exclude). Parens
+      // must be escaped: picomatch treats "(1)" as an extglob group otherwise.
+      '**/*\\(1\\)*',
+      '**/*\\(2\\)*',
+      '**/* copy*',
     ],
     coverage: {
       provider: 'v8',
