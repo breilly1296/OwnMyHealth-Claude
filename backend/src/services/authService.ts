@@ -19,7 +19,8 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
 import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
-import { withRLSContext, withRLSTransaction } from './database.js';
+import { withRLSContext, withRLSTransaction, getPrismaClient } from './database.js';
+import { getAuditLogService } from './auditLog.js';
 import { logger } from '../utils/logger.js';
 import type { User as PrismaUser, UserRole } from '../../generated/prisma/index.js';
 
@@ -456,9 +457,14 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
   // Admin context — refresh flow runs before the request has a user context.
   // The session-row lock + user lookup + new-session insert all live in one
   // transaction so concurrent refresh attempts serialize on the row lock.
+  //
+  // The transaction returns a discriminated result so the caller can tell a
+  // token-REUSE (signature-valid token whose JTI is no longer the live session)
+  // apart from an inactive-user rejection, and audit accordingly (RT
+  // refresh-reuse).
   const result = await withRLSTransaction(
     null,
-    async (tx) => {
+    async (tx): Promise<{ user: User } | { reason: 'reuse' | 'inactive' }> => {
       // Lock the session row for the duration of this transaction. A parallel
       // refresh attempt for the same JTI will block on this until we commit
       // or roll back; by the time it unblocks the row is gone and the lookup
@@ -475,18 +481,18 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
 
       const session = locked[0];
       if (!session || session.expiresAt < new Date()) {
-        // Either the row was already consumed by a racing refresh, or it
-        // expired between JWT verification and the lock. Either way: no
-        // new tokens issued.
+        // Either the row was already consumed by a racing/prior refresh
+        // (rotation already happened — this is token REUSE), or it expired
+        // between JWT verification and the lock. Either way: no new tokens.
         if (session) {
           await tx.session.delete({ where: { id: payload!.jti } });
         }
-        return null;
+        return { reason: 'reuse' };
       }
 
       const prismaUser = await tx.user.findUnique({ where: { id: session.userId } });
       if (!prismaUser || !prismaUser.isActive) {
-        return null;
+        return { reason: 'inactive' };
       }
 
       // Delete the old session row — the caller's refresh token is now
@@ -498,7 +504,50 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
     }
   );
 
-  if (!result) return null;
+  if ('reason' in result) {
+    if (result.reason === 'reuse') {
+      // RT (refresh-reuse): a signature-valid refresh token was presented whose
+      // JTI is no longer the live session — i.e. it was already rotated/consumed
+      // (replay), or it expired. Record a FAILURE audit row so this surfaces in
+      // the HIPAA trail instead of failing silently. Best-effort: never block the
+      // 401 the caller returns on an audit hiccup.
+      //
+      // TODO (follow-up): treat replay of an already-rotated token as a strong
+      // compromise signal and REVOKE THE ENTIRE TOKEN FAMILY for this user
+      // (revokeAllUserTokens(payload.id)) so a stolen-then-rotated token can't be
+      // used to mint a parallel session. Left out here to keep the change minimal
+      // and avoid logging-out a user whose own race (double-tab refresh) tripped
+      // the path; gate family-revocation on a reuse-after-success detector.
+      try {
+        const auditService = getAuditLogService(getPrismaClient());
+        // AuditContext only carries req/userId/sessionId/tx — IP and user-agent
+        // are derived from a `req`, which this pre-auth flow doesn't have. Carry
+        // the session metadata in the audit metadata instead.
+        // AUDIT SUCCESS contract: a FAILURE path passes success:false +
+        // errorMessage (logAuth threads metadata, not the top-level fields, so
+        // we carry them in metadata alongside the existing shape).
+        await auditService.logAuth(
+          'LOGIN_FAILED',
+          { userId: payload!.id },
+          {
+            reason: 'REFRESH_TOKEN_REUSE',
+            authAction: 'REFRESH',
+            success: false,
+            errorMessage: 'Refresh token reuse/rotation conflict — token no longer the live session',
+            jti: payload!.jti,
+            ipAddress: metadata?.ipAddress,
+            userAgent: metadata?.userAgent,
+          }
+        );
+      } catch (error) {
+        logger.error('Failed to audit refresh-token reuse', {
+          prefix: 'Auth',
+          data: { error: error instanceof Error ? error.message : String(error) },
+        });
+      }
+    }
+    return null;
+  }
 
   // Token rotation: new refresh token gets a new JTI and a new session row.
   // Runs outside the locking transaction because generateRefreshToken opens
@@ -944,10 +993,13 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
       }
 
       if (prismaUser.emailVerified) {
-        return {
-          success: false,
-          error: 'Email is already verified',
-        };
+        // L-17: account-enumeration defense. Return the SAME success shape as
+        // the non-existent-user branch (success:true, no token) rather than a
+        // distinguishable `{ success:false, 'Email is already verified' }`. The
+        // old error let an attacker tell "registered + verified" apart from
+        // "unknown / unverified". No token → caller sends no email, so a
+        // verified address is never spammed.
+        return { success: true };
       }
 
       await tx.user.update({
@@ -1139,8 +1191,20 @@ export async function resetPassword(token: string, newPassword: string): Promise
     }
   );
 
-  // Revoke all existing sessions (security: force re-login everywhere)
+  // Revoke all existing refresh sessions (security: force re-login everywhere)
   await revokeAllUserTokens(updatedPrismaUser.id);
+
+  // RT-M1: this revokes refresh SESSION rows, but any in-flight ACCESS token
+  // (short-lived JWT) keeps authenticating until natural expiry. Unlike the
+  // authenticated change-password flow, reset-password is a public token-based
+  // flow with NO logged-in request, so there is no request access token to
+  // revoke here (revokeAccessToken needs the raw JWT). The cross-device gap
+  // therefore remains: a stolen/active access token on another device stays
+  // valid for up to ~15 min after a reset.
+  // TODO (M-4 infra): close this with a per-user `tokensValidAfter` timestamp,
+  // stamped here on reset, checked in authenticate() against the JWT `iat`, and
+  // backed by a shared store (Redis/Memorystore) so invalidation survives
+  // restarts and spans replicas.
 
   return {
     success: true,
@@ -1301,6 +1365,15 @@ export async function confirmEmailChange(token: string): Promise<EmailChangeConf
     });
   });
 
+  // RT-M1: revokes refresh SESSION rows, but any in-flight ACCESS token
+  // (short-lived JWT) keeps authenticating until natural expiry. confirm-email-
+  // change is a public token-based flow with NO logged-in request, so there is
+  // no request access token to revoke here (revokeAccessToken needs the raw
+  // JWT). The cross-device gap remains: a still-valid access token on another
+  // device works for up to ~15 min after the email swap.
+  // TODO (M-4 infra): close this with a per-user `tokensValidAfter` timestamp,
+  // stamped here, checked in authenticate() against the JWT `iat`, backed by a
+  // shared store (Redis/Memorystore) so invalidation survives restarts/replicas.
   await revokeAllUserTokens(lookup.userId);
 
   return {

@@ -553,8 +553,29 @@ export async function changePassword(
   const newPasswordHash = await hashPassword(newPassword);
   await updateUserPassword(user.id, newPasswordHash);
 
-  // Revoke all existing tokens (force re-login on all devices)
+  // Revoke all existing refresh tokens (force re-login on all devices)
   await revokeAllUserTokens(user.id);
+
+  // RT-M1: revokeAllUserTokens only deletes refresh SESSION rows — the in-flight
+  // ACCESS token (short-lived JWT, valid for ~15 min) keeps authenticating until
+  // natural expiry. Revoke THIS request's access token now so the just-changed
+  // credentials can't keep being used on the old bearer/cookie on this instance.
+  // Extract from cookie OR Authorization header — either could carry the session.
+  const accessTokenFromCookie = req.cookies?.access_token;
+  const authHeader = req.headers.authorization;
+  const accessTokenFromHeader = authHeader?.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : undefined;
+  const currentAccessToken = accessTokenFromCookie || accessTokenFromHeader;
+  if (currentAccessToken) {
+    revokeAccessToken(currentAccessToken);
+  }
+  // NOTE: full cross-device access-token invalidation (not just this node /
+  // this request's token) needs a per-user `tokensValidAfter` timestamp checked
+  // in authenticate() against the JWT `iat`, backed by a shared store
+  // (Redis/Memorystore) so it survives restarts and spans replicas. The
+  // in-memory blacklist above only covers this instance. Out of scope here —
+  // tracked as M-4 (infra).
 
   // Get updated user and generate new tokens for this session
   const updatedUser = await findUserById(user.id);
@@ -697,24 +718,20 @@ export async function resendVerification(
 
   const result = await resendVerificationService(email);
 
-  if (!result.success) {
-    const response: ApiResponse = {
-      success: false,
-      error: {
-        code: 'RESEND_FAILED',
-        message: result.error || 'Failed to resend verification email',
-      },
-    };
-    res.status(400).json(response);
-    return;
-  }
-
-  // Send verification email if token was generated
+  // Send verification email only if a token was generated (i.e. the address
+  // exists AND is unverified). For every other case the service returns
+  // success:true with no token, so no email is sent.
   if (result.token) {
     await sendVerificationEmail(email, result.token);
   }
 
-  // Always return success (don't reveal if user exists)
+  // L-17: ALWAYS return the same generic 200 regardless of whether the email
+  // exists, is already verified, or is unverified. The previous 400 "Email is
+  // already verified" branch was an account-enumeration oracle that
+  // contradicted this endpoint's own "don't reveal if user exists" comment —
+  // an attacker could distinguish a registered+verified address from an
+  // unknown/unverified one by the status code. The differentiated signal (a
+  // verification email) goes only to the inbox of the address in question.
   const response: ApiResponse<{ message: string }> = {
     success: true,
     data: {

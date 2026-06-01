@@ -174,13 +174,13 @@ describe('PUT /admin/users/:id — F-41 password reset invalidates sessions', ()
     expect(mocks.bcryptHash).toHaveBeenCalledWith('NewSecurePassword123!', 10);
   });
 
-  it('does NOT touch sessions when no password is in the payload', async () => {
+  it('does NOT touch sessions for a benign field change (no password, role change, or deactivation)', async () => {
     seedExistingUser();
     mocks.tx.user.update.mockResolvedValue({
       id: TARGET_ID,
       email: 'target@example.com',
       role: 'PATIENT',
-      isActive: false, // role unchanged, just deactivation
+      isActive: true,
       emailVerified: true,
       updatedAt: new Date(),
     });
@@ -188,10 +188,36 @@ describe('PUT /admin/users/:id — F-41 password reset invalidates sessions', ()
     const app = buildApp();
     const res = await request(app)
       .patch(`/api/v1/admin/users/${TARGET_ID}`)
-      .send({ isActive: false });
+      .send({ emailVerified: true }); // no password, no role change, no deactivation
 
     expect(res.status).toBe(200);
     expect(mocks.tx.session.deleteMany).not.toHaveBeenCalled();
+    expect(mocks.bcryptHash).not.toHaveBeenCalled();
+  });
+
+  it('wipes target user sessions on deactivation (isActive -> false) [M-14]', async () => {
+    seedExistingUser();
+    mocks.tx.user.update.mockResolvedValue({
+      id: TARGET_ID,
+      email: 'target@example.com',
+      role: 'PATIENT',
+      isActive: false,
+      emailVerified: true,
+      updatedAt: new Date(),
+    });
+    mocks.tx.session.deleteMany.mockResolvedValue({ count: 2 });
+
+    const app = buildApp();
+    const res = await request(app)
+      .patch(`/api/v1/admin/users/${TARGET_ID}`)
+      .send({ isActive: false });
+
+    // M-14: deactivation must cut existing sessions so a stale refresh token
+    // can't keep operating after the account was disabled.
+    expect(res.status).toBe(200);
+    expect(mocks.tx.session.deleteMany).toHaveBeenCalledWith({
+      where: { userId: TARGET_ID },
+    });
     expect(mocks.bcryptHash).not.toHaveBeenCalled();
   });
 });
@@ -253,7 +279,7 @@ describe('PUT /admin/users/:id — F-42 self-demotion guard', () => {
     expect(mocks.tx.user.update).toHaveBeenCalled();
   });
 
-  it('allows an admin to change someone else\'s role', async () => {
+  it('allows an admin to change someone else\'s role (and wipes their sessions) [M-14]', async () => {
     seedExistingUser();
     mocks.tx.user.update.mockResolvedValue({
       id: TARGET_ID,
@@ -263,6 +289,7 @@ describe('PUT /admin/users/:id — F-42 self-demotion guard', () => {
       emailVerified: true,
       updatedAt: new Date(),
     });
+    mocks.tx.session.deleteMany.mockResolvedValue({ count: 1 });
 
     const app = buildApp();
     const res = await request(app)
@@ -271,5 +298,10 @@ describe('PUT /admin/users/:id — F-42 self-demotion guard', () => {
 
     expect(res.status).toBe(200);
     expect(mocks.tx.user.update).toHaveBeenCalled();
+    // M-14: a privilege change must cut the target's existing sessions so an
+    // already-issued refresh token can't keep operating under the old role.
+    expect(mocks.tx.session.deleteMany).toHaveBeenCalledWith({
+      where: { userId: TARGET_ID },
+    });
   });
 });

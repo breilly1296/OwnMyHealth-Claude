@@ -93,29 +93,52 @@ export function validateCsrfToken(
     return next();
   }
 
-  // Skip CSRF for auth routes that are public (login, register, etc.)
-  // These don't have a session to protect yet
-  const publicAuthRoutes = [
-    '/auth/login',
-    '/auth/register',
-    '/auth/demo',
-    '/auth/refresh',
-    '/auth/forgot-password',
-    '/auth/reset-password',
-    '/auth/verify-email',
-    '/auth/resend-verification',
-    '/marketplace/plans/search',
-  ];
+  // M-2: exemption checks now compare the NORMALIZED, fully-qualified request
+  // path with strict `===` equality against a fixed allowlist. The previous
+  // `req.path.endsWith(route)` was a suffix match — an attacker-controlled path
+  // like `/api/v1/evil/auth/login` (or any route ending in an exempt suffix)
+  // would have slipped past CSRF validation. `csrfProtection` is mounted at the
+  // app root (app.use(csrfProtection), before the /api/v1 router), so req.path
+  // here is the full path INCLUDING the /api/v1 prefix — the allowlist entries
+  // are spelled out in that fully-qualified form.
+  //
+  // Normalize a trailing slash so `/api/v1/auth/login/` matches `/api/v1/auth/login`
+  // (Express keeps the trailing slash in req.path). Empty string falls back to '/'.
+  const normalizedPath = req.path.length > 1 ? req.path.replace(/\/+$/, '') : req.path;
 
-  // Bearer-only streaming routes. These are intentionally CSRF-exempt
-  // because SSE (`EventSource`) can't attach a custom header, so CSRF
-  // tokens can't ride along. SAFETY: every route in this list MUST be
-  // mounted with `requireBearerAuth` instead of `authenticate`, so the
-  // cookie-auth path is rejected at the route layer. If you add to this
-  // list without switching to `requireBearerAuth`, you reopen a CSRF hole.
-  const bearerOnlyStreamingRoutes = [
-    '/ai/chat',
-  ];
+  // Public auth routes (login, register, etc.) — no session to protect yet.
+  // RT (Low): /api/v1/auth/refresh is intentionally NOT exempt. It is a
+  // cookie-authenticated, state-changing endpoint (rotates the refresh session
+  // and re-issues cookies), so exempting it from CSRF was a real CSRF hole.
+  // The SPA double-submits X-CSRF-Token on /refresh and the refresh handler
+  // re-issues a fresh csrf_token cookie via setCsrfCookie(res) on every
+  // successful refresh, so the double-submit invariant holds across rotations.
+  // The very first refresh is also safe: the client already obtained a
+  // csrf_token cookie at login (login calls setCsrfCookie) — or from GET
+  // /csrf-token — before any /refresh can occur, so removal does not break the
+  // first refresh.
+  const EXEMPT_PATHS = new Set<string>([
+    '/api/v1/auth/login',
+    '/api/v1/auth/register',
+    '/api/v1/auth/demo',
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/reset-password',
+    '/api/v1/auth/verify-email',
+    '/api/v1/auth/resend-verification',
+    '/api/v1/marketplace/plans/search',
+    // Bearer-only streaming route. Intentionally CSRF-exempt because SSE
+    // (`EventSource`) can't attach a custom header, so CSRF tokens can't ride
+    // along. SAFETY: this route MUST be mounted with `requireBearerAuth`
+    // instead of `authenticate`, so the cookie-auth path is rejected at the
+    // route layer. If you add a streaming route here without switching to
+    // `requireBearerAuth`, you reopen a CSRF hole.
+    '/api/v1/ai/chat',
+    // Cloud Scheduler maintenance trigger (audit #38). Authenticated by a
+    // shared-secret X-Cleanup-Token header (constant-time compared in the route
+    // handler), not a session — so the double-submit CSRF cookie can't ride
+    // along. Safe to exempt: it 404s unless the secret is configured.
+    '/api/v1/internal/audit-cleanup',
+  ]);
 
   // NOTE on upload routes: previously CSRF-exempt with a TODO. The
   // frontend's `services/uploadUtils.ts` reads csrf_token from the cookie
@@ -124,21 +147,7 @@ export function validateCsrfToken(
   // through uploadUtils will fail closed instead of silently bypassing
   // CSRF protection.
 
-  const isPublicAuthRoute = publicAuthRoutes.some(route =>
-    req.path.endsWith(route)
-  );
-
-  const isBearerOnlyStreamingRoute = bearerOnlyStreamingRoutes.some(route =>
-    req.path.endsWith(route)
-  );
-
-  // Cloud Scheduler maintenance trigger (audit #38). Authenticated by a
-  // shared-secret X-Cleanup-Token header (constant-time compared in the route
-  // handler), not a session — so the double-submit CSRF cookie can't ride
-  // along. Safe to exempt: it 404s unless the secret is configured.
-  const isSchedulerRoute = req.path.endsWith('/internal/audit-cleanup');
-
-  if (isPublicAuthRoute || isBearerOnlyStreamingRoute || isSchedulerRoute) {
+  if (EXEMPT_PATHS.has(normalizedPath)) {
     return next();
   }
 

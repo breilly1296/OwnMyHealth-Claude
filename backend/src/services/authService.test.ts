@@ -910,12 +910,16 @@ describe('authService', () => {
         expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('resendVerificationEmail should return error if email is already verified', async () => {
+    it('resendVerificationEmail should NOT leak that an email is already verified (no enumeration oracle)', async () => {
         userWithToken.emailVerified = true;
         mockPrisma.user.findUnique.mockResolvedValueOnce(userWithToken);
         const result = await authService.resendVerificationEmail(MOCK_EMAIL);
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Email is already verified');
+        // Hardened (L-17): an already-verified address returns the same generic
+        // success shape as a non-existent one — no success:false / "already
+        // verified" response that would confirm the account exists and is active.
+        expect(result.success).toBe(true);
+        expect(result.token).toBeUndefined();
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
     it('findUserByVerificationToken should return a user if found', async () => {

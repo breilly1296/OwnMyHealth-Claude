@@ -319,8 +319,24 @@ router.patch(
         // an admin reset would happen) keeps a valid refresh token and
         // can outrun the password change. Same transaction so the rotation
         // is atomic with the hash update.
+        //
+        // M-14 fix: a password reset is not the only event that must cut
+        // existing sessions. A role change (privilege change) or a
+        // deactivation (isActive -> false) must also wipe the target's
+        // sessions so an already-issued refresh token can't keep operating
+        // under stale privileges (or after the account was disabled). This
+        // matches what DELETE /users/:id already does on deactivation.
+        //
+        // RT-M1 (admin facet): this only revokes refresh/DB-backed sessions.
+        // Any access token already issued to the target user remains valid
+        // until it expires (up to its TTL), because revoking arbitrary
+        // users' access tokens needs the shared tokensValidAfter store
+        // (out of scope for this partition). The session wipe is the
+        // actionable mitigation here.
+        const roleChanged = role !== undefined && role !== existing.role;
+        const deactivated = isActive === false && existing.isActive !== false;
         let revokedSessionCount = 0;
-        if (password) {
+        if (password || roleChanged || deactivated) {
           const result = await tx.session.deleteMany({ where: { userId: id } });
           revokedSessionCount = result.count;
         }
@@ -336,6 +352,7 @@ router.patch(
         operation: 'UPDATE',
         actorType: 'ADMIN',
         success: false,
+        errorMessage: 'User not found',
         reason: 'user_not_found',
       });
       throw new NotFoundError('User not found');
@@ -361,10 +378,12 @@ router.patch(
       actorType: 'ADMIN',
       targetUserId: id,
       targetEmail: existing.email,
-      // Surface the count of sessions wiped on password reset so an admin
+      // M-14: surface the count of sessions wiped on this update so an admin
       // reviewing audit history can see the cascading invalidation actually
       // ran (and notice if a future regression silently drops it to 0).
-      ...(password && { revokedSessionCount }),
+      // Now reported for password reset AND role change AND deactivation,
+      // since any of those triggers the session wipe above.
+      revokedSessionCount,
       ...(isRoleChange && { previousRole: existing.role, newRole: role }),
     });
 
@@ -438,6 +457,12 @@ router.delete(
     });
 
     // Soft delete + session invalidation share a transaction for atomicity.
+    //
+    // RT-M1 (admin facet): deleteMany cuts the target's refresh/DB-backed
+    // sessions immediately, but any access token already issued to this user
+    // stays valid until it expires (up to its TTL). Hard-revoking arbitrary
+    // users' access tokens needs the shared tokensValidAfter store (out of
+    // scope for this partition); the session wipe is the actionable part.
     await withRLSContext(
       null,
       async (tx) => {
@@ -693,6 +718,10 @@ router.get(
 router.patch(
   '/provider-relationships/:id',
   validate(schemas.uuidParam, 'params'),
+  // M-3: body was previously read untyped. Validate the mutable fields
+  // (status enum + the four permission booleans) and reject unknown keys
+  // (.strict) so an admin can't smuggle arbitrary columns into the update.
+  validate(schemas.admin.updateProviderRelationship),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const { id } = req.params;
@@ -701,6 +730,20 @@ router.patch(
 
     const auditService = getAuditLogService(prisma);
 
+    // M-3: re-activating a REVOKED relationship is a consent-bearing action.
+    // A patient who revoked provider access must re-consent before an admin
+    // flips it back to ACTIVE/PENDING — otherwise an admin could silently
+    // restore data sharing the patient explicitly withdrew. Require an
+    // explicit reConsent=true flag to do so.
+    //
+    // NOTE: schemas.admin.updateProviderRelationship is .strict() (it rejects
+    // unknown keys). For this escape hatch to be reachable, that schema must
+    // also declare `reConsent: z.boolean().optional()` (owned by the
+    // validation partition). Until it does, this guard fails closed: an admin
+    // cannot reactivate a REVOKED relationship at all — the safe default for
+    // a consent gate.
+    const reConsent = (req.body as { reConsent?: boolean }).reConsent === true;
+
     // Fetch + update inside a single admin transaction.
     const result = await withRLSContext(
       null,
@@ -708,6 +751,17 @@ router.patch(
         const existing = await tx.providerPatient.findUnique({ where: { id } });
         if (!existing) {
           return { found: false as const };
+        }
+        // Block reactivation of a REVOKED relationship without re-consent.
+        // Done inside the tx so the guard and the update see the same row;
+        // returning a discriminated case keeps the audit-failure log outside.
+        if (
+          existing.status === 'REVOKED' &&
+          status !== undefined &&
+          status !== 'REVOKED' &&
+          !reConsent
+        ) {
+          return { found: true as const, blocked: 'reactivation_requires_reconsent' as const, existing };
         }
         const relationship = await tx.providerPatient.update({
           where: { id },
@@ -719,7 +773,7 @@ router.patch(
             ...(canEditData !== undefined && { canEditData }),
           },
         });
-        return { found: true as const, existing, relationship };
+        return { found: true as const, blocked: false as const, existing, relationship };
       },
       { isAdmin: true }
     );
@@ -730,9 +784,27 @@ router.patch(
         operation: 'UPDATE',
         actorType: 'ADMIN',
         success: false,
+        errorMessage: 'Provider-patient relationship not found',
         reason: 'relationship_not_found',
       });
       throw new NotFoundError('Provider-patient relationship not found');
+    }
+
+    // M-3: blocked reactivation of a REVOKED relationship without re-consent.
+    // Per the AUDIT SUCCESS contract, surface success:false + errorMessage.
+    if (result.blocked) {
+      await auditService.logAccess('admin_provider_relationship', id, { req, userId: adminId }, {
+        operation: 'UPDATE',
+        actorType: 'ADMIN',
+        success: false,
+        errorMessage: 'Cannot reactivate a REVOKED relationship without explicit re-consent',
+        reason: result.blocked,
+        providerId: result.existing.providerId,
+        patientId: result.existing.patientId,
+      });
+      throw new ForbiddenError(
+        'Cannot reactivate a revoked relationship without explicit patient re-consent (reConsent=true)'
+      );
     }
     const { existing, relationship } = result;
 

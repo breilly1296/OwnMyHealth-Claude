@@ -107,13 +107,28 @@ describe('validateCsrfToken — bearer-only streaming exemption preserved', () =
 });
 
 describe('validateCsrfToken — public auth routes stay exempt', () => {
-  for (const path of ['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/refresh']) {
+  for (const path of ['/api/v1/auth/login', '/api/v1/auth/register']) {
     it(`POST ${path} without CSRF token passes (pre-auth path)`, () => {
       const { error, nextCalled } = callMiddleware(makeReq({ path }));
       expect(error).toBeNull();
       expect(nextCalled).toBe(true);
     });
   }
+});
+
+describe('validateCsrfToken — /auth/refresh now REQUIRES CSRF (hardened)', () => {
+  // Hardening: /auth/refresh was removed from the CSRF exemption list. It is a
+  // cookie-authenticated state-changing endpoint (it rotates the refresh
+  // token), so it must carry the double-submit X-CSRF-Token like every other
+  // mutation. login + the refresh handler both re-issue the csrf_token cookie,
+  // so the SPA double-submit holds across rotations.
+  it('POST /api/v1/auth/refresh without a CSRF token is rejected', () => {
+    const { error, nextCalled } = callMiddleware(
+      makeReq({ path: '/api/v1/auth/refresh' })
+    );
+    expect(nextCalled).toBe(false);
+    expect(error).toBeInstanceOf(ForbiddenError);
+  });
 });
 
 describe('validateCsrfToken — constant-time comparison (F-17)', () => {

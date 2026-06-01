@@ -1,8 +1,48 @@
 import rateLimit from 'express-rate-limit';
-import type { Request } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import type { Options } from 'express-rate-limit';
+import crypto from 'crypto';
 import { config } from '../config/index.js';
 import type { ApiResponse } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 import { createRateLimitStore } from './rateLimitStore.js';
+
+// Best-effort client IP, mirroring the keyGenerator fallbacks below.
+const clientIp = (req: Request): string =>
+  req.ip || req.socket.remoteAddress || 'unknown';
+
+// Hash a rate-limit key before it is logged so the audit trail never carries a
+// raw email or IP. SHA-256 truncated to 16 hex chars is enough to correlate
+// repeat offenders within a window without storing the identifier itself.
+const hashKey = (value: string): string =>
+  crypto.createHash('sha256').update(value).digest('hex').slice(0, 16);
+
+// Normalize an attacker-controlled email before it is used in a rate-limit key
+// so case/whitespace variants ("User@x.com", " user@x.com ") collapse to one
+// bucket and cannot multiply the per-account login budget (L-1).
+const normalizeEmail = (email: unknown): string =>
+  typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+/**
+ * Shared 429 handler factory (M-5). express-rate-limit never logs by default,
+ * so a sustained limit breach is invisible. Each limiter passes its own
+ * `prefix` and a `getKey` that returns the SAME identifier it rate-limits on;
+ * the value is hashed before logging so no raw email/IP reaches the logs. The
+ * existing 429 body (`options.message`) and status are preserved exactly.
+ */
+const makeRateLimitHandler =
+  (prefix: string, getKey: (req: Request) => string) =>
+  (req: Request, res: Response, _next: NextFunction, options: Options): void => {
+    logger.warn('Rate limit exceeded', {
+      prefix,
+      data: {
+        prefix,
+        key: hashKey(getKey(req)),
+        path: req.path,
+      },
+    });
+    res.status(options.statusCode).json(options.message as ApiResponse);
+  };
 
 // STORE: in-process MemoryStore by default → per-instance counters, so on
 // Cloud Run with N instances the effective ceiling is N×limit (audit #37).
@@ -31,6 +71,7 @@ export const standardLimiter = rateLimit({
     // Use forwarded IP if behind proxy, otherwise use connection IP
     return req.ip || req.socket.remoteAddress || 'unknown';
   },
+  handler: makeRateLimitHandler('standard', clientIp),
 });
 
 // Rate limiter for authentication endpoints (registration, etc.)
@@ -47,6 +88,7 @@ export const authLimiter = rateLimit({
   } as ApiResponse,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: makeRateLimitHandler('auth', clientIp),
 });
 
 // Strict rate limiter for login specifically (brute force protection)
@@ -65,11 +107,17 @@ export const strictAuthLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed attempts
   keyGenerator: (req) => {
-    // Use email + IP for login rate limiting to prevent attacks on specific accounts
-    const email = req.body?.email || '';
+    // Use email + IP for login rate limiting to prevent attacks on specific
+    // accounts. Normalize the (attacker-controlled) email so case/whitespace
+    // variants collapse to one bucket and cannot multiply the budget (L-1).
+    const email = normalizeEmail(req.body?.email);
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     return `${email}:${ip}`;
   },
+  // Log a HASHED email only — never the raw `email:IP` key (M-5).
+  handler: makeRateLimitHandler('strict-auth', (req) =>
+    normalizeEmail(req.body?.email),
+  ),
 });
 
 // Upload rate limiter for file uploads
@@ -86,6 +134,7 @@ export const uploadLimiter = rateLimit({
   } as ApiResponse,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: makeRateLimitHandler('upload', clientIp),
 });
 
 // Sensitive operations rate limiter
@@ -102,6 +151,16 @@ export const sensitiveLimiter = rateLimit({
   } as ApiResponse,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Key by authenticated user ID so per-account export/delete caps survive a
+    // shared NAT (M-12). Falls back to IP for any unauthenticated path,
+    // mirroring aiLimiter.
+    return (req as Request & { user?: { id: string } }).user?.id || clientIp(req);
+  },
+  handler: makeRateLimitHandler(
+    'sensitive',
+    (req) => (req as Request & { user?: { id: string } }).user?.id || clientIp(req),
+  ),
 });
 
 // AI endpoint rate limiter (Claude API calls are expensive)
@@ -122,6 +181,14 @@ export const aiLimiter = rateLimit({
     // Key by authenticated user ID for per-user cost protection, fallback to IP
     return (req as Request & { user?: { id: string } }).user?.id || req.ip || req.socket.remoteAddress || 'unknown';
   },
+  handler: makeRateLimitHandler(
+    'ai',
+    (req) =>
+      (req as Request & { user?: { id: string } }).user?.id ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      'unknown',
+  ),
 });
 
 // Provider access-request limiter — caps how often one provider can fan
@@ -151,6 +218,14 @@ export const providerAccessRequestLimiter = rateLimit({
       'unknown'
     );
   },
+  handler: makeRateLimitHandler(
+    'provider-access-request',
+    (req) =>
+      (req as Request & { user?: { id: string } }).user?.id ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      'unknown',
+  ),
 });
 
 // Bulk operations rate limiter (for batch creates, imports)
@@ -167,4 +242,5 @@ export const bulkOperationLimiter = rateLimit({
   } as ApiResponse,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: makeRateLimitHandler('bulk', clientIp),
 });
