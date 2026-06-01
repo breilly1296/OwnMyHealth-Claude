@@ -59,10 +59,12 @@ interface PatientDetail {
   relationship: {
     id: string;
     relationshipType: string;
-    canViewBiomarkers: boolean;
-    canViewInsurance: boolean;
-    canViewHealthNeeds: boolean;
-    canEditData: boolean;
+    permissions: {
+      canViewBiomarkers: boolean;
+      canViewInsurance: boolean;
+      canViewHealthNeeds: boolean;
+      canEditData: boolean;
+    };
   };
 }
 
@@ -138,10 +140,10 @@ export default function MyPatientsPage() {
       const d = await providerApi.getPatient(patientId);
       setDetail(d as PatientDetail);
       const tasks: Promise<void>[] = [];
-      if (d.relationship.canViewBiomarkers) {
+      if (d.relationship.permissions.canViewBiomarkers) {
         tasks.push(providerApi.getPatientBiomarkers(patientId).then((b) => setBiomarkers(b)).catch(() => undefined));
       }
-      if (d.relationship.canViewHealthNeeds) {
+      if (d.relationship.permissions.canViewHealthNeeds) {
         tasks.push(providerApi.getPatientHealthNeeds(patientId).then((n) => setHealthNeeds(n)).catch(() => undefined));
       }
       await Promise.all(tasks);
@@ -197,7 +199,7 @@ export default function MyPatientsPage() {
             </div>
 
             {/* Biomarkers */}
-            {detail.relationship.canViewBiomarkers ? (
+            {detail.relationship.permissions.canViewBiomarkers ? (
               <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-brand-500" />
@@ -242,7 +244,7 @@ export default function MyPatientsPage() {
             )}
 
             {/* Health needs */}
-            {detail.relationship.canViewHealthNeeds ? (
+            {detail.relationship.permissions.canViewHealthNeeds ? (
               <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
                   <ClipboardList className="w-5 h-5 text-brand-500" />
