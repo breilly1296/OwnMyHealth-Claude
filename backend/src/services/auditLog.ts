@@ -70,6 +70,19 @@ interface AuditLogEntry {
   sessionId?: string;
   metadata?: AuditMetadata;
   /**
+   * Whether the recorded action SUCCEEDED. Defaults to true (the common case:
+   * we audit after the operation completes). Set false when auditing a
+   * privileged action that failed or was blocked, so the durable trail
+   * distinguishes a completed change from an attempted/denied one
+   * (HIPAA §164.312(b)). Pair with errorMessage.
+   */
+  success?: boolean;
+  /**
+   * Human-readable reason an action failed/was blocked. Only meaningful when
+   * success is false. Stored as null when omitted.
+   */
+  errorMessage?: string;
+  /**
    * When true, a failed audit write RE-THROWS so the calling PHI operation
    * fails closed rather than completing with no durable audit record
    * (HIPAA §164.312(b)). Set for create/update/delete/export. Read and
@@ -85,6 +98,17 @@ interface AuditLogEntry {
    * is opened mid-transaction (#17). Omit for standalone audits.
    */
   tx?: Prisma.TransactionClient;
+}
+
+/**
+ * Outcome of an audited action, threaded through the log* wrappers so callers
+ * can record a FAILURE/blocked attempt (success:false) without dropping to the
+ * low-level log() API. Omit entirely for the success path — log() defaults
+ * success to true. (M-1)
+ */
+export interface AuditOutcome {
+  success?: boolean;
+  errorMessage?: string;
 }
 
 interface AuditContext {
@@ -252,6 +276,8 @@ export class AuditLogService {
         userAgent: entry.userAgent,
         sessionId: entry.sessionId,
         metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+        success: entry.success ?? true,
+        errorMessage: entry.errorMessage ?? null,
       };
 
       if (entry.tx) {
@@ -310,7 +336,8 @@ export class AuditLogService {
     resourceType: string,
     resourceId: string | undefined,
     context: AuditContext,
-    metadata?: AuditMetadata
+    metadata?: AuditMetadata,
+    options?: AuditOutcome
   ): Promise<void> {
     await this.log({
       userId: context.userId,
@@ -320,6 +347,8 @@ export class AuditLogService {
       resourceId: resourceId || undefined,
       ...this.contextFields(context),
       metadata,
+      success: options?.success,
+      errorMessage: options?.errorMessage,
     });
   }
 
@@ -331,7 +360,8 @@ export class AuditLogService {
     resourceId: string,
     newValue: unknown,
     context: AuditContext,
-    metadata?: AuditMetadata
+    metadata?: AuditMetadata,
+    options?: AuditOutcome
   ): Promise<void> {
     await this.log({
       userId: context.userId,
@@ -342,6 +372,8 @@ export class AuditLogService {
       newValue,
       ...this.contextFields(context),
       metadata,
+      success: options?.success,
+      errorMessage: options?.errorMessage,
       failClosed: true,
     });
   }
@@ -355,7 +387,8 @@ export class AuditLogService {
     previousValue: unknown,
     newValue: unknown,
     context: AuditContext,
-    metadata?: AuditMetadata
+    metadata?: AuditMetadata,
+    options?: AuditOutcome
   ): Promise<void> {
     await this.log({
       userId: context.userId,
@@ -367,6 +400,8 @@ export class AuditLogService {
       newValue,
       ...this.contextFields(context),
       metadata,
+      success: options?.success,
+      errorMessage: options?.errorMessage,
       failClosed: true,
     });
   }
@@ -379,7 +414,8 @@ export class AuditLogService {
     resourceId: string,
     previousValue: unknown,
     context: AuditContext,
-    metadata?: AuditMetadata
+    metadata?: AuditMetadata,
+    options?: AuditOutcome
   ): Promise<void> {
     await this.log({
       userId: context.userId,
@@ -390,6 +426,8 @@ export class AuditLogService {
       previousValue,
       ...this.contextFields(context),
       metadata,
+      success: options?.success,
+      errorMessage: options?.errorMessage,
       failClosed: true,
     });
   }

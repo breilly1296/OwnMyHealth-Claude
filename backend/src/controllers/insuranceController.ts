@@ -862,11 +862,14 @@ export async function searchBenefits(
       }))
   );
 
-  // Audit log: SEARCH access to insurance benefits
+  // Audit log: SEARCH access to insurance benefits.
+  // SECURITY (RT-M3): audit_logs.metadata is stored in plaintext and retained
+  // ~7 years, and it bypasses encryptValue — so it MUST NOT carry free-text
+  // user input. The raw search term can describe a condition/treatment a user
+  // is searching for (PHI), so we log only non-PHI counters, never the term.
   const auditService = getAuditLogService(prisma);
   await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
     operation: 'SEARCH_BENEFITS',
-    searchTerm: query.substring(0, 100), // Limit logged search term
     plansSearched: plans.length,
     resultsFound: results.length,
   });

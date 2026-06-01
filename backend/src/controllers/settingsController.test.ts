@@ -57,6 +57,13 @@ vi.mock('../services/encryption.js', () => ({
   getEncryptionService: vi.fn(() => ({})),
 }));
 
+// deleteAllData/deleteAccount now best-effort revoke lab OAuth tokens at the
+// upstream provider before wiping LabConnection rows (mirrors deleteAccount).
+// Stub it so these sequencing tests don't hit the real FHIR/network path.
+vi.mock('../services/fhir/labSyncService.js', () => ({
+  revokeAllUserConnections: vi.fn(),
+}));
+
 vi.mock('../services/userEncryption.js', () => ({
   getUserEncryptionSalt: vi.fn(async () => 'salt'),
 }));
@@ -185,7 +192,17 @@ describe('deleteAllData (C-6)', () => {
         count: 1,
       })
     );
-    expect(mockAuditService.logDelete).not.toHaveBeenCalled();
+    // M-1: the aborted wipe is now recorded as a FAILED primary audit row
+    // (success:false) so a "WHERE success = false" HIPAA query surfaces it,
+    // in addition to the DELETE_DATA_FAILED system event above.
+    expect(mockAuditService.logDelete).toHaveBeenCalledWith(
+      'UserData',
+      'user-123',
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'DELETE_DATA_BLOCKED' }),
+      expect.objectContaining({ success: false })
+    );
   });
 
   it('handles a user with zero files (empty GCS call, DB deletion still runs)', async () => {

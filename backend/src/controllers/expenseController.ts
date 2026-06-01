@@ -40,6 +40,15 @@ const RESOURCE_TYPE_ACTUAL = 'expense_actual';
 const RESOURCE_TYPE_ANALYSIS = 'cost_analysis';
 
 /**
+ * RT (Low): maximum number of expense projections a single analyzeCosts call
+ * will load, decrypt, and interpolate into the Claude prompt. Bounds the
+ * per-request decrypt + prompt cost so one analyze cannot be forced to process
+ * an unbounded row set. Projections are fetched newest-first, so the most
+ * recent (most relevant) entries are kept when a plan exceeds this cap.
+ */
+const MAX_ANALYZE_PROJECTIONS = 200;
+
+/**
  * Encrypt-if-present helpers. Distinguish undefined (field absent in
  * update payload → leave alone) from null (explicit clear).
  * - `encIfProvided`: undefined → undefined, null/empty → null, else encrypt.
@@ -61,6 +70,30 @@ function encNumIfProvided(
 ): string | null | undefined {
   if (v === undefined) return undefined;
   return v === null ? null : encrypt(v.toString(), salt);
+}
+
+/**
+ * DECRYPT SAFETY (M-7): wrap an inline decrypt so a single corrupt or
+ * key-mismatched field returns null and logs at warn instead of throwing and
+ * rejecting the whole list/analysis/export. Used in the per-row hot paths
+ * (list decryption, analyzeCosts projection decryption) where one bad row must
+ * not 500 the entire request. Returns null on any failure.
+ */
+function tryDecrypt(
+  encryption: ReturnType<typeof getEncryptionService>,
+  value: string | null | undefined,
+  userSalt: string,
+  field: string
+): string | null {
+  if (!value) return null;
+  try {
+    return encryption.decrypt(value, userSalt);
+  } catch (err) {
+    logger.warn(`Failed to decrypt expense field: ${field}`, {
+      data: { error: err instanceof Error ? err.message : 'Unknown' },
+    });
+    return null;
+  }
 }
 
 // ============================================
@@ -154,12 +187,13 @@ export async function getProjections(req: AuthenticatedRequest, res: Response): 
     return { projections: rows, total: count };
   });
 
-  // Decrypt PHI fields
+  // Decrypt PHI fields. tryDecrypt returns null (and logs at warn) on a
+  // corrupt/key-mismatched field so one bad row can't throw the whole list.
   const decrypted = projections.map((p) => ({
     ...p,
-    serviceType: encryption.decrypt(p.serviceTypeEncrypted, userSalt),
-    estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
-    notes: p.notesEncrypted ? encryption.decrypt(p.notesEncrypted, userSalt) : null,
+    serviceType: tryDecrypt(encryption, p.serviceTypeEncrypted, userSalt, 'serviceTypeEncrypted'),
+    estimatedCost: parseFloat(tryDecrypt(encryption, p.estimatedCostEncrypted, userSalt, 'estimatedCostEncrypted') ?? ''),
+    notes: tryDecrypt(encryption, p.notesEncrypted, userSalt, 'notesEncrypted'),
   }));
 
   // Audit log: READ access to expense projections
@@ -289,24 +323,28 @@ function decryptActual(
   encryption: ReturnType<typeof getEncryptionService>,
   userSalt: string
 ) {
-  const decryptNumber = (v: string | null) =>
-    v ? parseFloat(encryption.decrypt(v, userSalt)) : null;
+  // M-7: route every field through tryDecrypt so a single corrupt/key-mismatched
+  // row returns null (logged at warn) instead of throwing the whole list/export.
+  const decryptNumber = (v: string | null, field: string) => {
+    const dec = tryDecrypt(encryption, v, userSalt, field);
+    return dec === null ? null : parseFloat(dec);
+  };
   return {
     id: a.id,
     userId: a.userId,
     planId: a.planId,
     projectionId: a.projectionId,
-    serviceType: encryption.decrypt(a.serviceTypeEncrypted, userSalt),
+    serviceType: tryDecrypt(encryption, a.serviceTypeEncrypted, userSalt, 'serviceTypeEncrypted'),
     serviceDate: a.dateOfService ? a.dateOfService.toISOString().split('T')[0] : null,
-    providerName: a.providerNameEncrypted ? encryption.decrypt(a.providerNameEncrypted, userSalt) : null,
-    billedAmount: decryptNumber(a.billedAmountEncrypted),
-    insurancePaid: decryptNumber(a.insurancePaidEncrypted),
-    patientPaid: decryptNumber(a.patientPaidEncrypted),
-    appliedToDeductible: decryptNumber(a.appliedToDeductibleEncrypted),
-    appliedToOop: decryptNumber(a.appliedToOopEncrypted),
+    providerName: tryDecrypt(encryption, a.providerNameEncrypted, userSalt, 'providerNameEncrypted'),
+    billedAmount: decryptNumber(a.billedAmountEncrypted, 'billedAmountEncrypted'),
+    insurancePaid: decryptNumber(a.insurancePaidEncrypted, 'insurancePaidEncrypted'),
+    patientPaid: decryptNumber(a.patientPaidEncrypted, 'patientPaidEncrypted'),
+    appliedToDeductible: decryptNumber(a.appliedToDeductibleEncrypted, 'appliedToDeductibleEncrypted'),
+    appliedToOop: decryptNumber(a.appliedToOopEncrypted, 'appliedToOopEncrypted'),
     isInNetwork: a.isInNetwork ?? true,
     claimStatus: a.claimStatus,
-    notes: a.notesEncrypted ? encryption.decrypt(a.notesEncrypted, userSalt) : null,
+    notes: tryDecrypt(encryption, a.notesEncrypted, userSalt, 'notesEncrypted'),
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
   };
@@ -643,9 +681,15 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       where: { id: planId, userId },
     });
 
+    // RT (Low): cap the projection set this single analyze call will decrypt
+    // and interpolate into the Claude prompt. Without a bound, a user with an
+    // unbounded number of projections on one plan could force one request to
+    // decrypt and prompt-embed an arbitrarily large row set (cost/DoS + prompt
+    // bloat). Newest-first so the most relevant projections are kept.
     const projections = await tx.expenseProjection.findMany({
       where: { userId, planId },
       orderBy: { createdAt: 'desc' },
+      take: MAX_ANALYZE_PROJECTIONS,
     });
 
     return { plan, projections };
@@ -655,15 +699,20 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     throw new NotFoundError('Insurance plan not found');
   }
 
-    // Decrypt projections (sanitize serviceType for prompt safety)
-    const decryptedProjections = projections.map((p) => ({
+    // Decrypt projections (sanitize serviceType for prompt safety). M-7: route
+    // through tryDecrypt so one corrupt/key-mismatched row yields null/'' and
+    // logs at warn rather than throwing and failing the whole analysis.
+    const decryptedProjections = projections.map((p) => {
+      const notes = tryDecrypt(encryption, p.notesEncrypted, userSalt, 'notesEncrypted');
+      return {
       id: p.id,
-      serviceType: sanitizeForPrompt(encryption.decrypt(p.serviceTypeEncrypted, userSalt)),
-      estimatedCost: parseFloat(encryption.decrypt(p.estimatedCostEncrypted, userSalt)),
+      serviceType: sanitizeForPrompt(tryDecrypt(encryption, p.serviceTypeEncrypted, userSalt, 'serviceTypeEncrypted') ?? ''),
+      estimatedCost: parseFloat(tryDecrypt(encryption, p.estimatedCostEncrypted, userSalt, 'estimatedCostEncrypted') ?? ''),
       frequencyPerYear: p.frequencyPerYear,
       isInNetwork: p.isInNetwork,
-      notes: p.notesEncrypted ? sanitizeForPrompt(encryption.decrypt(p.notesEncrypted, userSalt)) : null,
-    }));
+      notes: notes !== null ? sanitizeForPrompt(notes) : null,
+      };
+    });
 
   // Build Claude prompt
   const rawPrompt = buildCostAnalysisPrompt(plan, decryptedProjections);
@@ -790,18 +839,20 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
     });
   });
 
-  // Decrypt PHI fields
-  const decrypted = analyses.map((a) => ({
-    id: a.id,
-    planId: a.planId,
-    // Exposed as createdAt to match the frontend CostAnalysisData contract.
-    createdAt: a.analysisDate,
-    claudeResponse: encryption.decrypt(a.claudeResponseEncrypted, userSalt),
-    totalProjectedOop: a.totalProjectedOopEncrypted
-      ? parseFloat(encryption.decrypt(a.totalProjectedOopEncrypted, userSalt))
-      : null,
-    deductibleMetMonth: a.deductibleMetMonth,
-  }));
+  // Decrypt PHI fields. tryDecrypt returns null (and logs at warn) on a
+  // corrupt/key-mismatched field so one bad row can't throw the whole list.
+  const decrypted = analyses.map((a) => {
+    const oop = tryDecrypt(encryption, a.totalProjectedOopEncrypted, userSalt, 'totalProjectedOopEncrypted');
+    return {
+      id: a.id,
+      planId: a.planId,
+      // Exposed as createdAt to match the frontend CostAnalysisData contract.
+      createdAt: a.analysisDate,
+      claudeResponse: tryDecrypt(encryption, a.claudeResponseEncrypted, userSalt, 'claudeResponseEncrypted'),
+      totalProjectedOop: oop === null ? null : parseFloat(oop),
+      deductibleMetMonth: a.deductibleMetMonth,
+    };
+  });
 
   // Audit log: READ access to cost analyses
   const auditService = getAuditLogService(prisma);

@@ -20,6 +20,32 @@ import { logger } from '../utils/logger.js';
 import type { Biomarker as PrismaBiomarker, DataSourceType, Prisma } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
+
+/**
+ * DECRYPT SAFETY (M-7): wrap an inline decrypt so a single corrupt or
+ * key-mismatched field returns null and logs at warn instead of throwing and
+ * rejecting the whole list/response. Mirrors the null-on-failure behavior of
+ * encryption.decryptFields, but usable in the per-row/per-field hot paths here
+ * where the decrypted value is immediately parsed/coerced. Returns null on any
+ * failure so the rest of the row (and the rest of the list) still renders.
+ */
+function tryDecrypt(
+  encryption: ReturnType<typeof getEncryptionService>,
+  value: string | null | undefined,
+  userSalt: string,
+  field: string
+): string | null {
+  if (!value) return null;
+  try {
+    return encryption.decrypt(value, userSalt);
+  } catch (err) {
+    logger.warn(`Failed to decrypt biomarker field: ${field}`, {
+      data: { error: err instanceof Error ? err.message : 'Unknown' },
+    });
+    return null;
+  }
+}
+
 const VALID_SOURCE_TYPES: readonly DataSourceType[] = [
   'MANUAL',
   'LAB_UPLOAD',
@@ -63,18 +89,19 @@ async function toResponse(
 ): Promise<BiomarkerResponse> {
   const encryptionService = getEncryptionService();
 
-  // Decrypt value and notes
-  const decryptedValue = encryptionService.decrypt(biomarker.valueEncrypted, userSalt);
+  // Decrypt value and notes. tryDecrypt returns null (and logs at warn) on a
+  // corrupt/key-mismatched field so one bad row can't throw the whole list.
+  const decryptedValue = tryDecrypt(encryptionService, biomarker.valueEncrypted, userSalt, 'valueEncrypted');
   const decryptedNotes = biomarker.notesEncrypted
-    ? encryptionService.decrypt(biomarker.notesEncrypted, userSalt)
+    ? tryDecrypt(encryptionService, biomarker.notesEncrypted, userSalt, 'notesEncrypted') ?? undefined
     : undefined;
 
-  // Decrypt history values
+  // Decrypt history values (failed decrypts surface as NaN rather than throwing)
   const history = biomarker.history
     ? await Promise.all(
         biomarker.history.map(async (h) => ({
           date: h.measurementDate.toISOString().split('T')[0],
-          value: parseFloat(encryptionService.decrypt(h.valueEncrypted, userSalt)),
+          value: parseFloat(tryDecrypt(encryptionService, h.valueEncrypted, userSalt, 'history.valueEncrypted') ?? ''),
         }))
       )
     : [];
@@ -85,7 +112,7 @@ async function toResponse(
     category: biomarker.category,
     name: biomarker.name,
     unit: biomarker.unit,
-    value: parseFloat(decryptedValue),
+    value: parseFloat(decryptedValue ?? ''),
     notes: decryptedNotes,
     normalRange: {
       min: toNumber(biomarker.normalRangeMin),
@@ -799,12 +826,16 @@ export async function getHistory(
   const normalRangeMin = toNumber(biomarker.normalRangeMin);
   const normalRangeMax = toNumber(biomarker.normalRangeMax);
 
-  // Decrypt current value
-  const currentValue = parseFloat(encryptionService.decrypt(biomarker.valueEncrypted, userSalt));
+  // Decrypt current value (null-on-failure so a single bad row can't 500 the request)
+  const currentValue = parseFloat(
+    tryDecrypt(encryptionService, biomarker.valueEncrypted, userSalt, 'valueEncrypted') ?? ''
+  );
 
   // Build history entries from historical records
   const historyEntries: BiomarkerHistoryEntry[] = biomarker.history.map((h) => {
-    const value = parseFloat(encryptionService.decrypt(h.valueEncrypted, userSalt));
+    const value = parseFloat(
+      tryDecrypt(encryptionService, h.valueEncrypted, userSalt, 'history.valueEncrypted') ?? ''
+    );
     return {
       date: h.measurementDate.toISOString().split('T')[0],
       value,

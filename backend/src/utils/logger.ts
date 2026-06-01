@@ -17,17 +17,25 @@ interface LogOptions {
   data?: Record<string, unknown>;
 }
 
-// Fields that should never be logged (PHI and sensitive data)
+// Fields that should never be logged (PHI and sensitive data).
+// NOTE: lookups are case-insensitive (key.toLowerCase()), so every entry here
+// MUST be lowercase or it will never match.
 const SENSITIVE_FIELDS = new Set([
-  'password', 'token', 'accessToken', 'refreshToken', 'secret',
-  'ssn', 'socialSecurityNumber', 'memberId', 'groupNumber',
-  'memberIdEncrypted', 'groupIdEncrypted', 'valueEncrypted',
-  'descriptionEncrypted', 'noteEncrypted', 'genotype',
-  'email', 'phoneNumber', 'address', 'dateOfBirth',
+  'password', 'token', 'accesstoken', 'refreshtoken', 'secret',
+  // snake_case FHIR/OAuth tokens and HTTP auth headers
+  'access_token', 'refresh_token', 'authorization', 'cookie',
+  'ssn', 'socialsecuritynumber', 'memberid', 'groupnumber',
+  'memberidencrypted', 'groupidencrypted', 'valueencrypted',
+  'descriptionencrypted', 'noteencrypted', 'genotype',
+  'email', 'phonenumber', 'address', 'dateofbirth',
   // AI response fields that may contain PHI
-  'responseText', 'jsonText', 'claudeResponse', 'guidance',
-  'extractedData', 'pdfText', 'pdfContent', 'biomarker',
+  'responsetext', 'jsontext', 'clauderesponseencrypted', 'guidance',
+  'extracteddata', 'pdftext', 'pdfcontent', 'biomarker',
 ]);
+
+// Cap recursion so a pathologically deep logged object can't overflow the
+// stack; anything past this depth is collapsed to a marker.
+const MAX_SANITIZE_DEPTH = 8;
 
 /**
  * Recursively sanitize an arbitrary value, redacting any object field whose
@@ -35,21 +43,33 @@ const SENSITIVE_FIELDS = new Set([
  * objects nested inside arrays don't bypass redaction — prior to F-21 this
  * path short-circuited and a `biomarkers: [{ valueEncrypted: "..." }]`
  * shape would have leaked straight through.
+ *
+ * A max-depth guard plus a per-walk `seen` set protect against deep or
+ * self-referential objects that would otherwise overflow the stack.
  */
-function sanitizeValue(value: unknown): unknown {
+function sanitizeValue(value: unknown, depth: number, seen: WeakSet<object>): unknown {
   if (value === null || value === undefined) return value;
-  if (Array.isArray(value)) return value.map(sanitizeValue);
   if (typeof value !== 'object') return value;
-  return sanitizeData(value as Record<string, unknown>);
+  if (depth >= MAX_SANITIZE_DEPTH) return '[MAX_DEPTH]';
+  if (seen.has(value as object)) return '[CIRCULAR]';
+  seen.add(value as object);
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValue(item, depth + 1, seen));
+  }
+  return sanitizeData(value as Record<string, unknown>, depth + 1, seen);
 }
 
-function sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+function sanitizeData(
+  data: Record<string, unknown>,
+  depth = 0,
+  seen: WeakSet<object> = new WeakSet(),
+): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
       sanitized[key] = '[REDACTED]';
     } else {
-      sanitized[key] = sanitizeValue(value);
+      sanitized[key] = sanitizeValue(value, depth, seen);
     }
   }
   return sanitized;

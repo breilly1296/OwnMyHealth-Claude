@@ -16,6 +16,7 @@ import { storageService } from '../services/storageService.js';
 import { toNumber } from '../utils/numberConversion.js';
 import { processBatch } from '../utils/batchProcessor.js';
 import { UnauthorizedError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
 import { verifyPassword } from '../services/authService.js';
 import {
   getDecryptedHealthProfile,
@@ -316,10 +317,12 @@ interface ExportData {
 function tryDecryptNumber(
   encrypted: string | null | undefined,
   salt: string,
-  decrypt: (cipher: string, salt: string) => string
+  decrypt: (cipher: string, salt: string) => string | null
 ): number | null {
   if (!encrypted) return null;
-  const parsed = parseFloat(decrypt(encrypted, salt));
+  const plain = decrypt(encrypted, salt);
+  if (plain === null) return null;
+  const parsed = parseFloat(plain);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -436,7 +439,26 @@ export async function exportUserData(
     };
   });
 
-  const decrypt = (cipher: string, salt: string) => encryptionService.decrypt(cipher, salt);
+  // M-7 / DECRYPT SAFETY: one corrupt or key-mismatched PHI row must not 500
+  // the entire §164.524 right-of-access export. Wrap each inline decrypt so a
+  // single bad field yields null (logged at warn) instead of throwing — the
+  // user still gets every other row of their record. The encrypted ciphertext
+  // is never logged.
+  const tryDecrypt = (cipher: string, salt: string): string | null => {
+    try {
+      return encryptionService.decrypt(cipher, salt);
+    } catch (err) {
+      logger.warn('Failed to decrypt PHI field during data export; emitting null', {
+        prefix: 'settings.exportUserData',
+        data: { userId, error: err instanceof Error ? err.message : 'unknown' },
+      });
+      return null;
+    }
+  };
+  // Number-typed exports route through tryDecryptNumber, which already maps a
+  // null/non-finite decrypt to null. Pass the safe wrapper so a bad numeric
+  // field degrades to null instead of NaN-or-throw.
+  const decrypt = tryDecrypt;
 
   // Self-reported health profile (conditions, medications, family history,
   // etc.) is PHI the user explicitly entered and feeds the AI — it must be in
@@ -448,18 +470,19 @@ export async function exportUserData(
     email: user.email,
     role: user.role,
     createdAt: user.createdAt.toISOString(),
-    firstName: user.firstNameEncrypted ? decrypt(user.firstNameEncrypted, userSalt) : undefined,
-    lastName: user.lastNameEncrypted ? decrypt(user.lastNameEncrypted, userSalt) : undefined,
-    dateOfBirth: user.dateOfBirthEncrypted ? decrypt(user.dateOfBirthEncrypted, userSalt) : undefined,
-    phone: user.phoneEncrypted ? decrypt(user.phoneEncrypted, userSalt) : undefined,
-    address: user.addressEncrypted ? decrypt(user.addressEncrypted, userSalt) : undefined,
+    firstName: user.firstNameEncrypted ? decrypt(user.firstNameEncrypted, userSalt) ?? undefined : undefined,
+    lastName: user.lastNameEncrypted ? decrypt(user.lastNameEncrypted, userSalt) ?? undefined : undefined,
+    dateOfBirth: user.dateOfBirthEncrypted ? decrypt(user.dateOfBirthEncrypted, userSalt) ?? undefined : undefined,
+    phone: user.phoneEncrypted ? decrypt(user.phoneEncrypted, userSalt) ?? undefined : undefined,
+    address: user.addressEncrypted ? decrypt(user.addressEncrypted, userSalt) ?? undefined : undefined,
   };
 
   // Decrypt biomarkers (and each biomarker's history) with controlled concurrency
   const decryptedBiomarkers = await processBatch(
     biomarkers,
     async (biomarker) => {
-      const value = parseFloat(decrypt(biomarker.valueEncrypted, userSalt));
+      const decryptedValue = decrypt(biomarker.valueEncrypted, userSalt);
+      const value = decryptedValue !== null ? parseFloat(decryptedValue) : NaN;
 
       let source = 'Manual Entry';
       if (biomarker.sourceType === 'LAB_UPLOAD') {
@@ -472,10 +495,13 @@ export async function exportUserData(
         source = 'API Import';
       }
 
-      const history: ExportBiomarkerHistoryEntry[] = biomarker.history.map((h) => ({
-        value: parseFloat(decrypt(h.valueEncrypted, userSalt)),
-        date: h.measurementDate.toISOString().split('T')[0],
-      }));
+      const history: ExportBiomarkerHistoryEntry[] = biomarker.history.map((h) => {
+        const decryptedHistoryValue = decrypt(h.valueEncrypted, userSalt);
+        return {
+          value: decryptedHistoryValue !== null ? parseFloat(decryptedHistoryValue) : NaN,
+          date: h.measurementDate.toISOString().split('T')[0],
+        };
+      });
 
       return {
         name: biomarker.name,
@@ -491,7 +517,7 @@ export async function exportUserData(
           source: biomarker.normalRangeSource ?? undefined,
         },
         source,
-        notes: biomarker.notesEncrypted ? decrypt(biomarker.notesEncrypted, userSalt) : undefined,
+        notes: biomarker.notesEncrypted ? decrypt(biomarker.notesEncrypted, userSalt) ?? undefined : undefined,
         history,
       };
     },
@@ -511,8 +537,8 @@ export async function exportUserData(
     deductibleFamily: toNumber(plan.deductibleFamily),
     oopMaxIndividual: toNumber(plan.oopMaxIndividual),
     oopMaxFamily: toNumber(plan.oopMaxFamily),
-    memberId: plan.memberIdEncrypted ? decrypt(plan.memberIdEncrypted, userSalt) : undefined,
-    groupId: plan.groupIdEncrypted ? decrypt(plan.groupIdEncrypted, userSalt) : undefined,
+    memberId: plan.memberIdEncrypted ? decrypt(plan.memberIdEncrypted, userSalt) ?? undefined : undefined,
+    groupId: plan.groupIdEncrypted ? decrypt(plan.groupIdEncrypted, userSalt) ?? undefined : undefined,
     benefits: plan.benefits.map((benefit) => ({
       serviceName: benefit.serviceName,
       serviceCategory: benefit.serviceCategory,
@@ -535,7 +561,7 @@ export async function exportUserData(
     healthGoals,
     async (goal) => ({
       name: goal.name,
-      description: goal.descriptionEncrypted ? decrypt(goal.descriptionEncrypted, userSalt) : undefined,
+      description: goal.descriptionEncrypted ? decrypt(goal.descriptionEncrypted, userSalt) ?? undefined : undefined,
       category: goal.category,
       targetValue: toNumber(goal.targetValue),
       currentValue: goal.currentValue !== null && goal.currentValue !== undefined ? toNumber(goal.currentValue) : undefined,
@@ -551,7 +577,7 @@ export async function exportUserData(
       progressHistory: goal.progressHistory.map((entry) => ({
         value: toNumber(entry.value),
         progress: toNumber(entry.progress),
-        note: entry.noteEncrypted ? decrypt(entry.noteEncrypted, userSalt) : undefined,
+        note: entry.noteEncrypted ? decrypt(entry.noteEncrypted, userSalt) ?? undefined : undefined,
         recordedAt: entry.recordedAt.toISOString(),
       })),
     }),
@@ -563,7 +589,7 @@ export async function exportUserData(
     async (need) => ({
       name: need.name,
       needType: need.needType,
-      description: decrypt(need.descriptionEncrypted, userSalt),
+      description: decrypt(need.descriptionEncrypted, userSalt) ?? '',
       urgency: need.urgency,
       status: need.status,
       relatedBiomarkerIds: need.relatedBiomarkerIds,
@@ -576,11 +602,11 @@ export async function exportUserData(
   const exportExpenseProjections: ExportExpenseProjection[] = await processBatch(
     expenseProjections,
     async (projection) => ({
-      serviceType: decrypt(projection.serviceTypeEncrypted, userSalt),
+      serviceType: decrypt(projection.serviceTypeEncrypted, userSalt) ?? '',
       estimatedCost: tryDecryptNumber(projection.estimatedCostEncrypted, userSalt, decrypt),
       frequencyPerYear: projection.frequencyPerYear,
       isInNetwork: projection.isInNetwork,
-      notes: projection.notesEncrypted ? decrypt(projection.notesEncrypted, userSalt) : undefined,
+      notes: projection.notesEncrypted ? decrypt(projection.notesEncrypted, userSalt) ?? undefined : undefined,
       planId: projection.planId,
     }),
     DECRYPT_BATCH_SIZE
@@ -589,8 +615,8 @@ export async function exportUserData(
   const exportExpenseActuals: ExportExpenseActual[] = await processBatch(
     expenseActuals,
     async (actual) => ({
-      serviceType: decrypt(actual.serviceTypeEncrypted, userSalt),
-      providerName: actual.providerNameEncrypted ? decrypt(actual.providerNameEncrypted, userSalt) : undefined,
+      serviceType: decrypt(actual.serviceTypeEncrypted, userSalt) ?? '',
+      providerName: actual.providerNameEncrypted ? decrypt(actual.providerNameEncrypted, userSalt) ?? undefined : undefined,
       billedAmount: tryDecryptNumber(actual.billedAmountEncrypted, userSalt, decrypt),
       insurancePaid: tryDecryptNumber(actual.insurancePaidEncrypted, userSalt, decrypt),
       patientPaid: tryDecryptNumber(actual.patientPaidEncrypted, userSalt, decrypt),
@@ -599,7 +625,7 @@ export async function exportUserData(
       dateOfService: actual.dateOfService?.toISOString().split('T')[0],
       isInNetwork: actual.isInNetwork,
       claimStatus: actual.claimStatus,
-      notes: actual.notesEncrypted ? decrypt(actual.notesEncrypted, userSalt) : undefined,
+      notes: actual.notesEncrypted ? decrypt(actual.notesEncrypted, userSalt) ?? undefined : undefined,
     }),
     DECRYPT_BATCH_SIZE
   );
@@ -610,7 +636,7 @@ export async function exportUserData(
       // Column renamed in migration 20260424; export shape keeps the
        // legacy `claudeResponse` name so the JSON export contract for users
        // who already downloaded their data stays stable.
-      claudeResponse: decrypt(analysis.claudeResponseEncrypted, userSalt),
+      claudeResponse: decrypt(analysis.claudeResponseEncrypted, userSalt) ?? '',
       totalProjectedOop: tryDecryptNumber(analysis.totalProjectedOopEncrypted, userSalt, decrypt),
       analysisDate: analysis.analysisDate.toISOString(),
     }),
@@ -641,7 +667,7 @@ export async function exportUserData(
       canEditData: rel.canEditData,
       consentGrantedAt: rel.consentGrantedAt?.toISOString(),
       consentExpiresAt: rel.consentExpiresAt?.toISOString(),
-      notes: rel.notesEncrypted ? decrypt(rel.notesEncrypted, userSalt) : undefined,
+      notes: rel.notesEncrypted ? decrypt(rel.notesEncrypted, userSalt) ?? undefined : undefined,
     }),
     DECRYPT_BATCH_SIZE
   );
@@ -794,11 +820,34 @@ export async function deleteAllData(
         .join('; '),
     });
 
+    // Record the BLOCKED data wipe as an explicit failure on the UserData
+    // resource so the success-counts logDelete (Phase 4) can't be confused
+    // with this aborted attempt (mirrors the deleteAccount M-13 fix).
+    await auditService.logDelete(
+      'UserData',
+      userId,
+      { reason: 'user_requested' },
+      { req, userId },
+      { action: 'DELETE_DATA_BLOCKED' },
+      {
+        success: false,
+        errorMessage: `GCS deletion failed for ${gcsFailures.length} of ${filesToDelete.length} files; no data deleted.`,
+      }
+    );
+
     throw new Error(
       `Failed to delete ${gcsFailures.length} of ${filesToDelete.length} files from storage. ` +
       `No data was deleted. Please try again.`
     );
   }
+
+  // Revoke OAuth tokens at the upstream lab provider BEFORE the LabConnection
+  // rows are wiped below — otherwise the access/refresh tokens stay valid at
+  // the provider with no local record left to revoke them. Best-effort: each
+  // disconnect swallows its own errors. Mirrors deleteAccount. Done only after
+  // the GCS step succeeds so an aborted run doesn't sever provider access for
+  // data that was never deleted.
+  await revokeAllUserConnections(userId);
 
   // Phase 3 — delete DB rows in FK dependency order within a single RLS
   // transaction. deleteMany returns `.count`, so we avoid a separate
@@ -813,11 +862,10 @@ export async function deleteAllData(
   //
   // LabConnection is a user-owned table that cascades from User on
   // account-delete (deleteAccount path), but deleteAllData preserves
-  // the User row, so it needs an explicit wipe here. LabConnection's
-  // OAuth tokens stay valid at the upstream provider until the next
-  // refresh attempt — best-effort revocation lives in deleteAccount;
-  // deleteAllData just severs the local record. Document if a future
-  // requirement is "revoke at provider on data-wipe too".
+  // the User row, so it needs an explicit wipe here. Provider-side OAuth
+  // tokens are revoked just above via revokeAllUserConnections (best-effort,
+  // mirrors deleteAccount) before these local rows are severed, so a
+  // data-wipe no longer leaves valid tokens dangling at the upstream provider.
   const counts = await withRLSTransaction(userId, async (tx) => {
     const costAnalysisCount = (await tx.costAnalysis.deleteMany({ where: { userId } })).count;
     const expenseActualCount = (await tx.expenseActual.deleteMany({ where: { userId } })).count;
@@ -916,12 +964,6 @@ export async function deleteAccount(
     throw new UnauthorizedError('Invalid password');
   }
 
-  // Audit log: DELETE account (log before deletion)
-  await auditService.logDelete('User', userId, {
-    email: user.email,
-    reason: 'user_requested',
-  }, { req, userId });
-
   // Revoke OAuth tokens on any active lab connections BEFORE the
   // cascade delete drops the LabConnection rows — otherwise the tokens
   // stay valid at the provider even though we've lost the ability to
@@ -955,6 +997,21 @@ export async function deleteAccount(
         .join('; '),
     });
 
+    // M-13: record the BLOCKED account deletion as an explicit failure on the
+    // User resource so the audit trail can't be mistaken for a completed
+    // delete. The success-row logDelete now runs only AFTER tx.user.delete.
+    await auditService.logDelete(
+      'User',
+      userId,
+      { email: user.email, reason: 'user_requested' },
+      { req, userId },
+      { action: 'DELETE_ACCOUNT_BLOCKED' },
+      {
+        success: false,
+        errorMessage: `GCS deletion failed for ${gcsFailures.length} of ${filesToDelete.length} files; account preserved.`,
+      }
+    );
+
     throw new Error(
       `Failed to delete ${gcsFailures.length} of ${filesToDelete.length} files from storage. ` +
       `Your account was not deleted. Please try again.`
@@ -967,6 +1024,14 @@ export async function deleteAccount(
       where: { id: userId },
     });
   });
+
+  // Audit log: DELETE account — logged AFTER the cascade delete succeeds so a
+  // GCS-failure abort (which preserves the account) can never record a
+  // User-deleted success row (M-13). Mirrors deleteAllData's Phase 4 ordering.
+  await auditService.logDelete('User', userId, {
+    email: user.email,
+    reason: 'user_requested',
+  }, { req, userId });
 
   const response: ApiResponse = {
     success: true,

@@ -54,7 +54,7 @@ describe('encryption.ts', () => {
     it('should return invalid if key is too short', () => {
       const result = validateEncryptionKey(SHORT_PHI_ENCRYPTION_KEY);
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('must be at least 64 hex characters');
+      expect(result.error).toContain('must be exactly 64 hex characters');
     });
 
     it('should return invalid if key contains non-hex characters', () => {

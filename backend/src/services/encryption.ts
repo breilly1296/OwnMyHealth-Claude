@@ -85,8 +85,11 @@ const KEY_LENGTH = 32;
 const PBKDF2_ITERATIONS = 600000;
 const PBKDF2_ITERATIONS_LEGACY = 100000;
 
-/** Minimum master key length (64 hex chars = 256 bits) */
-const MIN_KEY_LENGTH = 64;
+/** Exact master key length (64 hex chars = 256 bits) */
+const KEY_HEX_LENGTH = 64;
+
+/** Hex encoding label used for master-key decoding */
+const HEX_ENCODING = 'hex';
 
 // Known insecure/placeholder keys that should never be used in production
 const INSECURE_KEYS = [
@@ -108,11 +111,14 @@ export function validateEncryptionKey(key: string | undefined): { valid: boolean
     };
   }
 
-  // Check minimum length (64 hex chars = 256 bits)
-  if (key.length < MIN_KEY_LENGTH) {
+  // Require an EXACT length (64 hex chars = 256 bits). AES-256-GCM needs a
+  // 32-byte key; a longer hex string would be silently truncated by
+  // Buffer.from(..., 'hex') below, so a floor check could let a misconfigured
+  // (over-long) key through and derive from only its first 32 bytes.
+  if (key.length !== KEY_HEX_LENGTH) {
     return {
       valid: false,
-      error: `PHI_ENCRYPTION_KEY must be at least ${MIN_KEY_LENGTH} hex characters (256 bits). Current length: ${key.length}`,
+      error: `PHI_ENCRYPTION_KEY must be exactly ${KEY_HEX_LENGTH} hex characters (256 bits). Current length: ${key.length}`,
     };
   }
 
@@ -122,6 +128,16 @@ export function validateEncryptionKey(key: string | undefined): { valid: boolean
     return {
       valid: false,
       error: 'PHI_ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F)',
+    };
+  }
+
+  // Confirm the hex string decodes to exactly 32 bytes (AES-256 key size).
+  // With the exact length + hex-format checks above this is belt-and-suspenders,
+  // but it asserts the precise invariant the cipher relies on.
+  if (Buffer.from(key, HEX_ENCODING).length !== KEY_LENGTH) {
+    return {
+      valid: false,
+      error: `PHI_ENCRYPTION_KEY must decode to exactly ${KEY_LENGTH} bytes (256 bits)`,
     };
   }
 
@@ -180,7 +196,18 @@ export class EncryptionService {
         `╚════════════════════════════════════════════════════════════════════╝\n`
       );
     } else {
-      this.masterKey = Buffer.from(masterKeyHex!, 'hex');
+      this.masterKey = Buffer.from(masterKeyHex!, HEX_ENCODING);
+    }
+
+    // Assert the AES-256 key invariant once, at startup, so a misconfigured
+    // key fails loudly here rather than at the first PHI encrypt/decrypt.
+    // validateEncryptionKey already enforces this, but the master key is the
+    // root of all PHI confidentiality — re-check the decoded buffer length so
+    // the service can never construct with a key the cipher would reject.
+    if (this.masterKey.length !== KEY_LENGTH) {
+      throw new Error(
+        `FATAL: PHI_ENCRYPTION_KEY decoded to ${this.masterKey.length} bytes; AES-256-GCM requires exactly ${KEY_LENGTH} bytes (256 bits).`
+      );
     }
   }
 
