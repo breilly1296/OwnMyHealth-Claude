@@ -7,7 +7,7 @@
  * with their new address.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Heart, CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import { authApi } from '../../services/api';
 
@@ -25,16 +25,38 @@ export default function ConfirmEmailChangePage({
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 
+  // Keep the latest onSuccess without making it an effect dependency. The
+  // confirm call consumes a ONE-TIME token, so the effect must fire exactly
+  // once — but onSuccess is a fresh inline closure from App.tsx on every render.
+  const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
-    const confirm = async () => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  // Run-once guard. Without it the call fires twice — once from React
+  // StrictMode's dev double-invoke, and (even in production) once more when
+  // AuthContext settles its initial session check and re-renders this page's
+  // parent. The second call hits the now-consumed token and 400s, flipping a
+  // SUCCESSFUL change to a false "failed" screen.
+  const confirmedRef = useRef(false);
+
+  useEffect(() => {
+    if (confirmedRef.current) return;
+    confirmedRef.current = true;
+
+    if (!token) {
+      setStatus('error');
+      setMessage('No confirmation token provided.');
+      return;
+    }
+
+    (async () => {
       try {
         const result = await authApi.confirmEmailChange(token);
         setStatus('success');
         setMessage(result.message || 'Your email address has been updated.');
         // Sessions were revoked server-side — send them to login shortly.
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
+        setTimeout(() => onSuccessRef.current(), 2000);
       } catch (error) {
         setStatus('error');
         setMessage(
@@ -42,15 +64,8 @@ export default function ConfirmEmailChangePage({
             'Failed to change email. The link may be expired or already used.'
         );
       }
-    };
-
-    if (token) {
-      confirm();
-    } else {
-      setStatus('error');
-      setMessage('No confirmation token provided.');
-    }
-  }, [token, onSuccess]);
+    })();
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
