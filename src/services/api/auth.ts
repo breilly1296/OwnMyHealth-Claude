@@ -56,6 +56,20 @@ export const authApi = {
     }
   },
 
+  /**
+   * Revoke every session for the current user (all devices/browsers), not just
+   * this one. Backed by POST /auth/logout-all, which deletes all refresh-token
+   * sessions and blacklists outstanding access tokens. The local token is
+   * cleared regardless of the request outcome.
+   */
+  async logoutAll(): Promise<void> {
+    try {
+      await apiFetch('/auth/logout-all', { method: 'POST' });
+    } finally {
+      clearAuthToken();
+    }
+  },
+
   async getCurrentUser(): Promise<{ id: string; email: string; role: string }> {
     const response = await apiFetch<{ id: string; email: string; role: string }>('/auth/me');
     return response.data;

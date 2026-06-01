@@ -17,6 +17,7 @@ import {
   Shield,
   Heart,
   Lock,
+  LogOut,
   Mail,
   Download,
   Trash2,
@@ -31,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { settingsApi } from '../../services/api';
+import { settingsApi, authApi } from '../../services/api';
 import { logger } from '../../utils/logger';
 import { extractErrorMessage } from '../../utils/errorHelpers';
 
@@ -81,6 +82,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
 
   // Password modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
 
   // Delete confirmation state
   const [deleteType, setDeleteType] = useState<'data' | 'account' | null>(null);
@@ -135,6 +137,18 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
       showToast(extractErrorMessage(err, 'Failed to update display name'), 'error');
     } finally {
       setIsSavingName(false);
+    }
+  };
+
+  const handleLogoutAll = async () => {
+    setIsLoggingOutAll(true);
+    try {
+      await authApi.logoutAll();
+      // Full reload drops in-memory auth state and bounces to the login screen.
+      window.location.href = '/';
+    } catch (err) {
+      showToast(extractErrorMessage(err, 'Failed to sign out of all devices'), 'error');
+      setIsLoggingOutAll(false);
     }
   };
 
@@ -316,6 +330,28 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
                 <Lock className="w-4 h-4 mr-2" />
                 Change Password
               </button>
+            </div>
+
+            {/* Active sessions — sign out everywhere */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Active Sessions
+              </label>
+              <button
+                onClick={handleLogoutAll}
+                disabled={isLoggingOutAll}
+                className="flex items-center px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+              >
+                {isLoggingOutAll ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4 mr-2" />
+                )}
+                Sign out of all devices
+              </button>
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                Ends every active session on all your devices and signs you out here.
+              </p>
             </div>
           </div>
         </section>
