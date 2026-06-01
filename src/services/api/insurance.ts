@@ -181,6 +181,54 @@ export interface CreateInsurancePlanData {
   isPrimary?: boolean;
 }
 
+/** Coverage detail for one network tier, as returned by the backend benefit responses. */
+export interface BenefitCoverageDetail {
+  covered: boolean;
+  copay?: number;
+  coinsurance?: number;
+  deductibleApplies: boolean;
+}
+
+/** Per-service benefit row (nested coverage shape from the insurance controller). */
+export interface BenefitResponseData {
+  id: string;
+  serviceName: string;
+  serviceCategory: string;
+  inNetworkCoverage: BenefitCoverageDetail;
+  outNetworkCoverage: BenefitCoverageDetail;
+  limitations?: string;
+  preAuthRequired: boolean;
+}
+
+/** One hit from GET /insurance/benefits/search. */
+export interface BenefitSearchResult {
+  planId: string;
+  planName: string;
+  benefit: BenefitResponseData;
+}
+
+/** Response from POST /insurance/compare — real extracted-benefit coverage matrix. */
+export interface PlanComparisonResult {
+  plans: {
+    id: string;
+    name: string;
+    type: string;
+    premium?: number;
+    deductibleIndividual: number;
+    oopMaxIndividual: number;
+  }[];
+  benefitComparison: {
+    serviceName: string;
+    coverage: {
+      planId: string;
+      planName: string;
+      covered: boolean;
+      copay?: number;
+      coinsurance?: number;
+    }[];
+  }[];
+}
+
 export const insuranceApi = {
   async getPlans(): Promise<InsurancePlanData[]> {
     const response = await apiFetch<InsurancePlanData[]>('/insurance/plans');
@@ -214,6 +262,33 @@ export const insuranceApi = {
 
   async getBenefits(planId: string): Promise<InsuranceBenefitData[]> {
     const response = await apiFetch<InsuranceBenefitData[]>(`/insurance/plans/${planId}/benefits`);
+    return response.data;
+  },
+
+  /**
+   * Compare 2–5 of the user's own plans by their extracted benefit rows.
+   * Backed by POST /insurance/compare (RLS-scoped, audit-logged). Returns a
+   * real covered-services matrix the client-side knowledge base can't build,
+   * since the per-service InsuranceBenefit rows only live server-side.
+   */
+  async comparePlans(planIds: string[]): Promise<PlanComparisonResult> {
+    const response = await apiFetch<PlanComparisonResult>('/insurance/compare', {
+      method: 'POST',
+      body: JSON.stringify({ planIds }),
+    });
+    return response.data;
+  },
+
+  /**
+   * Free-text search across the user's extracted benefits (serviceName match).
+   * Backed by GET /insurance/benefits/search.
+   */
+  async searchBenefits(query: string, planId?: string): Promise<BenefitSearchResult[]> {
+    const params = new URLSearchParams({ query });
+    if (planId) params.set('planId', planId);
+    const response = await apiFetch<BenefitSearchResult[]>(
+      `/insurance/benefits/search?${params.toString()}`
+    );
     return response.data;
   },
 

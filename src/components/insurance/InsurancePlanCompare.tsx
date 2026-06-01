@@ -28,8 +28,12 @@ import {
   type PlanSearchCriteria,
   type PlanSearchResult,
   type PlanComparison,
-  type ServiceCoverageComparison,
 } from '../../utils/insurance/insuranceKnowledgeBase';
+import {
+  insuranceApi,
+  type BenefitSearchResult,
+  type PlanComparisonResult,
+} from '../../services/api/insurance';
 
 interface InsuranceKnowledgePanelProps {
   plans: InsurancePlan[];
@@ -125,8 +129,13 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [comparison, setComparison] = useState<PlanComparison | null>(null);
   const [activeTab, setActiveTab] = useState<'search' | 'compare' | 'analyze' | 'coverage'>('search');
-  const [selectedService, setSelectedService] = useState<string>('');
-  const [serviceCoverage, setServiceCoverage] = useState<ServiceCoverageComparison[]>([]);
+  // Real backend-powered benefit data — replaces the old hardcoded-service-code KB demo.
+  const [benefitComparison, setBenefitComparison] = useState<PlanComparisonResult | null>(null);
+  const [benefitQuery, setBenefitQuery] = useState('');
+  const [benefitResults, setBenefitResults] = useState<BenefitSearchResult[]>([]);
+  const [benefitSearched, setBenefitSearched] = useState(false);
+  const [benefitLoading, setBenefitLoading] = useState(false);
+  const [benefitError, setBenefitError] = useState<string | null>(null);
 
   // Initialize knowledge base with plans
   useEffect(() => {
@@ -143,19 +152,35 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
   };
 
   // Handle plan comparison
-  const handleCompare = () => {
-    if (selectedPlans.length >= 2) {
-      const comparisonResult = insuranceKB.comparePlans(selectedPlans);
-      setComparison(comparisonResult);
-      setActiveTab('compare');
+  const handleCompare = async () => {
+    if (selectedPlans.length < 2) return;
+    const comparisonResult = insuranceKB.comparePlans(selectedPlans);
+    setComparison(comparisonResult);
+    setActiveTab('compare');
+    // Augment the client-side scored comparison with the real per-service
+    // benefit matrix from the user's extracted SBC data (server-only).
+    try {
+      const matrix = await insuranceApi.comparePlans(selectedPlans);
+      setBenefitComparison(matrix);
+    } catch {
+      setBenefitComparison(null);
     }
   };
 
-  // Handle service coverage analysis
-  const handleServiceCoverage = () => {
-    if (selectedService) {
-      const coverage = insuranceKB.getServiceCoverage(selectedService);
-      setServiceCoverage(coverage);
+  // Real benefit search across the user's extracted benefits (server-side).
+  const handleBenefitSearch = async () => {
+    const q = benefitQuery.trim();
+    if (!q) return;
+    setBenefitLoading(true);
+    setBenefitError(null);
+    try {
+      const results = await insuranceApi.searchBenefits(q);
+      setBenefitResults(results);
+      setBenefitSearched(true);
+    } catch {
+      setBenefitError('Benefit search failed. Please try again.');
+    } finally {
+      setBenefitLoading(false);
     }
   };
 
@@ -174,11 +199,11 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
     }).format(amount);
   };
 
-  // Get coverage color
-  const getCoverageColor = (coveragePercentage: number) => {
-    if (coveragePercentage >= 90) return 'text-green-600 bg-green-100';
-    if (coveragePercentage >= 70) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+  /** Render an in-network coverage cell as "$30", "20%", or "—". */
+  const formatBenefitCost = (copay?: number, coinsurance?: number): string => {
+    if (copay !== undefined && copay !== null) return `$${copay} copay`;
+    if (coinsurance !== undefined && coinsurance !== null) return `${coinsurance}% coinsurance`;
+    return '—';
   };
 
   if (!isOpen) return null;
@@ -429,6 +454,60 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                 </div>
               </div>
 
+              {/* Real covered-services matrix from extracted SBC benefits (backend) */}
+              {benefitComparison && benefitComparison.benefitComparison.length > 0 && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-3">
+                    Covered services (from your SBC data)
+                  </h4>
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Service
+                            </th>
+                            {benefitComparison.plans.map((p) => (
+                              <th key={p.id} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {p.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {benefitComparison.benefitComparison.map((row) => (
+                            <tr key={row.serviceName}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {row.serviceName}
+                              </td>
+                              {benefitComparison.plans.map((p) => {
+                                const cell = row.coverage.find((c) => c.planId === p.id);
+                                return (
+                                  <td key={p.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    {cell?.covered ? (
+                                      <span className="inline-flex items-center">
+                                        <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" />
+                                        {formatBenefitCost(cell.copay, cell.coinsurance)}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center text-gray-400">
+                                        <XCircle className="w-4 h-4 text-gray-300 mr-1.5" />
+                                        Not covered
+                                      </span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Recommendations */}
               <div>
                 <h4 className="text-md font-medium text-gray-900 mb-3">Recommendations</h4>
@@ -546,115 +625,97 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
             <div className="space-y-6">
               <h3 className="text-lg font-medium text-gray-900 flex items-center">
                 <Shield className="w-5 h-5 mr-2 text-indigo-600" />
-                Service Coverage Analysis
+                Benefit &amp; Coverage Search
               </h3>
 
-              {/* Service Selection */}
+              {/* Search box — queries the user's real extracted benefits */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Service to Analyze
-                    </label>
-                    <select
-                      value={selectedService}
-                      onChange={(e) => setSelectedService(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md shadow-sm p-2"
-                    >
-                      <option value="">Choose a service</option>
-                      <option value="PC001">Primary Care Visit</option>
-                      <option value="SP001">Specialist Visit</option>
-                      <option value="EM001">Emergency Room</option>
-                      <option value="DI002">MRI</option>
-                      <option value="DI003">CT Scan</option>
-                      <option value="LB001">Lab Tests</option>
-                      <option value="RX001">Generic Drugs</option>
-                      <option value="RX002">Brand Name Drugs</option>
-                    </select>
-                  </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search your plans&apos; covered services
+                </label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="text"
+                    value={benefitQuery}
+                    onChange={(e) => setBenefitQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleBenefitSearch(); }}
+                    placeholder="e.g. MRI, physical therapy, specialist"
+                    className="flex-1 border border-gray-300 rounded-md shadow-sm p-2"
+                  />
                   <button
-                    onClick={handleServiceCoverage}
-                    disabled={!selectedService}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleBenefitSearch}
+                    disabled={benefitLoading || !benefitQuery.trim()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
-                    Analyze Coverage
+                    <Search className="w-4 h-4 mr-2" />
+                    {benefitLoading ? 'Searching…' : 'Search'}
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Searches the benefits extracted from your uploaded Summary of Benefits (SBC) documents.
+                </p>
               </div>
 
-              {/* Coverage Results */}
-              {serviceCoverage.length > 0 && (
+              {benefitError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
+                  {benefitError}
+                </div>
+              )}
+
+              {benefitSearched && !benefitLoading && !benefitError && benefitResults.length === 0 && (
+                <p className="text-sm text-gray-500">No matching benefits found across your plans.</p>
+              )}
+
+              {benefitResults.length > 0 && (
                 <div>
                   <h4 className="text-md font-medium text-gray-900 mb-4">
-                    Coverage Comparison for Selected Service
+                    {benefitResults.length} matching benefit{benefitResults.length === 1 ? '' : 's'}
                   </h4>
-                  
                   <div className="space-y-4">
-                    {serviceCoverage.map((coverage, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    {benefitResults.map(({ planId, planName, benefit }) => (
+                      <div key={`${planId}-${benefit.id}`} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
-                            <h5 className="font-medium text-gray-900">{coverage.planName}</h5>
-                            <div className="flex items-center mt-1">
-                              {coverage.coverage.covered ? (
-                                <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                              ) : (
-                                <XCircle className="w-4 h-4 text-red-500 mr-2" />
-                              )}
-                              <span className={`text-sm ${coverage.coverage.covered ? 'text-green-600' : 'text-red-600'}`}>
-                                {coverage.coverage.covered ? 'Covered' : 'Not Covered'}
-                              </span>
-                            </div>
+                            <h5 className="font-medium text-gray-900">{benefit.serviceName}</h5>
+                            <p className="text-sm text-gray-500">
+                              {planName}{benefit.serviceCategory ? ` · ${benefit.serviceCategory}` : ''}
+                            </p>
                           </div>
-                          
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCoverageColor(coverage.coverage.coveragePercentage)}`}>
-                            {coverage.coverage.coveragePercentage}% Coverage
-                          </span>
+                          <div className="flex items-center">
+                            {benefit.inNetworkCoverage.covered ? (
+                              <CheckCircle className="w-4 h-4 text-green-500 mr-1.5" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500 mr-1.5" />
+                            )}
+                            <span className={`text-sm ${benefit.inNetworkCoverage.covered ? 'text-green-600' : 'text-red-600'}`}>
+                              {benefit.inNetworkCoverage.covered ? 'Covered in-network' : 'Not covered in-network'}
+                            </span>
+                          </div>
                         </div>
 
-                        {coverage.coverage.covered && (
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-600">Cost Structure:</span>
-                              <div className="font-medium">
-                                {coverage.coverage.costStructure.type === 'copay' &&
-                                  (coverage.coverage.costStructure.amount ? `$${coverage.coverage.costStructure.amount} copay` : '--')}
-                                {coverage.coverage.costStructure.type === 'coinsurance' &&
-                                  (coverage.coverage.costStructure.percentage ? `${coverage.coverage.costStructure.percentage}% coinsurance` : '--')}
-                                {coverage.coverage.costStructure.type === 'deductible' && 
-                                  'Subject to deductible'}
-                                {coverage.coverage.costStructure.type === 'not_covered' && 
-                                  'Not covered'}
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <span className="text-gray-600">Deductible Applies:</span>
-                              <span className="ml-2 font-medium">
-                                {coverage.coverage.deductibleApplies ? 'Yes' : 'No'}
-                              </span>
-                            </div>
-                            
-                            {coverage.coverage.annualLimit && (
-                              <div>
-                                <span className="text-gray-600">Annual Limit:</span>
-                                <span className="ml-2 font-medium">{formatCurrency(coverage.coverage.annualLimit)}</span>
-                              </div>
-                            )}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">In-network cost:</span>
+                            <span className="ml-2 font-medium">
+                              {formatBenefitCost(benefit.inNetworkCoverage.copay, benefit.inNetworkCoverage.coinsurance)}
+                            </span>
                           </div>
-                        )}
+                          <div>
+                            <span className="text-gray-600">Out-of-network:</span>
+                            <span className="ml-2 font-medium">
+                              {benefit.outNetworkCoverage.covered
+                                ? formatBenefitCost(benefit.outNetworkCoverage.copay, benefit.outNetworkCoverage.coinsurance)
+                                : 'Not covered'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Prior auth:</span>
+                            <span className="ml-2 font-medium">{benefit.preAuthRequired ? 'Required' : 'No'}</span>
+                          </div>
+                        </div>
 
-                        {coverage.requirements.length > 0 && (
-                          <div className="mt-3">
-                            <span className="text-sm text-gray-600">Requirements:</span>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {coverage.requirements.map((req, reqIndex) => (
-                                <span key={reqIndex} className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-                                  {req.type.replace('_', ' ').toUpperCase()}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+                        {benefit.limitations && (
+                          <p className="mt-2 text-xs text-gray-500">Limitations: {benefit.limitations}</p>
                         )}
                       </div>
                     ))}
