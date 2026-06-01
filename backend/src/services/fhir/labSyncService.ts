@@ -99,6 +99,14 @@ export async function buildConnectRedirect(
   const smart = await resolveEndpoints(smartConfigForProvider(provider));
   const challenge = generatePKCE();
   stashChallenge(challenge.state, challenge.codeVerifier, userId);
+
+  const auditService = getAuditLogService(getPrismaClient());
+  await auditService.logAccess(RESOURCE_TYPE, undefined, { userId }, {
+    operation: 'CONNECT_INITIATED',
+    externalApiCall: true,
+    provider,
+  });
+
   return buildAuthorizationUrl(smart, challenge);
 }
 
@@ -465,9 +473,14 @@ function mapObservation(obs: FHIRObservation): MappedObservation | null {
   if (!loinc) return null;
 
   const mapping = findLOINCMapping(obs.code);
-  const name = mapping?.biomarkerName ?? loinc.display;
+  // FHIR responses are untrusted input. Clamp + strip control chars/newlines
+  // on the display name (100) and unit (20) for parity with the manual-entry
+  // Zod bounds (sanitizedString(1,100) / sanitizedString(1,20)) before we
+  // persist them. Our own mapping table values are already clean; FHIR-derived
+  // fallbacks (loinc.display, valueQuantity.unit) are not.
+  const name = sanitizeFhirText(mapping?.biomarkerName ?? loinc.display, 100);
   const category = mapping?.category ?? 'Other';
-  const unit = obs.valueQuantity.unit ?? mapping?.defaultUnit ?? '';
+  const unit = sanitizeFhirText(obs.valueQuantity.unit ?? mapping?.defaultUnit ?? '', 20);
   const value = obs.valueQuantity.value;
 
   const refRange = obs.referenceRange?.[0];
@@ -490,6 +503,21 @@ function mapObservation(obs: FHIRObservation): MappedObservation | null {
     loincCode: loinc.code,
     unmapped: !mapping,
   };
+}
+
+/**
+ * Sanitize a FHIR-supplied free-text field before persisting. Strips control
+ * characters and newlines, collapses runs of whitespace, trims, and hard-caps
+ * the length. FHIR server responses are untrusted, so display name / unit get
+ * the same treatment manual entry does (Zod sanitizedString bounds).
+ */
+function sanitizeFhirText(input: string, maxLength: number): string {
+  return input
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1F\x7F]/g, '') // strip control chars + newlines/tabs
+    .replace(/\s+/g, ' ') // collapse remaining whitespace runs
+    .trim()
+    .slice(0, maxLength);
 }
 
 function dedupeKey(name: string, date: Date, value: string): string {

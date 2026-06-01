@@ -5,7 +5,7 @@
 import type { Request, Response } from 'express';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { config } from '../config/index.js';
-import { withRLSContext } from '../services/database.js';
+import { withRLSContext, getPrismaClient } from '../services/database.js';
 import {
   buildConnectRedirect,
   handleOAuthCallback,
@@ -14,6 +14,8 @@ import {
   disconnectConnection,
   type SyncResult,
 } from '../services/fhir/labSyncService.js';
+import { getAuditLogService } from '../services/auditLog.js';
+import { ExternalServiceError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
 interface ConnectionSummary {
@@ -98,9 +100,27 @@ export async function handleCallback(req: Request, res: Response): Promise<void>
     const sep = frontendBase.includes('?') ? '&' : '?';
     res.redirect(`${frontendBase}${sep}labConnected=quest`);
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : 'unknown';
     logger.error('OAuth callback failed', {
-      data: { error: err instanceof Error ? err.message : 'unknown' },
+      data: { error: errMsg },
     });
+    // Audit the failed connect attempt. userId is unknown here — the
+    // PKCE-bound userId is consumed inside handleOAuthCallback and only
+    // surfaced on success, so a pre-exchange failure has no user binding.
+    try {
+      const auditService = getAuditLogService(getPrismaClient());
+      await auditService.logAccess('LabConnection', undefined, { userId: undefined }, {
+        operation: 'CONNECT_FAILED',
+        externalApiCall: true,
+        provider: 'quest',
+        success: false,
+        error: errMsg.slice(0, 200),
+      });
+    } catch (auditErr) {
+      logger.error('Failed to audit OAuth callback failure', {
+        data: { error: auditErr instanceof Error ? auditErr.message : 'unknown' },
+      });
+    }
     const sep = frontendBase.includes('?') ? '&' : '?';
     res.redirect(`${frontendBase}${sep}error=connection_failed`);
   }
@@ -164,15 +184,12 @@ export async function triggerSync(
     const response: ApiResponse<SyncResult> = { success: true, data: result };
     res.json(response);
   } catch (err) {
+    // Keep full detail server-side; never leak downstream OAuth/host detail
+    // to the client. Let the central handler format a generic message.
     logger.error('Sync failed', {
       data: { userId, connectionId, error: err instanceof Error ? err.message : 'unknown' },
     });
-    res.status(500).json({
-      error: {
-        code: 'SYNC_FAILED',
-        message: err instanceof Error ? err.message : 'Sync failed',
-      },
-    });
+    throw new ExternalServiceError('Lab provider', 'Could not sync lab results. Please try again later.');
   }
 }
 
@@ -191,14 +208,11 @@ export async function deleteConnection(
     await disconnectConnection(userId, id);
     res.status(204).send();
   } catch (err) {
+    // Keep full detail server-side; never leak downstream OAuth/host detail
+    // to the client. Let the central handler format a generic message.
     logger.error('Disconnect failed', {
       data: { userId, id, error: err instanceof Error ? err.message : 'unknown' },
     });
-    res.status(500).json({
-      error: {
-        code: 'DISCONNECT_FAILED',
-        message: err instanceof Error ? err.message : 'Disconnect failed',
-      },
-    });
+    throw new ExternalServiceError('Lab provider', 'Could not disconnect the lab connection. Please try again later.');
   }
 }

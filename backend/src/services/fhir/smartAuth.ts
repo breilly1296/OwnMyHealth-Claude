@@ -72,6 +72,23 @@ const DEFAULT_SCOPES = [
 ];
 
 /**
+ * Bound every outbound SMART OAuth request with a timeout. A hung auth/token
+ * server must not pin a request handler indefinitely (slow-loris / DoS).
+ * Mirrors FHIRClient.request's AbortController pattern.
+ */
+const SMART_FETCH_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SMART_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * RFC 7636 — code_verifier must be 43-128 chars of [A-Z a-z 0-9 -._~].
  * Using base64url encoding of 64 random bytes → 86 chars, safely in range.
  */
@@ -99,7 +116,7 @@ export async function discoverEndpoints(
   allowedAuthHosts: string[] = []
 ): Promise<{ authorizeUrl: string; tokenUrl: string }> {
   const url = `${fhirBaseUrl.replace(/\/$/, '')}/.well-known/smart-configuration`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) {
@@ -183,7 +200,7 @@ export async function exchangeCodeForToken(
     headers.Authorization = `Basic ${creds}`;
   }
 
-  const response = await fetch(tokenUrl, {
+  const response = await fetchWithTimeout(tokenUrl, {
     method: 'POST',
     headers,
     body: body.toString(),
@@ -223,7 +240,7 @@ export async function refreshAccessToken(
     headers.Authorization = `Basic ${creds}`;
   }
 
-  const response = await fetch(tokenUrl, {
+  const response = await fetchWithTimeout(tokenUrl, {
     method: 'POST',
     headers,
     body: body.toString(),
@@ -291,7 +308,7 @@ export async function revokeToken(
       smartConfig.tokenUrl.replace(/\/token$/, '/revoke'),
       'SMART revoke endpoint'
     );
-    const response = await fetch(revokeUrl, { method: 'POST', headers, body: body.toString() });
+    const response = await fetchWithTimeout(revokeUrl, { method: 'POST', headers, body: body.toString() });
     if (!response.ok) {
       logger.warn('Token revocation request failed', {
         data: { status: response.status },
