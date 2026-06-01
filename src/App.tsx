@@ -8,7 +8,7 @@
  * 2. Error Boundary - Catches and handles React rendering errors gracefully
  * 3. Routing Logic - Conditionally renders Login, Register, or Dashboard based on auth state
  * 4. Loading States - Shows loading spinner while checking authentication status
- * 5. URL-based Routes - Handles /verify-email and /reset-password routes
+ * 5. URL-based Routes - Handles /verify-email, /reset-password, and /confirm-email-change routes
  *
  * Component Hierarchy:
  * App (root)
@@ -40,6 +40,7 @@ const RegisterPage = lazy(() => import('./components/auth/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('./components/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
 const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
+const ConfirmEmailChangePage = lazy(() => import('./components/auth/ConfirmEmailChangePage'));
 
 /** Loading fallback for lazy-loaded components */
 function LoadingFallback() {
@@ -61,7 +62,7 @@ type AuthView = 'login' | 'register' | 'forgot-password';
 
 /** URL-based routes that should be handled regardless of auth state */
 interface SpecialRoute {
-  type: 'verify-email' | 'reset-password';
+  type: 'verify-email' | 'reset-password' | 'confirm-email-change';
   token: string;
 }
 
@@ -79,6 +80,10 @@ function getSpecialRoute(): SpecialRoute | null {
 
   if (path === '/reset-password' && token) {
     return { type: 'reset-password', token };
+  }
+
+  if (path === '/confirm-email-change' && token) {
+    return { type: 'confirm-email-change', token };
   }
 
   return null;
@@ -144,6 +149,24 @@ function AppContent() {
       return (
         <Suspense fallback={<LoadingFallback />}>
           <ResetPasswordPage
+            token={specialRoute.token}
+            onSuccess={() => {
+              navigateToLogin();
+              setSpecialRoute(null);
+            }}
+            onNavigateToLogin={() => {
+              navigateToLogin();
+              setSpecialRoute(null);
+            }}
+          />
+        </Suspense>
+      );
+    }
+
+    if (specialRoute.type === 'confirm-email-change') {
+      return (
+        <Suspense fallback={<LoadingFallback />}>
+          <ConfirmEmailChangePage
             token={specialRoute.token}
             onSuccess={() => {
               navigateToLogin();
