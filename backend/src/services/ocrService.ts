@@ -220,9 +220,10 @@ async function processPDFWithClaude(
   const validatedBiomarkers = biomarkers.filter((b) => {
     const validationResult = validateBiomarkerValue(b.name, b.value, b.unit);
     if (!validationResult.valid) {
+      // H-1: do not log the raw extracted value — it is PHI. Log only the
+      // biomarker name and the validation reason.
       ocrLogger.warn('Invalid biomarker value discarded', {
         biomarkerName: b.name,
-        value: b.value,
         validationReason: validationResult.reason,
       });
     }
@@ -390,16 +391,40 @@ export async function processDocument(
     throw new BadRequestError(validation.error || 'Invalid file');
   }
 
-  // For PDFs, use Claude API for intelligent extraction
+  // For PDFs, use Claude API for intelligent extraction. Claude's path is
+  // text-based and throws for scanned (image-only) PDFs that have no usable
+  // extracted text. In that case fall back to Document AI, which accepts
+  // application/pdf and can OCR the page images — but only when the Google
+  // Cloud BAA covering Document AI is active (M-19). The BAA gate inside
+  // processImageWithDocumentAI is preserved and not weakened.
   if (mimeType === 'application/pdf') {
     if (isClaudeExtractionConfigured()) {
       try {
         return await processPDFWithClaude(buffer, mimeType, startTime, userId);
       } catch (error) {
-        ocrLogger.error('Claude extraction failed, no fallback for PDFs', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        // Scanned PDFs surface as a no-extractable-text failure from the
+        // text-only Claude path. If a BAA is active, route the raw PDF bytes
+        // to Document AI OCR (it accepts application/pdf) rather than crashing.
+        if (config.gcp.documentAiBaaActive) {
+          ocrLogger.warn('Claude PDF extraction failed; falling back to Document AI OCR', {
+            error: errorMessage,
+          });
+          // processImageWithDocumentAI still enforces the BAA gate internally.
+          return await processImageWithDocumentAI(buffer, mimeType, startTime);
+        }
+
+        // No OCR fallback available (BAA not active). Return a clear,
+        // non-crashing error instead of leaking the raw Claude failure.
+        ocrLogger.error('Claude PDF extraction failed and no OCR fallback is available', {
+          error: errorMessage,
         });
-        throw error;
+        throw new BadRequestError(
+          'This PDF could not be read. It may be a scanned/image-only document, ' +
+          'which requires OCR that is not currently available. Please upload a ' +
+          'text-based PDF or an image file (PNG, JPG, TIFF).'
+        );
       }
     } else {
       ocrLogger.error('ANTHROPIC_API_KEY not configured');

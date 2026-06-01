@@ -18,6 +18,7 @@ import { asyncHandler, BadRequestError } from '../middleware/errorHandler.js';
 import { uploadLimiter, aiLimiter } from '../middleware/rateLimiter.js';
 import { blockDemoAI } from '../middleware/demoProtection.js';
 import { requirePlanLimit } from '../middleware/planGating.js';
+import { aiSpendGuard } from '../middleware/aiSpendGuard.js';
 import { uploadLabReport, uploadSBC, uploadLabResultOCR } from '../controllers/upload/index.js';
 
 const router = Router();
@@ -78,6 +79,7 @@ router.post(
   '/lab-report',
   authenticate,
   aiLimiter,
+  aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('pdfUploadsPerMonth'),
   upload.single('file'),
@@ -95,6 +97,7 @@ router.post(
   '/insurance-sbc',
   authenticate,
   aiLimiter,
+  aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('pdfUploadsPerMonth'),
   upload.single('file'),
@@ -125,6 +128,7 @@ router.post(
   '/lab-results-ocr',
   authenticate,
   aiLimiter,
+  aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('pdfUploadsPerMonth'),
   uploadOCR.single('file'),
