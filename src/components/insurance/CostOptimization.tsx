@@ -144,7 +144,7 @@ interface CostOptimizationProps {
   onPlanUpdate?: () => void;
 }
 
-export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: CostOptimizationProps) {
+export default function CostOptimization({ plan, onPlanUpdate }: CostOptimizationProps) {
   const [projections, setProjections] = useState<ExpenseProjectionData[]>([]);
   const [actuals, setActuals] = useState<ExpenseActualData[]>([]);
   const [analyses, setAnalyses] = useState<CostAnalysisData[]>([]);
@@ -619,7 +619,7 @@ export default function CostOptimization({ plan, onPlanUpdate: _onPlanUpdate }: 
       </div>
 
       {/* Expense Actuals (recorded claims / EOBs) */}
-      <ExpenseActualsList planId={plan.id} onActualsChange={setActuals} />
+      <ExpenseActualsList planId={plan.id} onActualsChange={setActuals} onMutated={onPlanUpdate} />
 
       {/* Projection vs Actual Comparison */}
       {projections.length > 0 && (actuals.length > 0 || comparison.unplanned.length > 0) && (

@@ -19,6 +19,7 @@
 import { Response } from 'express';
 import type { AuthenticatedRequest } from '../types/index.js';
 import { getPrismaClient, withRLSTransaction } from '../services/database.js';
+import type { Prisma } from '../../generated/prisma/index.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -312,6 +313,45 @@ function decryptActual(
 }
 
 /**
+ * Recompute a plan's running deductible/OOP "met" amounts from the sum of its
+ * logged claims (ExpenseActual.appliedTo*). Logged claims are the source of
+ * truth for spending progress, so this runs after any actual is created,
+ * updated, or deleted. Runs inside the caller's RLS transaction so the plan
+ * update is atomic with the claim mutation. The plan's met columns are plaintext
+ * Decimal; the claim amounts are encrypted, hence the per-row decrypt.
+ */
+async function recomputePlanSpending(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  planId: string,
+  encryption: ReturnType<typeof getEncryptionService>,
+  userSalt: string
+): Promise<void> {
+  const actuals = await tx.expenseActual.findMany({
+    where: { userId, planId },
+    select: { appliedToDeductibleEncrypted: true, appliedToOopEncrypted: true },
+  });
+  const dec = (v: string | null) => {
+    if (!v) return 0;
+    const n = parseFloat(encryption.decrypt(v, userSalt));
+    return Number.isFinite(n) ? n : 0;
+  };
+  let deductibleMet = 0;
+  let oopMet = 0;
+  for (const a of actuals) {
+    deductibleMet += dec(a.appliedToDeductibleEncrypted);
+    oopMet += dec(a.appliedToOopEncrypted);
+  }
+  await tx.insurancePlan.updateMany({
+    where: { id: planId, userId },
+    data: {
+      deductibleMetIndividual: deductibleMet,
+      oopMetIndividual: oopMet,
+    },
+  });
+}
+
+/**
  * POST /api/expenses/actuals
  * Create a new expense actual (real claim/EOB entry)
  */
@@ -342,7 +382,7 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
     v === undefined || v === null ? null : encryption.encrypt(v.toString(), userSalt);
 
   const actual = await withRLSTransaction(userId, async (tx) => {
-    return tx.expenseActual.create({
+    const created = await tx.expenseActual.create({
       data: {
         userId,
         planId,
@@ -360,6 +400,9 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
         notesEncrypted: notes ? encryption.encrypt(notes, userSalt) : null,
       },
     });
+    // Keep the plan's met-amounts in sync with logged claims.
+    await recomputePlanSpending(tx, userId, planId, encryption, userSalt);
+    return created;
   });
 
   const auditService = getAuditLogService(prisma);
@@ -479,10 +522,13 @@ export async function updateActual(req: AuthenticatedRequest, res: Response): Pr
   if (notes !== undefined) updateData.notesEncrypted = encStr(notes);
 
   const updated = await withRLSTransaction(userId, async (tx) => {
-    return tx.expenseActual.update({
+    const row = await tx.expenseActual.update({
       where: { id, userId },
       data: updateData,
     });
+    // appliedTo* may have changed — resync the plan's met-amounts.
+    await recomputePlanSpending(tx, userId, row.planId, encryption, userSalt);
+    return row;
   });
 
   const auditService = getAuditLogService(prisma);
@@ -501,11 +547,15 @@ export async function deleteActual(req: AuthenticatedRequest, res: Response): Pr
   const { id } = req.params;
 
   const prisma = getPrismaClient();
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
 
   await withRLSTransaction(userId, async (tx) => {
-    await tx.expenseActual.delete({
+    const deleted = await tx.expenseActual.delete({
       where: { id, userId },
     });
+    // Removing a claim lowers the plan's met-amounts — resync.
+    await recomputePlanSpending(tx, userId, deleted.planId, encryption, userSalt);
   });
 
   const auditService = getAuditLogService(prisma);
