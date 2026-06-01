@@ -70,21 +70,25 @@ type GoalStatus = HealthGoalData['status'];
 type GoalDirection = HealthGoalData['direction'];
 
 const STATUS_BADGE: Record<GoalStatus, { cls: string; label: string }> = {
-  NOT_STARTED: {
-    cls: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-    label: 'Not started',
-  },
-  IN_PROGRESS: {
+  ACTIVE: {
     cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
-    label: 'In progress',
+    label: 'Active',
   },
-  COMPLETED: {
+  PAUSED: {
+    cls: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    label: 'Paused',
+  },
+  ACHIEVED: {
     cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-    label: 'Completed',
+    label: 'Achieved',
   },
-  ABANDONED: {
+  FAILED: {
+    cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+    label: 'Failed',
+  },
+  CANCELLED: {
     cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500',
-    label: 'Abandoned',
+    label: 'Cancelled',
   },
 };
 
@@ -129,8 +133,8 @@ const TREND_COLORS = {
 };
 
 function progressBarColor(progress: number, status: GoalStatus): string {
-  if (status === 'COMPLETED') return 'bg-emerald-500';
-  if (status === 'ABANDONED') return 'bg-slate-300 dark:bg-slate-600';
+  if (status === 'ACHIEVED') return 'bg-emerald-500';
+  if (status === 'CANCELLED' || status === 'FAILED') return 'bg-slate-300 dark:bg-slate-600';
   if (progress >= 75) return 'bg-emerald-500';
   if (progress >= 50) return 'bg-sky-500';
   if (progress >= 25) return 'bg-amber-500';
@@ -234,17 +238,17 @@ export default function GoalTrackerPanel({ biomarkers, onBiomarkerClick }: GoalT
     }
   }, [goals, selectedGoal]);
 
-  const activeGoals = goals.filter((g) => g.status === 'IN_PROGRESS' || g.status === 'NOT_STARTED');
-  const completedGoals = goals.filter((g) => g.status === 'COMPLETED');
+  const activeGoals = goals.filter((g) => g.status === 'ACTIVE' || g.status === 'PAUSED');
+  const completedGoals = goals.filter((g) => g.status === 'ACHIEVED');
 
   const derivedSummary = useMemo(
     () => ({
-      active: summary?.inProgress ?? activeGoals.length,
-      completed: summary?.completed ?? completedGoals.length,
+      active: summary?.active ?? activeGoals.length,
+      completed: summary?.achieved ?? completedGoals.length,
+      // The backend summary doesn't carry an average-progress figure, so it's
+      // always computed client-side from the loaded active goals.
       avgProgress:
-        summary?.averageProgress !== undefined
-          ? Math.round(summary.averageProgress)
-          : activeGoals.length > 0
+        activeGoals.length > 0
           ? Math.round(activeGoals.reduce((s, g) => s + g.progress, 0) / activeGoals.length)
           : 0,
     }),
@@ -907,10 +911,11 @@ function GoalDetailModal({
               disabled={isMutating}
               className="px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:bg-slate-700 dark:text-white text-sm"
             >
-              <option value="NOT_STARTED">Not started</option>
-              <option value="IN_PROGRESS">In progress</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="ABANDONED">Abandoned</option>
+              <option value="ACTIVE">Active</option>
+              <option value="PAUSED">Paused</option>
+              <option value="ACHIEVED">Achieved</option>
+              <option value="FAILED">Failed</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
             <button
               onClick={onDelete}

@@ -17,7 +17,7 @@ export interface HealthGoalData {
   relatedBiomarkerId: string | null;
   startDate: string;
   targetDate: string;
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+  status: 'ACTIVE' | 'PAUSED' | 'ACHIEVED' | 'FAILED' | 'CANCELLED';
   progress: number;
   milestones: { value: number; label: string; achieved: boolean; achievedAt?: string }[] | null;
   reminderFrequency: string | null;
@@ -51,7 +51,7 @@ export interface UpdateHealthGoalData {
   targetDate?: string;
   milestones?: { value: number; label: string }[];
   reminderFrequency?: string;
-  status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+  status?: 'ACTIVE' | 'PAUSED' | 'ACHIEVED' | 'FAILED' | 'CANCELLED';
 }
 
 export interface GoalProgressUpdate {
@@ -60,12 +60,13 @@ export interface GoalProgressUpdate {
 }
 
 export interface GoalsSummary {
+  byStatus: Record<string, number>;
+  byCategory: Record<string, number>;
   total: number;
-  notStarted: number;
-  inProgress: number;
-  completed: number;
-  abandoned: number;
-  averageProgress: number;
+  active: number;
+  achieved: number;
+  needAttention: number;
+  recentlyAchieved: number;
 }
 
 export const healthGoalsApi = {
