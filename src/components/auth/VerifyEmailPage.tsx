@@ -4,7 +4,7 @@
  * Premium dark-themed page for email verification.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Heart, CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import { authApi } from '../../services/api';
 
@@ -22,16 +22,37 @@ export default function VerifyEmailPage({
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 
+  // Keep the latest onSuccess without making it an effect dependency — the
+  // verification call consumes a ONE-TIME token, so it must fire exactly once,
+  // but onSuccess is a fresh inline closure from App.tsx on every render.
+  const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
-    const verifyEmail = async () => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  // Run-once guard. Without it the call fires twice — once from React
+  // StrictMode's dev double-invoke, and (even in production) once more when
+  // AuthContext settles its initial session check and re-renders the parent.
+  // The second call hits the now-consumed token and 400s, flipping a
+  // SUCCESSFUL verification to a false "failed" screen.
+  const verifiedRef = useRef(false);
+
+  useEffect(() => {
+    if (verifiedRef.current) return;
+    verifiedRef.current = true;
+
+    if (!token) {
+      setStatus('error');
+      setMessage('No verification token provided.');
+      return;
+    }
+
+    (async () => {
       try {
         const result = await authApi.verifyEmail(token);
         setStatus('success');
         setMessage(result.message || 'Your email has been verified successfully!');
-        // Wait a moment then redirect
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
+        setTimeout(() => onSuccessRef.current(), 2000);
       } catch (error) {
         setStatus('error');
         setMessage(
@@ -39,15 +60,8 @@ export default function VerifyEmailPage({
             'Failed to verify email. The link may be expired or invalid.'
         );
       }
-    };
-
-    if (token) {
-      verifyEmail();
-    } else {
-      setStatus('error');
-      setMessage('No verification token provided.');
-    }
-  }, [token, onSuccess]);
+    })();
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
