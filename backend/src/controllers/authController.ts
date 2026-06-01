@@ -33,6 +33,8 @@ import {
   resendVerificationEmail as resendVerificationService,
   forgotPassword as forgotPasswordService,
   resetPassword as resetPasswordService,
+  requestEmailChange as requestEmailChangeService,
+  confirmEmailChange as confirmEmailChangeService,
   isDemoUser,
   DEMO_SESSION_DURATION_MS,
   User,
@@ -42,6 +44,8 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendAccountExistsEmail,
+  sendEmailChangeConfirmation,
+  sendEmailChangeNotice,
 } from '../services/emailService.js';
 
 // Identical generic response for every registration attempt — whether or not
@@ -812,6 +816,120 @@ export async function resetPasswordHandler(
     success: true,
     data: {
       message: 'Password has been reset successfully. You can now log in with your new password.',
+    },
+  };
+
+  res.json(response);
+}
+
+/**
+ * Request an email-address change (authenticated)
+ * POST /api/v1/auth/change-email
+ *
+ * Re-authenticates with the current password, then stamps a pending change and
+ * fires two emails: a confirmation link to the NEW address and a security
+ * notice to the OLD one. The change does not take effect until confirmed.
+ */
+export async function changeEmailHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const authReq = req as Request & { user?: { id: string } };
+  const { newEmail, currentPassword } = req.body;
+
+  if (!authReq.user) {
+    throw new UnauthorizedError('Not authenticated');
+  }
+
+  if (!newEmail || !currentPassword) {
+    throw new BadRequestError('New email and current password are required');
+  }
+
+  const result = await requestEmailChangeService(authReq.user.id, newEmail, currentPassword);
+
+  const auditService = getAuditService();
+
+  if (!result.success) {
+    await auditService.logAuth('EMAIL_CHANGE_REQUEST', { req, userId: authReq.user.id }, {
+      success: false,
+      reason: result.error || 'EMAIL_CHANGE_REQUEST_FAILED',
+    });
+
+    // A bad current password is an auth failure; same/taken email is a 400.
+    if (result.error === 'Current password is incorrect') {
+      throw new UnauthorizedError(result.error);
+    }
+    throw new BadRequestError(result.error || 'Email change request failed');
+  }
+
+  // Confirmation link to the new address; out-of-band security notice to the old.
+  if (result.token && result.newEmail && result.oldEmail) {
+    await sendEmailChangeConfirmation(result.newEmail, result.oldEmail, result.token);
+    await sendEmailChangeNotice(result.oldEmail, result.newEmail);
+  }
+
+  await auditService.logAuth('EMAIL_CHANGE_REQUEST', { req, userId: authReq.user.id }, {
+    success: true,
+  });
+
+  const response: ApiResponse<{ message: string }> = {
+    success: true,
+    data: {
+      message: 'Check your new email address for a confirmation link to complete the change.',
+    },
+  };
+
+  res.json(response);
+}
+
+/**
+ * Confirm a pending email change using the tokenized link (public)
+ * GET /api/v1/auth/confirm-email-change?token=xxx
+ *
+ * Swaps the address and revokes all sessions; the user must log in again with
+ * the new email. Public like verify-email — the token IS the credential.
+ */
+export async function confirmEmailChangeHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { token } = req.query;
+
+  if (!token || typeof token !== 'string') {
+    throw new BadRequestError('Confirmation token is required');
+  }
+
+  const result = await confirmEmailChangeService(token);
+
+  const auditService = getAuditService();
+
+  if (!result.success) {
+    await auditService.logAuth('EMAIL_CHANGE_COMPLETE', { req }, {
+      success: false,
+      reason: result.error || 'EMAIL_CHANGE_FAILED',
+    });
+
+    const response: ApiResponse = {
+      success: false,
+      error: {
+        code: 'EMAIL_CHANGE_FAILED',
+        message: result.error || 'Email change failed',
+      },
+    };
+    res.status(400).json(response);
+    return;
+  }
+
+  await auditService.logAuth('EMAIL_CHANGE_COMPLETE', { req, userId: result.user?.id }, {
+    success: true,
+  });
+
+  logger.auth(`Email changed successfully for user: ${result.user?.id}`);
+
+  const response: ApiResponse<{ message: string }> = {
+    success: true,
+    data: {
+      message: 'Your email address has been updated. Please log in again with your new email.',
     },
   };
 

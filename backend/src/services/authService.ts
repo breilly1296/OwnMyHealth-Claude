@@ -1168,6 +1168,150 @@ export async function findUserByResetToken(token: string): Promise<User | null> 
 }
 
 // ============================================
+// Email change (verified)
+// ============================================
+
+const EMAIL_CHANGE_EXPIRATION_HOURS = 1;
+
+export interface EmailChangeRequestResult {
+  success: boolean;
+  token?: string;
+  newEmail?: string;
+  oldEmail?: string;
+  error?: string;
+}
+
+export interface EmailChangeConfirmResult {
+  success: boolean;
+  user?: User;
+  oldEmail?: string;
+  newEmail?: string;
+  error?: string;
+}
+
+/**
+ * Request an email change for an authenticated user. Re-authenticates with the
+ * current password (a valid session alone must not be enough to move the login
+ * identity), ensures the target address is free, and stamps a tokenized pending
+ * change. The caller emails the unhashed token as a confirmation link to the
+ * NEW address; the DB stores only its SHA-256 hash. Nothing changes until the
+ * user confirms via confirmEmailChange().
+ */
+export async function requestEmailChange(
+  userId: string,
+  newEmail: string,
+  currentPassword: string
+): Promise<EmailChangeRequestResult> {
+  const user = await findUserById(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  const passwordOk = await verifyPassword(currentPassword, user.passwordHash);
+  if (!passwordOk) {
+    return { success: false, error: 'Current password is incorrect' };
+  }
+
+  const normalizedNew = newEmail.toLowerCase().trim();
+  if (normalizedNew === user.email.toLowerCase()) {
+    return { success: false, error: 'That is already your email address' };
+  }
+  if (await emailExists(normalizedNew)) {
+    return { success: false, error: 'That email address is already in use' };
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashToken(token);
+  const expires = new Date(Date.now() + EMAIL_CHANGE_EXPIRATION_HOURS * 60 * 60 * 1000);
+
+  await withRLSContext(userId, async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        pendingEmail: normalizedNew,
+        emailChangeToken: tokenHash,
+        emailChangeExpires: expires,
+      },
+    });
+  });
+
+  return { success: true, token, newEmail: normalizedNew, oldEmail: user.email };
+}
+
+/**
+ * Confirm a pending email change via the tokenized link. Validates + expiry-
+ * checks the token, re-checks the target address is still free, swaps the email
+ * (marking it verified — clicking the link proves ownership of the new inbox),
+ * clears the pending state, and revokes all sessions so the user re-authenticates
+ * under the new identity (mirrors password change/reset).
+ */
+export async function confirmEmailChange(token: string): Promise<EmailChangeConfirmResult> {
+  const tokenHash = hashToken(token);
+
+  const lookup = await withRLSContext(
+    null,
+    async (
+      tx
+    ): Promise<{ userId: string; oldEmail: string; pendingEmail: string } | EmailChangeConfirmResult> => {
+      const prismaUser = await tx.user.findUnique({ where: { emailChangeToken: tokenHash } });
+      if (!prismaUser || !prismaUser.pendingEmail) {
+        return { success: false, error: 'Invalid or expired email-change link' };
+      }
+      if (prismaUser.emailChangeExpires && prismaUser.emailChangeExpires < new Date()) {
+        await tx.user.update({
+          where: { id: prismaUser.id },
+          data: { pendingEmail: null, emailChangeToken: null, emailChangeExpires: null },
+        });
+        return {
+          success: false,
+          error: 'This email-change link has expired. Please request a new one.',
+        };
+      }
+      return { userId: prismaUser.id, oldEmail: prismaUser.email, pendingEmail: prismaUser.pendingEmail };
+    },
+    { isAdmin: true }
+  );
+
+  if ('success' in lookup) {
+    return lookup;
+  }
+
+  // The target could have been registered by someone else between request and
+  // confirm — re-check (the unique index would also reject, but fail cleanly).
+  if (await emailExists(lookup.pendingEmail)) {
+    await withRLSContext(lookup.userId, async (tx) => {
+      await tx.user.update({
+        where: { id: lookup.userId },
+        data: { pendingEmail: null, emailChangeToken: null, emailChangeExpires: null },
+      });
+    });
+    return { success: false, error: 'That email address is no longer available.' };
+  }
+
+  const updated = await withRLSContext(lookup.userId, async (tx) => {
+    return tx.user.update({
+      where: { id: lookup.userId },
+      data: {
+        email: lookup.pendingEmail,
+        emailVerified: true,
+        pendingEmail: null,
+        emailChangeToken: null,
+        emailChangeExpires: null,
+      },
+    });
+  });
+
+  await revokeAllUserTokens(lookup.userId);
+
+  return {
+    success: true,
+    user: prismaUserToUser(updated),
+    oldEmail: lookup.oldEmail,
+    newEmail: lookup.pendingEmail,
+  };
+}
+
+// ============================================
 // Initialize Demo User (Non-Production Only)
 // ============================================
 

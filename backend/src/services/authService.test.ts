@@ -75,6 +75,9 @@ const MOCK_USER: PrismaUser = {
   emailVerificationExpires: null,
   passwordResetToken: null,
   passwordResetExpires: null,
+  pendingEmail: null,
+  emailChangeToken: null,
+  emailChangeExpires: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   lastLoginAt: null,
@@ -1046,6 +1049,163 @@ describe('authService', () => {
         mockPrisma.user.findUnique.mockResolvedValueOnce(null);
         const user = await authService.findUserByResetToken('nonexistent-token');
         expect(user).toBeNull();
+    });
+  });
+
+  // ============================================
+  // Email Change Tests
+  // ============================================
+  describe('Email Change', () => {
+    const NEW_EMAIL = 'new@example.com';
+    // crypto.randomBytes is stubbed to 32×0x61 → RAW_MOCK_TOKEN; the DB stores
+    // sha256(raw) = HASHED_MOCK_TOKEN (same constants as the reset flow).
+    const RAW_CHANGE_TOKEN = RAW_MOCK_TOKEN;
+    const HASHED_CHANGE_TOKEN = HASHED_MOCK_TOKEN;
+
+    describe('requestEmailChange', () => {
+      it('stores a pending change + hashed token and returns the raw token', async () => {
+        // findUserById -> the user; emailExists(new) -> null (address is free)
+        mockPrisma.user.findUnique
+          .mockResolvedValueOnce(MOCK_USER)
+          .mockResolvedValueOnce(null);
+        mockPrisma.user.update.mockResolvedValueOnce(MOCK_USER);
+
+        const result = await authService.requestEmailChange(MOCK_USER_ID, NEW_EMAIL, MOCK_PASSWORD);
+
+        expect(result.success).toBe(true);
+        expect(result.token).toBe(RAW_CHANGE_TOKEN); // raw token goes in the email link
+        expect(result.newEmail).toBe(NEW_EMAIL);
+        expect(result.oldEmail).toBe(MOCK_EMAIL);
+        expect(mockPrisma.user.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: MOCK_USER_ID },
+            data: {
+              pendingEmail: NEW_EMAIL,
+              emailChangeToken: HASHED_CHANGE_TOKEN, // DB stores the sha256 hash
+              emailChangeExpires: expect.any(Date),
+            },
+          })
+        );
+      });
+
+      it('rejects an incorrect current password without writing', async () => {
+        mockPrisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
+        vi.mocked(bcrypt.compare).mockResolvedValueOnce(false);
+
+        const result = await authService.requestEmailChange(MOCK_USER_ID, NEW_EMAIL, 'wrongpassword');
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Current password is incorrect');
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      });
+
+      it('rejects changing to the same email', async () => {
+        mockPrisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
+        const result = await authService.requestEmailChange(MOCK_USER_ID, MOCK_EMAIL, MOCK_PASSWORD);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('already your email');
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      });
+
+      it('rejects an email already in use by someone else', async () => {
+        // findUserById -> the user; emailExists(new) -> a different account holds it
+        mockPrisma.user.findUnique
+          .mockResolvedValueOnce(MOCK_USER)
+          .mockResolvedValueOnce({ ...MOCK_USER, id: 'other-user', email: NEW_EMAIL });
+        const result = await authService.requestEmailChange(MOCK_USER_ID, NEW_EMAIL, MOCK_PASSWORD);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('already in use');
+        expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('confirmEmailChange', () => {
+      let userWithPendingChange: PrismaUser;
+      beforeEach(() => {
+        userWithPendingChange = {
+          ...MOCK_USER,
+          pendingEmail: NEW_EMAIL,
+          emailChangeToken: HASHED_CHANGE_TOKEN,
+          emailChangeExpires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour out
+        };
+      });
+
+      it('swaps the email, verifies it, clears pending state, and revokes sessions', async () => {
+        // token lookup -> pending user; emailExists(pending) -> null (still free)
+        mockPrisma.user.findUnique
+          .mockResolvedValueOnce(userWithPendingChange)
+          .mockResolvedValueOnce(null);
+        mockPrisma.user.update.mockResolvedValueOnce({
+          ...userWithPendingChange,
+          email: NEW_EMAIL,
+          emailVerified: true,
+          pendingEmail: null,
+          emailChangeToken: null,
+          emailChangeExpires: null,
+        });
+        mockPrisma.session.deleteMany.mockResolvedValueOnce({});
+
+        const result = await authService.confirmEmailChange(RAW_CHANGE_TOKEN);
+
+        expect(result.success).toBe(true);
+        expect(result.user?.email).toBe(NEW_EMAIL);
+        expect(result.oldEmail).toBe(MOCK_EMAIL);
+        expect(result.newEmail).toBe(NEW_EMAIL);
+        expect(mockPrisma.user.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: MOCK_USER_ID },
+            data: {
+              email: NEW_EMAIL,
+              emailVerified: true,
+              pendingEmail: null,
+              emailChangeToken: null,
+              emailChangeExpires: null,
+            },
+          })
+        );
+        // Identity changed → all sessions revoked (mirrors password reset).
+        expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: MOCK_USER_ID } });
+      });
+
+      it('returns an error for an invalid token and does not revoke sessions', async () => {
+        mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+        const result = await authService.confirmEmailChange('nonexistent-token');
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Invalid or expired');
+        expect(mockPrisma.session.deleteMany).not.toHaveBeenCalled();
+      });
+
+      it('clears the pending change and errors when the token has expired', async () => {
+        userWithPendingChange.emailChangeExpires = new Date(Date.now() - 1000); // expired
+        mockPrisma.user.findUnique.mockResolvedValueOnce(userWithPendingChange);
+        mockPrisma.user.update.mockResolvedValueOnce({
+          ...userWithPendingChange,
+          pendingEmail: null,
+          emailChangeToken: null,
+          emailChangeExpires: null,
+        });
+        const result = await authService.confirmEmailChange(RAW_CHANGE_TOKEN);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('expired');
+        expect(mockPrisma.session.deleteMany).not.toHaveBeenCalled();
+      });
+
+      it('aborts if the target address was taken between request and confirm', async () => {
+        // token lookup -> pending user; emailExists(pending) -> now held by someone else
+        mockPrisma.user.findUnique
+          .mockResolvedValueOnce(userWithPendingChange)
+          .mockResolvedValueOnce({ ...MOCK_USER, id: 'other-user', email: NEW_EMAIL });
+        mockPrisma.user.update.mockResolvedValueOnce({
+          ...userWithPendingChange,
+          pendingEmail: null,
+          emailChangeToken: null,
+          emailChangeExpires: null,
+        });
+        const result = await authService.confirmEmailChange(RAW_CHANGE_TOKEN);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('no longer available');
+        expect(mockPrisma.session.deleteMany).not.toHaveBeenCalled();
+      });
     });
   });
 
