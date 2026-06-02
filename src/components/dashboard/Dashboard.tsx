@@ -217,10 +217,15 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
 
   // Render special pages (non-biomarker categories)
   const renderSpecialPage = () => {
-    // Role gate: if the selected page is role-restricted and the user lacks the
-    // role (e.g. a patient reaching /admin or /my-patients via a deep link),
-    // show an access notice rather than mounting the page shell. The backend
-    // independently 403s the data; this keeps the UI honest too.
+    // Defensive role recheck for provider/admin pages (My Patients, Admin).
+    // This is INDEPENDENT of the inline nav filter (visibleCategories) above:
+    // the nav filter only hides links, so a patient reaching /admin or
+    // /my-patients via a deep link, browser back/forward, or a hand-typed URL
+    // would otherwise mount the restricted page shell. Here we re-evaluate the
+    // category's `roles` against the live user role and show an access notice
+    // instead. NOTE: this is cosmetic UI hygiene only — the backend RBAC
+    // middleware is the real authorization boundary and independently 403s the
+    // underlying data regardless of what the UI renders.
     const cat = categories.find((c) => c.name === selectedCategory);
     if (cat?.roles && !cat.roles.includes(role)) {
       return (

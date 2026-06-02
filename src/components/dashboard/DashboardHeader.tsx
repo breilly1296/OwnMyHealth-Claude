@@ -81,6 +81,20 @@ export function DashboardHeader({
 
         {/* Right: User Menu */}
         <div className="flex items-center space-x-3">
+          {/* Demo indicator during an ACTIVE session, not just when logged out.
+              The frontend has no per-account demo flag (the demo account is
+              identified server-side by DEMO_EMAIL, which is never exposed to the
+              client), so this keys off the build-level VITE_DEMO_MODE flag: in a
+              demo-enabled build, surface the badge whenever someone is signed in
+              so it's never mistaken for a real production session. */}
+          {user && import.meta.env.VITE_DEMO_MODE === 'true' && (
+            <span
+              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+              title="This is a demo session. Data may be reset and some actions are restricted."
+            >
+              Demo Mode
+            </span>
+          )}
           {user ? (
             <div className="relative" ref={userMenuRef}>
               <button

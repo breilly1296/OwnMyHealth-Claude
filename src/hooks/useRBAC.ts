@@ -5,7 +5,6 @@
  * in React components.
  */
 
-import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../services/api';
 
@@ -21,33 +20,13 @@ export function useRBAC() {
 
   const role = (user?.role as UserRole) || null;
 
-  const permissions = useMemo(() => {
-    if (!role) {
-      return {
-        isPatient: false,
-        isProvider: false,
-        isAdmin: false,
-        canViewPatients: false,
-        canManageUsers: false,
-        canViewAuditLogs: false,
-        canAccessAdminPanel: false,
-        canManageProviderAccess: false,
-      };
-    }
-
-    const roleLevel = ROLE_HIERARCHY[role] || 0;
-
-    return {
-      isPatient: role === 'PATIENT',
-      isProvider: role === 'PROVIDER',
-      isAdmin: role === 'ADMIN',
-      canViewPatients: roleLevel >= ROLE_HIERARCHY.PROVIDER, // Providers and admins
-      canManageUsers: roleLevel >= ROLE_HIERARCHY.ADMIN, // Admins only
-      canViewAuditLogs: roleLevel >= ROLE_HIERARCHY.ADMIN, // Admins only
-      canAccessAdminPanel: roleLevel >= ROLE_HIERARCHY.ADMIN, // Admins only
-      canManageProviderAccess: role === 'PATIENT', // Only patients manage their provider access
-    };
-  }, [role]);
+  // NOTE: A `permissions` capability-flags object (canViewPatients,
+  // canManageUsers, isAdmin, …) previously lived here but was never consumed by
+  // any caller (audit L-28). It was removed as dead code. Client-side
+  // capability flags are advisory only regardless — the backend RBAC middleware
+  // is the real authorization boundary. If UI gating is needed again, derive it
+  // from `role` / `hasRole` / `hasMinRole` at the call site rather than
+  // reintroducing a parallel flag set that can drift from the role hierarchy.
 
   /**
    * Check if user has at least one of the specified roles
@@ -102,7 +81,6 @@ export function useRBAC() {
   return {
     role,
     isAuthenticated,
-    permissions,
     hasRole,
     hasMinRole,
     getRoleLabel,

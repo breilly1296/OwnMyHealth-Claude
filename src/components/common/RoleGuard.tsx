@@ -3,6 +3,17 @@
  *
  * Conditionally renders children based on user role.
  * Can be used to protect UI elements from unauthorized users.
+ *
+ * STATUS (audit L-18): These guard components and the `useRBAC` hook are
+ * currently UNUSED by any rendered component — UI role gating is done inline in
+ * Dashboard (nav filter + the defensive recheck in renderSpecialPage). They are
+ * retained, not deleted, only because they are re-exported through the barrels
+ * `components/common/index.ts` and `hooks/index.ts`, which are outside this
+ * change's edit scope; removing the files would break those re-exports and the
+ * build. RECOMMENDED FOLLOW-UP: in a barrel-inclusive change, either delete
+ * RoleGuard.tsx + useRBAC.ts and drop their barrel exports, or actually wire
+ * these guards into the UI. Note: client-side role gating is cosmetic only —
+ * the backend RBAC middleware is the real authorization boundary.
  */
 
 import React from 'react';

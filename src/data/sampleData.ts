@@ -226,7 +226,11 @@ export const categories: BiomarkerCategory[] = [
   { name: 'Needs', description: 'Conditions, follow-ups, and recommended services', icon: 'ActivitySquare', group: 'overview' },
 
   // Care Team - consent-gated provider collaboration
-  { name: 'Care Team', description: 'Manage who can access your health data', icon: 'Users', group: 'care' },
+  // PATIENT-only: this is the patient's consent-management page ("manage who can
+  // access *your* health data"). Providers/admins use "My Patients" / "Admin"
+  // instead. The backend already 403s the patient-consent endpoints for non-
+  // patients; restricting the nav item here is cosmetic alignment (audit L-23).
+  { name: 'Care Team', description: 'Manage who can access your health data', icon: 'Users', group: 'care', roles: ['PATIENT'] },
   { name: 'My Patients', description: 'Patients who have shared data with you', icon: 'Stethoscope', group: 'care', roles: ['PROVIDER', 'ADMIN'] },
 
   // Admin - operations console (ADMIN only)

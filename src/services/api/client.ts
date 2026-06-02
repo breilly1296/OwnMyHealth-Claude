@@ -119,7 +119,11 @@ function createTimeoutController(timeoutMs: number = DEFAULT_TIMEOUT_MS): { cont
 
 export function getCsrfToken(): string {
   const cookies = document.cookie;
-  const match = cookies.match(/csrf[_-]?token=([^;]+)/i);
+  // Anchor to a cookie-name boundary (start of string or "; " separator) so a
+  // same-suffix cookie (e.g. `xsrf_csrf_token`, `notcsrf_token`) can't satisfy
+  // the match and inject the wrong value. The double-submit cookie is named
+  // exactly `csrf_token`; only that name is accepted here.
+  const match = cookies.match(/(?:^|;\s*)csrf_token=([^;]+)/);
   const token = match ? decodeURIComponent(match[1]) : '';
 
   if (!token && typeof window !== 'undefined' && import.meta.env.DEV) {
@@ -241,11 +245,17 @@ export async function apiFetch<T>(
   // Auth-management endpoints must bypass the generic 401 retry path. When
   // /auth/refresh returns 401 the refresh token is terminally invalid —
   // calling attemptTokenRefresh() would hit the same endpoint recursively.
-  // When /auth/logout returns 401 the onAuthFailureCallback calls logout()
-  // which re-enters this code path. Both loops produced 10,000+ 401s in dev
-  // and prevented login from settling. /auth/login is intentionally NOT
-  // exempted — its 401 means wrong credentials, which the UI surfaces.
-  const isAuthMgmtEndpoint = endpoint === '/auth/refresh' || endpoint === '/auth/logout';
+  // When /auth/logout (or /auth/logout-all) returns 401 the onAuthFailureCallback
+  // calls logout() which re-enters this code path. /auth/logout-all also revokes
+  // every session, so a post-refresh retry would be a no-op against already-
+  // dead sessions. Both loops produced 10,000+ 401s in dev and prevented login
+  // from settling. They are also exempt from the 429 retry so a rate-limited
+  // logout doesn't loop. /auth/login is intentionally NOT exempted — its 401
+  // means wrong credentials, which the UI surfaces.
+  const isAuthMgmtEndpoint =
+    endpoint === '/auth/refresh' ||
+    endpoint === '/auth/logout' ||
+    endpoint === '/auth/logout-all';
 
   const { controller, timeoutId } = createTimeoutController(timeoutMs);
 
@@ -303,7 +313,11 @@ export async function apiFetch<T>(
       if (response.status === 401 && !isRetry && !isAuthMgmtEndpoint) {
         const refreshed = await attemptTokenRefresh();
         if (refreshed) {
-          return apiFetch<T>(endpoint, options, timeoutMs, true);
+          // Preserve retryCount429 across the one-shot 401-refresh retry so a
+          // request that already consumed some of its 429 budget doesn't get
+          // a fresh full allotment (which could amplify load against a rate-
+          // limited server). Mirrors the parse-error branch above.
+          return apiFetch<T>(endpoint, options, timeoutMs, true, retryCount429);
         }
         if (onAuthFailureCallback) {
           onAuthFailureCallback();
