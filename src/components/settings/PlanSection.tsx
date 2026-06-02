@@ -38,13 +38,18 @@ const USAGE_ROWS: UsageRow[] = [
 interface FeatureRow {
   label: string;
   key: keyof PlanLimits;
+  // Patient rights that are always included regardless of tier (never shown as
+  // a locked/upgrade feature). dataExport (HIPAA) and providerSharing
+  // (consent-based sharing of one's own data — product decision 2026-06-01)
+  // are true on every plan, so they always render under "Included".
+  alwaysIncluded?: boolean;
 }
 
 const FEATURE_ROWS: FeatureRow[] = [
   { label: 'Health profile', key: 'healthProfile' },
-  { label: 'Provider sharing', key: 'providerSharing' },
+  { label: 'Provider sharing', key: 'providerSharing', alwaysIncluded: true },
   { label: 'Quest FHIR integration', key: 'questFhirIntegration' },
-  { label: 'Data export', key: 'dataExport' },
+  { label: 'Data export', key: 'dataExport', alwaysIncluded: true },
 ];
 
 const TIER_BADGE_CLASSES: Record<PlanTier, string> = {
@@ -215,8 +220,12 @@ export default function PlanSection({ onError }: PlanSectionProps) {
             requires an upgrade. The previous single-list view mixed
             check marks and strike-through Xs, which read as confusing. */}
         {(() => {
-          const includedRows = FEATURE_ROWS.filter((row) => data.limits[row.key] === true);
-          const lockedRows = FEATURE_ROWS.filter((row) => data.limits[row.key] !== true);
+          const includedRows = FEATURE_ROWS.filter(
+            (row) => row.alwaysIncluded || data.limits[row.key] === true,
+          );
+          const lockedRows = FEATURE_ROWS.filter(
+            (row) => !row.alwaysIncluded && data.limits[row.key] !== true,
+          );
           return (
             <div className="space-y-5">
               {includedRows.length > 0 && (

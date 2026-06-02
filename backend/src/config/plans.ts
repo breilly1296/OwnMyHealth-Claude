@@ -52,7 +52,11 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       aiGuidancePerDay: 5,
       costAnalysisPerMonth: 1,
       healthProfile: false,
-      providerSharing: false,
+      // Consent-based sharing of one's OWN data is a patient right, not a
+      // paywalled feature (product decision 2026-06-01). Like dataExport, it
+      // stays true on every tier; the consent routes intentionally do not call
+      // requirePlanFeature('providerSharing').
+      providerSharing: true,
       dataExport: true,            // HIPAA requires this regardless of plan
       questFhirIntegration: false,
     },
