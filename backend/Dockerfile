@@ -1,7 +1,15 @@
 # OwnMyHealth Backend Dockerfile
-# Production-ready Node.js container for AWS ECS deployment
+# Production-ready Node.js container for GCP Cloud Run deployment
 
-FROM node:20-alpine AS builder
+# Base image digest-pinned so a rebuild is reproducible and tamper-evident: the
+# `20-alpine` tag is mutable (Docker Hub re-points it on every patch release),
+# so an unpinned FROM means two builds of the same commit can pull different
+# bytes. The trailing `# node:20-alpine` comment names the tag this digest
+# resolved to. Digest is the multi-arch index (linux/amd64 for Cloud Run),
+# resolved 2026-06-01 from Docker Hub registry-1.docker.io/library/node.
+# Bump it deliberately (e.g. via Renovate) when adopting a newer patch.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
+# node:20-alpine
 
 WORKDIR /app
 
@@ -20,8 +28,10 @@ RUN npx prisma generate
 
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine AS production
+# Production stage — same digest-pinned base as the builder above (kept in sync;
+# bump both together).
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS production
+# node:20-alpine
 
 WORKDIR /app
 

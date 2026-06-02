@@ -5,6 +5,13 @@ on:
     branches: [staging]
   workflow_dispatch:
 
+# Least-privilege default GITHUB_TOKEN scope. Like deploy.yml, these jobs only
+# checkout and authenticate to GCP via a JSON SA key (secrets.GCP_SA_KEY), not
+# GitHub OIDC, so no `id-token: write` is needed; nothing writes back to GitHub.
+# (Infra: switch to Workload Identity Federation, then add `id-token: write`.)
+permissions:
+  contents: read
+
 # Staging mirrors deploy.yml but targets a separate Cloud Run service and GCS
 # bucket in the same GCP project. No traffic-splitting, no smoke-test gate —
 # staging is the smoke test. Keep the structure duplicated (not a reusable
@@ -23,16 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Google Auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
         with:
           project_id: ${{ env.PROJECT_ID }}
 
@@ -87,21 +94,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Google Auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
         with:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'

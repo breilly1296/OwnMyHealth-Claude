@@ -1,21 +1,29 @@
 name: Deploy to Cloud Run
 
-# F-30 follow-up — TODO(supply-chain): pin every third-party action below to
-# a full commit SHA instead of the major-version tag (`@v2`, `@v4`).
-# Currently used: `actions/checkout@v4`, `google-github-actions/auth@v2`,
-# `google-github-actions/setup-gcloud@v2`, `actions/setup-node@v4`. A version
-# tag is mutable — if a release tag is ever force-pushed to a malicious
-# commit, every CI run picks it up. SHA pins make the action body
-# tamper-evident; renovate / dependabot can still bump them with a
-# reviewable diff. The pin should be done from a trusted environment with
-# access to the action's release page so the SHA can be verified against
-# what GitHub actually published; doing it blind in this repo would risk
-# fixing to a typoed or substituted hash.
+# F-30 — every third-party action below is pinned to a full commit SHA (with a
+# trailing `# vN.N.N` comment naming the release) instead of a mutable major-version
+# tag. A version tag can be force-pushed to a malicious commit; a SHA pin makes the
+# action body tamper-evident. Renovate / Dependabot can still bump these with a
+# reviewable diff. SHAs resolved 2026-06-01 against GitHub's published tag refs:
+#   actions/checkout                 34e114876b0b11c390a56381ad16ebd13914f8d5  v4.3.1
+#   actions/setup-node               49933ea5288caeca8642d1e84afbd3f7d6820020  v4.4.0
+#   google-github-actions/auth       c200f3691d83b41bf9bbd8638997a462592937ed  v2.1.13
+#   google-github-actions/setup-gcloud e427ad8a34f8676edf47cf7d7925499adf3eb74f v2.2.1
 
 on:
   push:
     branches: [master, main]
   workflow_dispatch:
+
+# Least-privilege default GITHUB_TOKEN scope. These jobs only checkout the repo
+# and authenticate to GCP via google-github-actions/auth using a JSON SA key
+# (secrets.GCP_SA_KEY) — not GitHub OIDC — so no `id-token: write` is required.
+# Nothing here writes back to GitHub (no releases, PR comments, package pushes).
+# NOTE (infra): migrating to Workload Identity Federation would replace the
+# long-lived SA key with short-lived OIDC tokens, at which point add
+# `id-token: write` here.
+permissions:
+  contents: read
 
 env:
   PROJECT_ID: ownmyhealth-prod
@@ -35,16 +43,16 @@ jobs:
       staging_tag: ${{ steps.deploy.outputs.staging_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Google Auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
         with:
           project_id: ${{ env.PROJECT_ID }}
 
@@ -160,13 +168,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Google Auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
         with:
           project_id: ${{ env.PROJECT_ID }}
 
@@ -203,21 +211,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Google Auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
         with:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
