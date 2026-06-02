@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-04-16
+updated: 2026-06-01
 ---
 
 # Encryption Review
@@ -15,11 +15,12 @@ updated: 2026-04-16
 > Use [Claude Code tools](./_verification-tools.md).
 
 ## Files to Review
-- `backend/src/services/encryption.ts` — AES-256-GCM implementation, `PHI_FIELDS` constant
-- `backend/src/services/userEncryption.ts` — per-user key derivation (PBKDF2-SHA512)
-- `backend/prisma/schema.prisma` — encrypted column declarations
+- `backend/src/services/encryption.ts` — AES-256-GCM implementation, `PHI_FIELDS` constant (~line 410)
+- `backend/src/services/userEncryption.ts` — per-user salt management (salt encrypted with master key; key-derivation iterations live in `encryption.ts`)
+- `backend/prisma/schema.prisma` — encrypted column declarations (currently 38 `*Encrypted` columns across 18 models)
 - `backend/src/controllers/*.ts` — every encrypt/decrypt call site
-- `backend/src/services/auditLog.ts` — audit log PHI encryption (uses system salt, not per-user)
+- `backend/src/services/auditLog.ts` — audit log PHI encryption (uses `systemSalt` from `AUDIT_LOG_SALT`, not per-user)
+- `backend/src/services/fhir/labSyncService.ts` — SMART-on-FHIR OAuth token encryption (`accessTokenEncrypted` / `refreshTokenEncrypted` on `LabConnection`, encrypted with the **per-user salt**)
 - Any file importing `getEncryptionService()`
 
 ## OwnMyHealth Encryption Architecture
@@ -46,10 +47,11 @@ updated: 2026-04-16
 ### 3. Per-User Key Management
 - [ ] Per-user salt stored in `UserEncryptionKey` table
 - [ ] Salt encrypted with master key before DB storage (`encryptWithMasterKey()`)
-- [ ] PBKDF2-SHA512 with 100,000 iterations for key derivation
+- [ ] PBKDF2-SHA512 key derivation uses `PBKDF2_ITERATIONS = 600000` (OWASP 2023 target) for new encryption (`encryption.ts` ~line 85)
+- [ ] Decryption falls back to `PBKDF2_ITERATIONS_LEGACY = 100000` only when the current count fails the auth tag — confirm this dual-derivation does NOT silently downgrade new writes
 - [ ] 32-byte random salt per user (`generateUserSalt()`)
-- [ ] Key rotation supported (version tracking, `isActive` flag)
-- [ ] Salt created on user registration
+- [ ] Version tracking (`version`) + `isActive` flag present for future rotation. NOTE: the old in-service key-rotation helper was **removed** from `userEncryption.ts` (it rotated the salt without re-encrypting existing PHI — a footgun with no callers). Verify no caller still expects it; proper rotation must be a dedicated job that re-encrypts every PHI column in one transaction. The `KEY_ROTATION` AuditAction enum value is retained for that future work.
+- [ ] Salt created on user registration (lazily via `getUserEncryptionSalt()`)
 - [ ] Salt destroyed on account deletion
 
 ### 4. PHI Field Coverage
@@ -57,7 +59,7 @@ Verify against [_phi-inventory](./_phi-inventory.md) — do **not** re-enumerate
 
 - [ ] Every listed field appears in `PHI_FIELDS` in `encryption.ts`.
 - [ ] Every listed field has a corresponding encrypted column in `schema.prisma`.
-- [ ] The controller for that model encrypts on write and decrypts on read (find with Grep: `pattern: "encryptField\\(.*<fieldName>|decryptField\\(.*<fieldName>"`).
+- [ ] The controller for that model encrypts on write and decrypts on read (find with Grep: `pattern: "encrypt\|decrypt"`, then locate the `<fieldName>` write/read; the service exposes `encrypt`/`decrypt` and the batch helpers `encryptFields`/`decryptFields`, NOT `encryptField`/`decryptField`).
 - [ ] No PLAINTEXT write path exists that bypasses encryption (Grep each non-`Encrypted` concept name — `firstName`, `memberId`, etc. — outside test files).
 
 Flag any drift between schema ↔ `PHI_FIELDS` ↔ inventory as a **Critical** finding.
@@ -75,18 +77,31 @@ Flag any drift between schema ↔ `PHI_FIELDS` ↔ inventory as a **Critical** f
 - [ ] PDF/document buffers cleared after processing
 - [ ] Encryption keys not retained beyond function scope
 
+### 7. SMART-on-FHIR OAuth Token Encryption (new sensitive class)
+`LabConnection` stores live OAuth tokens for Quest/LabCorp FHIR lab sync. A stolen
+access/refresh token is a direct path to the user's PHI at the external lab — treat
+these with the same rigor as PHI fields.
+
+- [ ] `accessTokenEncrypted` and `refreshTokenEncrypted` are in `PHI_FIELDS.LabConnection` and in `schema.prisma` (migration `20260418_add_lab_connections`).
+- [ ] Tokens are encrypted with the **per-user salt** (`getUserEncryptionSalt(userId)` → `encryption.encrypt(token, salt)` in `labSyncService.ts` `persistConnection()`), NOT the system/master key. Flag any path that stores a token in plaintext.
+- [ ] Refresh-on-expiry re-encrypts the rotated token (`labSyncService.ts` ~line 230) and persists `accessTokenEncrypted`/`refreshTokenEncrypted` under the same salt.
+- [ ] Decrypted tokens are never logged and never returned to the client (FHIR token flows go through `services/fhir/`; `urlSafety.ts` provides SSRF protection on outbound FHIR calls).
+- [ ] Tokens are destroyed/orphaned correctly on account deletion (per-user salt is destroyed on deletion, so ciphertext becomes unrecoverable — confirm the row is also deleted).
+
 ## Verification (Claude Code tools)
 
 | Check | Tool | Parameters |
 |---|---|---|
 | All `*Encrypted` columns in schema | Grep | `pattern: "Encrypted\\b"`, `path: "backend/prisma/schema.prisma"`, `output_mode: "content"` |
 | Controllers that touch encryption | Grep | `pattern: "encrypt\|decrypt"`, `glob: "backend/src/controllers/**/*.ts"`, `output_mode: "files_with_matches"` |
-| Plaintext PHI leaks | Grep | `pattern: "firstName\|lastName\|dateOfBirth\|phone\|address\|memberId\|groupId"`, `glob: "backend/src/**/*.ts"`; manually filter hits inside `encryptField(...)` / `decryptField(...)` calls and test files |
-| `PHI_FIELDS` definition | Read | `backend/src/services/encryption.ts` lines ~360–440 |
+| Plaintext PHI leaks | Grep | `pattern: "firstName\|lastName\|dateOfBirth\|phone\|address\|healthProfile\|memberId\|groupId\|targetValue\|accessToken\|refreshToken"`, `glob: "backend/src/**/*.ts"`; manually filter hits inside `encrypt(...)` / `decrypt(...)` calls and test files |
+| `PHI_FIELDS` definition | Read | `backend/src/services/encryption.ts` lines ~405–486 |
+| Per-user PBKDF2 iterations | Grep | `pattern: "PBKDF2_ITERATIONS"`, `path: "backend/src/services/encryption.ts"`, `output_mode: "content"` |
 
 ## Questions to Ask
-1. Are there any PHI fields being stored without encryption?
-2. Is the encryption key being rotated periodically?
-3. Are decryption errors handled without leaking data?
-4. Is the per-user key properly destroyed on account deletion?
-5. Are AI responses (Claude) encrypted before storage?
+1. Are there any PHI fields being stored without encryption? (Compare `PHI_FIELDS` ↔ schema's 38 `*Encrypted` columns ↔ [_phi-inventory](./_phi-inventory.md).)
+2. Is there a working key-rotation path, given the in-service rotation helper was removed? (Confirm no dead reference, and that rotation is acknowledged as a future dedicated re-encryption job.)
+3. Are decryption errors handled without leaking data, including the legacy-iteration PBKDF2 fallback?
+4. Is the per-user key properly destroyed on account deletion (and do `LabConnection` rows go with it)?
+5. Are AI responses encrypted before storage? `CostAnalysis.claudeResponse` was renamed to `claudeResponseEncrypted` (migration `20260424_align_uuid_defaults_and_rename_claude_response`) — confirm the column and `PHI_FIELDS` entry both use the new name.
+6. Are SMART-on-FHIR OAuth tokens (`LabConnection.accessTokenEncrypted` / `refreshTokenEncrypted`) encrypted with the per-user salt and never logged?

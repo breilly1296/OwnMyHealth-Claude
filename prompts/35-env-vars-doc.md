@@ -6,7 +6,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate ENV_VARS.md
@@ -33,19 +33,20 @@ Produce `New Project Documents/ENV_VARS.md` — the **complete, single-source-of
 
 | File | Why read it |
 |---|---|
-| `backend/src/config/index.ts` | **Primary source of truth** — the typed config object; lists every env var the backend reads and any defaults/validation. |
-| `backend/.env.example`, `backend/.env.production.example`, `backend/.env.staging.example` | Documented defaults, sample values, production overrides. |
-| `.env.example` (repo root) | Frontend-side (`VITE_*`) and any shared vars. |
-| `backend/src/index.ts` | Startup validation — which vars throw on boot if missing? |
-| `backend/railway.toml` | Production/staging env settings pinned in Railway (if any). |
-| `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml` | CI/CD env vars, GitHub secrets used at build/deploy time. |
+| `backend/src/config/index.ts` | **Primary source of truth** — the typed `config` object **and** all startup validation. Every env var the backend reads, its default (the `??` / `||` right-hand side), and the boot-time throws all live in this one module. There is no separate `index.ts` entry file. |
+| `backend/src/config/jwtOptions.ts`, `backend/src/config/plans.ts` | Sibling config modules — `jwtOptions.ts` defines the static `jsonwebtoken` sign/verify options (`algorithm`/`issuer`/`audience`; reads no env vars — the JWT secrets/expiries live in `config/index.ts`); `plans.ts` defines plan/billing tiers consumed by `planGating` (no env vars of its own, but cite it for completeness). |
+| `backend/.env.example`, `backend/.env.production.example`, `backend/.env.staging.example` | Documented defaults, sample values, production overrides. NOTE: `.env.example` still lists **removed** vars (`CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY`, `RLS_ENFORCEMENT`) — flag these as drift, they are read nowhere in code. |
+| `.env.example`, `.env.production.example`, `.env.staging` (repo root) | Frontend-side (`VITE_*`) and any shared vars. |
+| `backend/src/app.ts` | The actual Express entry point (`dist/app.js` is the prod start command — see `railway.toml`). Reads `CORS_ORIGIN` and `DISABLE_CSRF`. Startup throws come from importing `config/index.ts`, not from here. |
+| `backend/railway.toml` | Start command + healthcheck only — no env pins. Despite this file, **production runs on GCP Cloud Run** via `deploy.yml` (`gcloud run deploy`), not Railway. |
+| `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml` | CI/CD env vars, GitHub secrets (`secrets.GCP_SA_KEY`) used at build/deploy time; `deploy.yml` sets `VITE_API_URL` for the frontend build. |
 | `backend/Dockerfile` | `ENV` directives, build args. |
-| `vite.config.ts` | Build-time `VITE_*` var consumption. |
-| `backend/src/services/*.ts` | Consumer files — every `process.env.X` or `config.X` usage for the "consumer" column. |
-| `backend/src/middleware/*.ts` | Rate limiter, CSRF, CORS consumers. |
-| `src/services/api/client.ts` | Frontend consumer of `VITE_API_URL` (or similar). |
+| `vite.config.ts`, `src/utils/logger.ts` | Build-time `VITE_*` var consumption (`VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG`, plus Vite built-ins `import.meta.env.DEV/PROD`). |
+| `backend/src/services/*.ts` (23 modules + `fhir/`, `knowledge/` subdirs) | Consumer files — every `process.env.X` or `config.X` usage for the "consumer" column. `ocrService.ts` reads the Document AI vars directly (`GCP_PROCESSOR_ID`, `GCP_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS`); `anthropicClient.ts` reads `ANTHROPIC_API_KEY`; `database.ts` reads `DATABASE_URL`, `DATABASE_POOL_SIZE`. |
+| `backend/src/middleware/*.ts` (10 modules) | Rate limiter (`rateLimiter.ts` + `rateLimitStore.ts` → `REDIS_URL`), CSRF (`csrf.ts` → `DISABLE_CSRF`), `aiSpendGuard.ts` (AI budget vars), CORS consumers. |
+| `src/services/api/client.ts`, `src/services/uploadUtils.ts` | Frontend consumers of `VITE_API_URL`. |
 
-Use `Grep` for `process.env\\.|import.meta.env\\.|config\\.` across the whole repo to catch drift between `config/index.ts` and actual usage.
+Use `Grep` for `process\.env\.[A-Z_]+` and `import\.meta\.env\.[A-Z_]+` across the whole repo to catch drift between `config/index.ts` and actual usage. Note that several vars are read **directly from `process.env`** (not via the `config` object): `DATABASE_URL`, `PHI_ENCRYPTION_KEY`, `DATABASE_POOL_SIZE`, `DISABLE_CSRF`, `GCP_LOCATION`, `GCP_PROCESSOR_ID`, `GOOGLE_APPLICATION_CREDENTIALS` — so a pure `config.X` grep will miss them.
 
 ---
 
@@ -56,20 +57,22 @@ The output `ENV_VARS.md` must contain, in order:
 1. **Purpose / how to read this doc** (1 paragraph).
 2. **Master table** — every env var (see Required artifacts).
 3. **By category**:
-   - Critical secrets (JWT, encryption, DB, third-party API keys)
-   - Database & persistence
-   - Auth & sessions
-   - Rate limiting
-   - AI (Anthropic + Google Document AI)
-   - Email (SendGrid)
-   - File storage (GCS)
-   - CORS & frontend URLs
-   - Demo mode
-   - Feature flags
-   - CI/CD-only (GitHub Secrets, not runtime)
-   - Frontend build-time (`VITE_*`)
-4. **Startup validation** — which vars throw on boot, where, and with what message (cite `backend/src/index.ts` and `config/index.ts`).
-5. **Secret rotation policy** — per secret, cadence + where it lives (Secret Manager? GitHub Secrets? Railway?).
+   - Critical secrets (JWT access/refresh, `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`, DB, third-party API keys)
+   - Database & persistence (`DATABASE_URL`, `DATABASE_POOL_SIZE`)
+   - Auth & sessions (JWT expiry seconds, `BCRYPT_ROUNDS`, `MAX_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION_MINUTES`, cookie config `COOKIE_SAME_SITE` / `COOKIE_DOMAIN`)
+   - Rate limiting (`RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`, `REDIS_URL` shared store)
+   - AI — Anthropic (`ANTHROPIC_API_KEY`, `ANTHROPIC_BAA_ACTIVE`) + spend circuit breaker (`AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`) + Google Document AI (`GCP_PROCESSOR_ID`, `GCP_LOCATION`, `GOOGLE_BAA_ACTIVE`)
+   - Quest Diagnostics SMART-on-FHIR lab sync (`QUEST_FHIR_CLIENT_ID`, `QUEST_FHIR_CLIENT_SECRET`, `QUEST_FHIR_BASE_URL`, `QUEST_FHIR_REDIRECT_URI`, `QUEST_FHIR_SUCCESS_REDIRECT`, `QUEST_FHIR_AUTH_HOSTS`)
+   - Email (SendGrid: `SENDGRID_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `SENDGRID_SANDBOX_MODE`)
+   - File storage (GCS: `GCS_BUCKET_NAME`, `GCP_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS`)
+   - Scheduled maintenance / ops (`AUDIT_CLEANUP_TOKEN`)
+   - CORS & frontend URLs (`CORS_ORIGIN`, `FRONTEND_URL`)
+   - Demo mode (`DEMO_ACCOUNT_ENABLED`, `DEMO_EMAIL`, `DEMO_PASSWORD`)
+   - Feature flags / BAA gates (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`, `DISABLE_CSRF`)
+   - CI/CD-only (GitHub Secrets, not runtime — e.g. `secrets.GCP_SA_KEY`)
+   - Frontend build-time (`VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG`)
+4. **Startup validation** — which vars throw on boot, where, and with what message. All startup checks live in `backend/src/config/index.ts` (executed at module load): `requireEnv()` for the JWT secrets, the `BLOCKED_JWT_VALUES` / `MIN_JWT_SECRET_LENGTH` checks, the `AUDIT_LOG_SALT` length gate, the Anthropic + Document AI BAA gates, and the prod/staging block that validates `DATABASE_URL`, `PHI_ENCRYPTION_KEY` (64-hex), `GCS_BUCKET_NAME`, demo/sandbox prohibitions. There is **no** `backend/src/index.ts` — do not cite it; the entry point is `backend/src/app.ts`.
+5. **Secret rotation policy** — per secret, cadence + where it lives (GCP Secret Manager? GitHub Secrets? Cloud Run env?). NOTE: `AUDIT_LOG_SALT` and `PHI_ENCRYPTION_KEY` are NOT freely rotatable — rotating either makes existing encrypted PHI / audit logs undecryptable; document this explicitly.
 6. **Local vs staging vs prod** — per-env differences (quick diff table).
 7. **Drift findings** — env vars used in code but not in `config/index.ts` (or vice versa). Generated by the grep above.
 8. **Related Documents** — cross-links.
@@ -92,31 +95,49 @@ The output `ENV_VARS.md` must contain, in order:
 | **Where stored (prod)** | GCP Secret Manager / Railway env / GitHub Secret / Cloud Run env / not applicable. |
 | **Notes** | Rotation cadence, validation rules, gotchas. |
 
-At minimum, cover (verify each by reading `config/index.ts`):
+At minimum, cover (verify each by reading `config/index.ts` — the canonical inventory below is ~42 vars; these are the **real** names, not the pre-2026-04 names this prompt used to list):
 
-- `DATABASE_URL`, `DIRECT_URL` (if present), `DATABASE_SSL_*`
-- `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRY`, `JWT_REFRESH_EXPIRY`
-- `PHI_ENCRYPTION_KEY`, `CSRF_SECRET`
-- `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (if configurable), `ANTHROPIC_BAA_ACTIVE`
-- `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`
-- `GOOGLE_CLOUD_PROJECT`, `GCS_BUCKET_NAME`
-- `GOOGLE_DOCUMENT_AI_PROCESSOR_ID`, `GOOGLE_DOCUMENT_AI_LOCATION`
-- `NODE_ENV`, `PORT`, `CORS_ORIGIN`, `FRONTEND_URL`
-- `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`
-- `DEMO_ACCOUNT_ENABLED`, `DEMO_EMAIL`, `DEMO_PASSWORD`
-- `VITE_API_URL` (and any other `VITE_*`)
+- **Core/server**: `NODE_ENV`, `PORT`, `DATABASE_URL`, `DATABASE_POOL_SIZE` (read directly in `database.ts`), `FRONTEND_URL`, `CORS_ORIGIN`
+- **Auth/crypto secrets**: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` (NOT `JWT_SECRET` — there are two, both via `requireEnv`), `JWT_ACCESS_EXPIRES_SECONDS`, `JWT_REFRESH_EXPIRES_SECONDS` (integers in seconds, NOT `JWT_*_EXPIRY` strings), `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`
+- **Account security**: `BCRYPT_ROUNDS`, `MAX_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION_MINUTES`
+- **Cookies**: `COOKIE_SAME_SITE`, `COOKIE_DOMAIN` (there is NO `CSRF_SECRET` — CSRF is a double-submit cookie with no server-side secret; toggled only by `DISABLE_CSRF`)
+- **Rate limiting**: `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS` (NOT `RATE_LIMIT_MAX`), `REDIS_URL` (optional shared store backing all 8 limiters)
+- **Ops**: `AUDIT_CLEANUP_TOKEN` (enables `POST /api/v1/internal/audit-cleanup`)
+- **AI (Anthropic)**: `ANTHROPIC_API_KEY`, `ANTHROPIC_BAA_ACTIVE` (there is NO configurable `ANTHROPIC_MODEL` env var — the model is pinned in `anthropicClient.ts`), `AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`
+- **Email (SendGrid)**: `SENDGRID_API_KEY`, `EMAIL_FROM` (NOT `SENDGRID_FROM_EMAIL`), `EMAIL_FROM_NAME`, `SENDGRID_SANDBOX_MODE`
+- **Storage/GCP/OCR**: `GCS_BUCKET_NAME`, `GCP_PROJECT_ID` (NOT `GOOGLE_CLOUD_PROJECT`), `GCP_PROCESSOR_ID` (NOT `GOOGLE_DOCUMENT_AI_PROCESSOR_ID`), `GCP_LOCATION` (NOT `GOOGLE_DOCUMENT_AI_LOCATION`; default `'us'`, read in `ocrService.ts`), `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_BAA_ACTIVE`
+- **Quest FHIR (lab sync)**: `QUEST_FHIR_CLIENT_ID`, `QUEST_FHIR_CLIENT_SECRET`, `QUEST_FHIR_BASE_URL`, `QUEST_FHIR_REDIRECT_URI`, `QUEST_FHIR_SUCCESS_REDIRECT`, `QUEST_FHIR_AUTH_HOSTS` (comma-separated SSRF allowlist)
+- **Demo**: `DEMO_ACCOUNT_ENABLED`, `DEMO_EMAIL`, `DEMO_PASSWORD`
+- **CSRF toggle**: `DISABLE_CSRF` (dev only — refused by `csrf.ts` if NODE_ENV=production)
+- **Frontend build-time**: `VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG`
 
-If `config/index.ts` contains others, add them. If any of the above are **not** in `config/index.ts` but *are* in `.env.example`, flag as drift.
+If `config/index.ts` contains others, add them. If any var is **not** in `config/index.ts` (nor read via `process.env` anywhere) but *is* in `.env.example`, flag as drift — known cases: `CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY` (leftovers from the removed CMS Marketplace / provider-search features), and `RLS_ENFORCEMENT` (the strict-mode flag was removed when the `omh_app` NOBYPASSRLS cutover landed — see `database.ts:210-211` — but it lingers in `.env.example` / `.env.staging.example`).
 
 ### Startup-validation snippet
 
-Quote the assertion block from `backend/src/index.ts` (or wherever startup checks live):
+Quote the real assertion blocks from `backend/src/config/index.ts` (all startup checks live there — there is no `backend/src/index.ts`). For example, the `requireEnv` helper and the prod/staging required-vars gate:
 
 ```ts
-// Source: backend/src/index.ts:Lxx-Lyy
-if (!config.JWT_SECRET) throw new Error('JWT_SECRET is required');
-// ...
+// Source: backend/src/config/index.ts (requireEnv — throws at module load for JWT secrets)
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value || value.trim() === '') {
+    throw new Error(`Missing required environment variable: ${key}. ...`);
+  }
+  return value;
+}
+// jwt.accessSecret = requireEnv('JWT_ACCESS_SECRET');
+// jwt.refreshSecret = requireEnv('JWT_REFRESH_SECRET');
+
+// Source: backend/src/config/index.ts (prod/staging block, ~L341)
+const requiredEnvVars = ['DATABASE_URL', 'PHI_ENCRYPTION_KEY'];
+const missing = requiredEnvVars.filter(key => !process.env[key]);
+if (missing.length > 0) {
+  throw new Error(`Missing required environment variables for ${envLabel}: ${missing.join(', ')}`);
+}
 ```
+
+Also quote (don't just summarize) the BAA gates (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`), the `PHI_ENCRYPTION_KEY` 64-hex / placeholder checks, the `AUDIT_LOG_SALT` length gate, and the prod-only prohibitions (`DEMO_ACCOUNT_ENABLED`, `SENDGRID_SANDBOX_MODE`, `GCS_BUCKET_NAME`). Cite each with its real line number (verify against the current file).
 
 ### Drift table
 
@@ -130,16 +151,20 @@ if (!config.JWT_SECRET) throw new Error('JWT_SECRET is required');
 
 A reader with only the generated `ENV_VARS.md` (and siblings) must be able to answer:
 
-1. Which env vars are strictly required to boot the backend in production?
-2. What happens if `JWT_SECRET` is omitted? (file:line of the throw)
-3. Which env vars contain PHI-adjacent secrets and how are they rotated?
+1. Which env vars are strictly required to boot the backend in production? (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `AUDIT_LOG_SALT` always; plus `DATABASE_URL`, `PHI_ENCRYPTION_KEY` in prod/staging)
+2. What happens if `JWT_ACCESS_SECRET` is omitted? (file:line of the `requireEnv` throw in `config/index.ts`)
+3. Which env vars contain PHI-adjacent secrets, and which of them are NOT rotatable without re-encrypting data (`PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`)?
 4. Which vars are build-time (`VITE_*`) vs runtime?
-5. Where is `DATABASE_URL` stored in production and how is it provisioned for a new deploy?
-6. Which env var controls whether Anthropic BAA protections are active, and what code path does it gate?
-7. What's the CORS origin in staging vs prod, and which file reads it?
-8. Which vars have defaults safe for local dev and should never be left as default in prod?
+5. Where is `DATABASE_URL` stored in production and how is it provisioned for a new Cloud Run deploy?
+6. Which env vars control whether Anthropic and Google Document AI BAA protections are active, and what code paths do they gate? (`ANTHROPIC_BAA_ACTIVE` → `claudeExtraction`/`sbcExtraction`; `GOOGLE_BAA_ACTIVE` → `ocrService.processImageWithDocumentAI`)
+7. What's the CORS origin in staging vs prod, and which file reads it? (`CORS_ORIGIN`, read in `config/index.ts` and `app.ts`)
+8. Which vars have defaults safe for local dev and should never be left as default in prod (`GCS_BUCKET_NAME`, `EMAIL_FROM`, the Quest FHIR redirect URIs)?
 9. Does `PHI_ENCRYPTION_KEY` have a rotation procedure? (if not, flag as `TBD (external: ...)` with resolution path)
-10. Which GitHub Actions secrets are used at deploy time but never read at runtime?
+10. Which GitHub Actions secrets are used at deploy time but never read at runtime (`GCP_SA_KEY`)?
+11. How is the AI spend circuit breaker configured, and what's the per-instance caveat (`AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD` enforced by `aiSpendGuard`, in-memory per Cloud Run instance)?
+12. What's required to enable Quest lab sync vs run it against the mock FHIR server locally, and what does `QUEST_FHIR_AUTH_HOSTS` protect against (SSRF/token-exfil allowlist)?
+13. How is rate-limit state shared across Cloud Run instances (`REDIS_URL`), and what's the failure mode if it's set but unreachable?
+14. What does `AUDIT_CLEANUP_TOKEN` enable, and what runs in its absence (in-process 24h interval vs Cloud Scheduler hitting the internal endpoint)?
 
 After writing the doc, self-answer each question **using only the doc**. If any answer requires reading a source file, patch the doc and re-check.
 
@@ -151,9 +176,9 @@ Before marking anything TBD:
 
 - **For "which file reads X"**: `Grep` for `process.env.X` and `config.X` across `backend/src/**`, `src/**`, `vite.config.ts`, workflows.
 - **For "what's the default"**: read `config/index.ts` literally; the `??` / `||` right-hand-side is the default.
-- **For "required at boot?"**: read `backend/src/index.ts` for explicit throws; read `config/index.ts` for schema validation (Zod/envsafe/manual).
+- **For "required at boot?"**: read `backend/src/config/index.ts` for the explicit throws — `requireEnv()` calls, the prod/staging `requiredEnvVars` block, the JWT/PHI/audit-salt validators, and the BAA gates. (There is no `backend/src/index.ts`; the entry point is `backend/src/app.ts` but it does no env validation of its own.)
 - **For "rotation cadence"**: Grep for rotation references in `RUNBOOK.md`, `SECURITY_STATUS.md`, session summaries, `CLAUDE.md`.
-- **For "where stored in prod"**: read `railway.toml`, `deploy.yml` (`env:` block, `secrets.*`), `.github/workflows/deploy*.yml`.
+- **For "where stored in prod"**: production runs on GCP Cloud Run (not Railway). Read `.github/workflows/deploy.yml` / `deploy-staging.yml` for `secrets.*` and the `VITE_API_URL` build env; runtime env vars are set on the Cloud Run service itself (GCP Secret Manager / `gcloud run ... --set-env-vars`). `railway.toml` holds only the start command + healthcheck.
 
 **Only** if the rotation cadence or prod-storage location is not recorded anywhere in the repo, mark:
 
@@ -180,12 +205,14 @@ The generated `ENV_VARS.md` must link to:
 | Task | Tool | How |
 |---|---|---|
 | Find every `process.env.X` reader | Grep | `pattern: "process\\.env\\.[A-Z_]+"` over `backend/src/**`, `src/**`, `*.config.*`, `.github/**` |
-| Find every `config.X` reader | Grep | `pattern: "config\\.[A-Z][A-Za-z_]+"` over `backend/src/**` |
-| Read config schema | Read | `backend/src/config/index.ts` |
-| Read example envs | Read | `backend/.env.example`, `backend/.env.production.example`, `backend/.env.staging.example`, `.env.example` |
-| Read startup assertions | Read | `backend/src/index.ts` |
+| Find every `config.X` reader | Grep | `pattern: "config\\.[a-z][A-Za-z.]+"` over `backend/src/**` (config fields are camelCase, e.g. `config.jwt.accessSecret`, `config.gcp.bucketName`) |
+| Find every `VITE_*` reader | Grep | `pattern: "import\\.meta\\.env\\.[A-Z_]+"` over `src/**`, `vite.config.ts` |
+| Read config schema + ALL startup assertions | Read | `backend/src/config/index.ts` (single source — config object and boot-time throws) |
+| Read sibling config modules | Read | `backend/src/config/jwtOptions.ts`, `backend/src/config/plans.ts` |
+| Read example envs | Read | `backend/.env.example`, `backend/.env.production.example`, `backend/.env.staging.example`, `.env.example`, `.env.production.example`, `.env.staging` |
+| Read entry point (CORS/CSRF env reads) | Read | `backend/src/app.ts` (NOT `backend/src/index.ts` — it does not exist) |
 | Read workflow env blocks | Read | `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml` |
-| Confirm Railway pins | Read | `backend/railway.toml` |
+| Confirm start command (not env pins) | Read | `backend/railway.toml` (prod runs on Cloud Run via `deploy.yml`) |
 
 ---
 

@@ -5,60 +5,77 @@ tags:
   - critical
 type: prompt
 priority: 1
+updated: 2026-06-01
 ---
 
 # Authentication Review
 
 ## Files to Review
-- `backend/src/middleware/auth.ts` (JWT validation)
-- `backend/src/services/authService.ts` (auth logic)
+- `backend/src/middleware/auth.ts` (JWT validation, `authenticate` / `optionalAuth` / `requireBearerAuth`)
+- `backend/src/services/authService.ts` (auth logic, token rotation, lockout, email-change)
 - `backend/src/controllers/authController.ts` (endpoints)
 - `backend/src/routes/authRoutes.ts` (route definitions)
-- `src/contexts/AuthContext.tsx` (frontend auth state)
+- `backend/src/config/index.ts` (JWT secrets, expiry, lockout & bcrypt config, demo gating)
+- `backend/src/config/jwtOptions.ts` (`JWT_SIGN_OPTIONS` / `JWT_VERIFY_OPTIONS` — issuer/audience)
+- `backend/src/middleware/csrf.ts` (`setCsrfCookie` — token regeneration on login/refresh)
+- `src/contexts/AuthContext.tsx` (frontend auth state, HIPAA inactivity timeout)
+- `src/components/auth/ConfirmEmailChangePage.tsx` (email-change confirmation page)
 
 ## OwnMyHealth Auth Architecture
-- **Method**: JWT with HttpOnly cookies
-- **Access Token**: 15-minute expiration
-- **Refresh Token**: 7-day expiration (30-day for demo accounts)
-- **Password**: bcrypt hashed (cost factor 12)
-- **CSRF**: Double-submit cookie pattern
-- **Account Lockout**: 5 failed attempts → 30-minute lockout
-- **Email Verification**: 24-hour token, required before full access
-- **Password Reset**: Time-limited token via SendGrid email
-- **Sessions**: Database-backed (PostgreSQL), cleanup every 10 minutes
+- **Method**: JWT with HttpOnly cookies (access + refresh tokens, DB-backed sessions)
+- **Access Token**: 15-minute expiration (`JWT_ACCESS_EXPIRES_SECONDS`, default 900s)
+- **Refresh Token**: 7-day expiration (`JWT_REFRESH_EXPIRES_SECONDS`, default 604800s; 30-day for demo accounts)
+- **Refresh Rotation**: single-use, rotated atomically (`SELECT ... FOR UPDATE` in `refreshTokens`)
+- **Access Token Revocation**: in-memory blacklist (`revokeAccessToken` / `isTokenRevoked`), per-instance — NOT shared across Cloud Run replicas
+- **Password**: bcrypt hashed (cost factor configurable via `BCRYPT_ROUNDS`, default 13)
+- **CSRF**: Double-submit cookie pattern; CSRF token regenerated on login/refresh (token-fixation defense)
+- **Account Lockout**: `MAX_LOGIN_ATTEMPTS` (default 5) → `LOCKOUT_DURATION_MINUTES` (default 30) lockout
+- **Email Verification**: 24-hour token (`EMAIL_VERIFICATION_EXPIRATION_HOURS`), required before login; token stored as SHA-256 hash
+- **Password Reset**: 1-hour token via SendGrid; token stored as SHA-256 hash; all sessions revoked on reset
+- **Email Change**: re-auth with current password → tokenized confirmation link to new address + notice to old (1-hour token, SHA-256 hashed; migration `20260601_add_email_change`)
+- **Account Enumeration Defenses**: generic register response, timing-safe dummy bcrypt for unknown emails, no `remainingAttempts` leaked to client
+- **Sessions**: Database-backed (PostgreSQL `sessions` table), cleanup every 10 minutes (also sweeps the revoked-token blacklist)
+- **Inactivity Timeout**: HIPAA auto-logoff after 15 min idle, 2-min warning (frontend `AuthContext`)
 
 ## Checklist
 
 ### 1. JWT Implementation
-- [ ] Access token expiration is short (≤15 minutes)
-- [ ] Refresh token expiration is reasonable (≤7 days)
-- [ ] Tokens are signed with strong secret (256+ bits)
-- [ ] Secrets loaded from environment, not hardcoded
-- [ ] Token validation checks expiration, signature, and issuer
+- [ ] Access token expiration is short (≤15 minutes, `JWT_ACCESS_EXPIRES_SECONDS`)
+- [ ] Refresh token expiration is reasonable (≤7 days, `JWT_REFRESH_EXPIRES_SECONDS`)
+- [ ] Separate secrets for access vs refresh tokens (`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`)
+- [ ] Secrets required via `requireEnv` (no hardcoded fallback in ANY environment); weak/placeholder values rejected; min 32 chars enforced at config load
+- [ ] Token validation checks expiration, signature, and issuer/audience (`JWT_VERIFY_OPTIONS` in `config/jwtOptions.ts`)
+- [ ] Token `type` field checked — access endpoints reject refresh tokens and vice versa
 
 ### 2. Password Security
-- [ ] bcrypt used with cost factor ≥10
-- [ ] Password requirements enforced (length, complexity)
-- [ ] Password not logged anywhere
-- [ ] Timing-safe comparison used for password verification
+- [ ] bcrypt used with cost factor ≥12 (`BCRYPT_ROUNDS`, default 13 for HIPAA workloads)
+- [ ] Password requirements enforced in `validatePasswordStrength` (≥12 chars, upper/lower/number/special)
+- [ ] Password not logged anywhere (demo password explicitly not logged in `initializeDemoUser`)
+- [ ] Timing-safe comparison used for password verification (`bcrypt.compare`)
+- [ ] Login against an unknown email still runs a real bcrypt compare against a dummy hash (timing-attack defense in `attemptLogin`)
 
 ### 3. Cookie Security
-- [ ] `HttpOnly` flag set on auth cookies
-- [ ] `Secure` flag set (HTTPS only)
-- [ ] `SameSite` attribute configured appropriately
-- [ ] Cookie expiration matches token expiration
+- [ ] `HttpOnly` flag set on `access_token` and `refresh_token` cookies
+- [ ] `Secure` flag set in production (`config.cookie.secure` = `NODE_ENV === 'production'`)
+- [ ] `SameSite` configured appropriately (`COOKIE_SAME_SITE` override; production same-domain defaults to `strict`, cross-domain `COOKIE_DOMAIN` set → `none`)
+- [ ] Cookie expiration matches token expiration (demo refresh cookie extended to 30 days only in non-production)
+- [ ] Cookies cleared on logout (`clearAuthCookies` with matching path/domain attributes)
 
 ### 4. Token Refresh Flow
 - [ ] Refresh token stored in HttpOnly cookie
-- [ ] Refresh endpoint issues new access token
-- [ ] Refresh token rotation on use (optional but recommended)
-- [ ] Old tokens invalidated on logout
+- [ ] Refresh endpoint (`POST /api/v1/auth/refresh`) issues new access token + new refresh token
+- [ ] Refresh token rotation on use — single-use; old session row deleted, new one inserted in the same transaction
+- [ ] Concurrent refresh with the same token serializes (`SELECT ... FOR UPDATE` row lock in `refreshTokens`) so only one succeeds
+- [ ] Old tokens invalidated on logout (refresh session deleted; access token added to in-memory revocation blacklist)
+- [ ] CSRF token regenerated on refresh (`setCsrfCookie`)
 
 ### 5. Frontend Auth State
-- [ ] `refreshToken()` called BEFORE `getCurrentUser()` on page load
-- [ ] Auth state cleared on logout
-- [ ] Failed auth redirects to login
-- [ ] Token stored in memory only (not localStorage)
+- [ ] `refreshToken()` called BEFORE `getCurrentUser()` on page load (`checkAuth` in `AuthContext`)
+- [ ] Auth state cleared on logout (`setUser(null)` + `clearAuthToken()`)
+- [ ] Failed auth redirects to login (`setOnAuthFailure` wires the API client 401 path to `logout`)
+- [ ] Token stored in memory only (not localStorage) — only non-PHI identity (id/email/role) held in context
+- [ ] HIPAA inactivity auto-logoff present (15-min timeout, 2-min warning; activity events exclude mousemove)
+- [ ] Idle logout force-reloads to login so in-memory PHI in other tabs is discarded
 
 ### 6. Account Lockout
 - [ ] Failed login attempts tracked (`failedLoginAttempts` field)
@@ -69,45 +86,64 @@ priority: 1
 - [ ] Lockout not bypassable via API manipulation
 
 ### 7. Email Verification Flow
-- [ ] Verification token generated on registration
+- [ ] Verification token generated on registration (`generateEmailVerificationToken`, 32 random bytes)
 - [ ] Token has 24-hour expiration
+- [ ] Only the SHA-256 hash stored in DB (`hashToken`); plaintext goes in the email link only
 - [ ] Token sent via SendGrid email
 - [ ] Token cleared from URL immediately after read (frontend)
-- [ ] Token single-use (invalidated after verification)
-- [ ] Resend verification endpoint rate limited
+- [ ] Token single-use (cleared on verification; `resendVerification` does not reveal whether the user exists)
+- [ ] Resend verification endpoint rate limited (`strictAuthLimiter`)
 
 ### 8. Password Reset Flow
-- [ ] Reset token generated on forgot-password request
-- [ ] Token has expiration (time-limited)
+- [ ] Reset token generated on forgot-password request (`generatePasswordResetToken`, 32 random bytes)
+- [ ] Token has 1-hour expiration (`PASSWORD_RESET_EXPIRATION_HOURS`)
+- [ ] Only the SHA-256 hash stored in DB (`hashToken`); plaintext goes in the email link only
+- [ ] Forgot-password always returns success (no email enumeration)
 - [ ] Token sent via SendGrid email
 - [ ] Token cleared from URL immediately after read (frontend)
-- [ ] Token single-use (invalidated after reset)
-- [ ] All sessions revoked on password reset
-- [ ] Forgot-password endpoint rate limited (strict)
+- [ ] Token single-use (cleared on reset; expired token also cleared on lookup)
+- [ ] All sessions revoked on password reset (`revokeAllUserTokens`); failed attempts/lockout reset
+- [ ] Forgot-password AND reset-password endpoints rate limited (`strictAuthLimiter`)
+
+### 8b. Email Change Flow (NEW — migration `20260601_add_email_change`)
+- [ ] `POST /auth/change-email` requires authentication AND re-auth with current password (`requestEmailChange`)
+- [ ] Target address checked free; rejects if same as current or already in use
+- [ ] Tokenized confirmation link emailed to the NEW address (`sendEmailChangeConfirmation`) + security notice to the OLD (`sendEmailChangeNotice`)
+- [ ] 1-hour token (`EMAIL_CHANGE_EXPIRATION_HOURS`), stored as SHA-256 hash in `email_change_token`; pending address in `pending_email`
+- [ ] `GET /auth/confirm-email-change` is public, single-use (`ConfirmEmailChangePage` has run-once guard), strict rate limited
+- [ ] Confirmation re-checks the target is still free, swaps email (marks verified), clears pending state, revokes all sessions (forces re-login)
 
 ### 9. Session Management
-- [ ] Sessions stored in PostgreSQL `sessions` table
-- [ ] Session includes: token, userId, IP, userAgent, expiresAt
-- [ ] Expired sessions cleaned up automatically (10-min interval)
-- [ ] Logout revokes current session token from DB
-- [ ] Logout-all revokes all user sessions
-- [ ] Session metadata tracked for audit trail
+- [ ] Sessions stored in PostgreSQL `sessions` table (model `Session`)
+- [ ] Session includes: id (JTI), token (truncated), userId, IP, userAgent, expiresAt
+- [ ] Expired sessions cleaned up automatically (10-min interval, `startSessionCleanup`)
+- [ ] Logout revokes current session token from DB AND blacklists the access token (`revokeAccessToken`)
+- [ ] Logout-all revokes all user sessions (`revokeAllUserTokens`)
+- [ ] Access-token blacklist swept on the same 10-min interval (`sweepRevokedTokens`) so it stays bounded
+- [ ] Blacklist limitation noted: in-memory/per-instance — a revoked access token can still be honored by another Cloud Run replica until natural 15-min expiry (move to Redis/Memorystore at scale)
+- [ ] Session metadata tracked for audit trail (IP via `req.ip`, honoring `trust proxy`, not raw X-Forwarded-For)
 
 ### 10. Demo Account Security
 - [ ] Demo login only enabled when `DEMO_ACCOUNT_ENABLED=true`
-- [ ] Demo blocked in production (`NODE_ENV=production`)
-- [ ] Demo sessions have extended duration (30 days)
+- [ ] Demo blocked in production (config hard-fails if `DEMO_ACCOUNT_ENABLED=true` in production)
+- [ ] Demo lockout-bypass gated on `config.isDevelopment` (NOT just `demo.enabled`) so staging/preview can't be brute-forced without lockout
+- [ ] `isDemoUser` / `isDemoEmail` return false when `DEMO_EMAIL` is unset (no empty-string match)
+- [ ] Demo sessions have extended duration (30 days) only in non-production
 - [ ] Demo accounts restricted from sensitive operations (`demoProtection.ts`)
 
 ### 11. Rate Limiting
-- [ ] Login endpoint: strict limit (5/15 min per email+IP)
-- [ ] Register endpoint: moderate limit (20/15 min)
-- [ ] Password reset endpoint: strict limit
-- [ ] Verification resend: rate limited
+- [ ] All auth routes wrapped in `authLimiter` (20/15 min)
+- [ ] Login endpoint: `strictAuthLimiter` (5/15 min per email+IP, `skipSuccessfulRequests`)
+- [ ] Forgot-password / reset-password / resend-verification / change-email / confirm-email-change: `strictAuthLimiter`
+- [ ] Limiters backed by shared Redis store when `REDIS_URL` set, else per-instance MemoryStore (`rateLimitStore.ts`)
+- [ ] Per-instance MemoryStore limitation noted: effective ceiling is N×limit under Cloud Run autoscale (audit #37)
+- [ ] (Eight named limiters exist project-wide: standard, auth, strictAuth, upload, sensitive, ai, providerAccessRequest, bulkOperation — see prompt 10)
 
 ## Questions to Ask
-1. Is the token refresh order correct in AuthContext?
+1. Is the token refresh order correct in AuthContext (refresh before getCurrentUser)?
 2. Are there any auth bypass vulnerabilities?
-3. Is password validation consistent across frontend/backend?
-4. Is account lockout working correctly?
-5. Are email verification tokens properly invalidated after use?
+3. Is password validation consistent across frontend/backend (12-char minimum + complexity)?
+4. Is account lockout working correctly, and is it bypassable only via the dev-gated demo path?
+5. Are email verification / reset / email-change tokens properly invalidated after use (and stored hashed)?
+6. Does the in-memory access-token revocation blacklist hold across replicas, or is the per-instance gap acceptable for the current deployment?
+7. Is the email-change flow's re-authentication and session-revocation correct (a valid session alone must not move the login identity)?

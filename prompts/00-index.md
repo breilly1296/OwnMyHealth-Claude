@@ -4,12 +4,12 @@ tags:
   - meta
 type: index
 priority: 1
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # OwnMyHealth Prompts Index
 
-**Counts verified against the live repo on 2026-04-24.** When in doubt, trust the code — these numbers drift.
+**Counts verified against the live repo on 2026-06-01.** When in doubt, trust the code — these numbers drift.
 
 ---
 
@@ -29,7 +29,7 @@ The output docs live in `New Project Documents/` and are the primary substitute 
 
 ---
 
-## Security Audit Prompts (01–13, 26–32)
+## Security Audit Prompts (01–13, 26–32, 41–43)
 
 | # | Prompt | Purpose | Severity |
 |---|---|---|---|
@@ -40,7 +40,7 @@ The output docs live in `New Project Documents/` and are the primary substitute 
 | 05 | [audit-logging](./05-audit-logging.md) | HIPAA 7-year retention, immutability | Critical |
 | 06 | [api-routes](./06-api-routes.md) | Auth/RBAC/RLS context on every route | High |
 | 07 | [input-validation](./07-input-validation.md) | Zod schemas, UUIDs, file validation | High |
-| 08 | [rate-limiting](./08-rate-limiting.md) | 7 limiters — brute-force + cost control | Medium |
+| 08 | [rate-limiting](./08-rate-limiting.md) | 8 limiters — brute-force + cost control | Medium |
 | 09 | [external-apis](./09-external-apis.md) | API key handling, SSRF, timeouts | Medium |
 | 10 | [frontend-auth](./10-frontend-auth.md) | Memory-only tokens, refresh order | High |
 | 11 | [environment-secrets](./11-environment-secrets.md) | Secret Manager, env var inventory | Critical |
@@ -53,8 +53,11 @@ The output docs live in `New Project Documents/` and are the primary substitute 
 | 30 | [admin-security](./30-admin-security.md) | Admin privilege, escalation prevention | Medium |
 | 31 | [logging-observability](./31-logging-observability.md) | PHI redaction in logs, Cloud Logging | High |
 | 32 | [error-handling](./32-error-handling.md) | Error shape, stack-trace safety, async flow | Medium |
+| 41 | [fhir-lab-integration](./41-fhir-lab-integration.md) | Quest SMART-on-FHIR OAuth, encrypted lab tokens, SSRF, sync IDOR | High |
+| 42 | [ai-cost-control](./42-ai-cost-control.md) | AI dollar/usage governance — spend cap, cost tracking, plan limits | High |
+| 43 | [plan-gating-billing](./43-plan-gating-billing.md) | Plan-tier enforcement, gate bypass, billing-tier authz | Medium |
 
-Total: **20 security prompts.**
+Total: **23 security prompts.**
 
 ---
 
@@ -103,25 +106,27 @@ Generated docs go to `New Project Documents/`. That folder is attached directly 
 
 ---
 
-## Verified codebase counts (2026-04-24)
+## Verified codebase counts (2026-06-01)
 
 Use these when the prompts contradict each other. Re-verify quarterly with `Glob` (see [`_verification-tools.md`](./_verification-tools.md)).
 
 | Thing | Count | Path |
 |---|---|---|
-| Route files | 19 (incl. `index.ts`) | `backend/src/routes/` |
-| Controllers | 10 (+ `index.ts`) | `backend/src/controllers/` |
-| Services | ~30 (excl. tests, `data/`, subdirs `fhir/`, `knowledge/`) | `backend/src/services/` |
-| Middleware | 8 (`auth`, `csrf`, `rbac`, `rateLimiter`, `demoProtection`, `validation`, `errorHandler`, `planGating`) | `backend/src/middleware/` |
-| Rate limiters | **7** (standard, auth, strictAuth, upload, sensitive, **ai**, bulkOperation) | `backend/src/middleware/rateLimiter.ts` |
-| Frontend API modules | 17 + `index.ts` | `src/services/api/` |
-| Frontend `.tsx` files | 79 across 12 component dirs | `src/components/` |
-| Prisma models | 21 (incl. deprecated DNA/Genetics) | `backend/prisma/schema.prisma` |
-| Prisma migrations | 16 directories | `backend/prisma/migrations/` |
+| Route files | 18 (incl. `index.ts`; new since prompt era: `aiRoutes`, `fhirRoutes`, `internalRoutes`, `onboardingRoutes`, `planRoutes`) | `backend/src/routes/` |
+| Controllers | 10 top-level (+ `index.ts`) — new: `aiChatController`, `fhirController`; the old single `uploadController.ts` is gone (upload logic now in the `controllers/upload/` subdir — `labUploadController`, `sbcUploadController` — still re-exported as the `uploadController` namespace) | `backend/src/controllers/` |
+| Services | ~23 top-level `.ts` (incl. `index.ts`) plus subdirs `fhir/`, `knowledge/`, `data/` | `backend/src/services/` |
+| Middleware | 10 (+ `index.ts`): `aiSpendGuard`, `auth`, `csrf`, `demoProtection`, `errorHandler`, `planGating`, `rateLimitStore`, `rateLimiter`, `rbac`, `validation` | `backend/src/middleware/` |
+| Rate limiters | **8** (standard, auth, strictAuth, upload, sensitive, **ai**, **providerAccessRequest**, bulkOperation) — backed by `rateLimitStore.ts` (Redis via `REDIS_URL`, in-memory fallback) | `backend/src/middleware/rateLimiter.ts` |
+| Frontend API modules | 17 + `index.ts` (new: `ai`, `fhir`, `onboarding`, `plan`) | `src/services/api/` |
+| Frontend `.tsx` files | 73 across 14 component dirs (new dirs: `admin`, `health`, `onboarding`, `provider`) | `src/components/` |
+| Prisma models | 18 (new: `InsuranceBenefit`, `SystemConfig`, `LabConnection`; **DNA/Genetics dropped** in `20260423_drop_dna_genetics`) | `backend/prisma/schema.prisma` |
+| Prisma migrations | 22 directories | `backend/prisma/migrations/` |
 | GitHub workflows | 3 (`ci.yml`, `deploy.yml`, `deploy-staging.yml`) | `.github/workflows/` |
 | Playwright e2e specs | 5 (`auth`, `biomarker-entry`, `data-export`, `health-guide`, `settings`) | `e2e/` |
 
 **If your prompt cites a different number, trust the code and log the drift** per `_doc-quality.md` "Prompt drift log" rule.
+
+**Newer product domains the prompt library barely covers** (candidates for future prompts, not yet numbered): Quest FHIR / lab connections (SMART-on-FHIR OAuth, encrypted token storage in `LabConnection`, `fhir/urlSafety` SSRF guard, `labSyncService`, `loincMapper`); AI cost/spend control (`anthropicClient`, `aiCostTracker`, `usageTracker`, `aiSpendGuard`, `AI_DAILY_BUDGET_USD`/`AI_USER_DAILY_BUDGET_USD`); onboarding wizard; email-change flow; notification preferences; plan gating / billing tiers (`planGating`, `config/plans.ts`).
 
 ---
 
@@ -129,14 +134,14 @@ Use these when the prompts contradict each other. Re-verify quarterly with `Glob
 
 ### Security review (new engagement)
 1. Read `_review-protocol.md` (once).
-2. Run [24-full-security-audit](./24-full-security-audit.md) which fans out to all 20 security prompts.
+2. Run [24-full-security-audit](./24-full-security-audit.md) which fans out to all 23 security prompts.
 3. Consolidate findings into [21-security-status-doc](./21-security-status-doc.md).
 
 ### Adding or changing a PHI field
 1. Update `schema.prisma` (add `Encrypted` suffix).
 2. Update `PHI_FIELDS` in `backend/src/services/encryption.ts`.
 3. Update `_phi-inventory.md`.
-4. Add `SENSITIVE_FIELDS` entry in `backend/src/utils/logger.ts`.
+4. Add `SENSITIVE_FIELDS` entry (key-based redaction) in `backend/src/utils/logger.ts`; if the field can appear free-text in logs/PDFs, also confirm a pattern in `backend/src/utils/phiRedaction.ts` (pattern-based PHI scrubber).
 5. Re-run [02-encryption](./02-encryption.md), [31-logging-observability](./31-logging-observability.md).
 
 ### Running a full doc refresh (for Claude Project)
@@ -145,7 +150,7 @@ Use these when the prompts contradict each other. Re-verify quarterly with `Glob
 3. Attach the final `New Project Documents/` folder to the Claude.ai Project.
 
 ### Adding a new prompt
-1. Pick the next number (41+).
+1. Pick the next number (44+).
 2. Include frontmatter with `updated:` date.
 3. For security prompts: open with the three "review-protocol / phi-inventory / verification-tools" reference lines.
    For doc prompts: open with the three "doc-quality / verification-tools / phi-inventory-if-relevant" reference lines (see `_doc-quality.md` "Required opening boilerplate").

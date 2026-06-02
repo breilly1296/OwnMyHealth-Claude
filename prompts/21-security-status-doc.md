@@ -4,7 +4,7 @@ tags:
   - security
 type: prompt
 priority: 1
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate SECURITY_STATUS.md
@@ -45,7 +45,7 @@ A Claude Project reader must be able to answer "what's open? what's critical? wh
 | `New Project Documents/HIPAA_CHECKLIST.md` | Compliance posture. |
 | Project memory (PR #30 → C-1/F-14/F-15, BYPASSRLS C-8 plan, Anthropic BAA) | Status cross-checks. |
 | Git log PRs since last audit | Closing-PR map. |
-| `backend/src/middleware/*.ts`, `backend/src/services/encryption.ts`, `auditLog.ts`, `database.ts` | Spot-check current controls before declaring ✅. |
+| `backend/src/middleware/*.ts` (incl. `aiSpendGuard.ts`, `rateLimiter.ts` (8 limiters), `rateLimitStore.ts`, `planGating.ts`), `backend/src/services/encryption.ts`, `auditLog.ts`, `database.ts` (`assertNoBypassRLS`), `config/index.ts` (BAA gates), `services/fhir/urlSafety.ts` (SSRF), `utils/phiRedaction.ts` | Spot-check current controls before declaring ✅. |
 
 ---
 
@@ -55,7 +55,7 @@ A Claude Project reader must be able to answer "what's open? what's critical? wh
 2. **Posture summary** — severity counts (Critical / High / Medium / Low / Info), open vs fixed.
 3. **Open findings** — per finding: ID (C-N, H-N, M-N), title, area, severity, evidence (file:line), remediation plan, ETA, owner.
 4. **Closed in current cycle** — per finding: ID, closing PR, commit, verification note.
-5. **Controls status** — one table per area: Auth, CSRF, RBAC, Encryption, PHI handling, RLS, Audit logging, Rate limiting, Input validation, External APIs, File storage, Logging & observability, Error handling, Data portability, Admin, Provider collaboration, AI integration.
+5. **Controls status** — one table per area: Auth, CSRF, RBAC, Encryption, PHI handling, RLS, Audit logging, Rate limiting (8 named limiters in `rateLimiter.ts`, backed by `rateLimitStore.ts`), Input validation, External APIs, File storage, Logging & observability (PHI redaction in `utils/phiRedaction.ts` / `utils/pdfRedaction.ts`), Error handling, Data portability, Admin, Provider collaboration, AI integration (BAA gate + `aiSpendGuard` budget circuit breaker), Quest FHIR / lab connections (SMART-on-FHIR OAuth, encrypted `LabConnection` tokens, `fhir/urlSafety` SSRF guard), Plan gating / billing tiers (`planGating`, `config/plans.ts`).
 6. **BAA inventory** — table (vendor, service, status, date).
 7. **Incidents** — any security incidents since prior cycle + what was learned.
 8. **Compliance status** — GCP / Anthropic BAA, HIPAA technical safeguards, SOC 2 roadmap.
@@ -81,14 +81,14 @@ A Claude Project reader must be able to answer "what's open? what's critical? wh
 ### Open findings entry template
 
 ```markdown
-### C-8 — RLS policies inert at runtime (Critical)
+### C-8 — RLS not enforced under a BYPASSRLS login (Critical → partially mitigated)
 
 - **Area**: infrastructure
-- **Evidence**: `backend/src/services/database.ts:Lxx` (app connects as BYPASSRLS role in dev + prod).
-- **Impact**: RLS policies do not actually enforce; if app-layer filtering is compromised, all user data is reachable.
-- **Remediation plan**: 4-PR sequence — see `C8_PART3_RUNBOOK.md` and `C8_PART3_STARTUP_ASSERTION.md` in `New Project Documents/`.
+- **Evidence**: `backend/src/services/database.ts` — `assertNoBypassRLS()` (~L218) runs at startup: **production** hard-exits (`process.exit(1)`, ~L250) if the DB role has BYPASSRLS; **non-production** logs a WARNING and continues (~L258). RLS policies live in migration `20260107_add_rls_policies`; later fixes in `20260529_fix_has_provider_access` and `20260530_add_users_select_provider`.
+- **Impact**: With a BYPASSRLS login, RLS policies do not enforce and app-layer filtering is the only barrier. The startup assertion closes this for production; dev/staging can still run BYPASSRLS (warning only).
+- **Remediation plan**: verify the deployed Cloud SQL role is NOBYPASSRLS; close out the residual non-prod warning path; confirm `withRLSContext`/`withRLSTransaction` carry `SET LOCAL` on every query.
 - **Owner**: TBD (external: infra owner)
-- **ETA**: TBD (external: after PR #30 C-1 work)
+- **ETA**: TBD (external: confirm prod role + dev/staging cutover)
 - **Cross-link**: [`DATA_MODEL.md#rls-policies`](./DATA_MODEL.md), [`HIPAA_CHECKLIST.md#164312a`](./HIPAA_CHECKLIST.md).
 ```
 
@@ -144,7 +144,7 @@ Before marking anything TBD:
 - **Existing audits**: read `SECURITY_AUDIT_core.md`, `SECURITY_AUDIT_domain.md`, `SECURITY_AUDIT_infrastructure.md`, `SECURITY_AUDIT_periphery.md`. These files *are* the findings set — do not re-enumerate.
 - **Closing PRs**: project memory + `git log --grep='C-N\|F-N\|H-N\|M-N'` to connect finding IDs to commits.
 - **Control statuses**: spot-check the live code; `✅` means you verified in the last read, not just inherited from an older doc.
-- **BAA status**: project memory + env gate (`ANTHROPIC_BAA_ACTIVE`).
+- **BAA status**: project memory + env gates (`ANTHROPIC_BAA_ACTIVE` for Claude, `GOOGLE_BAA_ACTIVE` for Document AI OCR). Both gates are read in `backend/src/config/index.ts` (~L176, ~L185) and enforced at runtime: production startup throws if a key is configured without its BAA flag (~L300-330); the Claude gate is re-checked per-call in `biomarkerRoutes`, `aiChatController`, `claudeExtraction`, `sbcExtraction`, and `expenseController`, and the OCR gate in `ocrService`.
 
 Unresolvable external:
 
@@ -176,7 +176,7 @@ The generated `SECURITY_STATUS.md` must link to:
 | Cross-check finding IDs | Grep | `pattern: "C-\\d+|H-\\d+|M-\\d+"` over `New Project Documents/**` |
 | Closing PRs | Bash | `git log --all --grep='C-\\d\\+\\|F-\\d\\+' --pretty='%h %ad %s' --date=short` |
 | Spot-check encryption | Read | `backend/src/services/encryption.ts` |
-| Spot-check audit coverage | Grep | `pattern: "auditLog\\.log\\("` over `backend/src/**` |
+| Spot-check audit coverage | Grep | `pattern: "\\.log(Access\|Create\|Update\|Delete\|Auth\|Export\|System)?\\("` over `backend/src/**` — `AuditLogService` (`services/auditLog.ts`) exposes `log`, `logAccess`, `logCreate`, `logUpdate`, `logDelete`, `logAuth`, `logExport`, `logSystem` |
 
 ---
 

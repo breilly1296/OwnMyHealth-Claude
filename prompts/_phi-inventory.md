@@ -5,7 +5,7 @@ tags:
   - hipaa
 type: shared
 priority: 1
-updated: 2026-04-16
+updated: 2026-06-01
 ---
 
 # PHI Inventory (shared)
@@ -31,7 +31,7 @@ Drawn from `backend/src/services/encryption.ts` (verify before citing):
 ### Identity / profile
 | Model | Encrypted fields |
 |---|---|
-| `User` | `firstNameEncrypted`, `lastNameEncrypted`, `dateOfBirthEncrypted`, `phoneEncrypted`, `addressEncrypted` |
+| `User` | `firstNameEncrypted`, `lastNameEncrypted`, `dateOfBirthEncrypted`, `phoneEncrypted`, `addressEncrypted`, `healthProfileEncrypted` |
 
 ### Health data
 | Model | Encrypted fields |
@@ -39,7 +39,7 @@ Drawn from `backend/src/services/encryption.ts` (verify before citing):
 | `Biomarker` | `valueEncrypted`, `notesEncrypted` |
 | `BiomarkerHistory` | `valueEncrypted` *(no notes — by design)* |
 | `HealthNeed` | `descriptionEncrypted` |
-| `HealthGoal` | `descriptionEncrypted` |
+| `HealthGoal` | `descriptionEncrypted`, `targetValueEncrypted` *(numeric target encrypted as of migration `20260420_encrypt_health_goal_target`)* |
 | `GoalProgressHistory` | `noteEncrypted` |
 
 ### Insurance
@@ -52,7 +52,12 @@ Drawn from `backend/src/services/encryption.ts` (verify before citing):
 |---|---|
 | `ExpenseProjection` | `serviceTypeEncrypted`, `estimatedCostEncrypted`, `notesEncrypted` |
 | `ExpenseActual` | `serviceTypeEncrypted`, `providerNameEncrypted`, `billedAmountEncrypted`, `insurancePaidEncrypted`, `patientPaidEncrypted`, `appliedToDeductibleEncrypted`, `appliedToOopEncrypted`, `notesEncrypted` |
-| `CostAnalysis` | `claudeResponse`, `totalProjectedOopEncrypted`, `projectedExpensesSnapshotEncrypted` |
+| `CostAnalysis` | `claudeResponseEncrypted`, `totalProjectedOopEncrypted`, `projectedExpensesSnapshotEncrypted` |
+
+### Lab connections (Quest / SMART-on-FHIR)
+| Model | Encrypted fields |
+|---|---|
+| `LabConnection` | `accessTokenEncrypted`, `refreshTokenEncrypted` *(OAuth tokens for Quest FHIR lab sync — a stolen token is a direct path to live PHI at the lab, so treat as PHI)* |
 
 ### Provider collaboration
 | Model | Encrypted fields |
@@ -64,11 +69,8 @@ Drawn from `backend/src/services/encryption.ts` (verify before citing):
 |---|---|
 | `AuditLog` | `previousValueEncrypted`, `newValueEncrypted` |
 
-### Deprecated (schema retains — feature removed from UI)
-| Model | Encrypted fields | Status |
-|---|---|---|
-| `DNAVariant` | `genotypeEncrypted` | Consider removal (see CLAUDE.md) |
-| `GeneticTrait` | `descriptionEncrypted`, `recommendationsEncrypted` | Consider removal |
+### Removed (DNA / Genetics — dropped from schema)
+The `DNAVariant` (`genotypeEncrypted`) and `GeneticTrait` (`descriptionEncrypted`, `recommendationsEncrypted`) models were **dropped** in migration `20260423_drop_dna_genetics`. They no longer exist in `schema.prisma` or `PHI_FIELDS`. If a prompt or `CLAUDE.md` still references DNA/Genetics PHI, that reference is stale — flag it. There should be **no** `DNAVariant`/`GeneticTrait` hits anywhere in `backend/`.
 
 ---
 
@@ -80,12 +82,15 @@ Use the **Grep** tool, not Bash:
    Grep `Encrypted` in `backend/prisma/schema.prisma`, diff against keys of `PHI_FIELDS` in `encryption.ts`.
 
 2. **No plaintext writes of PHI fields**
-   Grep for bare field names (`firstName`, `lastName`, `dateOfBirth`, `phone`, `address`, `memberId`, `groupId`) in `backend/src/controllers/**/*.ts` and `backend/src/services/**/*.ts`. Every hit should be: (a) inside an `encrypt(...)` call, (b) a decrypted output property, or (c) Zod schema input before encryption. Flag anything else.
+   Grep for bare field names (`firstName`, `lastName`, `dateOfBirth`, `phone`, `address`, `memberId`, `groupId`, `healthProfile`, `targetValue`, `accessToken`, `refreshToken`) in `backend/src/controllers/**/*.ts` and `backend/src/services/**/*.ts`. Every hit should be: (a) inside an `encrypt(...)` call, (b) a decrypted output property, or (c) Zod schema input before encryption. Flag anything else.
 
-3. **`CostAnalysis.claudeResponse` is encrypted**
-   This is unusual — it's named without the `Encrypted` suffix but *is* in `PHI_FIELDS`. Confirm it's encrypted before DB write in `backend/src/controllers/expenseController.ts` or equivalent.
+3. **`CostAnalysis.claudeResponseEncrypted` is encrypted**
+   Renamed from `claudeResponse` → `claudeResponseEncrypted` in migration `20260424_align_uuid_defaults_and_rename_claude_response` so the column name advertises ciphertext. Confirm the plaintext Claude response is run through `encryption.encrypt(...)` before the DB write in `backend/src/controllers/expenseController.ts` (write ~line 737; decrypt-on-read ~line 799, and `backend/src/controllers/settingsController.ts` ~line 613 for export).
 
-4. **AuditLog uses the system salt, not per-user salt**
+4. **`LabConnection` OAuth tokens are encrypted**
+   `accessTokenEncrypted` / `refreshTokenEncrypted` hold SMART-on-FHIR (Quest) tokens — a stolen access token reaches live PHI at the lab. Confirm both are encrypted with the user's per-user key before write, and never logged in plaintext. Token encrypt/decrypt lives in `backend/src/services/fhir/labSyncService.ts`; the OAuth handshake itself is in `backend/src/services/fhir/smartAuth.ts`.
+
+5. **AuditLog uses the system salt, not per-user salt**
    Per-user salts are destroyed on account deletion; audit logs survive deletion (7-year HIPAA retention). If AuditLog PHI used per-user salt, it would become unreadable after deletion. Verify in `backend/src/services/auditLog.ts`.
 
 ---
@@ -109,4 +114,6 @@ If you're uncertain whether a field is PHI, treat it as PHI and flag the ambigui
 - [05-audit-logging](./05-audit-logging.md) — audit log PHI handling
 - [22-hipaa-checklist-doc](./22-hipaa-checklist-doc.md) — HIPAA §164.312 technical safeguards
 - [27-ai-integration](./27-ai-integration.md) — PHI handling before external AI calls
-- [31-logging-observability](./31-logging-observability.md) — PHI redaction in application logs
+- [09-external-apis](./09-external-apis.md) — Quest FHIR / SMART-on-FHIR OAuth (`LabConnection` token PHI, SSRF guard in `fhir/urlSafety.ts`)
+- [31-logging-observability](./31-logging-observability.md) — PHI redaction in application logs (`utils/phiRedaction.ts`)
+- [40-phi-taxonomy-doc](./40-phi-taxonomy-doc.md) — produced PHI taxonomy doc (consumes this inventory)

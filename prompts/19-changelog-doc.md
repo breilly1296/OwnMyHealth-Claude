@@ -4,7 +4,7 @@ tags:
   - changelog
 type: prompt
 priority: 3
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate CHANGELOG.md
@@ -36,7 +36,7 @@ Produce `New Project Documents/CHANGELOG.md` — a **[Keep-a-Changelog](https://
 | `backend/prisma/migrations/` | Schema changes, each migration is a user-visible change if it adds/removes fields. |
 | `.github/workflows/*` (history) | CI/CD changes. |
 | `CLAUDE.md` "Removed Features" + "Current Features" | Reconcile against git log — each removal should have a commit. |
-| Project memory (e.g., PR #30 ships C-1/F-14/F-15, Anthropic BAA 2026-04-16) | Record cross-sanity. |
+| Project memory (e.g., PR #30 ships C-1/F-14/F-15, Anthropic BAA 2026-04-16; later backlog PRs #113–#134 ship FHIR lab connect, AI chat, onboarding, plan gating, email-change) | Record cross-sanity. |
 
 ---
 
@@ -46,7 +46,7 @@ Produce `New Project Documents/CHANGELOG.md` — a **[Keep-a-Changelog](https://
 2. **[Unreleased]** — staged but un-deployed changes, if any.
 3. **Per-release entries** (most recent at top) — each with:
    - Date (ISO)
-   - Version (if using semver) or "deploy YYYY-MM-DD"
+   - Version or "deploy YYYY-MM-DD". NOTE: there are currently **no git tags** and both `package.json` files are pinned at `1.0.0`, so in practice every entry uses the `deploy YYYY-MM-DD` form. Do not invent a semver version.
    - Added / Changed / Fixed / Security / Deprecated / Removed / Infrastructure subsections
 4. **PR table** — full list of merged PRs since the cutoff (PR#, date, title, category, user-visible impact, breaking?).
 5. **Statistics** — deploy count, test-suite size change, Security findings closed (cross-link `SECURITY_STATUS.md`).
@@ -84,6 +84,22 @@ Every PR since the cutoff gets a row. Sort descending.
 
 ---
 
+## Major feature lines to account for since the early-2026 cutoff
+
+The codebase has grown well past the 2026-04-16 baseline. When reconstructing history from git, expect — and explicitly classify — these landed feature lines. Each is verifiable in code (cite real files when describing it):
+
+- **Quest FHIR / lab connections** (Added) — SMART-on-FHIR OAuth lab sync. Code: `backend/src/routes/fhirRoutes.ts`, `fhirController.ts`, `services/fhir/` (`fhirClient`, `labSyncService`, `loincMapper`, `smartAuth`, `urlSafety` SSRF guard), Prisma `LabConnection` model, migration `20260418_add_lab_connections`, env vars `QUEST_FHIR_*`. PR #115 (`feat/fhir-lab-connect`) and #119 (`fix/fhir-ui-review-followups`); SSRF hardening in PR #110 (`fix/fhir-ssrf-token-exfil`, closes finding #26).
+- **AI chat + AI spend control** (Added/Security) — `aiRoutes.ts`, `aiChatController.ts`, `services/anthropicClient.ts`, `aiCostTracker.ts`, `usageTracker.ts`, `middleware/aiSpendGuard.ts`; env vars `AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`, `ANTHROPIC_BAA_ACTIVE`.
+- **Onboarding wizard** (Added) — `onboardingRoutes.ts`, `services/onboardingService.ts`, `components/onboarding/`, migration `20260420_add_onboarding`.
+- **Plan gating / billing tiers** (Added) — `planRoutes.ts`, `middleware/planGating.ts`, `config/plans.ts`, `PlanType` enum, migration `20260420_add_user_plan`.
+- **Verified email-change flow** (Added) — request → confirm. PRs #133/#134, migration `20260601_add_email_change`.
+- **Notification preferences** (Added) — `services/notificationService.ts`, migration `20260417_add_notification_preferences`.
+- **Redis-backed rate limiting** (Infrastructure) — `middleware/rateLimitStore.ts` (Redis via `REDIS_URL`, in-memory fallback), now **8** named limiters in `rateLimiter.ts`. PR #125 (`feat/redis-rate-limit-store`).
+- **DNA / Genetics removal** (Removed) — `DNAVariant` / `GeneticTrait` models and their encrypted fields dropped in migration `20260423_drop_dna_genetics`. This is a Removed-section entry; reconcile against `CLAUDE.md` "Removed Features".
+- **`CostAnalysis.claudeResponse` → `claudeResponseEncrypted` rename** (Changed/Security) — migration `20260424_align_uuid_defaults_and_rename_claude_response`. The field is now encrypted-suffixed; the old un-suffixed name is gone.
+
+---
+
 ## Acceptance questions
 
 After writing the doc, self-answer each **using only the doc**:
@@ -111,7 +127,10 @@ Before marking anything TBD:
   ```
 
   Every commit in the output is in scope. Do not stop at "most recent 10."
-- **PRs**: `git log --grep="Merge pull request"` or `git log --format='%H%n%B'` and extract PR numbers. If PR titles aren't in commits, read GitHub (external) — mark such entries as `TBD (external: fill PR title from GitHub)` only if the commit message truly lacks it.
+- **PRs**: this repo uses **two** merge styles, so `--grep="Merge pull request"` alone WILL miss PRs. Capture both:
+  - Classic merge commits: `git log --grep="Merge pull request"` (e.g. `Merge pull request #132 from …`).
+  - Squash merges with a trailing `(#N)` in the subject: `git log --oneline | grep -E "\(#[0-9]+\)"` (e.g. `feat: verified email-change flow (request → confirm) (#133)`, `fix(auth): … (#134)`). These have NO "Merge pull request" line.
+  Union both lists. PR numbers currently run past #130 (HEAD = #134 `fix(auth): fire one-time-token confirmation exactly once`). If a PR title truly isn't in the commit, read GitHub (external) and mark `TBD (external: fill PR title from GitHub)` only then.
 - **Schema changes**: list every directory added under `backend/prisma/migrations/` since cutoff.
 - **Session summary integration**: if session summary files exist in the repo (e.g., `session-summaries/*.md`), read them and cross-reference to commit dates. If they live in an external doc store, mark and provide the locator.
 
@@ -134,7 +153,8 @@ The generated `CHANGELOG.md` must link to:
 | Task | Tool | How |
 |---|---|---|
 | Full commit range | Bash | `git log --all --since=<CUTOFF> --pretty=format:'%h %ad %s' --date=short` |
-| PR titles | Bash | `git log --grep='Merge pull request' --since=<CUTOFF>` |
+| PR titles (merge commits) | Bash | `git log --grep='Merge pull request' --since=<CUTOFF>` |
+| PR titles (squash merges) | Bash | `git log --oneline --since=<CUTOFF> \| grep -E '\(#[0-9]+\)'` (catches squash-merged PRs that have no "Merge pull request" line) |
 | Per-file change counts | Bash | `git log --since=<CUTOFF> --stat` |
 | New migrations | Glob | `pattern: "backend/prisma/migrations/*"` + `ls -lt` to find ones newer than cutoff |
 | Workflow changes | Bash | `git log --since=<CUTOFF> -- .github/workflows/` |

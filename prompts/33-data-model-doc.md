@@ -7,7 +7,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate DATA_MODEL.md
@@ -36,7 +36,8 @@ Produce `New Project Documents/DATA_MODEL.md` — the **complete, deep reference
 |---|---|
 | `backend/prisma/schema.prisma` | **Source of truth** — every model, field, `@@map`, `@map`, `@index`, `@unique`, relations, cascades. |
 | `backend/prisma/migrations/` (entire directory, in chronological order) | Migration history; SQL bodies of RLS policies, triggers, non-Prisma constraints. |
-| `backend/prisma/migrations/20260107_add_rls_policies/migration.sql` (or equivalent latest RLS file) | Full RLS policy text — copy into the RLS section. |
+| `backend/prisma/migrations/20260107_add_rls_policies/migration.sql` | Base RLS policy text + `current_user_id()`/`is_admin_session()`/`has_provider_access()` helpers — copy into the RLS section. |
+| `backend/prisma/migrations/20260529_fix_has_provider_access/migration.sql` and `20260530_add_users_select_provider/migration.sql` | Later RLS corrections — `has_provider_access()` fix + provider-side users SELECT policy; reflect the FINAL policy bodies. |
 | `backend/src/services/database.ts` | `withRLSContext`, `withRLSTransaction`, pool config, SSL handling, RLS context setter. |
 | `backend/src/services/encryption.ts` | `PHI_FIELDS` mapping — cross-reference encrypted columns against the schema. |
 | `backend/src/services/userEncryption.ts` | Per-user key derivation — where the wrap key is stored, what model holds it. |
@@ -48,19 +49,20 @@ Produce `New Project Documents/DATA_MODEL.md` — the **complete, deep reference
 
 ## Required sections
 
-1. **Overview** — model count, migration count, RLS-enabled model count, encrypted-field count. One paragraph.
+1. **Overview** — model count (18), migration count (22), RLS-enabled model count, encrypted-field count. One paragraph.
 2. **ER diagram (Mermaid)** — see Required artifacts.
-3. **Naming conventions** — `@@map("snake_case")` + `@map("snake_case")` pattern, `*Encrypted` suffix convention, `id` (cuid/uuid) conventions.
-4. **Model catalog** — one H3 per model (~21 models), alphabetical. Each H3 contains: purpose (1 sentence), field table, index table (if any), relation list, RLS note, deprecation note (if any).
+3. **Naming conventions** — `@@map("snake_case")` + `@map("snake_case")` pattern, `*Encrypted` suffix convention, `id` PK convention (all models use `@default(dbgenerated("gen_random_uuid()")) @db.Uuid` — NOT cuid; aligned by `20260424_align_uuid_defaults_and_rename_claude_response`).
+4. **Model catalog** — one H3 per model (18 models), alphabetical. Each H3 contains: purpose (1 sentence), field table, index table (if any), relation list, RLS note. Active models: `User`, `Session`, `UserEncryptionKey`, `ProviderPatient`, `UserFile`, `Biomarker`, `BiomarkerHistory`, `InsurancePlan`, `InsuranceBenefit`, `HealthNeed`, `HealthGoal`, `GoalProgressHistory`, `AuditLog`, `SystemConfig`, `ExpenseProjection`, `ExpenseActual`, `CostAnalysis`, `LabConnection`.
 5. **Encryption matrix** — table of every `*Encrypted` column vs `PHI_FIELDS` in `encryption.ts`. Drift rows flagged.
 6. **RLS policy catalog** — per table: SELECT/INSERT/UPDATE/DELETE policy bodies (from migration SQL). Include the `is_admin_session()` helper definition.
 7. **`withRLSContext` vs `withRLSTransaction` usage matrix** — every call site: `file:line` → which wrapper → `userId | null` → reason ("multi-statement atomicity", "single read", "admin listing").
 8. **Index catalog** — every `@@index` / `@@unique` across the schema, in a single table. Useful for query-plan reasoning.
 9. **Cascade / deletion behavior** — per relation: `onDelete` (Cascade | SetNull | Restrict | NoAction) and what it means for user-data deletion.
 10. **Migration timeline** — one row per migration dir: timestamp, name, one-line effect, links any drop/rename to affected docs.
-11. **Deprecated models** — explicit callout for DNAData, DNAVariant, GeneticTrait (still in schema per `CLAUDE.md`).
-12. **Related Documents** — cross-links.
-13. **Prompt drift log** — if this prompt's file list or model count is stale.
+11. **Enum catalog** — every Prisma `enum` (13: `UserRole`, `ProviderRelationType`, `ProviderPatientStatus`, `DataSourceType`, `PlanType`, `HealthNeedType`, `Urgency`, `HealthNeedStatus`, `GoalDirection`, `GoalStatus`, `ReminderFrequency`, `ActorType`, `AuditAction`), its values, and which model/field uses it. Confirm values against `schema.prisma` — do not paraphrase.
+12. **Removed models** — explicit callout that `DNAData`, `DNAVariant`, `GeneticTrait` (plus the `ProcessingStatus`/`RiskLevel` enums and `provider_patients.can_view_dna` column) were **dropped** in migration `20260423_drop_dna_genetics` — they are NO longer in `schema.prisma`. `CLAUDE.md` still calls them deprecated/in-schema; flag that as stale.
+13. **Related Documents** — cross-links.
+14. **Prompt drift log** — if this prompt's file list, model count, migration count, or enum list is stale.
 
 ---
 
@@ -81,10 +83,14 @@ erDiagram
   User ||--o{ ProviderPatient : "provider-side"
   InsurancePlan ||--o{ InsuranceBenefit : lists
   User ||--o{ InsurancePlan : owns
+  User ||--o{ LabConnection : "FHIR lab link"
+  User ||--o{ ExpenseProjection : projects
+  User ||--o{ ExpenseActual : records
+  User ||--o{ CostAnalysis : analyzes
   ...
 ```
 
-Include a separate Mermaid block for **deprecated** models so a reader can see the split.
+There are no deprecated models to diagram — the DNA/genetics models were dropped (migration `20260423_drop_dna_genetics`). Note that `SystemConfig` is the one model with no FK to `User` (global key/value config).
 
 ### Per-model field table (template)
 
@@ -97,8 +103,8 @@ Purpose: one measured biomarker reading tied to a user.
 
 | Field | Column | Type | Encrypted? | Nullable? | Index | FK | Notes |
 |---|---|---|---|---|---|---|---|
-| `id` | `id` | `String @id @default(cuid())` | — | no | PK | — | cuid |
-| `userId` | `user_id` | `String` | — | no | yes | `User.id` (onDelete Cascade) | RLS anchor |
+| `id` | `id` | `String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid` | — | no | PK | — | uuid |
+| `userId` | `user_id` | `String @db.Uuid` | — | no | yes | `User.id` (onDelete Cascade) | RLS anchor |
 | `valueEncrypted` | `value_encrypted` | `String` | **yes** | no | — | — | AES-256-GCM per `PHI_FIELDS` |
 | ... | ... | ... | ... | ... | ... | ... | ... |
 
@@ -119,7 +125,8 @@ Purpose: one measured biomarker reading tied to a user.
 |---|---|---|---|
 | `backend/src/controllers/biomarkerController.ts:28` | `withRLSContext` | `req.user.id` | List own biomarkers |
 | `backend/src/controllers/biomarkerController.ts:74` | `withRLSTransaction` | `req.user.id` | Create + audit atomically |
-| `backend/src/controllers/adminController.ts:42` | `withRLSContext(null, ...)` | `null` | Admin listing (RLS check `is_admin_session() = true`) |
+| `backend/src/routes/adminRoutes.ts:61` | `withRLSContext(null, fn, { isAdmin: true })` | `null` | Admin user listing — the `{ isAdmin: true }` flag makes RLS see `is_admin_session() = true` |
+| `backend/src/controllers/settingsController.ts:Lxx` | `withRLSContext(null, ...)` | `null` | System/no-user context |
 | ... | ... | ... | ... |
 
 Use `Grep` `pattern: "withRLS(Context|Transaction)\\("` over `backend/src/**`.
@@ -141,14 +148,15 @@ CREATE POLICY biomarkers_select ON biomarkers
 -- plus INSERT / UPDATE / DELETE
 ```
 
-Include the `is_admin_session()` function definition once, at the top of this section.
+Include the three helper-function definitions once, at the top of this section: `current_user_id()`, `is_admin_session()`, and `has_provider_access(patient_user_id uuid, permission_type text)` — all defined in `backend/prisma/migrations/20260107_add_rls_policies/migration.sql` (with `has_provider_access()` later corrected by `20260529_fix_has_provider_access` and the users SELECT policy added by `20260530_add_users_select_provider`). Quote their final bodies.
 
 ### Encryption matrix
 
 | Model.Field | In `PHI_FIELDS`? | In schema as `*Encrypted`? | Reader (decrypt site) | Writer (encrypt site) |
 |---|---|---|---|---|
 | `Biomarker.valueEncrypted` | yes | yes | `biomarkerController.ts:Lxx` | `biomarkerController.ts:Lyy` |
-| `Biomarker.unitEncrypted` | yes | yes | ... | ... |
+| `Biomarker.notesEncrypted` | yes | yes | ... | ... |
+| `LabConnection.accessTokenEncrypted` | yes | yes | ... | ... |
 | ... | ... | ... | ... | ... |
 
 Rows where either column disagrees = drift; flag in Prompt drift log.
@@ -171,9 +179,19 @@ Rows where either column disagrees = drift; flag in Prompt drift log.
 
 | Date | Migration | Effect |
 |---|---|---|
-| 2026-01-07 | `add_rls_policies` | Enabled RLS on all user-scoped tables + `is_admin_session()` helper |
+| 2026-01-07 | `add_rls_policies` | Enabled RLS on all user-scoped tables + `current_user_id()` / `is_admin_session()` / `has_provider_access()` helpers |
 | 2026-02-06 | `fix_expense_encryption_types` | Changed expense monetary fields from `Decimal` to `String` (encrypted) |
+| 2026-04-18 | `add_lab_connections` | Added `lab_connections` table (FHIR/SMART OAuth token storage) |
+| 2026-04-20 | `encrypt_health_goal_target` | Added `target_value_encrypted` to `health_goals` |
+| 2026-04-23 | `drop_dna_genetics` | Dropped `dna_data`/`dna_variants`/`genetic_traits` tables, `can_view_dna` column, `ProcessingStatus`/`RiskLevel` enums |
+| 2026-04-24 | `align_uuid_defaults_and_rename_claude_response` | Renamed `claude_response` → `claude_response_encrypted` on `cost_analyses` |
+| 2026-04-24 | `prevent_self_role_elevation` | Trigger/policy preventing users elevating own `role` |
+| 2026-05-29 | `fix_has_provider_access` | Fixed the `has_provider_access()` RLS helper |
+| 2026-05-30 | `add_users_select_provider` | Added users SELECT policy for provider-side access |
+| 2026-06-01 | `add_email_change` | Added `pending_email`/`email_change_token`/`email_change_expires` on `users` |
 | ... | ... | ... |
+
+Total: 22 migration directories (excluding `migration_lock.toml`).
 
 ---
 
@@ -181,7 +199,7 @@ Rows where either column disagrees = drift; flag in Prompt drift log.
 
 After writing the doc, self-answer each **using only the doc**:
 
-1. How many active (non-deprecated) models are in the schema, and which four are deprecated?
+1. How many models are in the schema (18), and which models/enums were removed by `20260423_drop_dna_genetics`?
 2. Which field on `Biomarker` stores the encrypted value, and what service decrypts it?
 3. What is the `onDelete` behavior for `ProviderPatient → User` and what does that mean for GDPR-style deletion?
 4. Which tables have RLS enabled, and which function lets admin code bypass the policy?
@@ -189,13 +207,17 @@ After writing the doc, self-answer each **using only the doc**:
 6. Name one RLS policy SQL body verbatim.
 7. Which index supports the biomarker dashboard list query?
 8. Which models hold the per-user encryption wrap key, and where is it derived?
-9. How many Prisma migrations exist in the repo, and what was the most recent change?
+9. How many Prisma migrations exist in the repo (22), and what was the most recent change (`20260601_add_email_change`)?
 10. Which callers pass `null` as `userId` to `withRLSContext` and why?
-11. Which deprecated models should be dropped and where is that decision tracked?
+11. Which models were dropped (DNA/genetics) and in which migration is that recorded?
 12. Is `Biomarker.notesEncrypted` in `PHI_FIELDS`? (consistency check)
 13. What cascade behavior applies when deleting a `User` — full list of child records removed?
 14. Where is `AuditLog` retention enforced (table, scheduler file:line)?
 15. What SQL-level constraint prevents a non-admin session from reading someone else's data, even if the app layer is compromised?
+16. Which two columns on `LabConnection` are encrypted, and why are SMART-on-FHIR OAuth tokens treated as PHI-adjacent?
+17. Which model has no FK to `User`, and what is its purpose (`SystemConfig` — global key/value config)?
+18. How does `InsuranceBenefit` relate to `InsurancePlan`, and what is its `onDelete` behavior?
+19. Which two helper functions besides `is_admin_session()` underpin RLS, and what does `has_provider_access()` gate?
 
 ---
 

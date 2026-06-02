@@ -4,7 +4,7 @@ tags:
   - bugs
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate KNOWN_ISSUES.md
@@ -31,9 +31,10 @@ Produce `New Project Documents/KNOWN_ISSUES.md` — the **bug and tech-debt ledg
 | File | Why read it |
 |---|---|
 | All of `backend/src/**` and `src/**` | Grep `TODO|FIXME|HACK|XXX` markers. |
-| `backend/src/**/*.test.ts` | Look for `.skip(`, `.todo(`, `xit(`, commented-out tests. |
+| `backend/src/**/*.test.ts` | Look for `.skip(`, `.todo(`, `xit(`, `.skipIf(`, commented-out tests. |
+| Newer subsystems (untested surfaces): `backend/src/controllers/aiChatController.ts`, `backend/src/controllers/fhirController.ts`, `backend/src/services/fhir/**` (Quest SMART-on-FHIR OAuth, `labSyncService`, `loincMapper`, `urlSafety` SSRF guard), AI cost control (`aiCostTracker`, `aiSpendGuard`, `usageTracker`, `anthropicClient`), `onboardingService`, `planGating`/`config/plans.ts`. | These shipped after the prompt era and have thin/no test coverage — surface their known gaps and risks (e.g., encrypted OAuth token storage on `LabConnection`, AI budget enforcement). |
 | `package.json` audit outputs (or run `npm audit --json`) | Open vulnerabilities with severity. |
-| `backend/prisma/schema.prisma` | Deprecated models still present (DNA/Genetics). |
+| `backend/prisma/schema.prisma` | Deprecated/dropped models. Note: DNAVariant/GeneticTrait were REMOVED in migration `20260423_drop_dna_genetics` — do not list them as "still present"; confirm no resurrected deprecated models remain (18 models as of HEAD). |
 | `New Project Documents/SECURITY_STATUS.md`, `SECURITY_AUDIT_*.md` | Open findings to mirror. |
 | Git log `git log --grep='revert\|hotfix'` | Reverts often leave scars — symptoms worth tracking. |
 
@@ -45,7 +46,7 @@ Produce `New Project Documents/KNOWN_ISSUES.md` — the **bug and tech-debt ledg
 2. **High** — significant feature broken / before beta.
 3. **Medium** — usability / during beta.
 4. **Low** — minor annoyance / backlog.
-5. **Deprecated (kept for compat)** — models, endpoints, components marked deprecated but still present.
+5. **Deprecated (kept for compat)** — models, endpoints, components marked deprecated but still present. (DNAVariant/GeneticTrait are NOT here — they were dropped entirely in migration `20260423_drop_dna_genetics`; record that as a *resolved* removal, not a live deprecation.)
 6. **Code-marker inventory** — table: every `TODO|FIXME|HACK|XXX` with file:line + context one-liner.
 7. **Skipped / TODO tests** — table: every `.skip|.todo|xit` occurrence with file:line.
 8. **Dependency vulnerabilities** — `npm audit` summary + per-severity count + notable advisories with status.
@@ -75,11 +76,12 @@ Produce `New Project Documents/KNOWN_ISSUES.md` — the **bug and tech-debt ledg
 
 | Marker | File:line | Context (first 80 chars) |
 |---|---|---|
-| TODO | `backend/src/services/claudeExtraction.ts:Lxx` | `// TODO: refine retry-after handling for 429 from Anthropic` |
-| FIXME | `src/components/insurance/SBCUpload.tsx:Lxx` | `// FIXME: drag-drop fails on Firefox` |
+| TODO | `backend/src/services/encryption.ts:80` | `// TODO(key-rotation): store the iteration count per user (or per-ciphertext` |
+| TODO | `backend/src/app.ts:130` | `// TODO(csp-nonce): 'unsafe-inline' is required today because Tailwind` |
+| TODO | `src/components/settings/PlanSection.tsx:157` | `// TODO: wire to Stripe checkout when billing goes live.` |
 | ... | ... | ... |
 
-Do not truncate to "top 10" — every marker gets a row.
+Do not truncate to "top 10" — every marker gets a row. (As of HEAD the count is small — ~4 markers total across `backend/src` + `src`, including the `csrf.ts:120` NOTE describing a *removed* TODO; the upload-route CSRF-exempt TODO is already resolved. Re-Grep to get the current set rather than trusting these examples.)
 
 ### `npm audit` summary
 
@@ -93,8 +95,8 @@ Do not truncate to "top 10" — every marker gets a row.
 
 | Area | Expected test file pattern | Exists? | Gap |
 |---|---|---|---|
-| Controllers | `backend/src/controllers/*.test.ts` | partial | No tests for `fileController`, `aiChatController` |
-| Routes | `backend/src/routes/*.test.ts` | partial | 2 exist (demoProtection, guidance); ~17 route files have none |
+| Controllers | `backend/src/controllers/*.test.ts` | partial | 10 non-test controllers (+ `index.ts`, `testHelpers.ts`); tests exist for auth, biomarker, expense, healthGoals, healthNeeds, settings. No tests for `aiChatController`, `fhirController`, `fileController`, `insuranceController`. (`uploadController` no longer exists — removed; upload logic lives in `uploadRoutes`/`fileController`.) |
+| Routes | `backend/src/routes/*.test.ts` | partial | 18 non-test route files; 5 route test files exist (`adminRoutes.demoProtection`, `adminRoutes.updateUser`, `biomarkerRoutes.guidance`, `internalRoutes`, `providerRoutes.requestUniformity`). The other route files have no dedicated route-level tests. |
 | ... | ... | ... | ... |
 
 ---
@@ -107,8 +109,8 @@ After writing the doc, self-answer each **using only the doc**:
 2. How many TODO/FIXME/HACK markers exist, and which file has the most?
 3. Are any tests currently skipped or marked `.todo`?
 4. What's the `npm audit` severity breakdown?
-5. Which deprecated models are still in `schema.prisma` and should be dropped?
-6. Which controllers have no test coverage at all?
+5. Which deprecated models remain in `schema.prisma` (if any), and is the DNAVariant/GeneticTrait removal — via migration `20260423_drop_dna_genetics` — recorded as resolved?
+6. Which controllers have no test coverage at all? (Expected answer set: `aiChatController`, `fhirController`, `fileController`, `insuranceController`.)
 7. What's the workaround for the RLS runtime gap (C-8)?
 8. Which recently closed issue introduced new known risk?
 9. Is the `nul` stray file (from memory about OneDrive) still in the tree?
@@ -121,9 +123,9 @@ After writing the doc, self-answer each **using only the doc**:
 Before marking anything TBD:
 
 - **Code markers**: `Grep pattern: "TODO|FIXME|HACK|XXX"` over `backend/src/**` and `src/**`. Every hit is a row.
-- **Skipped tests**: `Grep pattern: "\\.(skip|todo)\\(|xit\\("` over `backend/src/**` and `e2e/**`.
+- **Skipped tests**: `Grep pattern: "\\.(skip|todo|skipIf)\\(|xit\\("` over `backend/src/**` and `e2e/**`. (As of HEAD the only conditional skip is `describe.skipIf(!hasLiveDb)` in `backend/src/services/rls.test.ts:29` — an intentional gate on a live DB, not dead test debt; record it as such rather than as a skipped/TODO test.)
 - **Vulnerabilities**: run `npm audit --json` or `npm audit` (Bash); quote the counts.
-- **Deprecated models**: `Grep pattern: "deprecated|DNAData|DNAVariant|GeneticTrait"` over `backend/prisma/schema.prisma`.
+- **Deprecated models**: `Grep pattern: "deprecated|DNAVariant|GeneticTrait"` over `backend/prisma/schema.prisma`. Expect **zero** DNA/Genetics hits — those models were dropped in migration `20260423_drop_dna_genetics`; record the removal as resolved. Cross-check the 18 current models against any remaining `@deprecated`/legacy markers.
 - **Open findings mirror**: read `New Project Documents/SECURITY_STATUS.md` for the Critical/High list; do not re-audit here, just reference.
 - **Test gaps**: `Glob pattern: "backend/src/controllers/*.test.ts"`; compare against `Glob pattern: "backend/src/controllers/*.ts"` to compute coverage gap.
 
@@ -152,10 +154,10 @@ The generated `KNOWN_ISSUES.md` must link to:
 | Task | Tool | How |
 |---|---|---|
 | Code markers | Grep | `pattern: "TODO|FIXME|HACK|XXX"` over `{backend/src,src}/**` |
-| Skipped tests | Grep | `pattern: "\\.(skip|todo)\\(|xit\\("` over `{backend/src,e2e}/**` |
-| Console.log in prod code | Grep | `pattern: "console\\.log"` over `backend/src/**` (exclude `.test.`) |
+| Skipped tests | Grep | `pattern: "\\.(skip|todo|skipIf)\\(|xit\\("` over `{backend/src,e2e}/**` |
+| Console.log in prod code | Grep | `pattern: "console\\.log"` over `backend/src/**` (exclude `.test.`); cross-ref `backend/src/utils/phiRedaction.ts` + `logger.ts` for whether raw logging is already redacted |
 | Audit findings | Read | `New Project Documents/SECURITY_STATUS.md` |
-| Schema deprecation | Grep | `pattern: "DNAData|DNAVariant|GeneticTrait"` over `backend/prisma/schema.prisma` |
+| Schema deprecation | Grep | `pattern: "DNAVariant|GeneticTrait"` over `backend/prisma/schema.prisma` (expect zero — dropped in `20260423_drop_dna_genetics`) |
 | npm vulnerabilities | Bash | `npm audit` (in root + `backend/`) |
 
 ---

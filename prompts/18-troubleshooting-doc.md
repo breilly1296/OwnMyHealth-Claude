@@ -4,7 +4,7 @@ tags:
   - troubleshooting
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate TROUBLESHOOTING.md
@@ -38,8 +38,12 @@ Produce `New Project Documents/TROUBLESHOOTING.md` — the **symptom-first catal
 | Git log (`git log --grep='^fix:\|^hotfix:\|^revert:'`) | Every past fix is a symptom worth cataloging. |
 | `New Project Documents/KNOWN_ISSUES.md` | Currently-open symptoms. |
 | `New Project Documents/ERROR_RECOVERY.md` | Cross-link for every error-code path. |
-| `backend/src/middleware/errorHandler.ts` | Error envelope shape. |
+| `backend/src/middleware/errorHandler.ts` | Error envelope shape (`code`-keyed `AppError` hierarchy). |
 | `src/services/api/client.ts` | Frontend interceptor behavior (auto-refresh, auto-redirect). |
+| `src/contexts/AuthContext.tsx` | Mount-time `refreshToken()`→`getCurrentUser()` ordering (the "data disappears on refresh" root cause). |
+| `backend/src/utils/phiRedaction.ts`, `backend/src/utils/pdfRedaction.ts` | PHI/log redaction — the canonical answer to "PHI leaking into logs". |
+| `backend/src/middleware/aiSpendGuard.ts`, `backend/src/services/aiCostTracker.ts` | AI budget/spend-cap behavior (`aiSpendGuard` fails closed with 503 `SERVICE_UNAVAILABLE` once the daily/per-user dollar budget is hit; 429 on AI routes is the separate `aiLimiter` rate limiter). |
+| `backend/src/services/fhir/urlSafety.ts`, `backend/src/services/fhir/labSyncService.ts` | Quest/SMART-on-FHIR lab-sync failure modes (SSRF guard, OAuth token expiry). |
 | Project memory (postmortems, session summaries if present) | Retrospective context. |
 
 ---
@@ -60,9 +64,12 @@ Produce `New Project Documents/TROUBLESHOOTING.md` — the **symptom-first catal
 8. **Frontend symptoms** (blank page, CORS, cookie-SameSite, Vite/SWC on ARM64 per memory).
 9. **API / 500 symptoms**.
 10. **PDF / OCR / Claude extraction symptoms**.
-11. **Quick diagnostic commands** — canonical curls + `gcloud logging read` snippets.
-12. **Related Documents**.
-13. **Prompt drift log**.
+11. **AI chat / spend-cap symptoms** (503 `SERVICE_UNAVAILABLE` / "AI features are temporarily unavailable" from `aiSpendGuard` when the daily or per-user dollar budget is hit — see `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD`, `aiCostTracker`, `usageTracker`; distinguish from 429 `aiLimiter` rate-limiting).
+12. **Quest FHIR / lab-sync symptoms** (OAuth callback fails, `urlSafety` SSRF rejection, expired `accessTokenEncrypted`/`refreshTokenEncrypted` on `LabConnection`, `labSyncService`/`loincMapper` mapping gaps).
+13. **Onboarding / plan-gating symptoms** (onboarding wizard stuck; `planGating` blocks a feature unexpectedly — see `config/plans.ts`).
+14. **Quick diagnostic commands** — canonical curls + `gcloud logging read` snippets.
+15. **Related Documents**.
+16. **Prompt drift log**.
 
 ---
 
@@ -112,9 +119,9 @@ curl https://<prod-backend-url>/health
 # Last 20 errors in Cloud Run
 gcloud logging read 'resource.type="cloud_run_revision" severity>=ERROR' --limit=20 --freshness=1h
 
-# Connect to Cloud SQL via proxy
+# Connect to Cloud SQL via proxy (DB is `ownmyhealth` in Cloud SQL, `omh` for local dev)
 cloud-sql-proxy <instance-connection-name>
-psql -h 127.0.0.1 -U <user> -d verifymyprovider
+psql -h 127.0.0.1 -U <user> -d ownmyhealth
 ```
 
 ---
@@ -127,12 +134,14 @@ After writing the doc, self-answer each **using only the doc + siblings**:
 2. What's the decision tree for a stuck-on-login user?
 3. What symptom indicates the Cloud Run env-update pinning gotcha, and where's the fix?
 4. What causes an RLS "mystery" (fewer rows than expected), and how do you confirm?
-5. How do you detect PHI leaking into logs?
+5. How do you detect PHI leaking into logs, and which redaction util (`phiRedaction.ts` / `pdfRedaction.ts`) is the guard?
 6. What's the most common cause of blank page on frontend, and where is it fixed?
 7. Which past fix covers upload 500 errors, and where is the commit?
 8. What's the quick curl to verify prod health?
 9. Which failure matches "Next.js SWC ARM64 incompat" per project memory?
 10. Where does the doc point for each symptom that maps to a known `code`?
+11. What symptom indicates the AI spend cap was hit, and which env var / guard controls it?
+12. What does a Quest FHIR `urlSafety` SSRF rejection look like, and how do you tell it apart from an expired OAuth token on `LabConnection`?
 
 ---
 
@@ -171,7 +180,10 @@ The generated `TROUBLESHOOTING.md` must link to:
 |---|---|---|
 | Fix commits | Bash | `git log --all --since='2 years ago' --grep='^fix:\|^hotfix:\|^revert:' --pretty='%h %ad %s' --date=short` |
 | Look for console.log leaks | Grep | `pattern: "console\\.log"` over `backend/src/**` (exclude tests) |
+| Confirm log redaction guard | Read | `backend/src/utils/phiRedaction.ts`, `backend/src/utils/pdfRedaction.ts` |
 | Find retry/backoff | Grep | `pattern: "retry|backoff|setTimeout"` over `backend/src/services/**` |
+| AI spend-cap behavior | Read | `backend/src/middleware/aiSpendGuard.ts`, `backend/src/services/aiCostTracker.ts` |
+| FHIR lab-sync failure modes | Read | `backend/src/services/fhir/urlSafety.ts`, `backend/src/services/fhir/labSyncService.ts` |
 | Known decision points | Read | `src/contexts/AuthContext.tsx`, `src/services/api/client.ts`, `backend/src/middleware/*.ts` |
 
 ---

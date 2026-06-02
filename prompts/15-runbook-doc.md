@@ -4,7 +4,7 @@ tags:
   - operations
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate RUNBOOK.md
@@ -31,18 +31,22 @@ Produce `New Project Documents/RUNBOOK.md` — the **operator's reference**. Dep
 
 | File | Why read it |
 |---|---|
-| `backend/Dockerfile` | Runtime (Node 20 Alpine, multi-stage), expose port, entrypoint. |
-| `backend/railway.toml` | Production/staging runtime config. |
-| `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml` | Deploy pipeline — image tagging, Cloud Run update, GCS frontend sync. |
-| `DEPLOY.md` | Existing deploy notes — incorporate, don't ignore. |
-| `backend/src/index.ts` | Startup assertions, scheduler boots, listen port. |
-| `backend/src/services/database.ts` | DB connection, SSL, pool sizing, RLS wrapper. |
-| `backend/src/services/auditLog.ts` | Audit retention scheduler (cadence + retention). |
-| `backend/src/services/authService.ts` | Session cleanup scheduler. |
-| `backend/src/config/index.ts` | Env var matrix (cross-link to ENV_VARS.md). |
-| `backend/prisma/migrations/` | Migration history — how to apply in prod. |
-| `backend/scripts/*` | Operator scripts (provider-stats, check-rls-wrappers, check-column-sizes, check-enums). |
-| Any recent incident / postmortem notes in repo | Reuse real remediation steps. |
+| `backend/Dockerfile` | Runtime (Node 20 Alpine, multi-stage), `EXPOSE 3001`, HEALTHCHECK on `/health`, entrypoint runs `npx prisma migrate deploy && node dist/app.js`. |
+| `backend/railway.toml` | Legacy Railway runtime config (`startCommand`, `healthcheckPath=/api/v1/health`). Production actually deploys to GCP Cloud Run via GitHub Actions — note the divergence. |
+| `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml` | Deploy pipeline — image tagging, no-traffic canary + smoke-test + promote, Cloud Run update, GCS frontend `gsutil rsync`. These are the source of truth for project/region/service/bucket names. |
+| `DEPLOY.md` | Existing deploy notes — STALE (describes Railway, not the live Cloud Run pipeline). Incorporate the domain/DNS bits, but the deploy mechanics come from the workflows above. |
+| `backend/src/app.ts` | Server entry point (NOT `index.ts`). Startup assertions, `startServer()` boots all three schedulers, `app.listen(config.port)`, `/health` + `/api/health/db` endpoints, graceful shutdown. |
+| `backend/src/config/index.ts` | Boot-time env validation (JWT secret quality, PHI key format, AUDIT_LOG_SALT length, BAA gates, prod-only hard-fails). Env var matrix (cross-link to ENV_VARS.md). |
+| `backend/src/services/database.ts` | DB connection, SSL, pool sizing, `withRLSContext`/`withRLSTransaction` wrappers. |
+| `backend/src/services/auditLog.ts` | Audit retention scheduler (`startAuditCleanup`, daily, 2555-day/~7y retention) — disabled in-process when `AUDIT_CLEANUP_TOKEN` delegates to Cloud Scheduler. |
+| `backend/src/services/authService.ts` | Session cleanup scheduler (`startSessionCleanup`, every 10 min — also sweeps the revoked-token blacklist). |
+| `backend/src/schedulers/emailScheduler.ts` | Engagement email scheduler (`startEmailScheduler`, hourly tick: Monday 08:00 UTC weekly summary, daily goal-reminder + plan-expiry sweeps). |
+| `backend/src/routes/internalRoutes.ts` | Cloud Scheduler endpoint `POST /api/v1/internal/audit-cleanup` (shared-secret `X-Cleanup-Token`, 404 when token unset). |
+| `backend/prisma/migrations/` | Migration history (22 dirs) — applied via `prisma migrate deploy` (Dockerfile CMD + railway.toml startCommand). |
+| `scripts/*` | Operator scripts at repo root (NOT `backend/scripts/`): `provider-stats.mjs`, `check-rls-wrappers.sh`, `check-column-sizes.mjs`, `check-enums.mjs`, `check-providers-table.mjs`. |
+| `docs/INFRA_REDIS_AND_SCHEDULER.md` | Provisioning runbook for Memorystore (REDIS_URL) + Cloud Scheduler audit retention — reuse its real gcloud commands. |
+| `docs/STAGING.md`, `docs/c-8-part-c-runbook.md` | Staging setup + the C-8 NOBYPASSRLS role-cutover runbook (audit-salt migration). |
+| Any recent incident / postmortem notes in repo / memory | Reuse real remediation steps. |
 
 ---
 
@@ -55,22 +59,27 @@ Produce `New Project Documents/RUNBOOK.md` — the **operator's reference**. Dep
 5. **Deploy: frontend** — automatic + manual (vite build + `gsutil -m rsync`).
 6. **Rollback** — Cloud Run revision rollback, traffic-pin gotcha (cross-link to the 2026-04-17 postmortem in memory), frontend rollback.
 7. **Database operations** — connect via Cloud SQL proxy, migration procedure, common queries (with PHI-aware redaction warnings).
-8. **Secret management** — list, update, rotate. PHI encryption key rotation is load-bearing — spell out the re-encryption requirement (or mark `TBD (external: ...)` if not yet defined).
-9. **Log access + filtering** — `gcloud logging read` with common filters (auth failures, rate limits, RLS denials).
-10. **Schedulers** — table: job, file:line, cadence, effect.
-11. **Incident playbooks** — one per scenario:
-    - Auth outage (JWT mis-config, secret rotated, sessions all invalid)
+8. **Secret management** — list, update, rotate. Cover the full set: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`, `ANTHROPIC_API_KEY`, `SENDGRID_API_KEY`, `REDIS_URL`, `AUDIT_CLEANUP_TOKEN`, the `QUEST_FHIR_*` credentials. PHI encryption key rotation is load-bearing — spell out the re-encryption requirement. `AUDIT_LOG_SALT` is also load-bearing: rotating it renders all existing audit-log PHI undecryptable and the app hard-fails on boot if it's unset/too short (config/index.ts) — document the `system_config.audit_encryption_salt` extraction path from `docs/STAGING.md`/`docs/c-8-part-c-runbook.md`. (Mark `TBD (external: ...)` only if a procedure is genuinely undefined.)
+9. **Log access + filtering** — `gcloud logging read` with common filters (auth failures, rate limits, RLS denials). Note the prod logger strips query strings (`?token=...`) — see app.ts morgan `PROD_LOG_FORMAT` and `utils/phiRedaction.ts`.
+10. **Schedulers** — table: job, file:line, cadence, effect. There are THREE in-process schedulers (audit cleanup, session cleanup, email engagement) plus the optional Cloud-Scheduler-driven audit cleanup.
+11. **Cloud Scheduler / internal endpoint** — when `AUDIT_CLEANUP_TOKEN` is set, the daily in-process audit cleanup is disabled and Cloud Scheduler POSTs to `/api/v1/internal/audit-cleanup` with the `X-Cleanup-Token` header. Document provisioning (cross-link `docs/INFRA_REDIS_AND_SCHEDULER.md`), how to verify it's firing, and the 404 (token unset) vs 401 (bad token) behavior.
+12. **Redis rate-limit store** — `REDIS_URL` switches the eight rate limiters from per-instance MemoryStore to shared Memorystore (rateLimitStore.ts). Document the provisioning path, the fallback behavior when unset/unreachable, and the per-instance-dilution caveat (`--max-instances=3`).
+13. **Incident playbooks** — one per scenario:
+    - Auth outage (JWT mis-config, `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` rotated, sessions all invalid)
     - DB outage (Cloud SQL unavailable, connection pool exhausted)
-    - Claude API outage or BAA misconfiguration
+    - Claude API outage or BAA misconfiguration (`ANTHROPIC_BAA_ACTIVE`)
+    - AI spend budget exhausted (aiSpendGuard tripping on `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD`)
     - GCS outage or bucket-permission error
+    - Quest FHIR / lab sync outage or OAuth token failure (labSyncService, SMART token revoked/expired)
+    - Redis/Memorystore unavailable (rate limiters fall back to per-instance store)
     - PHI leak in logs (triage + remediation + audit)
     - Rate-limit abuse / DDoS
     - Runaway migration (failed midway)
     - Env-var update silently held back by explicit revision pin (cross-link memory)
-12. **Smoke test after deploy** — health check endpoints + critical path (register → login → create biomarker).
-13. **Runbook maintenance** — when + how to update this doc.
-14. **Related Documents**.
-15. **Prompt drift log**.
+14. **Smoke test after deploy** — health check endpoints (`/health`, `/api/health/db`, `/api/v1/health`) + critical path (register → login → create biomarker). The deploy.yml smoke-test job already probes `/api/v1/health`.
+15. **Runbook maintenance** — when + how to update this doc.
+16. **Related Documents**.
+17. **Prompt drift log**.
 
 ---
 
@@ -80,15 +89,18 @@ Produce `New Project Documents/RUNBOOK.md` — the **operator's reference**. Dep
 
 ```mermaid
 flowchart LR
-  dev[Developer push] --> gh[GitHub Actions deploy.yml]
-  gh --> img[Artifact Registry: ownmyhealth-backend:<sha>]
+  dev[Developer push to main/master] --> gh[GitHub Actions deploy.yml]
+  gh --> img["Artifact Registry: us-central1-docker.pkg.dev/ownmyhealth-prod/ownmyhealth/ownmyhealth-backend:&lt;sha&gt;"]
   gh --> fe[gsutil rsync → GCS bucket ownmyhealth-frontend]
-  img --> cr[Cloud Run revision]
+  img --> cr["Cloud Run: ownmyhealth-backend (us-central1)"]
   cr --> sql[(Cloud SQL: verifymyprovider)]
-  cr --> gcs[(GCS uploads)]
+  cr --> gcs[(GCS uploads: ownmyhealth-user-files)]
   cr --> anth[Anthropic]
   cr --> sg[SendGrid]
   cr --> dai[Google Document AI]
+  cr -.optional.-> redis[(Memorystore Redis: rate limits)]
+  cr -.optional.-> quest[Quest Diagnostics SMART-on-FHIR]
+  sched[Cloud Scheduler] -.X-Cleanup-Token.-> cr
   fe --> browser[Browser]
   browser -.cookies.-> cr
 ```
@@ -97,32 +109,38 @@ flowchart LR
 
 | Property | Local | Staging | Prod |
 |---|---|---|---|
-| Branch | (any) | `staging` | `main` |
-| Deploy trigger | manual | push + `deploy-staging.yml` | push + `deploy.yml` |
-| Frontend URL | `http://localhost:5173` | TBD (external: see `deploy-staging.yml`) | TBD (external: see `deploy.yml`) |
-| Backend URL | `http://localhost:3001` | TBD | TBD |
-| Cloud SQL instance | n/a | TBD | TBD (external: GCP Console project) |
+| Branch | (any) | `staging` | `main` / `master` |
+| Deploy trigger | manual | push + `deploy-staging.yml` | push + `deploy.yml` (no-traffic canary → smoke → promote) |
+| Frontend URL | `http://localhost:5173` | TBD (external: staging frontend host; bucket `ownmyhealth-frontend-staging`) | `https://app.ownmyhealth.io` / `https://ownmyhealth.io` (hardcoded CORS origins in `app.ts`) |
+| Backend URL | `http://localhost:3001` | `https://api-staging.ownmyhealth.io` (deploy-staging.yml health probe) | `https://api.ownmyhealth.io` (deploy.yml post-promote probe) |
+| GCP project | n/a | `ownmyhealth-prod` (deploy-staging.yml) | `ownmyhealth-prod` (deploy.yml) |
+| Cloud Run service | n/a | `ownmyhealth-backend-staging` | `ownmyhealth-backend` (`--max-instances=3`) |
+| Frontend bucket | n/a | `ownmyhealth-frontend-staging` | `ownmyhealth-frontend` |
+| Cloud SQL instance | n/a | TBD (external: GCP Console project `ownmyhealth-prod`) | TBD (external: GCP Console project `ownmyhealth-prod`) |
 | Database name | `ownmyhealth_dev` | TBD | `verifymyprovider` (per CLAUDE.md) |
 
-Fill every TBD by reading the referenced workflow files first. Only keep TBD with a resolution path.
+Project/region/service/bucket names above are confirmed from the workflow `env:` blocks. Region is `us-central1` for both staging and prod. Fill any remaining TBD by reading the referenced files first. Only keep TBD with a resolution path.
 
 ### Schedulers table
 
 | Job | File:line | Cadence | Effect |
 |---|---|---|---|
-| Audit log retention cleanup | `backend/src/services/auditLog.ts:Lxx` | daily | Delete rows older than 7y |
-| Session cleanup | `backend/src/services/authService.ts:Lxx` | every 10 min (verify) | Delete expired sessions |
-| RLS wrapper sanity check | `backend/scripts/check-rls-wrappers.sh` | manual / pre-deploy | Fails build if controller bypasses wrapper |
+| Audit log retention cleanup | `backend/src/services/auditLog.ts` `startAuditCleanup` (~L582) | daily (24h `setInterval`) — DISABLED in-process when `AUDIT_CLEANUP_TOKEN` set | Delete `AuditLog` rows older than 2555 days (~7y); `RETENTION_DAYS` at L10 |
+| Session cleanup | `backend/src/services/authService.ts` `startSessionCleanup` (~L1408) | every 10 min (`setInterval`) | Sweep revoked-token blacklist + `deleteMany` expired sessions |
+| Email engagement scheduler | `backend/src/schedulers/emailScheduler.ts` `startEmailScheduler` (~L311) | hourly tick | Mon 08:00 UTC weekly summary; once-per-UTC-day goal-reminder + plan-expiry sweeps |
+| Audit cleanup via Cloud Scheduler | `backend/src/routes/internalRoutes.ts` `POST /audit-cleanup` (~L40) | external (Cloud Scheduler) when `AUDIT_CLEANUP_TOKEN` set | Same retention delete, triggered by `X-Cleanup-Token` shared secret |
+| RLS wrapper sanity check | `scripts/check-rls-wrappers.sh` | manual / pre-deploy / CI (`ci.yml`) | Fails build if controller bypasses `withRLSContext` |
 
 ### Rollback commands
 
 ```bash
 # List Cloud Run revisions
-gcloud run revisions list --service=ownmyhealth-backend --region=us-central1
+gcloud run revisions list --service=ownmyhealth-backend --region=us-central1 --project=ownmyhealth-prod
 
 # Pin traffic to a specific prior revision (fully replace)
 gcloud run services update-traffic ownmyhealth-backend \
   --region=us-central1 \
+  --project=ownmyhealth-prod \
   --to-revisions=ownmyhealth-backend-0000N-abc=100
 ```
 
@@ -158,22 +176,22 @@ gcloud logging read '
 
 **Symptoms**: every request returns 401 across users; Cloud Run logs show `JsonWebTokenError: invalid signature`.
 
-**Likely cause**: `JWT_SECRET` or `JWT_REFRESH_SECRET` was rotated but Cloud Run revision wasn't updated (or a new revision didn't receive traffic — see pinning gotcha).
+**Likely cause**: `JWT_ACCESS_SECRET` or `JWT_REFRESH_SECRET` was rotated but Cloud Run revision wasn't updated (or a new revision didn't receive traffic — see pinning gotcha). Note: both secrets go through `requireEnv()` in config/index.ts, so the app hard-fails to boot if either is missing — a boot crash loop is a separate signal from `invalid signature`.
 
 **Diagnosis**:
-1. `gcloud run services describe ownmyhealth-backend --region=us-central1 --format='value(status.latestReadyRevisionName, status.latestCreatedRevisionName, spec.traffic)'`
+1. `gcloud run services describe ownmyhealth-backend --region=us-central1 --project=ownmyhealth-prod --format='value(status.latestReadyRevisionName, status.latestCreatedRevisionName, spec.traffic)'`
 2. If `latestReady` ≠ `latestCreated`, traffic is pinned — fix via `update-traffic`.
 3. Grep logs for `invalid signature`; correlate with last secret update time.
 
 **Remediation**:
-1. Re-deploy with correct secret: `gcloud run services update ownmyhealth-backend --update-secrets=JWT_SECRET=jwt-secret:latest`.
-2. Follow with `update-traffic --to-latest`.
+1. Re-deploy with correct secret: `gcloud run services update ownmyhealth-backend --region=us-central1 --project=ownmyhealth-prod --update-secrets=JWT_ACCESS_SECRET=jwt-access-secret:latest,JWT_REFRESH_SECRET=jwt-refresh-secret:latest`.
+2. Follow with `update-traffic --to-latest` (or `--to-revisions=NEW=100`).
 3. Force logout all users (admin endpoint or `DELETE FROM sessions`).
 
 **Cross-link**: see `ERROR_RECOVERY.md#unauthenticated`.
 ```
 
-Write real playbooks for at least the 8 scenarios listed under Required sections.
+Write real playbooks for at least the 11 scenarios listed under Required sections.
 
 ---
 
@@ -183,16 +201,18 @@ After writing the doc, self-answer each **using only the doc**:
 
 1. What command rolls back to the previous Cloud Run revision?
 2. Why might an env-var update not take effect even though a new revision exists? (cite the pinning gotcha)
-3. What's the cadence of the audit log retention cleanup, and what does it delete?
+3. What's the cadence of the audit log retention cleanup, what does it delete, and when does the in-process scheduler get disabled in favor of Cloud Scheduler?
 4. How do you connect to the production Cloud SQL DB from your laptop?
-5. Which script validates that every controller wraps Prisma calls in `withRLSContext`?
-6. What's the deploy trigger for staging vs prod?
-7. How do you rotate `PHI_ENCRYPTION_KEY` end-to-end?
-8. Where are secrets stored in prod, and how do you update one?
-9. What's the smoke-test you run after every deploy?
+5. Which script validates that every controller wraps Prisma calls in `withRLSContext`, and where does it live?
+6. What's the deploy trigger for staging vs prod, and what's the prod canary→promote flow?
+7. How do you rotate `PHI_ENCRYPTION_KEY` end-to-end? Why is rotating `AUDIT_LOG_SALT` dangerous?
+8. Where are secrets stored in prod, and how do you update one (both JWT secrets, by their real names)?
+9. What's the smoke-test you run after every deploy, and which endpoints does it hit?
 10. Which log filter finds RLS-denied requests in the last hour?
-11. What's the playbook for a Claude API outage, step by step?
-12. Where does the session-cleanup scheduler run and with what cadence?
+11. What's the playbook for a Claude API outage, step by step? What about AI daily-budget exhaustion?
+12. Where do the THREE in-process schedulers run (audit cleanup, session cleanup, email engagement) and with what cadence each?
+13. How is the Cloud Scheduler audit-cleanup endpoint authenticated, and what does it return when the token is unset?
+14. What does setting `REDIS_URL` change about rate limiting, and what's the fallback when it's unset?
 
 ---
 
@@ -200,11 +220,11 @@ After writing the doc, self-answer each **using only the doc**:
 
 Before marking anything TBD:
 
-- **URLs and instance names**: read `backend/railway.toml`, `.github/workflows/deploy.yml`, `deploy-staging.yml`, `ci.yml`, `DEPLOY.md`, project memory files (`cloud-run-env-update-pinning.md` if available).
-- **Scheduler cadence**: read the scheduler file; look for `setInterval(ms)` / `cron.schedule(...)`.
-- **Database name**: cross-check `CLAUDE.md` ("verifymyprovider") with `railway.toml` env vars.
-- **Migration command**: read `backend/package.json` scripts; typical is `prisma migrate deploy`.
-- **Rollback commands**: the `gcloud run` CLI syntax is stable; include working invocations with real service name + region.
+- **URLs and instance names**: read `.github/workflows/deploy.yml` + `deploy-staging.yml` (the `env:` blocks hold project/region/service/bucket); `backend/railway.toml`; `DEPLOY.md` (domain/DNS only — its Railway deploy mechanics are stale); project memory `cloud-run-env-update-pinning.md`.
+- **Scheduler cadence**: read each scheduler file; look for `setInterval(ms)`. Three exist: `auditLog.ts` (`startAuditCleanup`, 24h), `authService.ts` (`startSessionCleanup`, 10 min), `schedulers/emailScheduler.ts` (`startEmailScheduler`, hourly). All three are booted from `app.ts startServer()` and stopped in `gracefulShutdown`.
+- **Database name**: cross-check `CLAUDE.md` ("verifymyprovider") with `railway.toml` / Cloud Run env vars.
+- **Migration command**: confirmed `npx prisma migrate deploy` — it runs in both `backend/Dockerfile` CMD and `backend/railway.toml` startCommand before `node dist/app.js`. (`backend/package.json` has no `migrate:deploy` script; the command is inline in the deploy entrypoint.)
+- **Rollback commands**: the `gcloud run` CLI syntax is stable; include working invocations with real service name (`ownmyhealth-backend`), region (`us-central1`), and project (`ownmyhealth-prod`).
 - **Incident playbooks**: if a scenario has no recorded playbook in repo or memory, derive one from the architecture (auth = JWT → session; DB = pool + RLS; GCS = signed URL expiry; Claude = rate limiter + BAA env var) and **mark clearly** which steps are derived vs proven.
 
 If the Cloud SQL instance name is genuinely not in the repo:
@@ -228,6 +248,12 @@ The generated `RUNBOOK.md` must link to:
 - [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) — open infra findings (e.g., BYPASSRLS).
 - [`HIPAA_CHECKLIST.md`](./HIPAA_CHECKLIST.md) — operational HIPAA obligations.
 
+It should also reference these in-repo operational docs (read them while writing):
+
+- `docs/INFRA_REDIS_AND_SCHEDULER.md` — Memorystore (REDIS_URL) + Cloud Scheduler audit-cleanup provisioning.
+- `docs/STAGING.md` — staging environment setup + audit-salt migration.
+- `docs/c-8-part-c-runbook.md` — NOBYPASSRLS role-cutover runbook.
+
 ---
 
 ## Verification (tool usage)
@@ -237,10 +263,12 @@ The generated `RUNBOOK.md` must link to:
 | Read deploy workflows | Read | `.github/workflows/deploy.yml`, `deploy-staging.yml`, `ci.yml` |
 | Read Dockerfile | Read | `backend/Dockerfile` |
 | Read Railway config | Read | `backend/railway.toml` |
-| Find schedulers | Grep | `pattern: "setInterval|cron|node-schedule"` over `backend/src/**` |
-| Read operator scripts | Glob | `pattern: "backend/scripts/*"` |
+| Find schedulers | Grep | `pattern: "startAuditCleanup|startSessionCleanup|startEmailScheduler|setInterval"` over `backend/src/**` |
+| Read operator scripts | Glob | `pattern: "scripts/*"` (repo root, not `backend/scripts/`) |
+| Read internal/Cloud Scheduler endpoint | Read | `backend/src/routes/internalRoutes.ts` |
+| Read infra provisioning runbook | Read | `docs/INFRA_REDIS_AND_SCHEDULER.md` |
 | Read migration scripts | Read | one or two sample `backend/prisma/migrations/*/migration.sql` |
-| Read startup assertions | Read | `backend/src/index.ts` |
+| Read startup assertions | Read | `backend/src/app.ts` (the entry point) and `backend/src/config/index.ts` (boot-time env validation) |
 
 ---
 

@@ -4,7 +4,7 @@ tags:
   - meta
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Full Documentation Refresh
@@ -23,7 +23,11 @@ Before running any doc prompt, read:
 
 Orchestrate a full refresh of `New Project Documents/`. The output set, in its entirety, must be rich enough to serve as a Claude.ai Project context **substitute for the full GitHub repo** (which has outgrown Projects' attachment limit).
 
-This prompt is a runner, not a doc generator. It sequences the 18 doc prompts so each run benefits from the context the earlier ones produced.
+This prompt is a runner, not a doc generator. It sequences the 18 doc prompts (14-23 plus the 33-40 deep-reference layer) so each run benefits from the context the earlier ones produced.
+
+> **Current state (2026-06-01):** `New Project Documents/` is **empty** — none of the output docs exist yet. The first full run generates all 22 files from scratch (plus `INDEX.md`); it is not an incremental update of existing docs.
+
+Before sequencing, verify the live codebase counts in [`00-index.md`](./00-index.md) ("Verified codebase counts") so each generated doc starts from accurate totals. Several product domains added since the prompt era — Quest FHIR / lab connections, AI chat + AI cost/spend control, onboarding, email-change, notification preferences, and plan gating / billing tiers — are now in code and must be reflected across the generated set (especially `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ENV_VARS.md`, `ARCHITECTURE.md`, `API_REFERENCE.md`, and `FRONTEND_MAP.md`).
 
 ---
 

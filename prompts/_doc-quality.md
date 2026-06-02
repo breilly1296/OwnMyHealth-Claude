@@ -5,7 +5,7 @@ tags:
   - documentation
 type: shared
 priority: 1
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Doc Quality Protocol (shared)
@@ -26,7 +26,7 @@ This file defines the rules that make that possible.
 
 ## Core rules
 
-1. **No claim without evidence.** Every code claim cites `file:path:line` or a ranged `file:path:L42-L68`. No "the controller handles auth." Write "`authController.login` (`backend/src/controllers/authController.ts:74`) …".
+1. **No claim without evidence.** Every code claim cites `file:path:line` or a ranged `file:path:L42-L68`. No "the controller handles auth." Write "`authController.login` (`backend/src/controllers/authController.ts:257`) …".
 2. **No summary in place of a reference.** The docs are a reference, not a walkthrough. Tables, snippets, and diagrams out-rank paragraphs. Prose exists to connect artifacts, not replace them.
 3. **No fabrication.** If the code does not confirm a claim, mark it `TBD (external: <reason>)` per the TBD rule below. Never invent a route, env var, or table name.
 4. **No silent TBDs.** Banned except when the answer lives outside the repo. Every TBD carries the reason *and* where to go resolve it.
@@ -52,16 +52,17 @@ Before returning the doc, Claude self-checks it against the five tests below. A 
 
 ## Evidence and citation rule
 
-- **Atomic citations**: `backend/src/services/database.ts:275` for a single line; `backend/src/services/database.ts:L275-L290` for a range.
-- **Multi-file claims**: cite all relevant files inline, e.g., "Signed by `authController.login:92` using `JWT_ACCESS_SECRET` loaded at `config/index.ts:47`."
+- **Atomic citations**: `backend/src/services/database.ts:447` for a single line; `backend/src/services/database.ts:L447-L456` for a range.
+- **Multi-file claims**: cite all relevant files inline, e.g., "`authController.login` (`backend/src/controllers/authController.ts:257`) calls `authService.generateAccessToken` (`backend/src/services/authService.ts:237`), which signs with `config.jwt.accessSecret` loaded from `JWT_ACCESS_SECRET` at `backend/src/config/index.ts:61`."
 - **Table rows**: every structural row (routes, env vars, PHI fields, components) carries a citation column or inline anchor.
 - **Snippets**: precede with a one-line source marker:
 
   ```ts
-  // Source: backend/src/services/database.ts:L275-L290
+  // Source: backend/src/services/database.ts:L447-L456
   export async function withRLSContext<T>(
     userId: string | null,
-    fn: (tx: PrismaTx) => Promise<T>,
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+    options: RLSOptions = {},
   ): Promise<T> { ... }
   ```
 
@@ -84,10 +85,10 @@ Before returning the doc, Claude self-checks it against the five tests below. A 
   Client ──POST /auth/login──▶ authRoutes.ts
                                     │
                                     ▼
-                              authController.login  (backend/src/controllers/authController.ts:74)
+                              authController.login        (backend/src/controllers/authController.ts:257)
                                     │
                                     ▼
-                              authService.login     (backend/src/services/authService.ts:52)
+                              authService.generateAccessToken (backend/src/services/authService.ts:237)
   ```
 
 - **Mermaid** for sequence, state, and ER diagrams. Use ```mermaid fences:
@@ -204,38 +205,46 @@ This doc must pass the five tests in `_doc-quality.md` (question-answering, path
 A correct API_REFERENCE entry looks like this (note citations, snippet, diagram, acceptance-stub, cross-links):
 
 > ### `GET /api/v1/biomarkers`
-> List the authenticated user's biomarkers, most-recent first.
+> List the authenticated user's biomarkers, most-recent first (`measurementDate desc`), paginated.
 >
-> **Route**: `backend/src/routes/biomarkerRoutes.ts:14`
-> **Controller**: `biomarkerController.listBiomarkers` (`backend/src/controllers/biomarkerController.ts:22`)
+> **Route**: `backend/src/routes/biomarkerRoutes.ts:50`
+> **Controller**: `biomarkerController.getBiomarkers` (`backend/src/controllers/biomarkerController.ts:111`)
 > **Middleware chain** (in order, from route file):
 >
 > | # | Middleware | Source |
 > |---|---|---|
-> | 1 | `authenticate` | `backend/src/middleware/auth.ts:18` |
-> | 2 | `standardLimiter` | `backend/src/middleware/rateLimiter.ts:41` |
+> | 1 | `authenticate` (applied router-wide via `router.use`) | `backend/src/middleware/auth.ts:71` |
+> | 2 | `validate(schemas.biomarker.listQuery, 'query')` | `backend/src/middleware/validation.ts` |
 >
-> **RLS wrap**: `withRLSContext(userId, async tx => tx.biomarker.findMany(...))` — `biomarkerController.ts:L28-L36`.
+> **RLS wrap**: `withRLSTransaction(userId, async tx => { count + findMany })` — `biomarkerController.ts:L137-L147`.
 >
 > ```ts
-> // Source: backend/src/controllers/biomarkerController.ts:L28-L36
-> const rows = await withRLSContext(req.user.id, async (tx) => {
->   return tx.biomarker.findMany({ orderBy: { measuredAt: 'desc' } });
+> // Source: backend/src/controllers/biomarkerController.ts:L137-L147
+> const { total, biomarkers } = await withRLSTransaction(userId, async (tx) => {
+>   const total = await tx.biomarker.count({ where });
+>   const biomarkers = await tx.biomarker.findMany({
+>     where,
+>     include: { history: true },
+>     skip: pagination.skip,
+>     take: pagination.take,
+>     orderBy: { measurementDate: 'desc' },
+>   });
+>   return { total, biomarkers };
 > });
 > ```
 >
 > ```mermaid
 > sequenceDiagram
 >   C->>Route: GET /api/v1/biomarkers (cookie: access)
->   Route->>Ctl: authenticate + standardLimiter
->   Ctl->>DB: withRLSContext(userId, tx => tx.biomarker.findMany)
+>   Route->>Ctl: authenticate + validate(listQuery)
+>   Ctl->>DB: withRLSTransaction(userId, tx => count + findMany)
 >   DB-->>Ctl: rows (PHI still encrypted)
->   Ctl-->>C: 200 [{ id, valueDecrypted, unitDecrypted, ... }]
+>   Ctl-->>C: 200 { data: [{ id, value, unit, ... }], pagination }
 > ```
 >
-> **Response (200)**: `Array<{ id, valueDecrypted, unitDecrypted, measuredAt, category }>`.
-> **PHI fields returned**: `valueDecrypted`, `unitDecrypted`, `notesDecrypted` — see [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md#biomarker).
-> **Audit log**: `auditLog.log({ action: 'BIOMARKER_LIST', ... })` at `biomarkerController.ts:38`.
+> **Response (200)**: `{ data: Array<{ id, value, unit, notes?, date, category, ... }>, pagination }` — values decrypted via `toResponse` (`biomarkerController.ts:60`).
+> **PHI fields returned**: `value` (from `valueEncrypted`), `notes` (from `notesEncrypted`) — see [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md#biomarker).
+> **Audit log**: `auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, { operation: 'LIST', ... })` at `biomarkerController.ts:160`.
 >
 > **Related**: [`DATA_MODEL.md#biomarker`](./DATA_MODEL.md#biomarker), [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
 
@@ -270,8 +279,8 @@ Trust the code. Finish the section using what the code actually says, then appen
 ```markdown
 ## Prompt drift log
 
-- `./NN-foo.md` says "13 route files"; actual count is 19 (see [glob]). Prompt author should update `00-index.md` "Verified codebase counts" table.
-- `./NN-foo.md` expects `config.jwt.accessSecret`; config exports `config.JWT_ACCESS_SECRET`. Drift since 2026-04-01.
+- `./NN-foo.md` says "13 route files"; actual count is 18 (see [glob `backend/src/routes/*.ts`]). Prompt author should update `00-index.md` "Verified codebase counts" table.
+- `./NN-foo.md` references `uploadController.ts`; that single-file controller no longer exists — upload handlers now live in `backend/src/controllers/upload/index.ts` (`uploadLabReport`, `uploadSBC`, `uploadLabResultOCR`), wired from `uploadRoutes.ts:21`. Drift since the upload refactor.
 ```
 
 These entries drive the quarterly prompt-refresh task.

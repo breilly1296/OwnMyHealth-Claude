@@ -6,7 +6,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-04-24
+updated: 2026-06-01
 ---
 
 # Generate LOCAL_DEV.md
@@ -35,14 +35,14 @@ Produce `New Project Documents/LOCAL_DEV.md` — the **zero-to-running setup gui
 | `README.md` | High-level orientation (cross-check any existing setup steps). |
 | `package.json` (root) | Scripts: `dev`, `build`, `test`, `test:unit`, `test:e2e`, `lint`. |
 | `backend/package.json` | Backend scripts: `dev`, `build`, `test`, Prisma scripts. |
-| `backend/.env.example`, `.env.example` | Required env vars for local dev. |
-| `backend/src/config/index.ts` | Which vars boot with defaults vs throw. |
-| `backend/src/index.ts` | Startup assertions — local-dev failure modes. |
-| `backend/prisma/schema.prisma` | DB to provision. |
-| `backend/prisma/migrations/` | Number of migrations to run. |
-| `backend/scripts/*` | Seed scripts, schema checks, data loaders. |
-| `e2e/setup/*` | Test-user seeding (e.g., `seed-test-user.ts`) — useful for smoke test. |
-| `backend/Dockerfile` | Node version confirmation (Alpine). |
+| `backend/.env.example`, `.env.example` | Required env vars for local dev. (Frontend `.env.example` only needs `VITE_API_URL`.) |
+| `backend/src/config/index.ts` | Which vars boot with defaults vs throw (`requireEnv` for JWT secrets; hard-fail validation for `AUDIT_LOG_SALT`, `PHI_ENCRYPTION_KEY`). |
+| `backend/src/app.ts` | Backend entry point + startup assertions — local-dev failure modes. (There is no `src/index.ts`; dev script is `tsx watch src/app.ts`.) |
+| `backend/prisma/schema.prisma` | DB to provision (18 models). |
+| `backend/prisma/migrations/` | Number of migrations to run (22 as of 2026-06-01). |
+| `e2e/setup/seed-test-user.ts` | Test-user seeding (idempotent; sets `emailVerified`, `plan: PRO`, `onboardingCompletedAt`) — useful for smoke test. No `backend/scripts/seed*` exists. |
+| `backend/scripts/setup-rls-test-db.sh` | RLS test-DB bootstrap (only script in `backend/scripts/`). |
+| `backend/Dockerfile` | Node version confirmation (`node:20-alpine`). |
 | `vite.config.ts` | Dev server port + chunking. |
 | `CLAUDE.md` | Dev commands section. |
 
@@ -52,12 +52,12 @@ Produce `New Project Documents/LOCAL_DEV.md` — the **zero-to-running setup gui
 
 1. **Prerequisites** — Node version (from Dockerfile / engines), Postgres version, npm version, optional `gcloud` for GCS features.
 2. **Clone + install** — exact commands, root + workspace install.
-3. **Environment setup** — copying `.env.example` files, generating local secrets (`openssl rand -hex 32` for `PHI_ENCRYPTION_KEY` / `JWT_SECRET` / etc.), Postgres connection string.
-4. **Database provisioning** — create DB, run migrations (`npx prisma migrate deploy` or `migrate dev`), generate Prisma client, optional seed script.
-5. **Run** — start backend (`npm run dev` in `backend/`), start frontend (`npm run dev` at root), how to verify each is up.
-6. **Golden-path smoke test** — a copy-paste sequence of `curl` calls (or a script) that: registers a test user, verifies email (dev bypass? flag?), logs in, creates a biomarker, lists it, deletes it. End-to-end proof.
-7. **Test suites** — how to run unit tests, integration tests, e2e. Expected runtimes.
-8. **Local mocking** — which external services can be skipped locally (Anthropic key optional? SendGrid noop mode?).
+3. **Environment setup** — copying `.env.example` files, generating local secrets. Note the differing generators: JWT secrets use `openssl rand -base64 32` (min 32 chars, no fallback — `requireEnv` crashes at boot if missing); `PHI_ENCRYPTION_KEY` and `AUDIT_LOG_SALT` use `openssl rand -hex 32`. There is **no** `CSRF_SECRET` (CSRF is a stateless double-submit cookie). Postgres connection string.
+4. **Database provisioning** — create DB (or run Prisma Postgres locally via `npx prisma dev` per `.env.example`), run migrations (`npx prisma migrate deploy` or `migrate dev` — 22 migrations), generate Prisma client, optional seed (`npx tsx e2e/setup/seed-test-user.ts`).
+5. **Run** — start backend (`npm run dev` in `backend/`, runs `tsx watch src/app.ts`), start frontend (`npm run dev` at root), how to verify each is up.
+6. **Golden-path smoke test** — a copy-paste sequence of `curl` calls (or a script) that: registers a test user, verifies email (in dev without a SendGrid key the verification URL is printed to the backend console via `logger.devBox('EMAIL VERIFICATION', ...)` — or set `DISABLE_CSRF=true` and seed `emailVerified: true`), logs in, creates a biomarker, lists it, deletes it. End-to-end proof.
+7. **Test suites** — how to run unit tests (`npm run test:unit`), integration tests (`npm run test:integration`), RLS (`npm run test:rls`), and e2e (`npm run test:e2e`, which seeds first). Expected runtimes.
+8. **Local mocking** — which external services can be skipped locally. Anthropic key optional (warns at boot; runtime gate blocks Claude calls unless `ANTHROPIC_BAA_ACTIVE=true`). SendGrid optional (no key → emails logged, never sent; or `SENDGRID_SANDBOX_MODE=true`). Redis optional (`REDIS_URL` unset → in-memory rate-limit store). Quest FHIR optional (point `QUEST_FHIR_BASE_URL` at the local mock `http://localhost:3001/api/v1/mock-fhir/r4`).
 9. **Reset procedures** — wipe local DB, clear sessions, reset migrations.
 10. **Common failures + fixes** — "if this fails, try that" table.
 11. **IDE setup** — recommended extensions (ESLint, Prisma), Prettier/format-on-save if configured.
@@ -72,10 +72,11 @@ Produce `New Project Documents/LOCAL_DEV.md` — the **zero-to-running setup gui
 
 | Prereq | Version | Install hint |
 |---|---|---|
-| Node.js | >= 18 (matches `backend/Dockerfile`) | `nvm install 20` |
+| Node.js | 20 (`backend/Dockerfile` uses `node:20-alpine`; `engines` says `>=18`) | `nvm install 20` |
 | npm | latest | bundled with Node |
-| PostgreSQL | 15.x | Docker: `docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:15` |
-| gcloud (optional) | latest | for GCS-backed file features |
+| PostgreSQL | 15.x (or `npx prisma dev` for local Prisma Postgres) | Docker: `docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:15` |
+| gcloud (optional) | latest | for GCS-backed file features + Document AI OCR |
+| Redis (optional) | latest | only if testing the shared rate-limit store (`REDIS_URL`) |
 
 ### Step-by-step commands
 
@@ -93,51 +94,62 @@ cd backend && npm install && cd ..
 cp backend/.env.example backend/.env
 cp .env.example .env
 
-# Generate required secrets (commit-safe only for local)
-openssl rand -hex 32  # → JWT_SECRET
-openssl rand -hex 32  # → JWT_REFRESH_SECRET
-openssl rand -hex 32  # → PHI_ENCRYPTION_KEY
-openssl rand -hex 32  # → CSRF_SECRET
+# Generate required secrets (commit-safe only for local).
+# Backend refuses to boot if any of these are missing/weak (see config/index.ts).
+openssl rand -base64 32  # → JWT_ACCESS_SECRET  (min 32 chars, no fallback)
+openssl rand -base64 32  # → JWT_REFRESH_SECRET (min 32 chars, no fallback)
+openssl rand -hex 32     # → PHI_ENCRYPTION_KEY (exactly 64 hex chars / 256 bits)
+openssl rand -hex 32     # → AUDIT_LOG_SALT     (>=16 chars; hard-fail if unset)
+# NOTE: there is NO CSRF_SECRET — CSRF uses a stateless double-submit cookie.
 # Paste each into backend/.env
 
 # 5. Database
 createdb ownmyhealth_dev
 # or: docker exec pg psql -U postgres -c 'CREATE DATABASE ownmyhealth_dev;'
+# or (Prisma Postgres, per .env.example): cd backend && npx prisma dev
 
 # Edit backend/.env:
 # DATABASE_URL="postgresql://postgres:dev@localhost:5432/ownmyhealth_dev"
 
 cd backend
 npx prisma generate
-npx prisma migrate deploy
+npx prisma migrate deploy   # applies all 22 migrations
 cd ..
 
+# (optional) seed an already-verified PRO test user for smoke/e2e flows
+npx tsx e2e/setup/seed-test-user.ts
+
 # 6. Start dev
-(cd backend && npm run dev) &   # backend on :3001
+(cd backend && npm run dev) &   # backend on :3001 (tsx watch src/app.ts)
 npm run dev                      # frontend on :5173
 ```
 
 ### Smoke test (copy-paste to verify end-to-end)
 
 ```bash
-# Register
+# Register (email + password required; firstName/lastName optional)
 curl -X POST http://localhost:3001/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"smoke@test.local","password":"SmokePass123!"}'
+  -d '{"email":"smoke@test.local","password":"SmokePass123!","firstName":"Smoke","lastName":"Test"}'
 
-# Login (capture cookies)
+# Email verification gates login. With no SendGrid key the verification URL is
+# printed to the backend console (logger.devBox 'EMAIL VERIFICATION'); GET it,
+# OR seed an already-verified user with: npx tsx e2e/setup/seed-test-user.ts
+
+# Login (capture cookies — sets csrf_token + auth cookies)
 curl -c cookies.txt -X POST http://localhost:3001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"smoke@test.local","password":"SmokePass123!"}'
 
-# Extract CSRF token from cookies.txt and set header
-CSRF=$(awk '/csrfToken/ {print $7}' cookies.txt)
+# Extract CSRF token from the csrf_token cookie and set the header
+CSRF=$(awk '/csrf_token/ {print $7}' cookies.txt)
 
-# Create biomarker
+# Create biomarker (schemas.biomarker.create requires name, value, unit,
+# category, date, and a normalRange {min,max} — see middleware/validation.ts)
 curl -b cookies.txt -X POST http://localhost:3001/api/v1/biomarkers \
   -H "Content-Type: application/json" \
   -H "X-CSRF-Token: $CSRF" \
-  -d '{"name":"LDL","value":120,"unit":"mg/dL","measuredAt":"2026-04-24T10:00:00Z"}'
+  -d '{"name":"LDL","value":120,"unit":"mg/dL","category":"Lipids","date":"2026-06-01T10:00:00Z","normalRange":{"min":0,"max":100}}'
 
 # List biomarkers
 curl -b cookies.txt http://localhost:3001/api/v1/biomarkers
@@ -148,10 +160,12 @@ curl -b cookies.txt http://localhost:3001/api/v1/biomarkers
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `PrismaClientInitializationError: Can't reach database server` | Postgres not running / wrong port / wrong password | `docker ps` / check `DATABASE_URL` |
-| `Error: PHI_ENCRYPTION_KEY is required` | env var missing / too short | generate with `openssl rand -hex 32` |
+| `Missing required environment variable: JWT_ACCESS_SECRET` (or REFRESH) | secret missing/empty — `requireEnv` hard-fails at boot | generate with `openssl rand -base64 32` |
+| `PHI_ENCRYPTION_KEY must be at least 64 hex characters` | key missing / wrong format | generate with `openssl rand -hex 32` |
+| `AUDIT_LOG_SALT must be set and at least 16 characters` | salt missing (new requirement) | generate with `openssl rand -hex 32` |
 | `ECONNREFUSED 127.0.0.1:3001` from frontend | Backend not started | start backend first |
-| `401` on every request | `JWT_SECRET` differs between token issuance and verification | restart backend after changing `.env` |
-| `403 CSRF mismatch` | not sending `X-CSRF-Token` matching cookie | re-read cookie after login |
+| `401` on every request | `JWT_ACCESS_SECRET` differs between token issuance and verification | restart backend after changing `.env` |
+| `403 CSRF mismatch` | not sending `X-CSRF-Token` matching the `csrf_token` cookie | re-read cookie after login (or set `DISABLE_CSRF=true` in dev) |
 | Next dev/vite port conflict | `:5173` in use | `vite --port 5174` |
 | `npm install` fails on Windows ARM64 + Node 24 | Native binary incompat (see CLAUDE.md note) | use Node 20 or apply documented SWC patch |
 
@@ -182,9 +196,11 @@ After writing the doc, self-answer each **using only the doc**:
 7. Which test runner runs backend tests? Frontend? E2E?
 8. How do you reset a broken local database?
 9. What's the most common reason the frontend returns 401 on every call?
-10. Is a real `ANTHROPIC_API_KEY` required to run the app locally, or can AI features be skipped?
+10. Is a real `ANTHROPIC_API_KEY` required to run the app locally, or can AI features be skipped (and what does `ANTHROPIC_BAA_ACTIVE` do in dev)?
 11. How do you trigger email verification locally without a real SendGrid key?
 12. What port does Postgres default to in the dev `DATABASE_URL`?
+13. Is `REDIS_URL` required locally, and what happens to rate limiting when it's unset?
+14. How do you exercise the Quest FHIR / lab-connection flow locally without real Quest credentials?
 
 ---
 
@@ -192,11 +208,12 @@ After writing the doc, self-answer each **using only the doc**:
 
 Before marking anything TBD:
 
-- **Node version**: `backend/Dockerfile` `FROM` line; `package.json` `engines` field.
-- **Postgres version**: check Cloud SQL version in `railway.toml`, `deploy.yml`, or infer from Prisma's minimum supported.
-- **Seed scripts**: `Glob "backend/scripts/seed*.{ts,mjs}"`; read whatever exists. If none, state so explicitly.
-- **Email verification local bypass**: `Grep pattern: "NODE_ENV"` in `emailService.ts`, `authService.ts`, `authController.ts`.
-- **Anthropic key optional**: `Grep pattern: "ANTHROPIC_API_KEY"` — if the config marks it optional or a service no-ops on missing key, document that. Otherwise state "required for AI features".
+- **Node version**: `backend/Dockerfile` `FROM` line (`node:20-alpine`); `package.json` `engines` field (`>=18`).
+- **Postgres version**: check Cloud SQL version in `.github/workflows/deploy.yml`, or infer from Prisma's minimum supported.
+- **Seed scripts**: the only seed is `e2e/setup/seed-test-user.ts` (no `backend/scripts/seed*` exists — `backend/scripts/` holds only `setup-rls-test-db.sh`). State this explicitly.
+- **Email verification local bypass**: `emailService.ts` — when SendGrid is unavailable the verification URL is logged via `logger.devBox('EMAIL VERIFICATION', ...)`. The e2e seed sets `emailVerified: true` to skip the gate entirely.
+- **Anthropic key optional**: `Grep pattern: "ANTHROPIC_API_KEY"` in `config/index.ts` — it is optional (boot warns), but the runtime gate blocks Claude calls unless `ANTHROPIC_BAA_ACTIVE=true`. Document both.
+- **Redis optional**: `Grep pattern: "REDIS_URL"` in `config/index.ts` / `middleware/rateLimitStore.ts` — unset falls back to in-memory rate-limit store; document the fallback.
 
 If any of the above cannot be resolved from the repo, mark `TBD (external: ...)` with the specific file or owner to ask.
 
@@ -223,8 +240,10 @@ The generated `LOCAL_DEV.md` must link to:
 | Read backend scripts | Read | `backend/package.json` |
 | Read env examples | Read | `backend/.env.example`, `.env.example` |
 | Read Dockerfile | Read | `backend/Dockerfile` |
-| Find seed scripts | Glob | `pattern: "backend/scripts/seed*"` |
-| Find dev-only bypasses | Grep | `pattern: "NODE_ENV"` over `backend/src/**` |
+| Confirm boot-time env validation | Read | `backend/src/config/index.ts` (`requireEnv`, salt/key/secret checks) |
+| Find seed script | Glob | `pattern: "e2e/setup/seed-test-user.ts"` |
+| Count migrations | Glob | `pattern: "backend/prisma/migrations/*/"` (22 dirs) |
+| Find dev-only bypasses | Grep | `pattern: "DISABLE_CSRF|isDevelopment"` over `backend/src/**` |
 
 ---
 
