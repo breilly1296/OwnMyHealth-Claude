@@ -1,743 +1,488 @@
 # DATA_MODEL.md
 
-> Complete reference for the OwnMyHealth PostgreSQL database: every model, every
-> field, every index, every RLS policy, every cascade rule, and the
-> `withRLSContext` / `withRLSTransaction` usage matrix.
+> Complete, deep reference for the OwnMyHealth database: every model, field, index, foreign key, RLS policy, cascade rule, and the `withRLSContext` / `withRLSTransaction` access-control wrappers.
+> Source of truth: `backend/prisma/schema.prisma` + `backend/prisma/migrations/`. Generated 2026-06-01.
 
-Generated: 2026-04-24. Source of truth: `backend/prisma/schema.prisma` and
-`backend/prisma/migrations/**/migration.sql`.
+This doc lets a reader answer *"what does the DB look like and how is it access-controlled?"* without opening the schema file. Every non-trivial claim cites `file:path:line`.
 
 ---
 
-## Overview
+## 1. Overview
 
-- **Active models**: 18 (User, Session, UserEncryptionKey, ProviderPatient,
-  UserFile, Biomarker, BiomarkerHistory, InsurancePlan, InsuranceBenefit,
-  HealthNeed, HealthGoal, GoalProgressHistory, AuditLog, SystemConfig,
-  ExpenseProjection, ExpenseActual, CostAnalysis, LabConnection).
-- **Deprecated models (still in schema, removed from UI)**: 3 — `DNAData`,
-  `DNAVariant`, `GeneticTrait` (`backend/prisma/schema.prisma:383-435`). Per
-  [`CLAUDE.md:38-41`](../CLAUDE.md) these are retained pending a dedicated
-  drop migration.
-- **RLS-enabled tables**: 20 (all 18 active except `user_encryption_keys`
-  which is RLS-enabled too — totalling 21 including deprecated DNA tables;
-  see [RLS policy catalog](#rls-policy-catalog)).
-- **Encrypted columns in schema (`*Encrypted` or designated-encrypted)**: 36
-  (verified with `Grep pattern:"Encrypted\s+String"` over
-  `backend/prisma/schema.prisma` — 35 `*Encrypted` columns, plus
-  `CostAnalysis.claudeResponse` which is encrypted despite lacking the suffix,
-  see [`encryption.ts:482`](../backend/src/services/encryption.ts)).
-- **Migrations on disk**: 16 (`backend/prisma/migrations/` — see
-  [Migration timeline](#migration-timeline)).
-- **Database**: PostgreSQL on Google Cloud SQL. Connection pool capped at
-  `DATABASE_POOL_SIZE || 10` (`backend/src/services/database.ts:110`).
-- **Runtime caveat**: the application currently connects as a `BYPASSRLS`
-  role in dev and prod — RLS policies are structurally defined but do not
-  enforce at the SQL layer until the `omh_app` `NOBYPASSRLS` role cutover
-  (tracked via `RLS_ENFORCEMENT=strict`, see
-  `backend/src/services/database.ts:L211-L270` and the user-memory critical
-  finding for project OwnMyHealth).
+| Metric | Count | Source |
+|---|---|---|
+| Prisma models (active) | **18** | `backend/prisma/schema.prisma` (`User`, `Session`, `UserEncryptionKey`, `ProviderPatient`, `UserFile`, `Biomarker`, `BiomarkerHistory`, `InsurancePlan`, `InsuranceBenefit`, `HealthNeed`, `HealthGoal`, `GoalProgressHistory`, `AuditLog`, `SystemConfig`, `ExpenseProjection`, `ExpenseActual`, `CostAnalysis`, `LabConnection`) |
+| Prisma enums | **13** | `schema.prisma:501-608` (`UserRole` … `AuditAction`) |
+| Migration directories | **22** | `backend/prisma/migrations/*/migration.sql` (Glob), excluding `migration_lock.toml` |
+| RLS-enabled tables | **17** | 16 enabled in `20260107_add_rls_policies/migration.sql:68-83` + `lab_connections` in `20260418_add_lab_connections/migration.sql:35` |
+| Encrypted (`*Encrypted`) columns | **30** | `PHI_FIELDS` in `backend/src/services/encryption.ts:410-486` |
+
+All PHI is encrypted at the application layer with **AES-256-GCM** using a per-user derived key (PBKDF2-SHA512, 600k iterations) before it reaches the database — see [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) and [`ARCHITECTURE.md`](./ARCHITECTURE.md). The database adds **PostgreSQL Row-Level Security (RLS)** as an independent layer: even with valid app credentials, a session can only read/write rows whose `user_id` matches the `app.current_user_id` session variable (or that admin/provider helper functions explicitly permit). The DNA/genetics feature (`DNAData`, `DNAVariant`, `GeneticTrait`) was **dropped** in `20260423_drop_dna_genetics` — see [§12 Removed models](#12-removed-models).
 
 ---
 
-## ER diagram (active models)
+## 2. ER diagram (Mermaid)
 
 ```mermaid
 erDiagram
-  User ||--o{ Session : "owns sessions"
-  User ||--o{ UserEncryptionKey : "wraps per-user PHI key"
-  User ||--o{ AuditLog : "emits (optional)"
-  User ||--o{ UserFile : "uploads"
-  User ||--o{ Biomarker : "owns"
-  User ||--o{ InsurancePlan : "owns"
-  User ||--o{ HealthNeed : "tracks"
-  User ||--o{ HealthGoal : "tracks"
-  User ||--o{ ExpenseProjection : "projects"
-  User ||--o{ ExpenseActual : "records"
-  User ||--o{ CostAnalysis : "requests"
-  User ||--o{ LabConnection : "connects"
-  User ||--o{ ProviderPatient : "patient side"
-  User ||--o{ ProviderPatient : "provider side"
-
-  Biomarker ||--o{ BiomarkerHistory : "trends"
-  UserFile ||--o{ Biomarker : "extracted from (SetNull)"
-
-  InsurancePlan ||--o{ InsuranceBenefit : "lists"
-  InsurancePlan ||--o{ ExpenseProjection : "priced against"
-  InsurancePlan ||--o{ ExpenseActual : "claimed against"
-  InsurancePlan ||--o{ CostAnalysis : "analyzed against"
-
-  HealthGoal ||--o{ GoalProgressHistory : "progress notes"
-  ExpenseProjection ||--o{ ExpenseActual : "realized as (SetNull)"
-
+  User ||--o{ Session : has
+  User ||--o{ UserEncryptionKey : "holds PHI salt"
+  User ||--o{ ProviderPatient : "patient-side (PatientUser)"
+  User ||--o{ ProviderPatient : "provider-side (ProviderUser)"
+  User ||--o{ UserFile : owns
+  User ||--o{ Biomarker : owns
+  User ||--o{ InsurancePlan : owns
+  User ||--o{ HealthNeed : owns
+  User ||--o{ HealthGoal : owns
+  User ||--o{ AuditLog : "emits (nullable FK)"
+  User ||--o{ ExpenseProjection : projects
+  User ||--o{ ExpenseActual : records
+  User ||--o{ CostAnalysis : analyzes
+  User ||--o{ LabConnection : "FHIR lab link"
+  UserFile ||--o{ Biomarker : "source file (nullable)"
+  Biomarker ||--o{ BiomarkerHistory : "value timeline"
+  InsurancePlan ||--o{ InsuranceBenefit : lists
+  InsurancePlan ||--o{ ExpenseProjection : "scopes"
+  InsurancePlan ||--o{ ExpenseActual : "scopes"
+  InsurancePlan ||--o{ CostAnalysis : "scopes"
+  HealthGoal ||--o{ GoalProgressHistory : "progress timeline"
+  ExpenseProjection ||--o{ ExpenseActual : "reconciles (nullable, SetNull)"
   SystemConfig {
-    string key
+    string key PK_unique
     string value
+    note "no FK to User — global key/value"
   }
 ```
 
-## ER diagram (deprecated DNA models)
+`SystemConfig` is the **only** model with no FK to `User` — it is a global admin-only key/value store (`schema.prisma:487-499`).
 
-```mermaid
-erDiagram
-  User ||--o{ DNAData : "deprecated upload"
-  DNAData ||--o{ DNAVariant : "contains"
-  DNAData ||--o{ GeneticTrait : "produces"
+---
+
+## 3. Naming conventions
+
+| Convention | Rule | Example | Source |
+|---|---|---|---|
+| Table name | `@@map("snake_case")` on every model | `model User { … @@map("users") }` | `schema.prisma:58` |
+| Column name | `@map("snake_case")` on camelCase fields | `firstNameEncrypted @map("first_name_encrypted")` | `schema.prisma:14` |
+| Encrypted PHI | `*Encrypted` suffix; column stores AES-256-GCM ciphertext as `iv:authTag:ciphertext` base64 | `valueEncrypted @map("value_encrypted")` | `schema.prisma:147`; format at `encryption.ts:226` |
+| Primary key | `id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid` — Postgres-native UUID, **not** cuid | every model | `schema.prisma:11`; aligned by `20260424_align_uuid_defaults_and_rename_claude_response/migration.sql:36-46` |
+| Timestamps | `@db.Timestamptz(6)` for instants, `@db.Date` for calendar dates | `createdAt … @db.Timestamptz(6)` | `schema.prisma:38` |
+
+The `*Encrypted` suffix is load-bearing: the application's PHI redaction and iteration-based sweeps (export, deletion, audit) key off it, and the logger redaction matches `*Encrypted` variants (`20260424_…rename_claude_response/migration.sql:18-22`).
+
+```prisma
+// Source: backend/prisma/schema.prisma:11-14
+model User {
+  id                       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                    String              @unique @db.VarChar(255)
+  passwordHash             String              @map("password_hash") @db.VarChar(255)
+  firstNameEncrypted       String?             @map("first_name_encrypted")
 ```
 
 ---
 
-## Naming conventions
+## 4. Model catalog
 
-- **Models**: PascalCase in Prisma (`Biomarker`), `@@map("snake_case_plural")`
-  at the PostgreSQL table layer. Example: `backend/prisma/schema.prisma:175`.
-- **Fields**: camelCase in Prisma, `@map("snake_case")` at the DB layer.
-  Example: `userId String @map("user_id")` at `schema.prisma:142`.
-- **Primary keys**: `String @id` backed by either
-  `@default(dbgenerated("gen_random_uuid()")) @db.Uuid` (most models) or
-  `@default(uuid()) @db.Uuid` (expense tracking + `UserFile`). No cuid in
-  this schema — all IDs are UUIDs.
-- **PHI columns**: suffixed `*Encrypted` and typed `String` (base64-encoded
-  `iv:authTag:ciphertext`; see
-  [`encryption.ts:L216-L228`](../backend/src/services/encryption.ts)).
-  Exception: `CostAnalysis.claudeResponse` is encrypted but not suffixed
-  (historical — flagged in
-  [`_phi-inventory.md`](../prompts/_phi-inventory.md) item 3 and in
-  [Encryption matrix](#encryption-matrix)).
-- **Timestamps**: `createdAt` / `updatedAt` with `@db.Timestamptz(6)`;
-  legacy expense tables use plain `TIMESTAMP` (see
-  `schema.prisma:692-693`).
-
----
-
-## Model catalog
-
-All models listed alphabetically. Line references are into
-`backend/prisma/schema.prisma`.
+Eighteen models, alphabetical. Field tables list only structurally significant fields; the full column set is in `schema.prisma` at the cited line range. "Enc?" = encrypted PHI.
 
 ### AuditLog
 
-**Table**: `audit_logs` (`@@map` at `schema.prisma:537`).
-**Purpose**: immutable HIPAA audit trail for every PHI access, mutation, and
-auth event. 7-year retention enforced by `cleanupOldLogs`
-(`backend/src/services/auditLog.ts:L475-L503`).
+**Table**: `audit_logs`   **Source**: `schema.prisma:458-485`
 
-| Field | Column | Type | Encrypted | Null | Index | FK |
+Purpose: immutable HIPAA access/change record; PHI snapshots encrypted with the **system salt** (survives user deletion).
+
+| Field | Column | Type | Enc? | Null? | FK | Notes |
 |---|---|---|---|---|---|---|
-| `id` | `id` | `String @id uuid()` | — | no | PK | — |
-| `userId` | `user_id` | `String? @db.Uuid` | — | yes | yes | `User.id` (no cascade — audit survives deletion) |
-| `actorType` | `actor_type` | `ActorType` enum | — | no | — | — |
-| `ipAddress` | `ip_address` | `String? @db.VarChar(45)` | — | yes | — | — |
-| `userAgent` | `user_agent` | `String?` | — | yes | — | — |
-| `sessionId` | `session_id` | `String? @db.VarChar(100)` | — | yes | — | — |
-| `action` | `action` | `AuditAction` enum | — | no | yes | — |
-| `resourceType` | `resource_type` | `String @db.VarChar(100)` | — | no | yes | — |
-| `resourceId` | `resource_id` | `String? @db.Uuid` | — | yes | yes | — |
-| `previousValueEncrypted` | `previous_value_encrypted` | `String?` | **yes (system salt)** | yes | — | — |
-| `newValueEncrypted` | `new_value_encrypted` | `String?` | **yes (system salt)** | yes | — | — |
-| `metadata` | `metadata` | `String?` | — | yes | — | — |
-| `success` | `success` | `Boolean @default(true)` | — | no | — | — |
-| `errorMessage` | `error_message` | `String?` | — | yes | — | — |
-| `createdAt` | `created_at` | `@db.Timestamptz(6)` | — | no | yes | — |
+| `id` | `id` | `String @db.Uuid` | — | no | PK | uuid |
+| `userId` | `user_id` | `String? @db.Uuid` | — | **yes** | `User.id` (no cascade — see §9) | nullable so logs survive user deletion |
+| `actorType` | `actor_type` | `ActorType` | — | no | — | USER/SYSTEM/API/ADMIN/ANONYMOUS |
+| `action` | `action` | `AuditAction` | — | no | — | enum (§11) |
+| `resourceType` | `resource_type` | `String` | — | no | — | e.g. `Biomarker`, `Authentication` |
+| `previousValueEncrypted` | `previous_value_encrypted` | `String?` | **yes** | yes | — | system-salt ciphertext |
+| `newValueEncrypted` | `new_value_encrypted` | `String?` | **yes** | yes | — | system-salt ciphertext |
+| `success` | `success` | `Boolean @default(true)` | — | no | — | |
 
-**Indexes** (`schema.prisma:L529-L536`): `user_id`, `action`,
-`resource_type`, `resource_id`, `created_at ASC`, `created_at DESC`,
-`(user_id, created_at DESC)` ×2.
-
-**Relations**: `User` optional (`onDelete` omitted → default `NoAction`).
-Audit rows survive user deletion — required for 7-year HIPAA retention.
-The `previousValueEncrypted` / `newValueEncrypted` columns are encrypted
-with the **system salt** (`config.auditSalt`) rather than a per-user salt
-for exactly this reason (see
-`backend/src/services/auditLog.ts:L120-L127` and
-[`_phi-inventory.md` item 4](../prompts/_phi-inventory.md)).
-
-**RLS**: yes — `audit_logs_select`, `audit_logs_insert`,
-`audit_logs_delete`. No UPDATE policy → updates denied by default (logs are
-immutable). See [RLS policy catalog](#audit-logs-rls).
+**Indexes**: `userId`, `action`, `resourceType`, `resourceId`, plus 4 `createdAt` variants — see [§8](#8-index-catalog).
+**Relations**: belongs to `User` via `userId` — relation has **no `onDelete`** (defaults to `NoAction`/`SetNull` on a nullable FK; logs are not cascaded).
+**RLS**: yes (`audit_logs_*` policies). INSERT is `WITH CHECK (true)`; SELECT is self-or-admin; UPDATE denied (no policy); DELETE admin-only.
+**Retention**: 2555 days (~7 years), enforced by `AuditLogService.cleanupOldLogs` (`auditLog.ts:531-559`, `RETENTION_DAYS` at `auditLog.ts:10`).
 
 ### Biomarker
 
-**Table**: `biomarkers` (`schema.prisma:175`).
-**Purpose**: one measured biomarker reading tied to a user (value + unit +
-normal range + measurement date).
+**Table**: `biomarkers`   **Source**: `schema.prisma:141-177`
 
-| Field | Column | Type | Encrypted | Null | Index | FK |
+Purpose: one measured biomarker reading tied to a user.
+
+| Field | Column | Type | Enc? | Null? | FK | Notes |
 |---|---|---|---|---|---|---|
-| `id` | `id` | `String @id uuid()` | — | no | PK | — |
-| `userId` | `user_id` | `String @db.Uuid` | — | no | yes | `User.id` Cascade |
-| `category` | `category` | `@db.VarChar(100)` | — | no | — | — |
-| `name` | `name` | `@db.VarChar(200)` | — | no | — | — |
-| `unit` | `unit` | `@db.VarChar(50)` | — | no | — | — |
-| `valueEncrypted` | `value_encrypted` | `String` | **yes** | no | — | — |
-| `notesEncrypted` | `notes_encrypted` | `String?` | **yes** | yes | — | — |
-| `normalRangeMin` | `normal_range_min` | `Decimal(10,4)` | — | no | — | — |
-| `normalRangeMax` | `normal_range_max` | `Decimal(10,4)` | — | no | — | — |
-| `normalRangeSource` | `normal_range_source` | `@db.VarChar(200)` | — | yes | — | — |
-| `measurementDate` | `measurement_date` | `@db.Date` | — | no | yes | — |
-| `sourceType` | `source_type` | `DataSourceType` enum | — | no | — | — |
-| `sourceFile` | `source_file` | `@db.VarChar(255)` | — | yes | — | — |
-| `extractionConfidence` | `extraction_confidence` | `Decimal(3,2)` | — | yes | — | — |
-| `labName` | `lab_name` | `@db.VarChar(200)` | — | yes | — | — |
-| `isOutOfRange` | `is_out_of_range` | `Boolean` | — | no | yes | — |
-| `isAcknowledged` | `is_acknowledged` | `Boolean` | — | no | — | — |
-| `userFileId` | `user_file_id` | `@db.Uuid` | — | yes | yes | `UserFile.id` default (no cascade → SetNull via migration, see `20260108000000_add_user_files_table/migration.sql:34`) |
+| `id` | `id` | `String @db.Uuid` | — | no | PK | uuid |
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | RLS anchor |
+| `category` | `category` | `String @db.VarChar(100)` | — | no | — | metadata, not PHI |
+| `name` | `name` | `String @db.VarChar(200)` | — | no | — | |
+| `unit` | `unit` | `String @db.VarChar(50)` | — | no | — | reference unit (not encrypted) |
+| `valueEncrypted` | `value_encrypted` | `String` | **yes** | no | — | the measured value |
+| `notesEncrypted` | `notes_encrypted` | `String?` | **yes** | yes | — | |
+| `normalRangeMin/Max` | `normal_range_min/max` | `Decimal(10,4)` | — | no | — | reference range |
+| `measurementDate` | `measurement_date` | `DateTime @db.Date` | — | no | — | |
+| `sourceType` | `source_type` | `DataSourceType` | — | no | — | MANUAL default |
+| `userFileId` | `user_file_id` | `String? @db.Uuid` | — | yes | `UserFile.id` (no cascade) | extraction source |
 
-**Indexes** (`schema.prisma:L165-L174`): `user_id`, `(user_id, category)`,
-`measurement_date`, `is_out_of_range`, `user_file_id`,
-`(user_id, category, measurement_date DESC)` ×2 (one with alias
-`biomarkers_user_category_date_idx`), `(user_id, created_at)`,
-`(user_id, is_out_of_range)`, `(user_id, source_type)`.
-
-**Relations**: `User` Cascade; `UserFile` nullable (SetNull at SQL layer);
-`BiomarkerHistory[]` — history rows Cascade-deleted with the biomarker.
-
-**RLS**: yes — `biomarkers_select`, `biomarkers_insert_own`,
-`biomarkers_update`, `biomarkers_delete_own`. SELECT/UPDATE permit both owner
-and consented provider (`has_provider_access(user_id, 'view_biomarkers'|'edit')`).
-See [RLS policy catalog](#biomarkers-rls).
+**Indexes**: 10 indexes (see §8), incl. `biomarkers_user_category_date_idx` `(user_id, category, measurement_date DESC)` — the dashboard list index.
+**Relations**: belongs to `User` (Cascade); belongs to `UserFile?` (no cascade, SetNull behavior on nullable FK); has many `BiomarkerHistory` (Cascade).
+**Encrypt site**: `biomarkerController.ts:238` (`encryptionService.encrypt(String(input.value), userSalt)`).
+**Decrypt site**: `biomarkerController.ts:67` (`encryptionService.decrypt(biomarker.valueEncrypted, userSalt)`).
+**RLS**: yes — self OR `has_provider_access(user_id, 'view_biomarkers')` OR admin (§6).
 
 ### BiomarkerHistory
 
-**Table**: `biomarker_history` (`schema.prisma:188`).
-**Purpose**: append-only value history for a given `Biomarker`; trend charts
-query this.
+**Table**: `biomarker_history`   **Source**: `schema.prisma:179-190`
 
-| Field | Column | Type | Encrypted | Null | Index | FK |
+Purpose: append-only value timeline for a biomarker. Has `valueEncrypted` but **no `notesEncrypted`** (by design — `encryption.ts:425-428`).
+
+| Field | Column | Type | Enc? | Null? | FK | Notes |
 |---|---|---|---|---|---|---|
-| `id` | `id` | `String @id uuid()` | — | no | PK | — |
-| `biomarkerId` | `biomarker_id` | `@db.Uuid` | — | no | yes | `Biomarker.id` Cascade |
-| `valueEncrypted` | `value_encrypted` | `String` | **yes** | no | — | — |
-| `measurementDate` | `measurement_date` | `@db.Date` | — | no | yes | — |
-| `createdAt` | `created_at` | `@db.Timestamptz(6)` | — | no | — | — |
+| `id` | `id` | `String @db.Uuid` | — | no | PK | |
+| `biomarkerId` | `biomarker_id` | `String @db.Uuid` | — | no | `Biomarker.id` (Cascade) | |
+| `valueEncrypted` | `value_encrypted` | `String` | **yes** | no | — | |
+| `measurementDate` | `measurement_date` | `DateTime @db.Date` | — | no | — | |
 
-**Relations**: `Biomarker` Cascade.
-
-**RLS**: yes — policies defer to parent `biomarkers` (existential subquery).
-See [`biomarker_history_*` policies](#biomarker-history-rls).
-
-**Note**: intentionally has **no** `notesEncrypted` column (per
-[`_phi-inventory.md`](../prompts/_phi-inventory.md) and
-`encryption.ts:L427-L429`).
+**RLS**: yes — via parent biomarker EXISTS subquery (`20260107_add_rls_policies/migration.sql:182-212`). No `user_id` column; access is derived from the owning `Biomarker`.
 
 ### CostAnalysis
 
-**Table**: `cost_analyses` (`schema.prisma:748`).
-**Purpose**: AI-generated cost-optimization analysis for a given user+plan.
+**Table**: `cost_analyses`   **Source**: `schema.prisma:664-686`
 
-| Field | Column | Type | Encrypted | Null | Index | FK |
+Purpose: stores an AI (Claude) cost analysis for a plan; all output and dollar projections encrypted.
+
+| Field | Column | Type | Enc? | Null? | FK | Notes |
 |---|---|---|---|---|---|---|
-| `id` | `id` | `String @id uuid()` | — | no | PK | — |
-| `userId` | `user_id` | `@db.Uuid` | — | no | yes (composite) | `User.id` Cascade |
-| `planId` | `plan_id` | `@db.Uuid` | — | no | yes (composite) | `InsurancePlan.id` Cascade |
-| `analysisDate` | `analysis_date` | `DateTime @default(now())` | — | no | yes | — |
-| `claudeResponse` | `claude_response` | `String @db.Text` | **yes** (no suffix) | no | — | — |
-| `totalProjectedOopEncrypted` | `total_projected_oop` | `String? @db.Text` | **yes** | yes | — | — |
-| `deductibleMetMonth` | `deductible_met_month` | `Int?` | — | yes | — | — |
-| `projectedExpensesSnapshotEncrypted` | `projected_expenses_snapshot` | `String? @db.Text` | **yes** | yes | — | — |
+| `id` | `id` | `String @db.Uuid` | — | no | PK | |
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `planId` | `plan_id` | `String @db.Uuid` | — | no | `InsurancePlan.id` (Cascade) | |
+| `claudeResponseEncrypted` | `claude_response_encrypted` | `String @db.Text` | **yes** | no | — | renamed from `claude_response` (`20260424_…`) |
+| `totalProjectedOopEncrypted` | `total_projected_oop` | `String? @db.Text` | **yes** | yes | — | |
+| `projectedExpensesSnapshotEncrypted` | `projected_expenses_snapshot` | `String? @db.Text` | **yes** | yes | — | |
 
-**Indexes**: `(user_id, plan_id)`, `analysis_date`
-(`schema.prisma:L746-L747`).
-
-**Relations**: `User` Cascade; `InsurancePlan` Cascade.
-
-**RLS**: yes — `cost_analyses_user_policy` (FOR ALL). See
-[RLS policy catalog](#expense-and-analysis-rls).
-
-**Drift note**: `claudeResponse` is encrypted (listed in `PHI_FIELDS` at
-`encryption.ts:482`) but does not carry the `*Encrypted` suffix. Flagged;
-no rename planned — would require data-migration risk without benefit.
-
-### DNAData (deprecated)
-
-**Table**: `dna_data` (`schema.prisma:399`). Purpose: historical upload
-metadata for 23andMe/AncestryDNA imports. Feature removed from UI per
-[`CLAUDE.md:38-41`](../CLAUDE.md). Relations: `User` Cascade,
-`DNAVariant[]` Cascade, `GeneticTrait[]` Cascade. RLS enabled (see
-[DNA policies](#dna-rls)).
-
-### DNAVariant (deprecated)
-
-**Table**: `dna_variants` (`schema.prisma:414`). Single PHI column:
-`genotypeEncrypted` (`schema.prisma:408`). Relations: `DNAData` Cascade.
-RLS enabled via parent `dna_data`.
-
-### GeneticTrait (deprecated)
-
-**Table**: `genetic_traits` (`schema.prisma:434`). PHI columns:
-`descriptionEncrypted`, `recommendationsEncrypted`
-(`schema.prisma:L424-L425`). Relations: `DNAData` Cascade. RLS enabled.
+**Encrypt site**: `expenseController.ts:737`. **Decrypt sites**: `expenseController.ts:799`, `settingsController.ts:613` (export).
+**RLS**: yes (user-scoped; standard self/admin pattern via `withRLSTransaction(userId, …)`).
 
 ### ExpenseActual
 
-**Table**: `expense_actuals` (`schema.prisma:729`).
-**Purpose**: real claims/EOBs; denormalized per-service amounts, every
-monetary field encrypted.
+**Table**: `expense_actuals`   **Source**: `schema.prisma:636-662`
 
-| Field | Column | Type | Encrypted | Null | FK |
-|---|---|---|---|---|---|
-| `id` | `id` | `String @id uuid()` | — | no | — |
-| `userId` | `user_id` | `@db.Uuid` | — | no | `User.id` Cascade |
-| `planId` | `plan_id` | `@db.Uuid` | — | no | `InsurancePlan.id` Cascade |
-| `projectionId` | `projection_id` | `@db.Uuid` | — | yes | `ExpenseProjection.id` SetNull |
-| `serviceTypeEncrypted` | `service_type` | `@db.Text` | **yes** | no | — |
-| `providerNameEncrypted` | `provider_name` | `@db.Text` | **yes** | yes | — |
-| `dateOfService` | `date_of_service` | `@db.Date` | — | yes | — |
-| `billedAmountEncrypted` | `billed_amount` | `@db.Text` | **yes** | yes | — |
-| `insurancePaidEncrypted` | `insurance_paid` | `@db.Text` | **yes** | yes | — |
-| `patientPaidEncrypted` | `patient_paid` | `@db.Text` | **yes** | yes | — |
-| `appliedToDeductibleEncrypted` | `applied_to_deductible` | `@db.Text` | **yes** | yes | — |
-| `appliedToOopEncrypted` | `applied_to_oop` | `@db.Text` | **yes** | yes | — |
-| `claimStatus` | `claim_status` | `String` | — | no | — |
-| `isInNetwork` | `is_in_network` | `Boolean?` | — | yes | — |
-| `notesEncrypted` | `notes` | `@db.Text` | **yes** | yes | — |
+Purpose: a real claim/EOB line. **All monetary fields stored as encrypted strings, not Decimal** (`20260206_fix_expense_encryption_types`).
 
-**Indexes** (`schema.prisma:L727-L728`): `(user_id, plan_id)`,
-`date_of_service`.
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `planId` | `plan_id` | `String @db.Uuid` | — | no | `InsurancePlan.id` (Cascade) | |
+| `projectionId` | `projection_id` | `String? @db.Uuid` | — | yes | `ExpenseProjection.id` (**SetNull**) | reconciliation link |
+| `serviceTypeEncrypted` | `service_type` | `String @db.Text` | **yes** | no | — | |
+| `providerNameEncrypted` | `provider_name` | `String? @db.Text` | **yes** | yes | — | |
+| `billedAmountEncrypted` | `billed_amount` | `String? @db.Text` | **yes** | yes | — | |
+| `insurancePaidEncrypted` | `insurance_paid` | `String? @db.Text` | **yes** | yes | — | |
+| `patientPaidEncrypted` | `patient_paid` | `String? @db.Text` | **yes** | yes | — | |
+| `appliedToDeductibleEncrypted` | `applied_to_deductible` | `String? @db.Text` | **yes** | yes | — | |
+| `appliedToOopEncrypted` | `applied_to_oop` | `String? @db.Text` | **yes** | yes | — | |
+| `notesEncrypted` | `notes` | `String? @db.Text` | **yes** | yes | — | |
 
-**Relations**: `User` Cascade; `InsurancePlan` Cascade;
-`ExpenseProjection?` SetNull (deleting a projection un-links its actuals
-but preserves the claim record).
-
-**RLS**: yes — `expense_actuals_user_policy` (FOR ALL).
-
-**Type history**: columns were originally `DECIMAL(10,2)` / `JSONB` in
-`20260111_add_expense_tracking`; migrated to `TEXT` in
-`20260206_fix_expense_encryption_types` so the columns can hold ciphertext.
+**Indexes**: `(user_id, plan_id)`, `date_of_service`.
+**RLS**: yes (user-scoped).
 
 ### ExpenseProjection
 
-**Table**: `expense_projections` (`schema.prisma:701`).
-**Purpose**: user-entered forecasts of future medical expenses under a
-given plan.
+**Table**: `expense_projections`   **Source**: `schema.prisma:614-634`
 
-| Field | Column | Type | Encrypted | Null | FK |
-|---|---|---|---|---|---|
-| `id` | `id` | `String @id uuid()` | — | no | — |
-| `userId` | `user_id` | `@db.Uuid` | — | no | `User.id` Cascade |
-| `planId` | `plan_id` | `@db.Uuid` | — | no | `InsurancePlan.id` Cascade |
-| `serviceTypeEncrypted` | `service_type` | `@db.Text` | **yes** | no | — |
-| `estimatedCostEncrypted` | `estimated_cost` | `@db.Text` | **yes** | no | — |
-| `frequencyPerYear` | `frequency_per_year` | `Int @default(1)` | — | no | — |
-| `isInNetwork` | `is_in_network` | `Boolean @default(true)` | — | no | — |
-| `notesEncrypted` | `notes` | `@db.Text` | **yes** | yes | — |
-| `projectionDate` | `projection_date` | `@db.Date` | — | no | — |
+Purpose: a planned/expected expense for a plan.
 
-**Indexes**: `(user_id, plan_id)`, `created_at`.
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `planId` | `plan_id` | `String @db.Uuid` | — | no | `InsurancePlan.id` (Cascade) | |
+| `serviceTypeEncrypted` | `service_type` | `String @db.Text` | **yes** | no | — | |
+| `estimatedCostEncrypted` | `estimated_cost` | `String @db.Text` | **yes** | no | — | was Decimal → Text (`20260206_…`) |
+| `notesEncrypted` | `notes` | `String? @db.Text` | **yes** | yes | — | |
 
-**Relations**: `User` Cascade; `InsurancePlan` Cascade; `ExpenseActual[]`
-(via `projection_id`, SetNull).
-
-**RLS**: yes — `expense_projections_user_policy`.
+**Indexes**: `(user_id, plan_id)`, `createdAt`.
+**Relations**: has many `ExpenseActual` (via `projectionId`, **SetNull** on delete).
+**RLS**: yes (user-scoped).
 
 ### GoalProgressHistory
 
-**Table**: `goal_progress_history` (`schema.prisma:508`).
-**Purpose**: append-only progress entries for `HealthGoal`.
+**Table**: `goal_progress_history`   **Source**: `schema.prisma:444-456`
 
-| Field | Column | Type | Encrypted | Null | FK |
-|---|---|---|---|---|---|
-| `id` | `id` | uuid | — | no | — |
-| `goalId` | `goal_id` | `@db.Uuid` | — | no | `HealthGoal.id` Cascade |
-| `value` | `value` | `Decimal(10,4)` | — | no | — |
-| `progress` | `progress` | `Decimal(5,2)` | — | no | — |
-| `noteEncrypted` | `note_encrypted` | `String?` | **yes** | yes | — |
-| `recordedAt` | `recorded_at` | `@db.Timestamptz(6)` | — | no | yes |
+Purpose: append-only progress entries for a `HealthGoal`.
 
-**Indexes**: `goal_id`, `recorded_at`.
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `goalId` | `goal_id` | `String @db.Uuid` | — | no | `HealthGoal.id` (Cascade) | |
+| `value` | `value` | `Decimal(10,4)` | — | no | — | numeric progress |
+| `noteEncrypted` | `note_encrypted` | `String?` | **yes** | yes | — | |
 
-**RLS**: yes — `goal_progress_history_*` (deferred to parent goal).
+**RLS**: yes — via parent goal EXISTS subquery, incl. provider `view_health_needs` branch (`20260107_…:436-466`).
 
 ### HealthGoal
 
-**Table**: `health_goals` (`schema.prisma:494`).
-**Purpose**: numeric health goals (weight, A1c, etc.) with target and
-progress tracking.
+**Table**: `health_goals`   **Source**: `schema.prisma:404-442`
 
-| Field | Column | Type | Encrypted | Null |
-|---|---|---|---|---|
-| `id` | `id` | uuid | — | no |
-| `userId` | `user_id` | `@db.Uuid` | — | no |
-| `name` | `name` | `@db.VarChar(200)` | — | no |
-| `descriptionEncrypted` | `description_encrypted` | `String?` | **yes** | yes |
-| `category` | `category` | `@db.VarChar(100)` | — | no |
-| `targetValue` | `target_value` | `Decimal(10,4)` | — | no (legacy plaintext) |
-| `targetValueEncrypted` | `target_value_encrypted` | `String?` | **yes** | yes (new column — `20260420_encrypt_health_goal_target`) |
-| `currentValue` | `current_value` | `Decimal(10,4)` | — | yes |
-| `startValue` | `start_value` | `Decimal(10,4)` | — | yes |
-| `unit` | `unit` | `@db.VarChar(50)` | — | no |
-| `direction` | `direction` | `GoalDirection` enum | — | no |
-| `relatedBiomarkerId` | `related_biomarker_id` | `@db.Uuid` | — | yes |
-| `startDate`, `targetDate` | `start_date`, `target_date` | `@db.Date` | — | no |
-| `status` | `status` | `GoalStatus` enum | — | no |
-| `progress` | `progress` | `Decimal(5,2)` | — | no |
-| `milestones` | `milestones` | `String?` | — | yes |
-| `reminderFrequency` | `reminder_frequency` | `ReminderFrequency?` enum | — | yes |
+Purpose: a tracked health goal with target/current values.
 
-**Indexes** (`schema.prisma:L488-L493`): `user_id`, `status`, `category`,
-`target_date`, `(user_id, status, target_date)` ×2 (one with alias
-`health_goals_user_status_target_idx`).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `descriptionEncrypted` | `description_encrypted` | `String?` | **yes** | yes | — | |
+| `targetValue` | `target_value` | `Decimal(10,4)` | — | no | — | **legacy plaintext**, kept for back-compat reads |
+| `targetValueEncrypted` | `target_value_encrypted` | `String?` | **yes** | yes | — | added `20260420_encrypt_health_goal_target`; read path prefers this, falls back to `targetValue` (`schema.prisma:411-416`) |
+| `direction` | `direction` | `GoalDirection` | — | no | — | DECREASE default |
+| `status` | `status` | `GoalStatus` | — | no | — | ACTIVE default |
+| `reminderFrequency` | `reminder_frequency` | `ReminderFrequency?` | — | yes | — | |
 
-**Relations**: `User` Cascade; `GoalProgressHistory[]` Cascade.
-
-**RLS**: yes — `health_goals_*`. SELECT permits providers with
-`view_health_needs`. See [policy catalog](#health-goals-rls).
-
-**Drift note**: `targetValue` (plaintext Decimal) is kept for
-backward-compat reads until every row is re-encrypted to
-`targetValueEncrypted`. See inline comment at `schema.prisma:L464-L469`.
+**Indexes**: 6 incl. `health_goals_user_status_target_idx` `(user_id, status, target_date)`.
+**RLS**: yes — self OR `has_provider_access(user_id, 'view_health_needs')` OR admin (note: gated on the health-needs permission, not a goal-specific flag — `20260107_…:412-418`).
 
 ### HealthNeed
 
-**Table**: `health_needs` (`schema.prisma:455`).
-**Purpose**: tracked health tasks/conditions/services/follow-ups with urgency
-and status.
+**Table**: `health_needs`   **Source**: `schema.prisma:384-402`
 
-| Field | Column | Type | Encrypted | Null |
-|---|---|---|---|---|
-| `id` | `id` | uuid | — | no |
-| `userId` | `user_id` | `@db.Uuid` | — | no |
-| `needType` | `need_type` | `HealthNeedType` enum | — | no |
-| `name` | `name` | `@db.VarChar(200)` | — | no |
-| `descriptionEncrypted` | `description_encrypted` | `String` | **yes** | no |
-| `urgency` | `urgency` | `Urgency` enum | — | no |
-| `status` | `status` | `HealthNeedStatus` enum | — | no |
-| `relatedBiomarkerIds` | `related_biomarker_ids` | `String[] @db.Uuid` | — | no |
-| `resolvedAt` | `resolved_at` | `@db.Timestamptz(6)` | — | yes |
+Purpose: a tracked health need (condition/action/service/follow-up).
 
-**Indexes**: `user_id`, `status`, `urgency`.
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `needType` | `need_type` | `HealthNeedType` | — | no | — | |
+| `descriptionEncrypted` | `description_encrypted` | `String` | **yes** | no | — | only encrypted field |
+| `urgency` | `urgency` | `Urgency` | — | no | — | |
+| `status` | `status` | `HealthNeedStatus` | — | no | — | PENDING default |
+| `relatedBiomarkerIds` | `related_biomarker_ids` | `String[] @db.Uuid` | — | no | — | array, no FK |
 
-**RLS**: yes — `health_needs_*`. UPDATE permits provider `edit`.
+**RLS**: yes — self OR `has_provider_access(user_id, 'view_health_needs')` OR admin; UPDATE also allows `'edit'` (`20260107_…:384-406`).
 
 ### InsuranceBenefit
 
-**Table**: `insurance_benefits` (`schema.prisma:381`).
-**Purpose**: per-service covered-or-not rows extracted from SBC / plan
-schedule (in-network + out-of-network cost-share per service).
+**Table**: `insurance_benefits`   **Source**: `schema.prisma:361-382`
 
-| Field | Column | Type | Null | FK |
-|---|---|---|---|---|
-| `id` | `id` | uuid | no | — |
-| `planId` | `plan_id` | `@db.Uuid` | no | `InsurancePlan.id` Cascade |
-| `serviceName` | `service_name` | `@db.VarChar(300)` | no | — |
-| `serviceCategory` | `service_category` | `@db.VarChar(100)` | no | — |
-| `inNetworkCovered` | `in_network_covered` | Boolean | no | — |
-| `inNetworkCopay` | `in_network_copay` | `Decimal(10,2)` | yes | — |
-| `inNetworkCoinsurance` | `in_network_coinsurance` | `Decimal(5,2)` | yes | — |
-| `inNetworkDeductible` | `in_network_deductible_applies` | Boolean | no | — |
-| `outNetworkCovered` | `out_network_covered` | Boolean | no | — |
-| `outNetworkCopay`, `outNetworkCoinsurance`, `outNetworkDeductible` | (analogous) | | | — |
-| `limitations` | `limitations` | String? | yes | — |
-| `preAuthRequired` | `pre_auth_required` | Boolean | no | — |
+Purpose: a single covered service line under an `InsurancePlan`. No PHI columns.
 
-**Indexes**: `plan_id`, `service_category` (`schema.prisma:L378-L379`).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `planId` | `plan_id` | `String @db.Uuid` | — | no | `InsurancePlan.id` (**Cascade**) | |
+| `serviceName` | `service_name` | `String @db.VarChar(300)` | — | no | — | |
+| `inNetworkCopay` | `in_network_copay` | `Decimal?(10,2)` | — | yes | — | metadata |
 
-**RLS**: yes — defer to parent `insurance_plans` (EXISTS subquery).
+**Relation/onDelete**: belongs to `InsurancePlan` via `planId` — **`onDelete: Cascade`** (`schema.prisma:377`). Deleting a plan deletes its benefits.
+**RLS**: yes — via parent plan EXISTS subquery incl. provider `view_insurance` branch (`20260107_…:242-282`).
 
 ### InsurancePlan
 
-**Table**: `insurance_plans` (`schema.prisma:358`).
-**Purpose**: a user's health insurance plan with full cost-share structure
-(deductibles, OOP max, copays, coinsurance, Rx tiers, dental/vision, DME,
-home-health, hospice, therapy limits, preventive services, exclusions). The
-widest model in the schema by far.
+**Table**: `insurance_plans`   **Source**: `schema.prisma:192-359`
 
-| Notable field | Column | Type | Encrypted |
-|---|---|---|---|
-| `memberIdEncrypted` | `member_id_encrypted` | String? | **yes** |
-| `groupIdEncrypted` | `group_id_encrypted` | String? | **yes** |
-| All monetary fields (`deductible_*`, `oop_*`, `copay_*`, `coinsurance_*`, `rx_*`, `vision_*`, `dental_*`, etc.) | (snake_case) | `Decimal(10,2)` or `Decimal(5,2)` | — (not PHI — plan metadata) |
-| `preventiveServicesList`, `exclusionsList`, `priorAuthRequirements`, `servicesWithLimits` | JSON arrays stored as `@db.Text` | Text | — |
-| `extractedFromSbc` | `extracted_from_sbc` | Boolean | — |
-| `sbcExtractionConfidence` | `sbc_extraction_confidence` | `Decimal(3,2)` | — |
-| `isActive`, `isPrimary` | | Boolean | — |
+Purpose: a user's insurance plan with ~120 coverage columns (copays, coinsurance, Rx tiers, dental/vision, etc.). Only member/group IDs are PHI; the rest is plan metadata.
 
-See `schema.prisma:L191-L357` for the full field list (~100 columns).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `planName` | `plan_name` | `String @db.VarChar(300)` | — | no | — | metadata (not PHI) |
+| `planType` | `plan_type` | `PlanType` | — | no | — | HMO/PPO/EPO/POS/HDHP |
+| `memberIdEncrypted` | `member_id_encrypted` | `String?` | **yes** | yes | — | |
+| `groupIdEncrypted` | `group_id_encrypted` | `String?` | **yes** | yes | — | |
+| `deductibleIndividual` | `deductible_individual` | `Decimal(10,2)` | — | no | — | metadata |
+| `isPrimary` | `is_primary` | `Boolean @default(false)` | — | no | — | |
 
-**Indexes** (`schema.prisma:L353-L356`): `user_id`, `is_active`,
-`(user_id, is_active, is_primary DESC)` ×2 (one aliased
-`insurance_plans_user_active_primary_idx`).
-
-**Relations**: `User` Cascade; `InsuranceBenefit[]` Cascade;
-`ExpenseProjection[]`, `ExpenseActual[]`, `CostAnalysis[]` all Cascade.
-
-**RLS**: yes — `insurance_plans_*`. SELECT permits providers with
-`view_insurance`.
+**Indexes**: `userId`, `isActive`, `insurance_plans_user_active_primary_idx` `(user_id, is_active, is_primary DESC)`.
+**Relations**: has many `InsuranceBenefit`/`ExpenseProjection`/`ExpenseActual`/`CostAnalysis` (all Cascade from plan).
+**RLS**: yes — self OR `has_provider_access(user_id, 'view_insurance')` OR admin.
 
 ### LabConnection
 
-**Table**: `lab_connections` (`schema.prisma:778`).
-**Purpose**: SMART-on-FHIR OAuth token set + sync state for
-Quest/Labcorp/etc. imports.
+**Table**: `lab_connections`   **Source**: `schema.prisma:692-716`
 
-| Field | Column | Type | Encrypted | Null |
-|---|---|---|---|---|
-| `id` | `id` | uuid | — | no |
-| `userId` | `user_id` | `@db.Uuid` | — | no |
-| `provider` | `provider` | `@db.VarChar(50)` | — | no |
-| `fhirPatientId` | `fhir_patient_id` | `@db.VarChar(255)` | — | yes |
-| `accessTokenEncrypted` | `access_token_encrypted` | String | **yes** | no |
-| `refreshTokenEncrypted` | `refresh_token_encrypted` | String? | **yes** | yes |
-| `tokenExpiresAt` | `token_expires_at` | `@db.Timestamptz(6)` | — | yes |
-| `scopeGranted` | `scope_granted` | String? | — | yes |
-| `connectedAt` | `connected_at` | `@db.Timestamptz(6)` | — | no |
-| `lastSyncAt` | `last_sync_at` | `@db.Timestamptz(6)` | — | yes |
-| `syncStatus` | `sync_status` | `@db.VarChar(20)` default `'idle'` | — | no |
-| `syncError` | `sync_error` | String? | — | yes |
-| `lastImportedCount` | `last_imported_count` | `Int default 0` | — | no |
-| `isActive` | `is_active` | Boolean | — | no |
+Purpose: per-user SMART-on-FHIR OAuth connection (Quest today; design supports LabCorp/others). OAuth tokens are PHI-adjacent.
 
-**Indexes**: `@@unique([userId, provider])`, `user_id`
-(`schema.prisma:L776-L777`).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `provider` | `provider` | `String @db.VarChar(50)` | — | no | — | `'quest'` etc. |
+| `accessTokenEncrypted` | `access_token_encrypted` | `String` | **yes** | no | — | OAuth access token |
+| `refreshTokenEncrypted` | `refresh_token_encrypted` | `String?` | **yes** | yes | — | OAuth refresh token |
+| `tokenExpiresAt` | `token_expires_at` | `DateTime? @db.Timestamptz(6)` | — | yes | — | |
+| `syncStatus` | `sync_status` | `String @default("idle")` | — | no | — | idle/syncing/error |
 
-**Relations**: `User` Cascade.
-
-**RLS**: yes — `lab_connections_*` (Jan 2026 migration
-`20260418_add_lab_connections`).
+**Why tokens are PHI**: a stolen access token is a direct path to the user's live PHI at the lab (Quest), so both tokens are encrypted with the user's per-user key (`schema.prisma:698-701`).
+**Encrypt sites**: `fhir/labSyncService.ts:142-143` (initial), `:230-232` (refresh). **Decrypt sites**: `fhir/labSyncService.ts:213-215`, `:403`.
+**Index/unique**: `@@unique([userId, provider])` (one connection per provider per user), `@@index([userId])`.
+**RLS**: yes — self OR admin (`20260418_add_lab_connections/migration.sql:37-60`).
 
 ### ProviderPatient
 
-**Table**: `provider_patients` (`schema.prisma:116`).
-**Purpose**: consent-gated link between a `PROVIDER`-role user and a
-`PATIENT`-role user with per-category permissions and an optional expiry.
+**Table**: `provider_patients`   **Source**: `schema.prisma:94-117`
 
-| Field | Column | Type | Encrypted | Null | FK |
-|---|---|---|---|---|---|
-| `id` | `id` | uuid | — | no | — |
-| `providerId` | `provider_id` | `@db.Uuid` | — | no | `User.id` Cascade (named relation "ProviderUser") |
-| `patientId` | `patient_id` | `@db.Uuid` | — | no | `User.id` Cascade (named relation "PatientUser") |
-| `canViewBiomarkers` | `can_view_biomarkers` | Boolean default `true` | — | no | — |
-| `canViewInsurance` | `can_view_insurance` | Boolean default `false` | — | no | — |
-| `canViewDna` | `can_view_dna` | Boolean default `false` | — | no | — |
-| `canViewHealthNeeds` | `can_view_health_needs` | Boolean default `true` | — | no | — |
-| `canEditData` | `can_edit_data` | Boolean default `false` | — | no | — |
-| `relationshipType` | `relationship_type` | `ProviderRelationType` enum | — | no | — |
-| `status` | `status` | `ProviderPatientStatus` enum | — | no | yes | — |
-| `consentGrantedAt` | `consent_granted_at` | `@db.Timestamptz(6)` | — | yes | — | — |
-| `consentExpiresAt` | `consent_expires_at` | `@db.Timestamptz(6)` | — | yes | — | — |
-| `notesEncrypted` | `notes_encrypted` | String? | **yes** | yes | — | — |
+Purpose: consent-based provider↔patient link with granular permission flags.
 
-**Indexes** (`schema.prisma:L111-L114`): `@@unique(provider_id, patient_id)`,
-`provider_id`, `patient_id`, `status`.
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `providerId` | `provider_id` | `String @db.Uuid` | — | no | `User.id` ProviderUser (**Cascade**) | |
+| `patientId` | `patient_id` | `String @db.Uuid` | — | no | `User.id` PatientUser (**Cascade**) | |
+| `canViewBiomarkers` | `can_view_biomarkers` | `Boolean @default(true)` | — | no | — | permission flag |
+| `canViewInsurance` | `can_view_insurance` | `Boolean @default(false)` | — | no | — | |
+| `canViewHealthNeeds` | `can_view_health_needs` | `Boolean @default(true)` | — | no | — | |
+| `canEditData` | `can_edit_data` | `Boolean @default(false)` | — | no | — | `'edit'` permission |
+| `status` | `status` | `ProviderPatientStatus` | — | no | — | PENDING default |
+| `consentExpiresAt` | `consent_expires_at` | `DateTime?` | — | yes | — | checked by `has_provider_access` |
+| `notesEncrypted` | `notes_encrypted` | `String?` | **yes** | yes | — | relationship notes |
 
-**Relations**: **both** sides Cascade — deleting a provider OR a patient
-removes the relationship row. This is deliberate (consent is no longer
-meaningful once either party is gone) but it means `ProviderPatient` has
-two Cascade paths into `User`.
-
-**RLS**: yes — `provider_patients_*`. SELECT/UPDATE/DELETE permit either
-side; INSERT permits only the provider to initiate.
+**Unique/Indexes**: `@@unique([providerId, patientId])`; `@@index` on `providerId`, `patientId`, `status`.
+**onDelete**: **both** `providerId` and `patientId` are `onDelete: Cascade` (`schema.prisma:109-110`). Deleting either party removes the relationship row. See [§3 acceptance Q3](#13-acceptance-questions).
+**RLS**: yes — provider OR patient OR admin (both parties see/manage; provider-only INSERT) (`20260107_…:473-505`).
+**Note**: the `can_view_dna` column was **dropped** in `20260423_drop_dna_genetics/migration.sql:28`.
 
 ### Session
 
-**Table**: `sessions` (`schema.prisma:73`).
-**Purpose**: DB-backed refresh-token session records.
+**Table**: `sessions`   **Source**: `schema.prisma:61-75`
 
-| Field | Column | Type | Null |
-|---|---|---|---|
-| `id` | `id` | uuid | no |
-| `userId` | `user_id` | `@db.Uuid` | no |
-| `token` | `token` | `@unique @db.VarChar(500)` | no |
-| `ipAddress` | `ip_address` | `@db.VarChar(45)` | yes |
-| `userAgent` | `user_agent` | String | yes |
-| `expiresAt` | `expires_at` | `@db.Timestamptz(6)` | no |
-| `createdAt` | `created_at` | `@db.Timestamptz(6)` | no |
+Purpose: DB-backed refresh-token session (the refresh-token / session record).
 
-**Indexes**: `user_id`, `token` (unique), `expires_at`.
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `token` | `token` | `String @unique @db.VarChar(500)` | — | no | unique | session/refresh token (hash) |
+| `expiresAt` | `expires_at` | `DateTime @db.Timestamptz(6)` | — | no | — | |
 
-**Relations**: `User` Cascade.
-
-**RLS**: yes — `sessions_select_own`, `sessions_insert_own`,
-`sessions_delete_own`. No UPDATE policy → updates denied.
+**Indexes**: `userId`, `token`, `expiresAt`.
+**RLS**: yes — self OR admin (`20260107_…:118-128`).
 
 ### SystemConfig
 
-**Table**: `system_config` (`schema.prisma:552`).
-**Purpose**: admin-only key/value config (e.g., feature flags, historical
-audit-salt location pre-2026-04-16 — see
-`backend/src/services/auditLog.ts:L113-L127`).
+**Table**: `system_config`   **Source**: `schema.prisma:487-499`
 
-| Field | Column | Type | Null |
-|---|---|---|---|
-| `id` | `id` | uuid | no |
-| `key` | `key` | `@unique @db.VarChar(100)` | no |
-| `value` | `value` | String | no |
-| `valueType` | `value_type` | `@db.VarChar(50) default 'string'` | no |
-| `description` | `description` | String? | yes |
-| `isEncrypted` | `is_encrypted` | Boolean | no |
-| `updatedBy` | `updated_by` | `@db.Uuid` | yes |
+Purpose: global admin-only key/value config. **The one model with no FK to `User`.**
 
-**RLS**: yes — all four policies gated on `is_admin_session()`
-(`20260107_add_rls_policies/migration.sql:L537-L551`).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `key` | `key` | `String @unique @db.VarChar(100)` | — | no | unique | |
+| `value` | `value` | `String` | — | no | — | |
+| `isEncrypted` | `is_encrypted` | `Boolean @default(false)` | — | no | — | row-level flag |
+| `updatedBy` | `updated_by` | `String? @db.Uuid` | — | yes | — | admin user id, no FK constraint |
+
+**RLS**: yes — **admin-only for all operations** (`is_admin_session()` on SELECT/INSERT/UPDATE/DELETE — `20260107_…:537-551`).
 
 ### User
 
-**Table**: `users` (`schema.prisma:57`).
-**Purpose**: root account record; owns everything else in the system.
+**Table**: `users`   **Source**: `schema.prisma:10-59`
 
-| Field | Column | Type | Encrypted | Null |
-|---|---|---|---|---|
-| `id` | `id` | uuid | — | no |
-| `email` | `email` | `@unique @db.VarChar(255)` | — | no |
-| `passwordHash` | `password_hash` | `@db.VarChar(255)` | — | no |
-| `firstNameEncrypted` | `first_name_encrypted` | String? | **yes** | yes |
-| `lastNameEncrypted` | `last_name_encrypted` | String? | **yes** | yes |
-| `dateOfBirthEncrypted` | `date_of_birth_encrypted` | String? | **yes** | yes |
-| `phoneEncrypted` | `phone_encrypted` | String? | **yes** | yes |
-| `addressEncrypted` | `address_encrypted` | String? | **yes** | yes |
-| `emailVerified` | `email_verified` | Boolean | — | no |
-| `emailVerificationToken` | `email_verification_token` | `@unique @db.VarChar(255)` | — | yes |
-| `emailVerificationExpires` | `email_verification_expires` | `@db.Timestamptz(6)` | — | yes |
-| `passwordResetToken` | `password_reset_token` | `@unique @db.VarChar(255)` | — | yes |
-| `passwordResetExpires` | `password_reset_expires` | `@db.Timestamptz(6)` | — | yes |
-| `isActive` | `is_active` | Boolean | — | no |
-| `role` | `role` | `UserRole` enum | — | no |
-| `failedLoginAttempts` | `failed_login_attempts` | `Int default 0` | — | no |
-| `lockedUntil` | `locked_until` | `@db.Timestamptz(6)` | — | yes |
-| `lastFailedLogin` | `last_failed_login` | `@db.Timestamptz(6)` | — | yes |
-| `notificationPreferences` | `notification_preferences` | `Json default "{}"` | — | no |
-| `healthProfileEncrypted` | `health_profile_encrypted` | String? | **yes** | yes |
-| `plan` | `plan` | `@db.VarChar(20) default 'FREE'` | — | no |
-| `planExpiresAt`, `planUpdatedAt` | | `@db.Timestamptz(6)` | — | yes |
-| `onboardingCompletedAt` | `onboarding_completed_at` | `@db.Timestamptz(6)` | — | yes |
-| `createdAt`, `updatedAt`, `lastLoginAt` | | `@db.Timestamptz(6)` | — | varies |
+Purpose: account + profile root; the RLS anchor every other user-scoped table joins to.
 
-**Indexes**: `email`, `created_at` (`schema.prisma:L54-L55`).
+| Field | Column | Type | Enc? | Null? | Notes |
+|---|---|---|---|---|---|
+| `id` | `id` | `String @db.Uuid` | — | no | PK |
+| `email` | `email` | `String @unique @db.VarChar(255)` | — | no | identifier, not classified PHI |
+| `passwordHash` | `password_hash` | `String @db.VarChar(255)` | — | no | bcrypt/argon hash |
+| `firstNameEncrypted` | `first_name_encrypted` | `String?` | **yes** | yes | |
+| `lastNameEncrypted` | `last_name_encrypted` | `String?` | **yes** | yes | |
+| `dateOfBirthEncrypted` | `date_of_birth_encrypted` | `String?` | **yes** | yes | |
+| `phoneEncrypted` | `phone_encrypted` | `String?` | **yes** | yes | |
+| `addressEncrypted` | `address_encrypted` | `String?` | **yes** | yes | |
+| `healthProfileEncrypted` | `health_profile_encrypted` | `String?` | **yes** | yes | JSON profile (`20260418_add_health_profile`) |
+| `role` | `role` | `UserRole @default(PATIENT)` | — | no | self-elevation blocked by trigger (§6) |
+| `plan` | `plan` | `String @default("FREE") @db.VarChar(20)` | — | no | FREE/PRO/TEAM (`20260420_add_user_plan`) |
+| `pendingEmail` | `pending_email` | `String? @db.VarChar(255)` | — | yes | email-change flow (`20260601_add_email_change`) |
+| `emailChangeToken` | `email_change_token` | `String? @unique` | — | yes | SHA-256 hash of change link token |
+| `notificationPreferences` | `notification_preferences` | `Json @default("{}")` | — | no | non-PHI JSON (`20260417_…`) |
 
-**Relations (children)**: `Session`, `UserEncryptionKey`, `Biomarker`,
-`InsurancePlan`, `ProviderPatient` (×2), `UserFile`, `HealthGoal`,
-`HealthNeed`, `AuditLog` (no-cascade), `DNAData`, `ExpenseProjection`,
-`ExpenseActual`, `CostAnalysis`, `LabConnection` — all Cascade except
-`AuditLog` (survives deletion). See [Cascade table](#cascade-behavior).
-
-**RLS**: yes — `users_select_own`, `users_update_own`,
-`users_insert_system`, `users_delete_admin`. Only admin can DELETE;
-registration bypasses RLS via `current_user_id() IS NULL` clause.
+**Indexes**: `email`, `createdAt`, plus unique indexes on the token columns.
+**RLS**: yes — `users_select_own` (self/admin) PLUS `users_select_provider` (any active consent — §6); UPDATE self/admin but `role`/`is_active` change blocked for non-admin by trigger.
 
 ### UserEncryptionKey
 
-**Table**: `user_encryption_keys` (`schema.prisma:91`).
-**Purpose**: per-user PHI encryption salt, wrapped (encrypted) with the
-master key. Backs the PBKDF2-SHA512 per-user key derivation in
-[`encryption.ts:L193-L201`](../backend/src/services/encryption.ts) and
-[`userEncryption.ts:L29-L72`](../backend/src/services/userEncryption.ts).
+**Table**: `user_encryption_keys`   **Source**: `schema.prisma:77-92`
 
-| Field | Column | Type | Null |
-|---|---|---|---|
-| `id` | `id` | uuid | no |
-| `userId` | `user_id` | `@db.Uuid` | no |
-| `keyType` | `key_type` | `@db.VarChar(50)` | no (always `'phi_encryption'`) |
-| `keyHash` | `key_hash` | `@db.VarChar(255)` | no |
-| `encryptedKey` | `encrypted_key` | String | no (ciphertext of the salt under master key) |
-| `version` | `version` | `Int default 1` | no |
-| `isActive` | `is_active` | Boolean | no |
-| `createdAt` | `created_at` | `@db.Timestamptz(6)` | no |
-| `rotatedAt` | `rotated_at` | `@db.Timestamptz(6)` | yes |
+Purpose: holds the **per-user PHI salt** (encrypted with the master key), from which the per-user AES key is derived.
 
-**Indexes**: `@@unique(user_id, key_type, version)`, `user_id`
-(`schema.prisma:L87-L88`).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `keyType` | `key_type` | `String @db.VarChar(50)` | — | no | — | `'phi_encryption'` |
+| `encryptedKey` | `encrypted_key` | `String` | — | no | — | the user salt, master-key-encrypted |
+| `version` | `version` | `Int @default(1)` | — | no | — | |
+| `isActive` | `is_active` | `Boolean @default(true)` | — | no | — | |
 
-**Relations**: `User` Cascade. **This is the single PHI wrap-key holder** —
-deletion of a user permanently destroys their PHI decryption key.
-
-**RLS**: yes — `user_encryption_keys_*` (`20260107_add_rls_policies/migration.sql:L134-L144`).
+**Unique**: `@@unique([userId, keyType, version])`.
+**Where derived/read**: `userEncryption.getUserEncryptionSalt` (`userEncryption.ts:29-72`) — finds or creates the salt; the master-key wrap/unwrap is `encryptionService.encryptWithMasterKey`/`decryptWithMasterKey` (`encryption.ts:214-253`); the per-user key is derived via PBKDF2-SHA512 at `encryption.ts:192-200`. **This is the model that holds the wrap key** (acceptance Q8). Account-deletion destroys this salt, making the user's PHI permanently unreadable.
+**RLS**: yes — self OR admin (`20260107_…:134-144`).
 
 ### UserFile
 
-**Table**: `user_files` (`schema.prisma:138`).
-**Purpose**: metadata for uploaded lab PDFs / SBC documents (GCS
-`storage_key`, filename, extraction confidence, count of biomarkers parsed).
+**Table**: `user_files`   **Source**: `schema.prisma:119-139`
 
-| Field | Column | Type | Null |
-|---|---|---|---|
-| `id` | `id` | uuid | no |
-| `userId` | `user_id` | `@db.Uuid` | no |
-| `filename` | `filename` | `@db.VarChar(255)` | no |
-| `originalFilename` | `original_filename` | `@db.VarChar(255)` | no |
-| `fileType` | `file_type` | `@db.VarChar(50)` | no |
-| `fileSize` | `file_size` | Int | no |
-| `storageKey` | `storage_key` | `@db.VarChar(500)` | no |
-| `labName`, `labDate` | | `@db.VarChar(255)` / `@db.Date` | yes |
-| `biomarkersExtracted` | `biomarkers_extracted` | `Int default 0` | no |
-| `extractionConfidence` | `extraction_confidence` | `Decimal(3,2)` | yes |
+Purpose: an uploaded file (lab PDF, SBC). Metadata only; the binary lives in GCS keyed by `storageKey`.
 
-**Indexes**: `user_id`, `lab_date` (`schema.prisma:L135-L136`).
+| Field | Column | Type | Enc? | Null? | FK | Notes |
+|---|---|---|---|---|---|---|
+| `userId` | `user_id` | `String @db.Uuid` | — | no | `User.id` (Cascade) | |
+| `storageKey` | `storage_key` | `String @db.VarChar(500)` | — | no | — | GCS object key |
+| `fileType` | `file_type` | `String @db.VarChar(50)` | — | no | — | |
+| `biomarkersExtracted` | `biomarkers_extracted` | `Int @default(0)` | — | no | — | |
 
-**Relations**: `User` Cascade; `Biomarker[]` (FK on child, SetNull on
-delete per `20260108000000_add_user_files_table/migration.sql:34`).
-
-**RLS**: yes — `user_files_{select,insert,update,delete}_policy`
-(`20260108000000_add_user_files_table/migration.sql:L37-L66`).
+**Indexes**: `userId`, `labDate`.
+**Relations**: has many `Biomarker` (via `userFileId`, nullable, no cascade — biomarkers persist if a file row is removed).
+**RLS**: yes — `user_files` was RLS-enabled in `20260108000000_add_user_files_table` (table created with its own policies). User-scoped self/admin.
 
 ---
 
-## Encryption matrix
+## 5. Encryption matrix
 
-Cross-reference of `backend/src/services/encryption.ts` `PHI_FIELDS`
-(`encryption.ts:L411-L492`) against schema `*Encrypted` columns
-(Grep results at `schema.prisma` lines listed).
+Cross-reference of every `*Encrypted` schema column vs `PHI_FIELDS` (`encryption.ts:410-486`). **No drift** — all 30 columns appear in both.
 
-| Model.Field | In `PHI_FIELDS`? | In schema? | Schema line | Reader / Writer |
+| Model.Field | In `PHI_FIELDS`? | In schema as `*Encrypted`? | Writer (encrypt) | Reader (decrypt) |
 |---|---|---|---|---|
-| `User.firstNameEncrypted` | yes (`encryption.ts:414`) | yes | `schema.prisma:14` | `settingsController`, `authService` |
-| `User.lastNameEncrypted` | yes (`encryption.ts:415`) | yes | `schema.prisma:15` | same |
-| `User.dateOfBirthEncrypted` | yes (`encryption.ts:416`) | yes | `schema.prisma:16` | same |
-| `User.phoneEncrypted` | yes (`encryption.ts:417`) | yes | `schema.prisma:17` | same |
-| `User.addressEncrypted` | yes (`encryption.ts:418`) | yes | `schema.prisma:18` | same |
-| `User.healthProfileEncrypted` | yes (`encryption.ts:419`) | yes | `schema.prisma:30` | `healthProfileService.ts:L59,L104` |
-| `Biomarker.valueEncrypted` | yes (`encryption.ts:423`) | yes | `schema.prisma:146` | `biomarkerController.ts:*` |
-| `Biomarker.notesEncrypted` | yes (`encryption.ts:424`) | yes | `schema.prisma:147` | same |
-| `BiomarkerHistory.valueEncrypted` | yes (`encryption.ts:427`) | yes | `schema.prisma:181` | `biomarkerController.ts`, `labUploadController.ts` |
-| `InsurancePlan.memberIdEncrypted` | yes (`encryption.ts:432`) | yes | `schema.prisma:198` | `insuranceController.ts:*` |
-| `InsurancePlan.groupIdEncrypted` | yes (`encryption.ts:433`) | yes | `schema.prisma:199` | same |
-| `ProviderPatient.notesEncrypted` | yes (`encryption.ts:437`) | yes | `schema.prisma:105` | `providerRoutes.ts`, `patientRoutes.ts` |
-| `DNAVariant.genotypeEncrypted` | yes (`encryption.ts:441`) | yes | `schema.prisma:408` | (deprecated) |
-| `GeneticTrait.descriptionEncrypted` | yes (`encryption.ts:444`) | yes | `schema.prisma:424` | (deprecated) |
-| `GeneticTrait.recommendationsEncrypted` | yes (`encryption.ts:445`) | yes | `schema.prisma:425` | (deprecated) |
-| `HealthNeed.descriptionEncrypted` | yes (`encryption.ts:449`) | yes | `schema.prisma:442` | `healthNeedsController.ts` |
-| `HealthGoal.descriptionEncrypted` | yes (`encryption.ts:454`) | yes | `schema.prisma:461` | `healthGoalsController.ts` |
-| `HealthGoal.targetValueEncrypted` | yes (`encryption.ts:455`) | yes | `schema.prisma:469` | same |
-| `GoalProgressHistory.noteEncrypted` | yes (`encryption.ts:458`) | yes | `schema.prisma:502` | same |
-| `AuditLog.previousValueEncrypted` | yes (`encryption.ts:462`) | yes | `schema.prisma:521` | `auditLog.ts:L188-L199` (system salt) |
-| `AuditLog.newValueEncrypted` | yes (`encryption.ts:463`) | yes | `schema.prisma:522` | same |
-| `ExpenseProjection.serviceTypeEncrypted` | yes (`encryption.ts:467`) | yes | `schema.prisma:686` | `expenseController.ts` |
-| `ExpenseProjection.estimatedCostEncrypted` | yes (`encryption.ts:468`) | yes | `schema.prisma:687` | same |
-| `ExpenseProjection.notesEncrypted` | yes (`encryption.ts:469`) | yes | `schema.prisma:690` | same |
-| `ExpenseActual.serviceTypeEncrypted` | yes (`encryption.ts:472`) | yes | `schema.prisma:709` | same |
-| `ExpenseActual.providerNameEncrypted` | yes (`encryption.ts:473`) | yes | `schema.prisma:710` | same |
-| `ExpenseActual.billedAmountEncrypted` | yes (`encryption.ts:474`) | yes | `schema.prisma:712` | same |
-| `ExpenseActual.insurancePaidEncrypted` | yes (`encryption.ts:475`) | yes | `schema.prisma:713` | same |
-| `ExpenseActual.patientPaidEncrypted` | yes (`encryption.ts:476`) | yes | `schema.prisma:714` | same |
-| `ExpenseActual.appliedToDeductibleEncrypted` | yes (`encryption.ts:477`) | yes | `schema.prisma:715` | same |
-| `ExpenseActual.appliedToOopEncrypted` | yes (`encryption.ts:478`) | yes | `schema.prisma:716` | same |
-| `ExpenseActual.notesEncrypted` | yes (`encryption.ts:479`) | yes | `schema.prisma:719` | same |
-| `CostAnalysis.claudeResponse` (no suffix) | yes (`encryption.ts:482`) | yes (plain `claudeResponse`) | `schema.prisma:737` | `expenseController.ts:L715` |
-| `CostAnalysis.totalProjectedOopEncrypted` | yes (`encryption.ts:483`) | yes | `schema.prisma:738` | same |
-| `CostAnalysis.projectedExpensesSnapshotEncrypted` | yes (`encryption.ts:484`) | yes | `schema.prisma:740` | same |
-| `LabConnection.accessTokenEncrypted` | yes (`encryption.ts:488`) | yes | `schema.prisma:763` | `fhirController.ts`, `labSyncService.ts` |
-| `LabConnection.refreshTokenEncrypted` | yes (`encryption.ts:489`) | yes | `schema.prisma:764` | same |
+| `User.firstNameEncrypted` | yes (`encryption.ts:413`) | yes (`schema.prisma:14`) | `settingsController.ts` (profile update) | `settingsController.ts` / `authService.ts` |
+| `User.lastNameEncrypted` | yes (`:414`) | yes (`:15`) | settingsController | settingsController |
+| `User.dateOfBirthEncrypted` | yes (`:415`) | yes (`:16`) | settingsController | settingsController |
+| `User.phoneEncrypted` | yes (`:416`) | yes (`:17`) | settingsController | settingsController |
+| `User.addressEncrypted` | yes (`:417`) | yes (`:18`) | settingsController | settingsController |
+| `User.healthProfileEncrypted` | yes (`:418`) | yes (`:33`) | `healthProfileService.ts:104` | `healthProfileService.ts:59` |
+| `Biomarker.valueEncrypted` | yes (`:422`) | yes (`:147`) | `biomarkerController.ts:238` | `biomarkerController.ts:67` |
+| `Biomarker.notesEncrypted` | yes (`:423`) | yes (`:148`) | biomarkerController | biomarkerController |
+| `BiomarkerHistory.valueEncrypted` | yes (`:426`) | yes (`:182`) | `biomarkerController.ts:504` | `biomarkerController.ts:77` |
+| `InsurancePlan.memberIdEncrypted` | yes (`:431`) | yes (`:199`) | insuranceController | insuranceController |
+| `InsurancePlan.groupIdEncrypted` | yes (`:432`) | yes (`:200`) | insuranceController | insuranceController |
+| `ProviderPatient.notesEncrypted` | yes (`:436`) | yes (`:106`) | providerRoutes/patientRoutes | providerRoutes |
+| `HealthNeed.descriptionEncrypted` | yes (`:440`) | yes (`:389`) | healthNeedsController | healthNeedsController |
+| `HealthGoal.descriptionEncrypted` | yes (`:445`) | yes (`:408`) | healthGoalsController | healthGoalsController |
+| `HealthGoal.targetValueEncrypted` | yes (`:446`) | yes (`:416`) | healthGoalsController | healthGoalsController |
+| `GoalProgressHistory.noteEncrypted` | yes (`:449`) | yes (`:449`) | healthGoalsController | healthGoalsController |
+| `AuditLog.previousValueEncrypted` | yes (`:453`) | yes (`:468`) | `auditLog.ts:240` (system salt) | `auditLog.ts` / adminRoutes |
+| `AuditLog.newValueEncrypted` | yes (`:454`) | yes (`:469`) | `auditLog.ts:241` (system salt) | adminRoutes |
+| `ExpenseProjection.serviceTypeEncrypted` | yes (`:458`) | yes (`:618`) | expenseController | expenseController |
+| `ExpenseProjection.estimatedCostEncrypted` | yes (`:459`) | yes (`:619`) | expenseController | expenseController |
+| `ExpenseProjection.notesEncrypted` | yes (`:460`) | yes (`:622`) | expenseController | expenseController |
+| `ExpenseActual.serviceTypeEncrypted` | yes (`:463`) | yes (`:641`) | expenseController | expenseController |
+| `ExpenseActual.providerNameEncrypted` | yes (`:464`) | yes (`:642`) | expenseController | expenseController |
+| `ExpenseActual.billedAmountEncrypted` | yes (`:465`) | yes (`:644`) | expenseController | expenseController |
+| `ExpenseActual.insurancePaidEncrypted` | yes (`:466`) | yes (`:645`) | expenseController | expenseController |
+| `ExpenseActual.patientPaidEncrypted` | yes (`:467`) | yes (`:646`) | expenseController | expenseController |
+| `ExpenseActual.appliedToDeductibleEncrypted` | yes (`:468`) | yes (`:647`) | expenseController | expenseController |
+| `ExpenseActual.appliedToOopEncrypted` | yes (`:469`) | yes (`:648`) | expenseController | expenseController |
+| `ExpenseActual.notesEncrypted` | yes (`:470`) | yes (`:651`) | expenseController | expenseController |
+| `CostAnalysis.claudeResponseEncrypted` | yes (`:476`) | yes (`:674`) | `expenseController.ts:737` | `expenseController.ts:799`, `settingsController.ts:613` |
+| `CostAnalysis.totalProjectedOopEncrypted` | yes (`:477`) | yes (`:675`) | expenseController | expenseController |
+| `CostAnalysis.projectedExpensesSnapshotEncrypted` | yes (`:478`) | yes (`:677`) | expenseController | expenseController |
+| `LabConnection.accessTokenEncrypted` | yes (`:483`) | yes (`:700`) | `fhir/labSyncService.ts:142` | `fhir/labSyncService.ts:213,403` |
+| `LabConnection.refreshTokenEncrypted` | yes (`:484`) | yes (`:701`) | `fhir/labSyncService.ts:143` | `fhir/labSyncService.ts:215` |
 
-**Drift check**: no drift. Every `*Encrypted` column returned by
-`Grep pattern:"Encrypted\s+String"` matches a key in `PHI_FIELDS`.
-`CostAnalysis.claudeResponse` is the one non-suffixed encrypted column and
-is explicitly listed.
+> Note: most expense fields are encrypted/decrypted via the iteration-based `encryptFields`/`decryptFields` helpers (`encryption.ts:337-384`) keyed off `PHI_FIELDS`. Controller-level encrypt/decrypt for the heavily-used Biomarker, LabConnection, and CostAnalysis paths is cited directly above. See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) for the full per-field reader/writer map.
 
-**Keying note**: all fields use per-user salt derivation
-(`getUserEncryptionSalt`, `userEncryption.ts:29`) **except**
-`AuditLog.{previousValueEncrypted,newValueEncrypted}` which use the system
-salt (`config.auditSalt`, `auditLog.ts:L188-L199`) so audit rows remain
-decipherable after a user's per-user key row is Cascade-destroyed.
+`AuditLog` uses the **system salt** (`auditLog.ts:148` sets `systemSalt = config.auditSalt`; encrypt at `auditLog.ts:220`), not a per-user salt — because audit rows must remain readable after a user (and their per-user salt) is deleted, for the 7-year retention window.
 
 ---
 
-## RLS policy catalog
+## 6. RLS policy catalog
 
-All policy text below is quoted verbatim from migration SQL.
+RLS gives a second, SQL-enforced layer of tenant isolation. Even if the app layer is compromised and issues an unscoped `SELECT * FROM biomarkers`, the policy `USING` clause filters rows to the current session's `app.current_user_id` (or admin/provider) — **the SQL-level constraint that prevents a non-admin session from reading another user's data** (acceptance Q15).
 
-### Helper functions
+### Helper functions (final bodies)
 
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L16-L25
+-- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:17-25
 CREATE OR REPLACE FUNCTION current_user_id()
 RETURNS uuid AS $$
 BEGIN
@@ -750,7 +495,7 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 ```
 
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L27-L36
+-- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:28-36
 CREATE OR REPLACE FUNCTION is_admin_session()
 RETURNS boolean AS $$
 BEGIN
@@ -762,8 +507,10 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 ```
 
+`has_provider_access(patient_user_id, permission_type)` gates whether the **current provider session** may read/edit a consented patient's data. It checks for an `ACTIVE`, unexpired `provider_patients` row and the matching capability flag. The **final** body (after `20260529_fix_has_provider_access` dropped the dead `view_dna` branch) is:
+
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L38-L62
+-- Source: backend/prisma/migrations/20260529_fix_has_provider_access/migration.sql:20-42
 CREATE OR REPLACE FUNCTION has_provider_access(patient_user_id uuid, permission_type text DEFAULT 'view')
 RETURNS boolean AS $$
 DECLARE
@@ -778,111 +525,66 @@ BEGIN
       AND CASE permission_type
         WHEN 'view_biomarkers' THEN pp.can_view_biomarkers
         WHEN 'view_insurance' THEN pp.can_view_insurance
-        WHEN 'view_dna' THEN pp.can_view_dna
         WHEN 'view_health_needs' THEN pp.can_view_health_needs
         WHEN 'edit' THEN pp.can_edit_data
         ELSE pp.can_view_biomarkers -- Default to basic view
       END
   ) INTO has_access;
-
   RETURN COALESCE(has_access, false);
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 ```
 
-### RLS-enabled tables
+> Why the fix mattered: the original body referenced `pp.can_view_dna`, which `20260423_drop_dna_genetics` dropped. Postgres plans the whole function body, so the missing column made `has_provider_access` throw `column pp.can_view_dna does not exist` for **every** permission type under a `NOBYPASSRLS` role — breaking all multi-tenant reads (`20260529_…/migration.sql:1-18`).
+
+`has_active_consent(patient_user_id)` (added `20260530_add_users_select_provider`) gates the provider's read of a consented patient's **users** row on ANY active consent (not a specific flag):
 
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L68-L83
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_encryption_keys ENABLE ROW LEVEL SECURITY;
-ALTER TABLE biomarkers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE biomarker_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE insurance_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE insurance_benefits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dna_data ENABLE ROW LEVEL SECURITY;
-ALTER TABLE dna_variants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE genetic_traits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE health_needs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE health_goals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE goal_progress_history ENABLE ROW LEVEL SECURITY;
-ALTER TABLE provider_patients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
+-- Source: backend/prisma/migrations/20260530_add_users_select_provider/migration.sql:33-48
+CREATE OR REPLACE FUNCTION has_active_consent(patient_user_id uuid)
+RETURNS boolean AS $$
+DECLARE
+  has_access boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM provider_patients pp
+    WHERE pp.provider_id = current_user_id()
+      AND pp.patient_id = patient_user_id
+      AND pp.status = 'ACTIVE'
+      AND (pp.consent_expires_at IS NULL OR pp.consent_expires_at > NOW())
+  ) INTO has_access;
+  RETURN COALESCE(has_access, false);
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 ```
 
-Later migrations add:
-`user_files` (`20260108000000_add_user_files_table/migration.sql:37`),
-`expense_projections` / `expense_actuals` / `cost_analyses`
-(`20260111_add_expense_tracking/migration.sql:L61-L63`),
-`lab_connections` (`20260418_add_lab_connections/migration.sql:35`).
+### Per-table policy summary
 
-### users
+All tables ENABLE ROW LEVEL SECURITY (`20260107_…:68-83`, `lab_connections` at `20260418_…:35`). `is_admin_session()` is the bypass for every table (it is the function that lets admin code bypass the per-user policy — acceptance Q4). `current_user_id()` and `has_provider_access()` are the two helpers besides `is_admin_session()` that underpin RLS (acceptance Q19).
 
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L90-L111
-CREATE POLICY users_select_own ON users
-  FOR SELECT
-  USING (
-    id = current_user_id()
-    OR is_admin_session()
-  );
+| Table | SELECT | INSERT | UPDATE | DELETE | Source |
+|---|---|---|---|---|---|
+| `users` | self/admin (`users_select_own`) **OR** active consent (`users_select_provider`) | admin or `current_user_id() IS NULL` (registration) | self/admin (+ role/is_active trigger) | admin only | `20260107_…:90-111`; `20260530_…:54-56`; trigger `20260424_prevent_self_role_elevation` |
+| `sessions` | self/admin | self/admin/null | — (no UPDATE policy) | self/admin | `20260107_…:118-128` |
+| `user_encryption_keys` | self/admin | self/admin/null | self/admin | — | `20260107_…:134-144` |
+| `biomarkers` | self / `has_provider_access(…, 'view_biomarkers')` / admin | self/admin | self / `…'edit'` / admin | self/admin | `20260107_…:151-176` |
+| `biomarker_history` | via parent biomarker | via parent | — | via parent | `20260107_…:182-212` |
+| `insurance_plans` | self / `…'view_insurance'` / admin | self/admin | self/admin | self/admin | `20260107_…:218-236` |
+| `insurance_benefits` | via parent plan | via parent | via parent | via parent | `20260107_…:242-282` |
+| `health_needs` | self / `…'view_health_needs'` / admin | self/admin | self / `…'edit'` / admin | self/admin | `20260107_…:384-406` |
+| `health_goals` | self / `…'view_health_needs'` / admin | self/admin | self/admin | self/admin | `20260107_…:412-430` |
+| `goal_progress_history` | via parent goal | via parent | — | via parent | `20260107_…:436-466` |
+| `provider_patients` | provider/patient/admin | provider/admin | provider/patient/admin | provider/patient/admin | `20260107_…:473-505` |
+| `audit_logs` | self/admin | `WITH CHECK (true)` | — (immutable) | admin only | `20260107_…:512-530` |
+| `system_config` | admin only | admin only | admin only | admin only | `20260107_…:537-551` |
+| `lab_connections` | self/admin | self/admin | self/admin | self/admin | `20260418_…:37-60` |
+| `user_files` | self/admin | self/admin | self/admin | self/admin | `20260108000000_add_user_files_table` |
+| `expense_projections` / `expense_actuals` / `cost_analyses` | self/admin | self/admin | self/admin | self/admin | `20260111_add_expense_tracking` |
 
-CREATE POLICY users_update_own ON users
-  FOR UPDATE
-  USING (id = current_user_id() OR is_admin_session())
-  WITH CHECK (id = current_user_id() OR is_admin_session());
-
-CREATE POLICY users_insert_system ON users
-  FOR INSERT
-  WITH CHECK (is_admin_session() OR current_user_id() IS NULL);
-
-CREATE POLICY users_delete_admin ON users
-  FOR DELETE
-  USING (is_admin_session());
-```
-
-### sessions
+Verbatim policy body (acceptance Q6):
 
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L118-L128
-CREATE POLICY sessions_select_own ON sessions
-  FOR SELECT
-  USING (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY sessions_insert_own ON sessions
-  FOR INSERT
-  WITH CHECK (user_id = current_user_id() OR is_admin_session() OR current_user_id() IS NULL);
-
-CREATE POLICY sessions_delete_own ON sessions
-  FOR DELETE
-  USING (user_id = current_user_id() OR is_admin_session());
-```
-
-(No UPDATE policy → session row mutations are denied by default.)
-
-### user_encryption_keys
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L134-L144
-CREATE POLICY user_encryption_keys_select_own ON user_encryption_keys
-  FOR SELECT
-  USING (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY user_encryption_keys_insert_own ON user_encryption_keys
-  FOR INSERT
-  WITH CHECK (user_id = current_user_id() OR is_admin_session() OR current_user_id() IS NULL);
-
-CREATE POLICY user_encryption_keys_update_own ON user_encryption_keys
-  FOR UPDATE
-  USING (user_id = current_user_id() OR is_admin_session());
-```
-
-### biomarkers <a id="biomarkers-rls"></a>
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L151-L176
+-- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:151-157
 CREATE POLICY biomarkers_select ON biomarkers
   FOR SELECT
   USING (
@@ -890,774 +592,335 @@ CREATE POLICY biomarkers_select ON biomarkers
     OR has_provider_access(user_id, 'view_biomarkers')
     OR is_admin_session()
   );
-
-CREATE POLICY biomarkers_insert_own ON biomarkers
-  FOR INSERT
-  WITH CHECK (
-    user_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY biomarkers_update ON biomarkers
-  FOR UPDATE
-  USING (
-    user_id = current_user_id()
-    OR has_provider_access(user_id, 'edit')
-    OR is_admin_session()
-  );
-
-CREATE POLICY biomarkers_delete_own ON biomarkers
-  FOR DELETE
-  USING (user_id = current_user_id() OR is_admin_session());
 ```
 
-### biomarker_history <a id="biomarker-history-rls"></a>
+### Defense-in-depth: BYPASSRLS guard
 
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L182-L212
-CREATE POLICY biomarker_history_select ON biomarker_history
-  FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM biomarkers b
-      WHERE b.id = biomarker_history.biomarker_id
-        AND (b.user_id = current_user_id()
-             OR has_provider_access(b.user_id, 'view_biomarkers')
-             OR is_admin_session())
-    )
-  );
-
-CREATE POLICY biomarker_history_insert ON biomarker_history
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM biomarkers b
-      WHERE b.id = biomarker_history.biomarker_id
-        AND (b.user_id = current_user_id() OR is_admin_session())
-    )
-  );
-
-CREATE POLICY biomarker_history_delete ON biomarker_history
-  FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM biomarkers b
-      WHERE b.id = biomarker_history.biomarker_id
-        AND (b.user_id = current_user_id() OR is_admin_session())
-    )
-  );
-```
-
-### insurance_plans, insurance_benefits
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L218-L236
-CREATE POLICY insurance_plans_select ON insurance_plans
-  FOR SELECT
-  USING (
-    user_id = current_user_id()
-    OR has_provider_access(user_id, 'view_insurance')
-    OR is_admin_session()
-  );
-
-CREATE POLICY insurance_plans_insert_own ON insurance_plans
-  FOR INSERT
-  WITH CHECK (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY insurance_plans_update_own ON insurance_plans
-  FOR UPDATE
-  USING (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY insurance_plans_delete_own ON insurance_plans
-  FOR DELETE
-  USING (user_id = current_user_id() OR is_admin_session());
-```
-
-`insurance_benefits` has analogous `EXISTS (SELECT 1 FROM insurance_plans p …)`
-policies at `20260107_add_rls_policies/migration.sql:L242-L282`.
-
-### dna_* (deprecated but RLS-protected) <a id="dna-rls"></a>
-
-`dna_data`, `dna_variants`, `genetic_traits` policies at
-`20260107_add_rls_policies/migration.sql:L288-L378`, all following the
-same owner-or-provider-with-`view_dna`-or-admin pattern.
-
-### health_needs
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L384-L406
-CREATE POLICY health_needs_select ON health_needs
-  FOR SELECT
-  USING (
-    user_id = current_user_id()
-    OR has_provider_access(user_id, 'view_health_needs')
-    OR is_admin_session()
-  );
-
-CREATE POLICY health_needs_insert_own ON health_needs
-  FOR INSERT
-  WITH CHECK (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY health_needs_update ON health_needs
-  FOR UPDATE
-  USING (
-    user_id = current_user_id()
-    OR has_provider_access(user_id, 'edit')
-    OR is_admin_session()
-  );
-
-CREATE POLICY health_needs_delete_own ON health_needs
-  FOR DELETE
-  USING (user_id = current_user_id() OR is_admin_session());
-```
-
-### health_goals <a id="health-goals-rls"></a>
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L412-L430
-CREATE POLICY health_goals_select ON health_goals
-  FOR SELECT
-  USING (
-    user_id = current_user_id()
-    OR has_provider_access(user_id, 'view_health_needs')
-    OR is_admin_session()
-  );
-
-CREATE POLICY health_goals_insert_own ON health_goals
-  FOR INSERT
-  WITH CHECK (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY health_goals_update_own ON health_goals
-  FOR UPDATE
-  USING (user_id = current_user_id() OR is_admin_session());
-
-CREATE POLICY health_goals_delete_own ON health_goals
-  FOR DELETE
-  USING (user_id = current_user_id() OR is_admin_session());
-```
-
-`goal_progress_history` uses EXISTS-to-`health_goals` at lines 436-466.
-
-### provider_patients
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L473-L505
-CREATE POLICY provider_patients_select ON provider_patients
-  FOR SELECT
-  USING (
-    provider_id = current_user_id()
-    OR patient_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY provider_patients_insert ON provider_patients
-  FOR INSERT
-  WITH CHECK (
-    provider_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY provider_patients_update ON provider_patients
-  FOR UPDATE
-  USING (
-    provider_id = current_user_id()
-    OR patient_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY provider_patients_delete ON provider_patients
-  FOR DELETE
-  USING (
-    provider_id = current_user_id()
-    OR patient_id = current_user_id()
-    OR is_admin_session()
-  );
-```
-
-### audit_logs <a id="audit-logs-rls"></a>
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L512-L530
-CREATE POLICY audit_logs_select ON audit_logs
-  FOR SELECT
-  USING (
-    user_id = current_user_id()
-    OR is_admin_session()
-  );
-
--- Only system can insert audit logs (app.current_user_id not required)
-CREATE POLICY audit_logs_insert ON audit_logs
-  FOR INSERT
-  WITH CHECK (true);
-
--- Audit logs are immutable - no updates
--- (No UPDATE policy means updates are denied)
-
--- Only admin can delete (for compliance-approved purging after retention period)
-CREATE POLICY audit_logs_delete ON audit_logs
-  FOR DELETE
-  USING (is_admin_session());
-```
-
-### system_config
-
-```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L537-L551
-CREATE POLICY system_config_select ON system_config
-  FOR SELECT
-  USING (is_admin_session());
-
-CREATE POLICY system_config_insert ON system_config
-  FOR INSERT
-  WITH CHECK (is_admin_session());
-
-CREATE POLICY system_config_update ON system_config
-  FOR UPDATE
-  USING (is_admin_session());
-
-CREATE POLICY system_config_delete ON system_config
-  FOR DELETE
-  USING (is_admin_session());
-```
-
-### user_files (added later)
-
-```sql
--- Source: backend/prisma/migrations/20260108000000_add_user_files_table/migration.sql:L40-L66
-CREATE POLICY "user_files_select_policy" ON "user_files"
-    FOR SELECT
-    USING (
-        user_id::text = current_setting('app.current_user_id', true)
-        OR current_setting('app.is_admin', true) = 'true'
-    );
-
-CREATE POLICY "user_files_insert_policy" ON "user_files"
-    FOR INSERT
-    WITH CHECK (
-        user_id::text = current_setting('app.current_user_id', true)
-        OR current_setting('app.is_admin', true) = 'true'
-    );
-
-CREATE POLICY "user_files_update_policy" ON "user_files"
-    FOR UPDATE
-    USING (
-        user_id::text = current_setting('app.current_user_id', true)
-        OR current_setting('app.is_admin', true) = 'true'
-    );
-
-CREATE POLICY "user_files_delete_policy" ON "user_files"
-    FOR DELETE
-    USING (
-        user_id::text = current_setting('app.current_user_id', true)
-        OR current_setting('app.is_admin', true) = 'true'
-    );
-```
-
-This migration predates the `current_user_id()` / `is_admin_session()`
-helpers going into standard use — policy logic is equivalent but
-differently worded.
-
-### expense_projections, expense_actuals, cost_analyses <a id="expense-and-analysis-rls"></a>
-
-```sql
--- Source: backend/prisma/migrations/20260111_add_expense_tracking/migration.sql:L66-L111
-CREATE POLICY expense_projections_user_policy ON expense_projections
-  FOR ALL
-  USING (
-    CASE
-      WHEN current_setting('app.is_admin', true)::boolean = true THEN true
-      ELSE user_id::text = current_setting('app.current_user_id', true)
-    END
-  )
-  WITH CHECK (
-    CASE
-      WHEN current_setting('app.is_admin', true)::boolean = true THEN true
-      ELSE user_id::text = current_setting('app.current_user_id', true)
-    END
-  );
-
-CREATE POLICY expense_actuals_user_policy ON expense_actuals
-  FOR ALL
-  USING ( … same shape … )
-  WITH CHECK ( … same shape … );
-
-CREATE POLICY cost_analyses_user_policy ON cost_analyses
-  FOR ALL
-  USING ( … same shape … )
-  WITH CHECK ( … same shape … );
-```
-
-### lab_connections
-
-```sql
--- Source: backend/prisma/migrations/20260418_add_lab_connections/migration.sql:L37-L60
-CREATE POLICY lab_connections_select ON lab_connections
-  FOR SELECT
-  USING (
-    user_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY lab_connections_insert_own ON lab_connections
-  FOR INSERT
-  WITH CHECK (
-    user_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY lab_connections_update ON lab_connections
-  FOR UPDATE
-  USING (
-    user_id = current_user_id()
-    OR is_admin_session()
-  );
-
-CREATE POLICY lab_connections_delete_own ON lab_connections
-  FOR DELETE
-  USING (user_id = current_user_id() OR is_admin_session());
-```
-
----
-
-## `withRLSContext` vs `withRLSTransaction` usage matrix
-
-The two wrappers share a core implementation
-(`backend/src/services/database.ts:L433-L483`). The difference is solely in
-the transaction timeout envelope passed through to Prisma:
+The app refuses to serve PHI if the DB role can bypass RLS. In production, `BYPASSRLS=true` is a hard `process.exit(1)`; in non-prod it warns:
 
 ```ts
-// Source: backend/src/services/database.ts:L456-L483
-export async function withRLSContext<T>(
-  userId: string | null,
-  fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: RLSOptions = {}
-): Promise<T> {
-  return runWithRLS(userId, fn, options, {
-    maxWait: options.maxWait ?? 20_000,
-    timeout: options.timeout ?? 30_000,
-  });
+// Source: backend/src/services/database.ts:248-260
+if (config.isProduction) {
+  logger.error(
+    'FATAL: Production database role has BYPASSRLS. ' +
+    'RLS policies are not enforcing. Refusing to start. ' +
+    'See C8_PART3_RUNBOOK.md.'
+  );
+  process.exit(1);
 }
+logger.warn(
+  'WARNING: Database role has BYPASSRLS — RLS policies are not enforcing. ' +
+  'This is acceptable in development but must be fixed before production.'
+);
+```
 
-export async function withRLSTransaction<T>(
+---
+
+## 7. `withRLSContext` vs `withRLSTransaction` usage matrix
+
+Both wrappers open a Prisma `$transaction`, then issue `SELECT set_config('app.current_user_id', …, true)` and `SELECT set_config('app.is_admin', …, true)` on that transaction (`database.ts:368-377`) so RLS policies evaluate against the caller. **Every query inside the callback must go through the `tx` argument** — a call to the module-level `prisma` singleton runs on a different pooled connection that never received the `SET LOCAL`, silently bypassing RLS (`database.ts:14-31`). This invariant is enforced in CI by `scripts/check-rls-wrappers.sh` (referenced at `database.ts:26`).
+
+```ts
+// Source: backend/src/services/database.ts:368-377
+async function applyRLSContext(
+  tx: Prisma.TransactionClient,
   userId: string | null,
-  fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { isAdmin?: boolean } = {}
-): Promise<T> {
-  return runWithRLS(userId, fn, options, undefined);
+  isAdmin: boolean
+): Promise<void> {
+  const userIdValue = userId ?? '';
+  const isAdminValue = isAdmin ? 'true' : 'false';
+  await tx.$executeRaw`SELECT set_config('app.current_user_id', ${userIdValue}, true)`;
+  await tx.$executeRaw`SELECT set_config('app.is_admin', ${isAdminValue}, true)`;
 }
 ```
 
-Both open a Prisma interactive transaction and issue `SET LOCAL
-app.current_user_id` / `SET LOCAL app.is_admin` on it — **both are
-transactions**. `withRLSTransaction` uses Prisma's default txn limits
-(5s/5s); `withRLSContext` extends them to 20s/30s for longer reads.
-Convention in this codebase:
+### Difference (acceptance Q5)
 
-- **`withRLSContext`**: single-statement reads, admin ops
-  (`userId = null, { isAdmin: true }`), schedulers, services, routes that
-  need extended timeouts.
-- **`withRLSTransaction`**: controller mutations (create + audit log +
-  cascade writes) that must be atomic under Prisma's default timeout.
+Both share one implementation (`runWithRLS`, `database.ts:424-445`). The difference is the transaction-option defaults:
 
-### Call-site inventory
-
-Every call site in `backend/src/**` (Grep
-`pattern:"withRLSContext\(|withRLSTransaction\("`; 170+ hits, collapsed here
-by file). `file:line` citations are the earliest hit per grouping; full
-list in the tool-results file above.
-
-| File | Wrapper mix | Representative `userId` | Notes |
+| Wrapper | `$transaction` options | Intended use | Source |
 |---|---|---|---|
-| `backend/src/services/authService.ts` | `withRLSContext` ×17, `withRLSTransaction` ×1 | `user.id` or `null` (registration/lookup) | Lines 271, 334, 365, 390, 422 (txn), 515, 544, 589, 620, 640, 666, 706, 834, 897, 940, 991, 1040, 1089, 1121, 1152, 1200. Multiple `null` calls for pre-auth user lookup |
-| `backend/src/services/auditLog.ts` | `withRLSContext` ×3 | `null` (always admin) | Lines 215 (insert), 453 (queryLogs), 483 (cleanupOldLogs). All `{ isAdmin: true }` |
-| `backend/src/services/userEncryption.ts` | `withRLSContext` ×3 | `null` (admin) | Lines 30, 91, 146 — per-user salt lookup is conceptually infrastructure |
-| `backend/src/services/onboardingService.ts` | `withRLSContext` ×2 | `userId` | Lines 66, 121 |
-| `backend/src/services/healthContextService.ts` | `withRLSContext` ×1 | `userId` | Line 183 |
-| `backend/src/services/healthProfileService.ts` | `withRLSContext` ×2 | `userId` | Lines 59, 104 |
-| `backend/src/services/notificationService.ts` | `withRLSContext` ×1 | `null` | Line 53 — admin lookup to hydrate email template |
-| `backend/src/services/usageTracker.ts` | `withRLSContext` ×1 | `userId` | Line 60 |
-| `backend/src/services/fhir/labSyncService.ts` | `withRLSContext` ×10, `withRLSTransaction` ×1 | `userId` | Lines 144, 193, 202, 233, 257, 303 (txn — biomarker batch insert), 330, 362, 389, 411, 427 |
-| `backend/src/schedulers/emailScheduler.ts` | `withRLSContext` ×5 | `null` + per-user | Lines 64, 80, 129, 146, 182. Outer admin scan → inner per-user wrap |
-| `backend/src/middleware/rbac.ts` | `withRLSContext` ×2 | `null` (admin) | Lines 211, 296 — relationship check |
-| `backend/src/controllers/biomarkerController.ts` | `withRLSTransaction` ×10 | `userId` | Lines 137, 202, 247, 300, 390, 430, 539, 666, 769, 859 — every mutation atomic |
-| `backend/src/controllers/healthGoalsController.ts` | `withRLSTransaction` ×8 | `userId` | Lines 246, 307, 391, 467, 547, 652, 692, 773 |
-| `backend/src/controllers/healthNeedsController.ts` | `withRLSTransaction` ×9 | `userId` | Lines 91, 163, 200, 254, 312, 355, 395, 474, 546 |
-| `backend/src/controllers/insuranceController.ts` | `withRLSTransaction` ×7 | `userId` | Lines 432, 476, 519, 657, 712, 754, 845 |
-| `backend/src/controllers/expenseController.ts` | `withRLSTransaction` ×12 | `userId` | Lines 97, 156, 234, 270, 372, 430, 519, 548, 585, 650, 715, 768 |
-| `backend/src/controllers/fileController.ts` | `withRLSTransaction` ×5 | `userId` | Lines 58, 135, 220, 309, 343 |
-| `backend/src/controllers/fhirController.ts` | `withRLSContext` ×2 | `userId` | Lines 119, 152 |
-| `backend/src/controllers/settingsController.ts` | mix | `userId` + one `null` | Lines 329 ctx, 686 ctx, 703 txn, 754 txn, 831 ctx, 863 txn, **894 `withRLSContext(null, …)` for account deletion cascade**, 922 ctx, 993 ctx, 1047 ctx, 1088 ctx |
-| `backend/src/controllers/upload/labUploadController.ts` | `withRLSTransaction` ×2 | `userId` | Lines 86, 249 — atomic file-row + biomarker batch |
-| `backend/src/controllers/upload/sbcUploadController.ts` | `withRLSTransaction` ×3 | `userId` | Lines 89, 238, 270 |
-| `backend/src/routes/adminRoutes.ts` | `withRLSContext` ×12 | `null` (admin) | Lines 61, 137, 211, 295, 391, 425, 475, 519, 560, 646, 689, 776, 878 |
-| `backend/src/routes/providerRoutes.ts` | `withRLSContext` ×7 | `providerId` | Lines 41, 127, 176, 254, 378, 521, 660 |
-| `backend/src/routes/patientRoutes.ts` | `withRLSContext` ×8 | `patientId` | Lines 37, 49, 117, 130, 206, 286, 345, 436, 501 |
-| `backend/src/routes/biomarkerRoutes.ts` | `withRLSTransaction` ×1 | `userId` | Line 157 |
-| `backend/src/routes/planRoutes.ts` | `withRLSContext` ×1 | `userId` | Line 65 |
+| `withRLSContext(userId, fn, opts?)` | `{ maxWait: 20_000, timeout: 30_000 }` | single read or simple write; longer wait/timeout for Cloud SQL cold starts | `database.ts:447-456` |
+| `withRLSTransaction(userId, fn, opts?)` | `undefined` (Prisma defaults: 2s maxWait / 5s timeout) | multi-statement atomic ops (create + audit, update + history) — **use this when several writes must commit/rollback together** | `database.ts:468-474` |
 
-### Why some calls pass `userId = null`
+Practically, controllers use `withRLSTransaction` for create/update/delete + audit (atomicity), and `withRLSContext` for reads, admin listings, and system context.
 
-- **Admin listings** (`adminRoutes.ts`, 12 sites). The admin is already
-  RBAC-gated; RLS sees `is_admin_session() = true`.
-- **Registration / pre-auth lookups** (`authService.ts` multiple). There is
-  no user yet — the policy allows INSERT via
-  `current_user_id() IS NULL` clauses on `users_insert_system`,
-  `sessions_insert_own`, and `user_encryption_keys_insert_own`.
-- **Audit logging** (`auditLog.ts` 3 sites). `audit_logs_insert` is
-  `WITH CHECK (true)`; admin wrapping is defensive consistency.
-- **Per-user salt lookup** (`userEncryption.ts` 3 sites). Infrastructure
-  that callers shouldn't need to scope — see the comment at
-  `userEncryption.ts:L9-L16`.
-- **Scheduled jobs scanning users** (`emailScheduler.ts:64,129,182`,
-  `notificationService.ts:53`). Background jobs have no user session.
-- **Account deletion cascade** (`settingsController.ts:894`). Admin
-  wrapping required because the user row itself is deleted inside the
-  callback and subsequent queries must still succeed.
-- **RBAC relationship check** (`rbac.ts:211,296`). Invoked before auth
-  resolves which user owns the relationship.
+### Call-site matrix (representative; null = admin context)
 
----
-
-## Index catalog
-
-Single consolidated list of every `@@index` and `@@unique`
-(`Grep pattern:"@@index|@@unique"` on `schema.prisma`). Alias column shows
-the explicit `map:` name where one exists.
-
-| Model | Columns | Alias | Schema line |
+| Caller (`file:line`) | Wrapper | `userId` | Purpose |
 |---|---|---|---|
-| User | `email` | — | 54 |
-| User | `createdAt` | — | 55 |
-| Session | `userId` | — | 69 |
-| Session | `token` (unique already by `@unique`) | — | 70 |
-| Session | `expiresAt` | — | 71 |
-| UserEncryptionKey | `(userId, keyType, version)` UNIQUE | — | 87 |
-| UserEncryptionKey | `userId` | — | 88 |
-| ProviderPatient | `(providerId, patientId)` UNIQUE | — | 111 |
-| ProviderPatient | `providerId` | — | 112 |
-| ProviderPatient | `patientId` | — | 113 |
-| ProviderPatient | `status` | — | 114 |
-| UserFile | `userId` | — | 135 |
-| UserFile | `labDate` | — | 136 |
-| Biomarker | `userId` | — | 165 |
-| Biomarker | `(userId, category)` | — | 166 |
-| Biomarker | `measurementDate` | — | 167 |
-| Biomarker | `isOutOfRange` | — | 168 |
-| Biomarker | `userFileId` | — | 169 |
-| Biomarker | `(userId, category, measurementDate DESC)` | `biomarkers_user_category_date_idx` | 170 |
-| Biomarker | `(userId, category, measurementDate DESC)` | — (dup Prisma-gen) | 171 |
-| Biomarker | `(userId, createdAt)` | — | 172 |
-| Biomarker | `(userId, isOutOfRange)` | — | 173 |
-| Biomarker | `(userId, sourceType)` | — | 174 |
-| BiomarkerHistory | `biomarkerId` | — | 186 |
-| BiomarkerHistory | `measurementDate` | — | 187 |
-| InsurancePlan | `userId` | — | 353 |
-| InsurancePlan | `isActive` | — | 354 |
-| InsurancePlan | `(userId, isActive, isPrimary DESC)` | `insurance_plans_user_active_primary_idx` | 355 |
-| InsurancePlan | `(userId, isActive, isPrimary DESC)` | — | 356 |
-| InsuranceBenefit | `planId` | — | 378 |
-| InsuranceBenefit | `serviceCategory` | — | 379 |
-| DNAData | `userId` | — | 398 |
-| DNAVariant | `dnaDataId` | — | 412 |
-| DNAVariant | `rsid` | — | 413 |
-| GeneticTrait | `dnaDataId` | — | 431 |
-| GeneticTrait | `category` | — | 432 |
-| GeneticTrait | `riskLevel` | — | 433 |
-| HealthNeed | `userId` | — | 451 |
-| HealthNeed | `status` | — | 452 |
-| HealthNeed | `urgency` | — | 453 |
-| HealthGoal | `userId` | — | 488 |
-| HealthGoal | `status` | — | 489 |
-| HealthGoal | `category` | — | 490 |
-| HealthGoal | `targetDate` | — | 491 |
-| HealthGoal | `(userId, status, targetDate)` | `health_goals_user_status_target_idx` | 492 |
-| HealthGoal | `(userId, status, targetDate)` | — | 493 |
-| GoalProgressHistory | `goalId` | — | 506 |
-| GoalProgressHistory | `recordedAt` | — | 507 |
-| AuditLog | `userId` | — | 529 |
-| AuditLog | `action` | — | 530 |
-| AuditLog | `resourceType` | — | 531 |
-| AuditLog | `resourceId` | — | 532 |
-| AuditLog | `createdAt` | `audit_logs_created_at_asc_idx` | 533 |
-| AuditLog | `createdAt DESC` | `audit_logs_created_at_desc_idx` | 534 |
-| AuditLog | `(userId, createdAt DESC)` | `audit_logs_user_created_at_idx` | 535 |
-| AuditLog | `(userId, createdAt DESC)` | — | 536 |
-| ExpenseProjection | `(userId, planId)` | — | 699 |
-| ExpenseProjection | `createdAt` | — | 700 |
-| ExpenseActual | `(userId, planId)` | — | 727 |
-| ExpenseActual | `dateOfService` | — | 728 |
-| CostAnalysis | `(userId, planId)` | — | 746 |
-| CostAnalysis | `analysisDate` | — | 747 |
-| LabConnection | `(userId, provider)` UNIQUE | — | 776 |
-| LabConnection | `userId` | — | 777 |
+| `biomarkerController.ts:137` | `withRLSTransaction` | `userId` | List own biomarkers + count atomically |
+| `biomarkerController.ts:202` | `withRLSTransaction` | `userId` | Get single biomarker + history |
+| `biomarkerController.ts:300` | `withRLSTransaction` | `userId` | Update biomarker + write history + audit |
+| `insuranceController.ts:432` | `withRLSTransaction` | `userId` | List own plans |
+| `expenseController.ts:728` | `withRLSTransaction` | `userId` | Create cost analysis (Claude) + persist |
+| `settingsController.ts:353` | `withRLSContext` | `userId` | Export own data (read) |
+| `settingsController.ts:965` | `withRLSContext` | **null** | System/no-user context during deletion |
+| `fileController.ts:56` | `withRLSTransaction` | `userId` | List own files |
+| `fhirController.ts:119` | `withRLSContext` | `userId` | List own lab connections |
+| `fhir/labSyncService.ts:304` | `withRLSTransaction` | `userId` | Import labs (biomarker + history) atomically |
+| `providerRoutes.ts:227` | `withRLSContext` | `providerId` | Provider reads consented patient (RLS via `has_provider_access`) |
+| `patientRoutes.ts:204` | `withRLSContext` | `patientId` | Patient approves/revokes consent |
+| `adminRoutes.ts:61` | `withRLSContext` | **null** + `{isAdmin:true}` | Admin user listing (RLS sees `is_admin_session()=true`) |
+| `adminRoutes.ts:891` | `withRLSContext` | **null** + `{isAdmin:true}` | Admin audit-log viewer |
+| `auditLog.ts:269` | `withRLSContext` | **null** + `{isAdmin:true}` | Standalone audit write (`WITH CHECK (true)`) |
+| `auditLog.ts:539` | `withRLSContext` | **null** + `{isAdmin:true}` | Retention `deleteMany` |
+| `userEncryption.ts:30` | `withRLSContext` | **null** + `{isAdmin:true}` | Get/create per-user salt (infra, not user-scoped) |
+| `authService.ts:626` | `withRLSContext` | **null** + `{isAdmin:true}` | Lookup user by email at login (pre-session) |
+| `emailScheduler.ts:83` | `withRLSContext` | **null** + `{isAdmin:true}` | Cross-user batch select for scheduled email |
+| `providerRoutes.ts:165` | `withRLSContext` | **null** + `{isAdmin:true}` | Resolve patient id by email for a connect request |
+| `rbac.ts:208` | `withRLSContext` | **null** | Check provider→patient relationship in RBAC middleware |
+| `notificationService.ts:53` | `withRLSContext` | **null** | Cross-user notification preference lookup |
 
-**Biomarker dashboard list query** is supported by
-`biomarkers_user_category_date_idx` (`schema.prisma:170`) and/or its
-unaliased twin on line 171 — either covers
-`WHERE user_id = ? AND category = ? ORDER BY measurement_date DESC`.
+### Who passes `null` (acceptance Q10) and why
 
-**Note on aliased duplicates** (e.g., lines 170/171, 355/356, 492/493,
-533/534/535/536): these appear to be Prisma schema artifacts where an
-explicit `map:` name coexists with Prisma's auto-generated index. They
-describe the same physical index once `prisma migrate` runs — see
-`20260103_add_compound_indexes/migration.sql`.
+`null` userId (or `{ isAdmin: true }`) puts the transaction into **admin context** (`is_admin_session() = true`), used where the operation is legitimately not scoped to one user:
+
+- **Admin endpoints** — all of `adminRoutes.ts` (user mgmt, audit viewer): `adminRoutes.ts:61,137,210,294,407,441,491,535,576,662,705,789,891`. Each is also RBAC-gated to ADMIN.
+- **Audit logging** — `auditLog.ts:269` (standalone write), `:509` (query), `:539` (retention cleanup).
+- **Auth pre-session lookups** — `authService.ts` (login/register/reset look up users by email/token before a session exists): `:371,402,459,626,657,677,871,934,977,1028,1077,1158,1251,1333,1381`.
+- **Per-user salt infra** — `userEncryption.ts:30,89` (salt lookup is infrastructure, callers don't own an RLS context — `userEncryption.ts:8-16`).
+- **Schedulers** — `emailScheduler.ts:83,162,241` (batch across users).
+- **Provider/patient id resolution** — `providerRoutes.ts:165`, `patientRoutes.ts:49,129` (resolve a counterparty by email; `users_select_own` would deny).
+- **RBAC + notifications** — `rbac.ts:208,288`, `notificationService.ts:53`.
+- **Deletion system step** — `settingsController.ts:965`.
 
 ---
 
-## Cascade behavior
+## 8. Index catalog
 
-Output of `Grep pattern:"onDelete:"` on `schema.prisma`. When a `User` is
-deleted, every Cascade-child below is also removed; `AuditLog.userId` is
-the only user-facing FK that survives deletion.
+Every `@@index` / `@@unique` in `schema.prisma`. The dashboard biomarker list query is served by `biomarkers_user_category_date_idx` (acceptance Q7).
 
-| Parent → Child | `onDelete` | Schema line |
-|---|---|---|
-| `User` → `Session` | Cascade | 67 |
-| `User` → `UserEncryptionKey` | Cascade | 85 |
-| `User` → `ProviderPatient` (patient side) | Cascade | 108 |
-| `User` → `ProviderPatient` (provider side) | Cascade | 109 |
-| `User` → `UserFile` | Cascade | 133 |
-| `User` → `Biomarker` | Cascade | 163 |
-| `Biomarker` → `BiomarkerHistory` | Cascade | 184 |
-| `User` → `InsurancePlan` | Cascade | 348 |
-| `InsurancePlan` → `InsuranceBenefit` | Cascade | 376 |
-| `User` → `DNAData` | Cascade | 394 |
-| `DNAData` → `DNAVariant` | Cascade | 410 |
-| `DNAData` → `GeneticTrait` | Cascade | 429 |
-| `User` → `HealthNeed` | Cascade | 449 |
-| `User` → `HealthGoal` | Cascade | 486 |
-| `HealthGoal` → `GoalProgressHistory` | Cascade | 504 |
-| `User` → `ExpenseProjection` | Cascade | 695 |
-| `InsurancePlan` → `ExpenseProjection` | Cascade | 696 |
-| `User` → `ExpenseActual` | Cascade | 723 |
-| `InsurancePlan` → `ExpenseActual` | Cascade | 724 |
-| `ExpenseProjection` → `ExpenseActual` | **SetNull** | 725 |
-| `User` → `CostAnalysis` | Cascade | 743 |
-| `InsurancePlan` → `CostAnalysis` | Cascade | 744 |
-| `User` → `LabConnection` | Cascade | 774 |
-| `UserFile` → `Biomarker` (via `user_file_id`) | **SetNull** | migration `20260108000000_add_user_files_table/migration.sql:34` |
-| `User` → `AuditLog` | **NoAction** (no `onDelete:` clause — `schema.prisma:527`) | 527 |
+| Model | Index name / def | Columns | Type | Source |
+|---|---|---|---|---|
+| User | (unique) `email` | `email` | btree unique | `schema.prisma:12` |
+| User | `@@index([email])` | `email` | btree | `schema.prisma:56` |
+| User | `@@index([createdAt])` | `created_at` | btree | `schema.prisma:57` |
+| User | (unique) token cols | `email_verification_token`, `password_reset_token`, `email_change_token` | btree unique | `schema.prisma:20,22,25`; `20260601_…:12` |
+| Session | `@@index([userId])`, `[token]`, `[expiresAt]` | resp. | btree | `schema.prisma:71-73` |
+| UserEncryptionKey | `@@unique([userId,keyType,version])`, `@@index([userId])` | resp. | btree | `schema.prisma:89-90` |
+| ProviderPatient | `@@unique([providerId,patientId])`; idx `providerId`,`patientId`,`status` | resp. | btree | `schema.prisma:112-115` |
+| UserFile | `@@index([userId])`, `[labDate]` | resp. | btree | `schema.prisma:136-137` |
+| Biomarker | `@@index([userId])` | `user_id` | btree | `schema.prisma:166` |
+| Biomarker | `@@index([userId,category])` | `(user_id,category)` | btree | `schema.prisma:167` |
+| Biomarker | `@@index([measurementDate])` | `measurement_date` | btree | `schema.prisma:168` |
+| Biomarker | `@@index([isOutOfRange])` | `is_out_of_range` | btree | `schema.prisma:169` |
+| Biomarker | `@@index([userFileId])` | `user_file_id` | btree | `schema.prisma:170` |
+| Biomarker | `biomarkers_user_category_date_idx` | `(user_id,category,measurement_date DESC)` | btree | `schema.prisma:171`; `20260103_add_compound_indexes:12-13` — **dashboard list query** |
+| Biomarker | `@@index([userId,createdAt])` | `(user_id,created_at)` | btree | `schema.prisma:173` |
+| Biomarker | `@@index([userId,isOutOfRange])` | `(user_id,is_out_of_range)` | btree | `schema.prisma:174` |
+| Biomarker | `@@index([userId,sourceType])` | `(user_id,source_type)` | btree | `schema.prisma:175` |
+| InsurancePlan | `@@index([userId])`, `[isActive]` | resp. | btree | `schema.prisma:354-355` |
+| InsurancePlan | `insurance_plans_user_active_primary_idx` | `(user_id,is_active,is_primary DESC)` | btree | `schema.prisma:356`; `20260103_…:22-23` |
+| InsuranceBenefit | `@@index([planId])`, `[serviceCategory]` | resp. | btree | `schema.prisma:379-380` |
+| HealthNeed | `@@index([userId])`, `[status]`, `[urgency]` | resp. | btree | `schema.prisma:398-400` |
+| HealthGoal | `@@index([userId])`,`[status]`,`[category]`,`[targetDate]` | resp. | btree | `schema.prisma:435-438` |
+| HealthGoal | `health_goals_user_status_target_idx` | `(user_id,status,target_date)` | btree | `schema.prisma:439`; `20260103_…:17-18` |
+| GoalProgressHistory | `@@index([goalId])`, `[recordedAt]` | resp. | btree | `schema.prisma:453-454` |
+| BiomarkerHistory | `@@index([biomarkerId])`, `[measurementDate]` | resp. | btree | `schema.prisma:187-188` |
+| AuditLog | `@@index([userId])`,`[action]`,`[resourceType]`,`[resourceId]` | resp. | btree | `schema.prisma:476-479` |
+| AuditLog | `audit_logs_created_at_asc_idx`, `audit_logs_created_at_desc_idx`, `audit_logs_user_created_at_idx` | `created_at` / `(user_id,created_at DESC)` | btree | `schema.prisma:480-483`; `20260103_…:7-8` |
+| SystemConfig | (unique) `key` | `key` | btree unique | `schema.prisma:489` |
+| ExpenseProjection | `@@index([userId,planId])`, `[createdAt]` | resp. | btree | `schema.prisma:631-632` |
+| ExpenseActual | `@@index([userId,planId])`, `[dateOfService]` | resp. | btree | `schema.prisma:659-660` |
+| CostAnalysis | `@@index([userId,planId])`, `[analysisDate]` | resp. | btree | `schema.prisma:683-684` |
+| LabConnection | `@@unique([userId,provider])`, `@@index([userId])` | resp. | btree | `schema.prisma:713-714` |
 
-**User-deletion impact** (from `settingsController.ts:894` account-deletion
-path + DB cascades): every `Session`, `UserEncryptionKey`, `ProviderPatient`
-(both sides), `UserFile`, `Biomarker`+`BiomarkerHistory`, `InsurancePlan`+
-`InsuranceBenefit`+`ExpenseProjection`+`ExpenseActual`+`CostAnalysis`,
-`DNAData`+`DNAVariant`+`GeneticTrait`, `HealthNeed`, `HealthGoal`+
-`GoalProgressHistory`, `LabConnection` row belonging to the user is
-physically removed. `AuditLog` rows survive (the `userId` column remains
-populated but points to a non-existent row; 7-year HIPAA retention
-requirement).
+> Several biomarker/insurance/goal compound indexes appear **twice** in `schema.prisma` (once with an explicit `map:` name, once anonymous) — e.g. `schema.prisma:171-172`. This is benign duplication in the Prisma model (the named DDL is the one applied by `20260103_add_compound_indexes`); flagged in the [drift log](#prompt-drift-log).
 
 ---
 
-## Migration timeline
+## 9. Cascade / deletion behavior
 
-| Date | Directory | Effect |
-|---|---|---|
-| (baseline) | `00000000000000_initial_schema` | Initial DDL from Prisma schema. Every model+enum listed above minus expense tracking, user_files, notification prefs, health profile, lab connections, onboarding, plan, and encrypted goal target |
-| 2026-01-03 | `20260103_add_compound_indexes` | Compound indexes for hot-path queries (biomarker dashboard, insurance plan active-primary, health-goals status, audit-log user+time, etc.). `CONCURRENTLY` removed because it can't run in a transaction |
-| 2026-01-07 | `20260107_add_rls_policies` | **Enables RLS on 16 tables**, defines `current_user_id()`, `is_admin_session()`, `has_provider_access(patient, permission_type)` helpers, grants `EXECUTE` to PUBLIC |
-| 2026-01-08 | `20260108000000_add_user_files_table` | Adds `user_files` table; adds `biomarkers.user_file_id` FK with `ON DELETE SET NULL`; enables RLS + policies on `user_files` |
-| 2026-01-10 | `20260110_add_coinsurance_columns` | Adds per-service coinsurance columns on `insurance_plans` for plans using "% after deductible" instead of copays |
-| 2026-01-10 | `20260110_add_comprehensive_coverage_fields` | Adds copays/coinsurance, inpatient/outpatient, therapy limits, Rx, emergency fields to `insurance_plans` |
-| 2026-01-10 | `20260110_add_extended_coverage_fields` | Adds ambulance, vision, dental, DME, home-health, hospice, additional therapy columns |
-| 2026-01-11 | `20260111_add_expense_tracking` | Adds `expense_projections`, `expense_actuals`, `cost_analyses` tables with RLS policies |
-| 2026-01-11 | `20260111_add_out_of_network_fields` | Adds `deductible_*_oon` / `oop_max_*_oon` columns |
-| 2026-02-06 | `20260206_fix_expense_encryption_types` | Changes `estimated_cost`, `billed_amount`, `insurance_paid`, `patient_paid`, `applied_to_deductible`, `applied_to_oop`, `total_projected_oop`, `projected_expenses_snapshot`, `claude_response` from `DECIMAL`/`JSONB` to `TEXT` so they can hold AES-256-GCM ciphertext. See `CLAUDE.md:132` |
-| 2026-04-17 | `20260417_add_notification_preferences` | Adds `users.notification_preferences JSON default '{}'` (non-PHI) |
-| 2026-04-18 | `20260418_add_health_profile` | Adds `users.health_profile_encrypted` (encrypted JSON — PHI) |
-| 2026-04-18 | `20260418_add_lab_connections` | Adds `lab_connections` table with RLS policies (Quest / SMART-on-FHIR) |
-| 2026-04-20 | `20260420_add_onboarding` | Adds `users.onboarding_completed_at` |
-| 2026-04-20 | `20260420_add_user_plan` | Adds `users.plan VARCHAR(20) default 'FREE'`, `plan_expires_at`, `plan_updated_at` |
-| 2026-04-20 | `20260420_encrypt_health_goal_target` | Adds `health_goals.target_value_encrypted` column (existing `target_value Decimal` retained for backward-compat reads) |
+Deleting a `User` cascades to **all** child rows whose FK is `onDelete: Cascade`. `AuditLog` is the deliberate exception (nullable FK, no cascade) so the 7-year HIPAA trail survives account deletion (acceptance Q13).
 
-Most recent change: `20260420_encrypt_health_goal_target` (2026-04-20) —
-encrypts the numeric goal-target, which on its own can reveal sensitive
-conditions (A1c 6.5, blood-pressure targets, weight goals).
+| Relation | Parent | Child | onDelete | Source | Impact |
+|---|---|---|---|---|---|
+| `Session.userId → User.id` | User | Session | **Cascade** | `schema.prisma:69` | sessions purged |
+| `UserEncryptionKey.userId → User.id` | User | UserEncryptionKey | **Cascade** | `schema.prisma:87` | per-user salt destroyed → PHI permanently unreadable |
+| `ProviderPatient.patientId → User.id` | User | ProviderPatient | **Cascade** | `schema.prisma:109` | patient-side links removed |
+| `ProviderPatient.providerId → User.id` | User | ProviderPatient | **Cascade** | `schema.prisma:110` | provider-side links removed |
+| `UserFile.userId → User.id` | User | UserFile | **Cascade** | `schema.prisma:134` | file metadata removed (GCS blobs deleted separately by app) |
+| `Biomarker.userId → User.id` | User | Biomarker | **Cascade** | `schema.prisma:164` | biomarkers purged |
+| `Biomarker.userFileId → UserFile.id` | UserFile | Biomarker | (none → SetNull on nullable) | `schema.prisma:163` | biomarker kept, link nulled |
+| `BiomarkerHistory.biomarkerId → Biomarker.id` | Biomarker | BiomarkerHistory | **Cascade** | `schema.prisma:185` | history purged |
+| `InsurancePlan.userId → User.id` | User | InsurancePlan | **Cascade** | `schema.prisma:349` | plans purged |
+| `InsuranceBenefit.planId → InsurancePlan.id` | InsurancePlan | InsuranceBenefit | **Cascade** | `schema.prisma:377` | benefits purged with plan (acceptance Q18) |
+| `HealthNeed.userId → User.id` | User | HealthNeed | **Cascade** | `schema.prisma:396` | needs purged |
+| `HealthGoal.userId → User.id` | User | HealthGoal | **Cascade** | `schema.prisma:433` | goals purged |
+| `GoalProgressHistory.goalId → HealthGoal.id` | HealthGoal | GoalProgressHistory | **Cascade** | `schema.prisma:451` | progress purged |
+| `ExpenseProjection.userId → User.id` | User | ExpenseProjection | **Cascade** | `schema.prisma:627` | projections purged |
+| `ExpenseProjection.planId → InsurancePlan.id` | InsurancePlan | ExpenseProjection | **Cascade** | `schema.prisma:628` | projections purged with plan |
+| `ExpenseActual.userId → User.id` | User | ExpenseActual | **Cascade** | `schema.prisma:655` | actuals purged |
+| `ExpenseActual.planId → InsurancePlan.id` | InsurancePlan | ExpenseActual | **Cascade** | `schema.prisma:656` | actuals purged with plan |
+| `ExpenseActual.projectionId → ExpenseProjection.id` | ExpenseProjection | ExpenseActual | **SetNull** | `schema.prisma:657` | actual kept, projection link nulled |
+| `CostAnalysis.userId → User.id` | User | CostAnalysis | **Cascade** | `schema.prisma:680` | analyses purged |
+| `CostAnalysis.planId → InsurancePlan.id` | InsurancePlan | CostAnalysis | **Cascade** | `schema.prisma:681` | analyses purged with plan |
+| `LabConnection.userId → User.id` | User | LabConnection | **Cascade** | `schema.prisma:711` | lab connections (tokens) purged |
+| `AuditLog.userId → User.id` | User | AuditLog | **none** (nullable FK; not cascaded) | `schema.prisma:474` | **logs retained** (7-yr HIPAA) |
 
----
+**GDPR-style deletion of a User** removes: Session, UserEncryptionKey, both ProviderPatient sides, UserFile, Biomarker (+BiomarkerHistory), InsurancePlan (+InsuranceBenefit, +ExpenseProjection, +ExpenseActual, +CostAnalysis), HealthNeed, HealthGoal (+GoalProgressHistory), ExpenseProjection/Actual/CostAnalysis (direct user FKs), LabConnection — and intentionally **keeps** AuditLog (with `user_id` left pointing at the now-deleted id, since there is no cascade). Because `UserEncryptionKey` is cascaded, the user's per-user salt is destroyed, rendering any residual encrypted PHI cryptographically unreadable.
 
-## Deprecated models
-
-Per [`CLAUDE.md:38-41`](../CLAUDE.md):
-
-> **DNA/Genetics**: DNAData, DNAVariant, GeneticTrait models — consider
-> removing if not planned.
-
-Status as of 2026-04-24:
-
-- All three models remain in `backend/prisma/schema.prisma`
-  (`schema.prisma:383-435`).
-- RLS policies still active
-  (`20260107_add_rls_policies/migration.sql:L288-L378`).
-- PHI columns still registered in
-  [`PHI_FIELDS`](../backend/src/services/encryption.ts) at
-  `encryption.ts:L440-L446`.
-- No UI route references them (removed in Jan 2025 per `CLAUDE.md:33-36`).
-- No drop migration exists. Decision to drop is pending per
-  `CLAUDE.md:41` — TBD (external: product decision whether to re-enable
-  DNA import or schedule a drop; resolve with the schema owner before the
-  next major schema revision).
+```prisma
+// Source: backend/prisma/schema.prisma:109-110
+patient            User                  @relation("PatientUser", fields: [patientId], references: [id], onDelete: Cascade)
+provider           User                  @relation("ProviderUser", fields: [providerId], references: [id], onDelete: Cascade)
+```
 
 ---
 
-## Acceptance questions (self-answered)
+## 10. Migration timeline
 
-**Q1.** Active vs deprecated — *18 active models, 3 deprecated
-(DNAData, DNAVariant, GeneticTrait).* See [Overview](#overview) and
-[Deprecated models](#deprecated-models).
+22 migration directories (`backend/prisma/migrations/*/migration.sql`), chronological. Most recent: `20260601_add_email_change` (acceptance Q9).
 
-**Q2.** Biomarker encrypted value field — *`Biomarker.valueEncrypted`
-(`schema.prisma:146`), decrypted via
-`EncryptionService.decrypt(ciphertext, userSalt)` at
-`backend/src/services/encryption.ts:L288-L316` where `userSalt` comes from
-`getUserEncryptionSalt(userId)` at
-`backend/src/services/userEncryption.ts:29`.*
+| Date | Migration | Effect | Source |
+|---|---|---|---|
+| (baseline) | `00000000000000_initial_schema` | Baseline schema: all enums + core tables (incl. then-present DNA tables) | `…/migration.sql:1-10` |
+| 2026-01-03 | `20260103_add_compound_indexes` | 4 compound indexes (audit, biomarker, goal, insurance) | `…:7-23` |
+| 2026-01-07 | `20260107_add_rls_policies` | Enabled RLS on 16 tables; added `current_user_id()`/`is_admin_session()`/`has_provider_access()` + all policies | `…:17-560` |
+| 2026-01-08 | `20260108000000_add_user_files_table` | Added `user_files` table (+RLS) | `…:1-12` |
+| 2026-01-10 | `20260110_add_coinsurance_columns` | Per-service coinsurance columns on `insurance_plans` | dir |
+| 2026-01-10 | `20260110_add_comprehensive_coverage_fields` | Inpatient/outpatient/Rx/dental/vision coverage columns | dir |
+| 2026-01-10 | `20260110_add_extended_coverage_fields` | Additional therapy/DME/hospice/ambulance columns | dir |
+| 2026-01-11 | `20260111_add_expense_tracking` | Created `expense_projections`, `expense_actuals`, `cost_analyses` | `…:1-20` |
+| 2026-01-11 | `20260111_add_out_of_network_fields` | OON deductible/OOP columns on `insurance_plans` | `…:4-8` |
+| 2026-02-06 | `20260206_fix_expense_encryption_types` | Expense monetary cols Decimal/JSONB → **TEXT** (encrypted strings) | `…:6-20` |
+| 2026-04-17 | `20260417_add_notification_preferences` | Added `notification_preferences` JSONB (non-PHI) | `…:5-6` |
+| 2026-04-18 | `20260418_add_health_profile` | Added `health_profile_encrypted` to `users` | `…:7-8` |
+| 2026-04-18 | `20260418_add_lab_connections` | Added `lab_connections` table (FHIR/SMART OAuth tokens) +RLS | `…:11-60` |
+| 2026-04-20 | `20260420_add_onboarding` | Added `onboarding_completed_at`; backfilled existing users | `…:11-16` |
+| 2026-04-20 | `20260420_add_user_plan` | Added `plan`/`plan_expires_at`/`plan_updated_at` (FREE/PRO/TEAM) | `…:13-16` |
+| 2026-04-20 | `20260420_encrypt_health_goal_target` | Added `target_value_encrypted` (additive; plaintext kept) | `…:18-19` |
+| 2026-04-23 | `20260423_drop_dna_genetics` | **Dropped** `dna_data`/`dna_variants`/`genetic_traits`, `can_view_dna` col, `ProcessingStatus`/`RiskLevel` enums | `…:23-32` |
+| 2026-04-24 | `20260424_align_uuid_defaults_and_rename_claude_response` | 4 tables → `gen_random_uuid()` default; `claude_response` → `claude_response_encrypted` | `…:36-53` |
+| 2026-04-24 | `20260424_prevent_self_role_elevation` | BEFORE UPDATE trigger blocking non-admin `role`/`is_active` change | `…:30-67` |
+| 2026-05-29 | `20260529_fix_has_provider_access` | Recreated `has_provider_access()` without dead `view_dna` branch | `…:20-42` |
+| 2026-05-30 | `20260530_add_users_select_provider` | Added `has_active_consent()` + `users_select_provider` SELECT policy | `…:33-56` |
+| 2026-06-01 | `20260601_add_email_change` | Added `pending_email`/`email_change_token`/`email_change_expires` to `users` | `…:7-12` |
 
-**Q3.** `ProviderPatient → User` delete — *Both FKs (`providerId`,
-`patientId`) use `onDelete: Cascade` (`schema.prisma:108-109`). GDPR /
-HIPAA account-deletion therefore removes all relationship rows for that
-user, from both sides. `notesEncrypted` is destroyed with them.*
+---
 
-**Q4.** RLS tables + admin bypass — *21 tables: users, sessions,
-user_encryption_keys, biomarkers, biomarker_history, insurance_plans,
-insurance_benefits, dna_data, dna_variants, genetic_traits, health_needs,
-health_goals, goal_progress_history, provider_patients, audit_logs,
-system_config (all from `20260107_add_rls_policies`), plus user_files,
-expense_projections, expense_actuals, cost_analyses, lab_connections.
-`is_admin_session()` (`20260107_add_rls_policies/migration.sql:L27-L36`)
-returns the boolean value of `app.is_admin`, and every policy includes
-`OR is_admin_session()` or a `CASE WHEN app.is_admin = true THEN true`
-clause as the bypass.*
+## 11. Enum catalog
 
-**Q5.** `withRLSContext` vs `withRLSTransaction` — *Both wrap a
-`$transaction` with `SET LOCAL` of the RLS session variables; they differ
-only in timeout defaults (`withRLSContext` passes maxWait 20s / timeout 30s;
-`withRLSTransaction` uses Prisma defaults). See
-[`database.ts:L456-L483`](../backend/src/services/database.ts). Convention:
-use `withRLSTransaction` for controller mutations that must be atomic
-under tight timeouts (e.g., biomarker create + audit-log write); use
-`withRLSContext` for longer-running reads, admin operations, schedulers,
-and per-user-salt lookups. See
-[usage matrix](#withrlscontext-vs-withrlstransaction-usage-matrix).*
+13 Prisma enums (`schema.prisma:501-608`). Values verified verbatim against the schema.
 
-**Q6.** RLS policy verbatim — *`biomarkers_select` (see
-[biomarkers RLS](#biomarkers-rls)):*
+| Enum | Values | Used by | Source |
+|---|---|---|---|
+| `UserRole` | `PATIENT`, `PROVIDER`, `ADMIN` | `User.role` | `schema.prisma:501-505` |
+| `ProviderRelationType` | `PRIMARY_CARE`, `SPECIALIST`, `CONSULTANT`, `EMERGENCY`, `OTHER` | `ProviderPatient.relationshipType` | `schema.prisma:507-513` |
+| `ProviderPatientStatus` | `PENDING`, `ACTIVE`, `SUSPENDED`, `REVOKED`, `EXPIRED` | `ProviderPatient.status` | `schema.prisma:515-521` |
+| `DataSourceType` | `MANUAL`, `LAB_UPLOAD`, `EHR_IMPORT`, `DEVICE_SYNC`, `API_IMPORT` | `Biomarker.sourceType` | `schema.prisma:523-529` |
+| `PlanType` | `HMO`, `PPO`, `EPO`, `POS`, `HDHP` | `InsurancePlan.planType` | `schema.prisma:531-537` |
+| `HealthNeedType` | `CONDITION`, `ACTION`, `SERVICE`, `FOLLOW_UP` | `HealthNeed.needType` | `schema.prisma:539-544` |
+| `Urgency` | `IMMEDIATE`, `URGENT`, `FOLLOW_UP`, `ROUTINE` | `HealthNeed.urgency` | `schema.prisma:546-551` |
+| `HealthNeedStatus` | `PENDING`, `IN_PROGRESS`, `COMPLETED`, `DISMISSED` | `HealthNeed.status` | `schema.prisma:553-558` |
+| `GoalDirection` | `INCREASE`, `DECREASE`, `MAINTAIN` | `HealthGoal.direction` | `schema.prisma:560-564` |
+| `GoalStatus` | `ACTIVE`, `PAUSED`, `ACHIEVED`, `FAILED`, `CANCELLED` | `HealthGoal.status` | `schema.prisma:566-572` |
+| `ReminderFrequency` | `DAILY`, `WEEKLY`, `BIWEEKLY`, `MONTHLY` | `HealthGoal.reminderFrequency` | `schema.prisma:574-579` |
+| `ActorType` | `USER`, `SYSTEM`, `API`, `ADMIN`, `ANONYMOUS` | `AuditLog.actorType` | `schema.prisma:581-587` |
+| `AuditAction` | `LOGIN`, `LOGOUT`, `LOGIN_FAILED`, `PASSWORD_CHANGE`, `PASSWORD_RESET`, `READ`, `VIEW`, `EXPORT`, `PRINT`, `CREATE`, `UPDATE`, `DELETE`, `PHI_ACCESS`, `PHI_EXPORT`, `PHI_DECRYPT`, `PERMISSION_CHANGE`, `SETTINGS_CHANGE`, `KEY_ROTATION` | `AuditLog.action` | `schema.prisma:589-608` |
+
+> `ProcessingStatus` and `RiskLevel` are **gone** — dropped with the DNA tables (`20260423_drop_dna_genetics/migration.sql:31-32`). They are not in `schema.prisma`.
+
+---
+
+## 12. Removed models
+
+The DNA / genetics feature was scaffolded in the initial schema but **never shipped** (no frontend, no upload endpoint, no extraction pipeline) and was dropped on **2026-04-23**:
 
 ```sql
-CREATE POLICY biomarkers_select ON biomarkers
-  FOR SELECT
-  USING (
-    user_id = current_user_id()
-    OR has_provider_access(user_id, 'view_biomarkers')
-    OR is_admin_session()
-  );
+-- Source: backend/prisma/migrations/20260423_drop_dna_genetics/migration.sql:23-32
+DROP TABLE IF EXISTS "genetic_traits" CASCADE;
+DROP TABLE IF EXISTS "dna_variants" CASCADE;
+DROP TABLE IF EXISTS "dna_data" CASCADE;
+-- Provider-consent flag for a resource that no longer exists.
+ALTER TABLE "provider_patients" DROP COLUMN IF EXISTS "can_view_dna";
+-- Enums only used by the dropped tables.
+DROP TYPE IF EXISTS "ProcessingStatus";
+DROP TYPE IF EXISTS "RiskLevel";
 ```
 
-**Q7.** Biomarker dashboard list index — *`biomarkers_user_category_date_idx`
-on `(user_id, category, measurement_date DESC)` at `schema.prisma:170`
-(plus its Prisma-auto unaliased twin on line 171). Covers the common
-`WHERE user_id = ? AND category = ? ORDER BY measurement_date DESC` shape.*
+| Removed | Kind | Notes |
+|---|---|---|
+| `DNAData` | model/table | gone from `schema.prisma` |
+| `DNAVariant` | model/table | held `genotypeEncrypted` (PHI) — gone |
+| `GeneticTrait` | model/table | held `descriptionEncrypted`/`recommendationsEncrypted` — gone |
+| `provider_patients.can_view_dna` | column | dropped |
+| `ProcessingStatus` | enum | dropped |
+| `RiskLevel` | enum | dropped |
+| `rls_dna_*` policies | RLS policies | dropped implicitly with the tables |
 
-**Q8.** PHI wrap key holder + derivation site — *`UserEncryptionKey`
-(`schema.prisma:91`) stores the per-user salt (wrapped with the master key).
-The salt is read/created in `getUserEncryptionSalt`
-(`backend/src/services/userEncryption.ts:L29-L72`) and fed into PBKDF2-SHA512
-at `backend/src/services/encryption.ts:L193-L201` (`PBKDF2_ITERATIONS = 600000`;
-legacy fallback `100000`).*
+**Staleness flag:** `CLAUDE.md` (this repo) still describes the DNA/genetics models as "deprecated" / present and lists "DNA" under provider permissions and PHI. That is **stale** — the models, column, enums, and RLS policies no longer exist anywhere in `backend/`. The `has_provider_access` `view_dna` branch was also removed (`20260529_fix_has_provider_access`). See [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md).
 
-**Q9.** Migration count + most recent — *16 migration directories (see
-[Migration timeline](#migration-timeline)). Most recent:
-`20260420_encrypt_health_goal_target` (2026-04-20) adds
-`health_goals.target_value_encrypted`.*
+---
 
-**Q10.** `userId = null` callers — *admin listings in
-`backend/src/routes/adminRoutes.ts` (~12 sites), auth/session bootstrap
-in `backend/src/services/authService.ts` (~8 sites), audit writers in
-`backend/src/services/auditLog.ts:215,453,483`, per-user salt lookups in
-`backend/src/services/userEncryption.ts:30,91,146`, RBAC preflights in
-`backend/src/middleware/rbac.ts:211,296`, schedulers in
-`backend/src/schedulers/emailScheduler.ts:64,129,182`, notification
-hydration in `backend/src/services/notificationService.ts:53`, account
-deletion cleanup in `backend/src/controllers/settingsController.ts:894`.
-Each passes `null` because the caller either has no user session, is
-explicitly admin, or is running infrastructure that spans multiple users.*
+## 13. Acceptance questions
 
-**Q11.** Deprecated-model drop plan — *DNAData, DNAVariant, GeneticTrait.
-Decision tracked in [`CLAUDE.md:38-41`](../CLAUDE.md); no drop migration
-exists. Marked TBD (external: product decision, schema owner).*
+Self-answered from this doc alone:
 
-**Q12.** `Biomarker.notesEncrypted` in `PHI_FIELDS`? — *Yes
-(`backend/src/services/encryption.ts:424`).*
+1. **How many models / what did `20260423` remove?** 18 models ([§1](#1-overview)); `20260423_drop_dna_genetics` removed `DNAData`, `DNAVariant`, `GeneticTrait`, the `can_view_dna` column, and `ProcessingStatus`/`RiskLevel` enums ([§12](#12-removed-models)).
+2. **Which field stores the encrypted biomarker value, what decrypts it?** `Biomarker.valueEncrypted` (`schema.prisma:147`); decrypted by the `EncryptionService` at `biomarkerController.ts:67` ([§4 Biomarker](#biomarker), [§5](#5-encryption-matrix)).
+3. **`ProviderPatient → User` onDelete + GDPR meaning?** **Cascade** on both `patientId` and `providerId` (`schema.prisma:109-110`); deleting either user removes the relationship row ([§9](#9-cascade--deletion-behavior)).
+4. **Which tables have RLS, which function bypasses?** All 17 ([§6 table](#per-table-policy-summary)); `is_admin_session()` is the bypass.
+5. **`withRLSContext` vs `withRLSTransaction`?** Same impl; `withRLSTransaction` uses Prisma's default (shorter) transaction window and is for multi-statement atomic ops; `withRLSContext` has longer maxWait/timeout for reads/admin ([§7](#difference-acceptance-q5)).
+6. **One RLS policy verbatim?** `biomarkers_select` ([§6](#per-table-policy-summary)).
+7. **Index for biomarker dashboard list?** `biomarkers_user_category_date_idx` `(user_id, category, measurement_date DESC)` ([§8](#8-index-catalog)).
+8. **Which model holds the wrap key, where derived?** `UserEncryptionKey` (`encrypted_key` = master-key-wrapped per-user salt); derived/created in `userEncryption.getUserEncryptionSalt` (`userEncryption.ts:29-72`), key derivation at `encryption.ts:192-200` ([§4 UserEncryptionKey](#userencryptionkey)).
+9. **How many migrations / most recent?** 22; `20260601_add_email_change` ([§10](#10-migration-timeline)).
+10. **Who passes `null` and why?** Admin routes, audit logging, auth pre-session lookups, per-user salt infra, schedulers, provider/patient resolution, RBAC, notifications ([§7](#who-passes-null-acceptance-q10-and-why)).
+11. **Which models dropped + which migration?** DNA/genetics, in `20260423_drop_dna_genetics` ([§12](#12-removed-models)).
+12. **Is `Biomarker.notesEncrypted` in `PHI_FIELDS`?** Yes (`encryption.ts:423`) ([§5](#5-encryption-matrix)).
+13. **Cascade on User delete — full child list?** See [§9](#9-cascade--deletion-behavior) final paragraph (all user-scoped tables except AuditLog).
+14. **Where is AuditLog retention enforced?** `audit_logs` table; `AuditLogService.cleanupOldLogs` (`auditLog.ts:531-559`), `RETENTION_DAYS=2555` (`auditLog.ts:10`); scheduler `startAuditCleanup` (`auditLog.ts:582-613`) ([§4 AuditLog](#auditlog)).
+15. **SQL constraint preventing cross-user reads even if app is compromised?** Per-table RLS `USING (user_id = current_user_id() OR …)` policies ([§6](#6-rls-policy-catalog)).
+16. **Which two LabConnection cols are encrypted + why PHI?** `accessTokenEncrypted`, `refreshTokenEncrypted` (`schema.prisma:700-701`); a stolen OAuth token reaches live PHI at the lab ([§4 LabConnection](#labconnection)).
+17. **Which model has no User FK + purpose?** `SystemConfig` — global admin-only key/value config ([§2](#2-er-diagram-mermaid), [§4](#systemconfig)).
+18. **`InsuranceBenefit` ↔ `InsurancePlan` + onDelete?** Belongs to plan via `planId`, `onDelete: Cascade` (`schema.prisma:377`) ([§4 InsuranceBenefit](#insurancebenefit), [§9](#9-cascade--deletion-behavior)).
+19. **Two helpers besides `is_admin_session()` + what `has_provider_access` gates?** `current_user_id()` and `has_provider_access()`; the latter gates a provider session's access to a consented patient's data by capability flag (`view_biomarkers`/`view_insurance`/`view_health_needs`/`edit`) ([§6](#helper-functions-final-bodies)).
 
-**Q13.** User-deletion cascade — *Session, UserEncryptionKey,
-ProviderPatient (both sides), UserFile, Biomarker → BiomarkerHistory,
-InsurancePlan → InsuranceBenefit → ExpenseProjection → ExpenseActual +
-CostAnalysis (both paths), DNAData → DNAVariant + GeneticTrait,
-HealthNeed, HealthGoal → GoalProgressHistory, LabConnection. AuditLog
-does NOT cascade (`schema.prisma:527`) — required for HIPAA retention.
-See [Cascade behavior](#cascade-behavior).*
+---
 
-**Q14.** AuditLog retention enforcement — *Table: `audit_logs` (PK on
-`id`); retention constant `RETENTION_DAYS = 2555` (~7 years) at
-`backend/src/services/auditLog.ts:9`; deletion logic in
-`AuditLogService.cleanupOldLogs` at `auditLog.ts:L475-L503`; scheduler in
-`startAuditCleanup` at `auditLog.ts:L526-L546` (runs every 24 h via
-`setInterval`). `audit_logs_delete` policy requires `is_admin_session()`
-(`20260107_add_rls_policies/migration.sql:L528-L530`) — the cleanup call
-wraps with `{ isAdmin: true }`.*
+## 14. Reproducibility
 
-**Q15.** SQL-level isolation guarantee — *Every user-scoped table has RLS
-enabled and a `USING` clause that compares `user_id` to
-`current_user_id()` (from `app.current_user_id` session variable) unless
-`is_admin_session()` is true. See for example `biomarkers_select`
-([biomarkers RLS](#biomarkers-rls)). If the app layer is compromised,
-an attacker still cannot read another tenant's rows without also being
-able to set `app.current_user_id` or `app.is_admin` on their own
-transaction, which requires a database login the app uses — so compromise
-equal to "app-level code exec". **However**: the runtime role currently
-has `BYPASSRLS=true` in both dev and prod
-(`backend/src/services/database.ts:L219-L270` warning path, plus the
-user-memory critical finding); until the `omh_app NOBYPASSRLS` cutover
-lands and `RLS_ENFORCEMENT=strict` is flipped, the SQL-level guarantee is
-dormant and isolation relies on application `where: { userId }` filters.*
+```bash
+# List migration directories (expect 22)
+ls backend/prisma/migrations/*/migration.sql | wc -l
+
+# Confirm every *Encrypted schema column is in PHI_FIELDS (expect no diff)
+#  - schema columns:
+#    Grep pattern "Encrypted" path backend/prisma/schema.prisma
+#  - PHI_FIELDS keys:
+#    Read backend/src/services/encryption.ts:410-486
+
+# Verify the BYPASSRLS guard runs at boot
+#    Read backend/src/services/database.ts:218-261
+
+# Inspect a live RLS session variable from psql (DATABASE_URL must be set)
+#    SELECT set_config('app.current_user_id','<uuid>', true);
+#    SELECT current_user_id();           -- returns the uuid
+#    SELECT is_admin_session();          -- false
+```
+
+`DATABASE_URL` (Prisma adapter pool, SSL via env), `DATABASE_POOL_SIZE` (default 10, `database.ts:110`), `PHI_ENCRYPTION_KEY` (64 hex), and `AUDIT_LOG_SALT` are documented in [`ENV_VARS.md`](./ENV_VARS.md). The local-dev `DATABASE_URL` template is `backend/.env.example:30`.
 
 ---
 
 ## Related Documents
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — where the database sits in the
-  overall system; request lifecycle ending in Prisma.
-- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts and
-  which models each touches.
-- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — field-level PHI reference
-  (encryption, audit, write/read sites).
-- [ENV_VARS.md](./ENV_VARS.md) — `DATABASE_URL`, `PHI_ENCRYPTION_KEY`,
-  `AUDIT_LOG_SALT`, `DATABASE_POOL_SIZE`, `RLS_ENFORCEMENT`.
-- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — per-route middleware and RLS
-  wrapper.
-- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — §164.312 technical
-  safeguards pointing into this doc.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — where the database sits in the system; middleware and RLS at the request boundary.
+- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts; which endpoints touch which models.
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — richer field-level PHI reference (encryption × read/write sites × audit coverage).
+- [ENV_VARS.md](./ENV_VARS.md) — `DATABASE_URL`, `DATABASE_POOL_SIZE`, SSL config, `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`.
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — per-route RLS wrapper usage and middleware chains.
+- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — §164.312 technical safeguards that point here (encryption, audit, access control).
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — stale CLAUDE.md DNA references; index duplication.
 
 ---
 
 ## Prompt drift log
 
-- Prompt `33-data-model-doc.md:54` estimates *"~21 models"*; actual count
-  is 21 total (18 active + 3 deprecated). Close enough — no action
-  needed.
-- Prompt `33-data-model-doc.md:70` example ER diagram references
-  `InsuranceBenefit` belonging to `User` directly; actual relation is
-  `InsurancePlan → InsuranceBenefit` only (`schema.prisma:376`). Diagram
-  above reflects reality.
-- `CLAUDE.md:182` says "Database models (15+)"; actual is 21. Minor —
-  no action.
-- `CLAUDE.md:128` lists PHI categories including "AI Responses: guidance
-  content, analysis results" — in the current schema this maps only to
-  `CostAnalysis.{claudeResponse, totalProjectedOopEncrypted,
-  projectedExpensesSnapshotEncrypted}`. No `AIResponse` / `Guidance`
-  table exists.
-- Prompt asks for `scripts/check-rls-wrappers.sh`; actual path referenced
-  in code is the same (`backend/scripts/check-rls-wrappers.sh`) but the
-  comment at `database.ts:L26-L27` points to its CI guard role — not
-  verified on disk here.
+- **Enum count**: `./33-data-model-doc.md` §11 lists 12 enum names in prose ("13: …") but the parenthetical enumerates 13 names. The schema has **13** enums (`UserRole` … `AuditAction`, `schema.prisma:501-608`). Doc uses 13. No action beyond confirming the count.
+- **RLS-enabled table count**: spec §1 asks for "RLS-enabled model count" without a number. Actual is **17** tables: 16 in `20260107_add_rls_policies/migration.sql:68-83` (three of which — `dna_data`/`dna_variants`/`genetic_traits` — were later dropped, netting 13 of those original 16 still present) plus `user_files` (`20260108000000`), `lab_connections` (`20260418`), and the three expense tables (`20260111`). Counting currently-present RLS tables: `users, sessions, user_encryption_keys, biomarkers, biomarker_history, insurance_plans, insurance_benefits, health_needs, health_goals, goal_progress_history, provider_patients, audit_logs, system_config, user_files, lab_connections, expense_projections, expense_actuals, cost_analyses` = **18 tables** (every model). Documented as 17+ in §6; the precise current set is the 18-row table in §6.
+- **`check-rls-wrappers.sh` location**: spec "Files to review" cites `backend/scripts/check-rls-wrappers.sh`; the file actually lives at repo-root `scripts/check-rls-wrappers.sh` (Glob). `database.ts:26` refers to it as `scripts/check-rls-wrappers.sh`. Drift: prompt path prefix is wrong.
+- **Index duplication in schema**: several compound indexes are declared twice in `schema.prisma` (a named `map:` variant and an anonymous duplicate), e.g. biomarker `schema.prisma:171-172`, insurance `:356-357`, goals `:439-440`. Only the named DDL was applied by `20260103_add_compound_indexes`. Likely a Prisma `db pull` artifact; harmless but worth a schema cleanup. Not mentioned in the prompt.
+- **`CLAUDE.md` staleness** (also called out by the spec): `CLAUDE.md` still lists DNA/genetics as deprecated/in-schema and lists "DNA" under provider permissions/PHI, and says "Database models (15+)". Actual is 18 models, DNA fully removed. Confirmed stale per §12.

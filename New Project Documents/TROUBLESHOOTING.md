@@ -1,358 +1,328 @@
 # TROUBLESHOOTING.md
 
-_Generated 2026-04-24 — symptom-first catalog. Start here when you know what you observed but not where to look. Cross-link to [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) when you know the error `code`._
+> Symptom-first catalog for OwnMyHealth. You observed behavior X in the browser, the network tab, or the Cloud Run logs — this doc routes you to the file, the log filter, and the fix in under a minute.
+> Verified against the codebase on **2026-06-01**. Every non-trivial claim cites `file:path:line`.
 
----
+## How to use this doc
 
-## 1. How to use this doc
+Find your symptom in the [Symptom index](#symptom-index), jump to its section, and read **Symptom → Root cause → Workaround → Fix → Files**. If you already know the **error `code`** (`FORBIDDEN`, `SERVICE_UNAVAILABLE`, etc.), use [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) instead — that doc is the error-code-first lens; this one is the observed-behavior lens. For incident *playbooks* (rollback, key rotation, env flips) go to [`RUNBOOK.md`](./RUNBOOK.md). For currently-open bugs see [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md).
 
-Pick the symptom that matches what the user (or you) observed — network tab, UI behavior, deploy output, log line. Each entry gives:
-
-- **Symptom** — the observable signal.
-- **Root cause** — what actually produces that signal, with `file:line` citations.
-- **Workaround** — unblock the user immediately.
-- **Fix** — the durable change, with commit SHA when known.
-- **Files** — code to look at.
-- **Cross-link** — the matching error code in [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) when one exists.
-
-This doc is the **symptom lens**. [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) is the **code-catalog lens** — every `code` value the backend emits, its throw sites, and recovery actions. Pair them: use this doc to get from "user said X" to a code; use `ERROR_RECOVERY.md` to go from a code to the canonical recovery.
-
-| I know… | Start here |
+| This doc (`TROUBLESHOOTING.md`) | [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) |
 |---|---|
-| The user-visible behavior ("login loops", "upload 500") | **This doc** |
-| The HTTP `code` value (`TOKEN_EXPIRED`, `PLAN_LIMIT_EXCEEDED`) | [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) |
-| The operational playbook ("rotate JWT secret", "flip BAA flag") | [`RUNBOOK.md`](./RUNBOOK.md) |
-| Currently-open bugs | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) |
+| Organized by **observed behavior** ("data disappears after refresh") | Organized by **error `code`** (`NOT_FOUND` → recovery) |
+| Decision trees, log filters, curls | Per-code envelope, status conventions, master code table |
 
 ---
 
-## 2. Symptom index
+## Symptom index
 
-| # | Symptom | Section | Cross-link |
-|---|---|---|---|
-| S-1 | Login screen loops / stuck on login | [§4 Auth — Login loops](#s-1-login-screen-loops--stuck-on-login) | [`ERROR_RECOVERY.md#unauthorized-http-401`](./ERROR_RECOVERY.md) |
-| S-2 | Data disappears after page refresh | [§4 Auth — Refresh wipe](#s-2-data-disappears-after-page-refresh) | [`ERROR_RECOVERY.md#unauthorized-http-401`](./ERROR_RECOVERY.md) |
-| S-3 | Cross-domain cookies not set (prod) | [§4 Auth — Cookie domain](#s-3-cookies-never-arrive-in-prod-cross-subdomain-deploy) | — |
-| S-4 | `INVALID_CREDENTIALS` with correct password | [§4 Auth — Password OK but 401](#s-4-password-is-correct-but-login-returns-401-invalid_credentials) | [`ERROR_RECOVERY.md#invalid_credentials-http-401`](./ERROR_RECOVERY.md) |
-| S-5 | Session expires at random (idle logout) | [§4 Auth — Idle timeout](#s-5-session-expires-unexpectedly-idle-watchdog) | — |
-| S-6 | `FORBIDDEN` / CSRF on mutations | [§5 CSRF](#s-6-all-post-put-patch-delete-return-403-forbidden) | [`ERROR_RECOVERY.md#forbidden-from-csrf-http-403`](./ERROR_RECOVERY.md) |
-| S-7 | CSRF passes in dev, fails in prod | [§5 CSRF — Cookie scope](#s-7-csrf-passes-in-dev-fails-in-prod) | — |
-| S-8 | File upload / AI guidance 403 CSRF | [§5 CSRF — Exempt routes](#s-8-file-upload-or-ai-guidance-returns-403-forbidden-csrf-token-missing) | — |
-| S-9 | Pool exhaustion ("all connections busy") | [§6 Database — Pool exhaust](#s-9-queries-hang-then-fail-with-connection-timeout-or-all-connections-busy) | [`ERROR_RECOVERY.md#database_error-http-500`](./ERROR_RECOVERY.md) |
-| S-10 | Migration fails with `CONCURRENTLY` | [§6 Database — Migration](#s-10-prisma-migrate-deploy-fails-on-create-index-concurrently) | — |
-| S-11 | Query returns fewer rows than expected (RLS mystery) | [§6 Database — RLS mystery](#s-11-query-returns-fewer-rows-than-expected-rls-mystery) | [`ERROR_RECOVERY.md#not_found-as-rls-denial`](./ERROR_RECOVERY.md) |
-| S-12 | Query silently returns ALL users' rows | [§6 Database — RLS bypass](#s-12-query-silently-returns-all-users-rows-rls-bypass) | — |
-| S-13 | Cloud Run env update applied but behavior unchanged | [§7 Deployment — Pinned traffic](#s-13-gcloud-run-services-update---update-env-vars-applied-but-prod-behavior-unchanged) | — |
-| S-14 | GitHub Actions deploy workflow fails | [§7 Deployment — Workflow](#s-14-github-actions-deploy-workflow-fails) | — |
-| S-15 | Docker build fails on Prisma generate | [§7 Deployment — Docker](#s-15-docker-build-fails-during-prisma-generate) | — |
-| S-16 | Frontend blank page after deploy | [§8 Frontend — Blank page](#s-16-frontend-loads-blank-page-no-errors-visible) | — |
-| S-17 | Charts throw `forwardRef` error | [§8 Frontend — forwardRef](#s-17-dashboard-charts-crash-cannot-read-properties-of-undefined-reading-forwardref) | — |
-| S-18 | CORS error in browser console | [§8 Frontend — CORS](#s-18-browser-console-blocked-by-cors-policy) | — |
-| S-19 | `crypto.randomUUID is not a function` | [§8 Frontend — HTTP context](#s-19-crypto-randomuuid-is-not-a-function-on-older-browsers--http-contexts) | — |
-| S-20 | Vite/SWC fails on Windows ARM64 (dev) | [§8 Frontend — SWC ARM64](#s-20-vite-dev-server-fails-on-windows-arm64--node-24) | — |
-| S-21 | API returns 500 with generic message | [§9 API 500](#s-21-api-returns-500-with-generic-message) | [`ERROR_RECOVERY.md#internal_error-http-500`](./ERROR_RECOVERY.md) |
-| S-22 | Server fails to start (FATAL in logs) | [§9 API — Startup](#s-22-server-fails-to-start--fatal-log-lines-before-first-request) | — |
-| S-23 | Upload returns 500 / extraction empty | [§10 PDF/OCR/Claude](#s-23-lab-upload-returns-500-or-completes-but-no-biomarkers-extracted) | [`ERROR_RECOVERY.md#validation_error-http-422`](./ERROR_RECOVERY.md) |
-| S-24 | AI endpoints return 503 | [§10 PDF/OCR/Claude — BAA gate](#s-24-ai-endpoints-return-503-service_unavailable) | [`ERROR_RECOVERY.md#service_unavailable-http-503--baa-gate`](./ERROR_RECOVERY.md) |
-| S-25 | Claude API returns 400 max_tokens | [§10 PDF/OCR/Claude — max_tokens](#s-25-claude-api-returns-400-invalid_request_error-max_tokens) | — |
-| S-26 | SBC/lab PDF.js breaks on insurance page | [§10 PDF/OCR/Claude — PDF.js](#s-26-insurance-sbc-upload-breaks-with-pdf-js-worker-error) | — |
+| # | Symptom | Section |
+|---|---|---|
+| 1 | Stuck on login / 401 loop | [Auth symptoms](#auth-symptoms) → [Stuck on login / 401 loop](#stuck-on-login--401-loop) |
+| 2 | Data disappears after page refresh | [Auth symptoms](#auth-symptoms) → [Data disappears after page refresh](#data-disappears-after-page-refresh) |
+| 3 | Logged out after ~15 min of activity | [Auth symptoms](#auth-symptoms) → [Logged out after 15 minutes idle](#logged-out-after-15-minutes-idle) |
+| 4 | Login page fetch storm / repeated 429s | [Auth symptoms](#auth-symptoms) → [Login page fetch storm](#login-page-fetch-storm) |
+| 5 | Mutation rejected: "CSRF token missing" / "Invalid CSRF token" | [CSRF symptoms](#csrf-symptoms) |
+| 6 | Query returns fewer rows than expected / 404 on a row you own | [Database symptoms](#database-symptoms) → [RLS mystery](#rls-mystery-fewer-rows-than-expected) |
+| 7 | "all connections busy" / pool exhaustion | [Database symptoms](#database-symptoms) → [Connection pool exhaustion](#connection-pool-exhaustion) |
+| 8 | Server refuses to boot (FATAL) | [Database symptoms](#database-symptoms) → [Server refuses to start](#server-refuses-to-start-fatal-boot) |
+| 9 | Env-var change has no effect after deploy | [Deployment symptoms](#deployment-symptoms) → [Env-var change has no effect](#env-var-change-has-no-effect-cloud-run-pinning) |
+| 10 | CI deploy fails at smoke-test | [Deployment symptoms](#deployment-symptoms) → [Deploy fails at smoke-test](#deploy-fails-at-smoke-test) |
+| 11 | Blank page after deploy / "A new version is available" | [Frontend symptoms](#frontend-symptoms) → [Blank page or stale-chunk crash](#blank-page-or-stale-chunk-crash) |
+| 12 | CORS rejected / browser request blocked | [Frontend symptoms](#frontend-symptoms) → [CORS rejected origin](#cors-rejected-origin) |
+| 13 | Cookies not set / auth fails cross-domain | [Frontend symptoms](#frontend-symptoms) → [Cookies not set (SameSite / domain)](#cookies-not-set-samesite--domain) |
+| 14 | Upload returns 500 / "could not extract biomarkers" | [PDF / OCR / extraction symptoms](#pdf--ocr--claude-extraction-symptoms) |
+| 15 | Upload rejected: "File too large" / "does not match its declared type" | [PDF / OCR / extraction symptoms](#pdf--ocr--claude-extraction-symptoms) → [Upload rejected before extraction](#upload-rejected-before-extraction) |
+| 16 | "AI features are temporarily unavailable" (503) | [AI chat / spend-cap symptoms](#ai-chat--spend-cap-symptoms) |
+| 17 | "Too many AI requests" (429) | [AI chat / spend-cap symptoms](#ai-chat--spend-cap-symptoms) → [429 vs 503 on AI routes](#429-vs-503-on-ai-routes) |
+| 18 | Quest lab connect bounces with `?error=` | [Quest FHIR / lab-sync symptoms](#quest-fhir--lab-sync-symptoms) |
+| 19 | Lab sync fails (`syncStatus: error`) | [Quest FHIR / lab-sync symptoms](#quest-fhir--lab-sync-symptoms) → [Sync fails / SSRF rejection / expired token](#sync-fails--ssrf-rejection--expired-token) |
+| 20 | Onboarding wizard stuck | [Onboarding / plan-gating symptoms](#onboarding--plan-gating-symptoms) |
+| 21 | Feature blocked: "not available on your current plan" | [Onboarding / plan-gating symptoms](#onboarding--plan-gating-symptoms) → [Plan-gating blocks a feature](#plan-gating-blocks-a-feature-unexpectedly) |
+| 22 | PHI suspected in logs | [API / 500 symptoms](#api--500-symptoms) → [PHI leaking into logs](#phi-leaking-into-logs) |
+| 23 | Opaque 500 / `INTERNAL_ERROR` | [API / 500 symptoms](#api--500-symptoms) |
+| — | Quick diagnostic commands | [Quick diagnostic commands](#quick-diagnostic-commands) |
 
 ---
 
-## 3. Decision trees
+## Decision trees
 
-### 3.1 "I'm stuck on login" / 401 loop
-
-```
-User reports "stuck on login" or "keeps bouncing me back to login"
-          │
-          ▼
-Open DevTools → Network tab. Reproduce. What does POST /auth/login return?
-   ├── 429 AUTH/LOGIN_RATE_LIMIT_EXCEEDED
-   │     └─▶ Wait 15 min OR reset keyed email+IP. See §4 S-1.
-   ├── 401 INVALID_CREDENTIALS
-   │     ├─▶ remainingAttempts > 0 → wrong password. S-4.
-   │     └─▶ 423 ACCOUNT_LOCKED next → user hit lockout. See ERROR_RECOVERY.md §5.
-   ├── 403 EMAIL_NOT_VERIFIED
-   │     └─▶ POST /auth/resend-verification, click email link.
-   ├── 200 but user bounces back to /login within seconds
-   │     └─▶ S-2 "Data disappears after refresh" — AuthContext ordering
-   │         (commit 195ccc1). Check: does the network tab show
-   │         /auth/me returning 401 BEFORE /auth/refresh fires?
-   ├── 403 FORBIDDEN on first mutation after login
-   │     └─▶ S-6 CSRF cookie/header mismatch. Hit /csrf-token.
-   └── Network error / pending forever
-         └─▶ S-18 CORS or S-3 cross-domain cookie issue.
-              Check Response headers for Access-Control-Allow-Origin
-              and Set-Cookie domain attributes.
-```
-
-### 3.2 "Data disappears on refresh"
+### Stuck-on-login decision tree
 
 ```
-User logs in, sees dashboard with biomarkers, refreshes page, dashboard is empty
-          │
-          ▼
-Network tab on refresh. Order of auth calls?
-   ├── /auth/me BEFORE /auth/refresh → BUG: AuthContext ordering.
-   │     Fix: commit 195ccc1 — refreshToken() must run before getCurrentUser().
-   │     Confirm src/contexts/AuthContext.tsx:L96-L119 order still holds.
-   ├── /auth/refresh fires, returns 401
-   │     └─▶ Refresh token expired OR JWT_REFRESH_SECRET rotated.
-   │         Playbook: RUNBOOK.md "JWT secret rotated".
-   ├── /auth/refresh returns 200, /auth/me returns 200, but UI still empty
-   │     └─▶ Frontend store bug — data fetch didn't re-fire on user change.
-   │         Not an auth problem; inspect TanStack Query/SWR keys.
-   └── /auth/refresh 200, /auth/me 200, data endpoint returns []
-         └─▶ S-11 RLS mystery — wrong `app.current_user_id` context.
+User reports "I can't get past the login screen"
+        │
+        ▼
+  Network tab shows 401 on /auth/me (getCurrentUser) ?
+     ├── yes ──▶ Did /auth/refresh run FIRST and succeed (200)?
+     │                 ├── no  ──▶ refresh failed/absent → see "Stuck on login / 401 loop"
+     │                 │             ├─ 401 on /auth/refresh → refresh token invalid/expired OR
+     │                 │             │   JWT secret rotated → re-login (RUNBOOK.md key-rotation)
+     │                 │             └─ 429 on /auth/refresh → rate-limited → hard-logout is by design
+     │                 └── yes ──▶ /auth/me still 401 after refresh → AuthContext ordering / token not in cookie
+     └── no  ──▶ UI redirect loop, dashboard renders empty → see "Data disappears after page refresh"
 ```
 
-### 3.3 "Upload returns 500 / extraction empty"
+### Data-disappears-on-refresh decision tree
 
 ```
-User uploads lab report or SBC, gets 500 or 200-with-0-biomarkers
-          │
-          ▼
-What does /upload/* return?
-   ├── 500 with "An unexpected error occurred..."
-   │     ├─▶ Cloud Run logs: search for "claudeExtraction" or "ocrService".
-   │     ├─▶ Common: ANTHROPIC_API_KEY missing → service fails to init.
-   │     │    Fix: commit e7ae477 (graceful) + 769685c (dynamic import).
-   │     └─▶ Common: max_tokens over limit. Fix: commit e029127.
-   ├── 422 VALIDATION_ERROR
-   │     ├─▶ Magic bytes don't match MIME → controllers/upload/shared.ts:89
-   │     ├─▶ File too large → controllers/upload/shared.ts:113
-   │     └─▶ "Could not extract any biomarkers from the PDF..."
-   │          → PDF is scanned (no text layer). Retry via OCR endpoint.
-   ├── 200 with success: true, data.biomarkers: []
-   │     ├─▶ Scanned PDF → should have gone to /upload/lab-results-ocr
-   │     ├─▶ Quest format whitespace variation. Fix: commits a59c547, e79e1e2.
-   │     └─▶ Multi-line table. Fix: commits f62796f, 2cbf6e4, 56fd294.
-   └── 504 with {error: '...'}
-         └─▶ Claude read timeout. S-24 if also ANTHROPIC_BAA_ACTIVE issue,
-              else retry / wait — upstream hiccup.
+After F5, dashboard is empty and user looks logged out
+        │
+        ▼
+  Network shows /auth/refresh BEFORE /auth/me ?
+     ├── no  ──▶ ordering regression — refresh MUST precede getCurrentUser
+     │            (AuthContext.tsx:104-119). This was the original bug.
+     └── yes ──▶ /auth/refresh 200 but /auth/me 401 ?
+                    ├── yes ──▶ access-token cookie not written (SameSite/domain) →
+                    │            see "Cookies not set (SameSite / domain)"
+                    └── no  ──▶ both 200, list empty ──▶ RLS context lost →
+                                 see "RLS mystery (fewer rows than expected)"
 ```
 
-### 3.4 "RLS mystery — query returns fewer rows than expected"
+### Upload-500 / empty-extraction decision tree
 
 ```
-Query through withRLSContext returns 0 (or fewer) rows, but you KNOW the row exists
-          │
-          ▼
-Is the failing call inside `withRLSContext(userId, async (tx) => ...)`?
-   ├── No — it uses module-level `prisma.*` → rows may be visible, but
-   │         other queries in the same handler silently leak.
-   │         This is S-12, the bypass — different failure mode. Investigate.
-   ├── Yes, but the callback uses `prisma.biomarker.findMany()` not `tx.biomarker.findMany()`
-   │         → Classic footgun per database.ts:L15-L31.
-   │         Fix: change `prisma.*` to `tx.*` inside every RLS callback.
-   │         CI guard: scripts/check-rls-wrappers.sh (see database.ts:L26).
-   └── Yes, uses `tx.*` correctly, still returns nothing
-         ├─▶ Is userId actually what you expect? Log `req.user.id`.
-         ├─▶ Is the row's user_id actually that value? Query with
-         │    withRLSContext(null, ...) (admin context) and compare user_id.
-         │    See ERROR_RECOVERY.md §5 "NOT_FOUND as RLS denial".
-         └─▶ Did a session cleanup (authService scheduler) just run?
-              Revoked sessions don't affect RLS directly, but a stale
-              client-side userId would.
+POST /upload/lab-report or /upload/lab-results-ocr fails
+        │
+        ▼
+  HTTP status?
+   ├── 413 FILE_TOO_LARGE ──▶ >10MB. Reduce file. (errorHandler.ts:171)
+   ├── 422 VALIDATION_ERROR ──▶ wrong type / magic-byte mismatch / 0 biomarkers
+   │        ├─ "does not match its declared type" → magic bytes (shared.ts:90)
+   │        ├─ "Only PDF files are accepted"      → wrong mimetype (shared.ts:133)
+   │        └─ "Could not extract any biomarkers" → extraction ran, found 0
+   │                                                 (labUploadController.ts:61,221)
+   ├── 503 SERVICE_UNAVAILABLE ──▶ BAA gate (ANTHROPIC_BAA_ACTIVE / GOOGLE_BAA_ACTIVE)
+   └── 500 INTERNAL_ERROR ──▶ Claude/Document-AI threw. Check ANTHROPIC_API_KEY,
+                               GCP_PROCESSOR_ID, provider status (ocrService / claudeExtraction)
+```
+
+### RLS-mystery decision tree
+
+```
+A query returns 0 rows (or a 404) for data that exists in the DB
+        │
+        ▼
+  Is the query inside withRLSContext / withRLSTransaction ?
+     ├── no  ──▶ a bare prisma.* call sees RLS-as-NULL → no rows.
+     │            Wrap it (database.ts:14-31 footgun banner).
+     └── yes ──▶ Does the callback use `tx.*` (NOT module-level `prisma.*`) ?
+                    ├── no  ──▶ prisma.* inside the callback runs on a DIFFERENT
+                    │            pooled connection without SET LOCAL → bypass/empties
+                    │            (database.ts:368-377, 439-442)
+                    └── yes ──▶ Is the row owned by a DIFFERENT user ?
+                                 ├── yes ──▶ RLS correctly hides it → 404 by design
+                                 │            (fhirController.ts:152-159)
+                                 └── no  ──▶ DB role has BYPASSRLS off but policy gap;
+                                              confirm with the psql check below
 ```
 
 ---
 
-## 4. Auth symptoms
+## Auth symptoms
 
-### S-1. Login screen loops / stuck on login
+### Stuck on login / 401 loop
 
-**Symptom**: user submits correct credentials; page flashes dashboard for a frame, then bounces back to `/login`. Or network shows `/auth/login` returning 200 followed immediately by `/auth/me` returning 401 and logout.
+**Symptom**: login appears to succeed (or the page reloads) but the user is bounced back to `/login`; the network tab shows a burst of `401`s, sometimes thousands.
 
-**Root cause**: one of:
-1. Pre-commit `195ccc1`: `AuthContext` called `getCurrentUser()` before `refreshToken()`. The 15-min access cookie was expired, `/auth/me` returned 401, the `onAuthFailureCallback` fired logout before the refresh completed.
-2. `client.ts:L204` did not exempt `/auth/refresh` and `/auth/logout` from the 401-retry path, so `refresh` returning 401 triggered another `attemptTokenRefresh()` recursively, flooding the server and preventing login from settling (documented in `client.ts:L198-L204`).
-
-**Workaround**: hard refresh twice. Second mount has the access cookie from the first refresh.
-
-**Fix**: commit `195ccc1` (2026-01-10 "Fix auth token restoration order on page refresh") and companion `0889ff6`. Frontend now awaits `refreshToken()` **before** `getCurrentUser()`. Also: `client.ts:L198-L204` explicitly flags `/auth/refresh` and `/auth/logout` as `isAuthMgmtEndpoint` so their 401s short-circuit rather than recurse.
-
-**Files**:
-- `src/contexts/AuthContext.tsx:L93-L128` (restore order — current impl).
-- `src/services/api/client.ts:L198-L250` (401 retry gate).
-
-**Cross-link**: [`ERROR_RECOVERY.md` §5 Auth family](./ERROR_RECOVERY.md).
-
----
-
-### S-2. Data disappears after page refresh
-
-**Symptom**: user is logged in, sees their dashboard with biomarkers, refreshes the page (F5). Dashboard re-renders empty. Network tab shows a 401 on `/auth/me`, followed by the UI routing to `/login` (or the data fetch simply returning `[]`).
-
-**Root cause**: same AuthContext ordering bug as S-1. Access token cookie has 15-minute TTL; the refresh cookie has 7-day TTL. If `getCurrentUser()` fires before `refreshToken()` and the 15-min access token has expired, the 401 triggers logout.
-
-**Workaround**: hard refresh twice. Alternatively, log out and log back in (forces a fresh access cookie).
-
-**Fix**: commit `195ccc1`. Current code at `src/contexts/AuthContext.tsx:L93-L128`:
-
-```tsx
-// Source: src/contexts/AuthContext.tsx:L93-L119
-useEffect(() => {
-  const checkAuth = async () => {
-    try {
-      // CRITICAL FIX: Call refreshToken FIRST to get a fresh access token.
-      try {
-        await authApi.refreshToken();
-        authLogger.debug('Access token refreshed from refresh token');
-      } catch {
-        authLogger.debug('Refresh token invalid, user not authenticated');
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-      // Now get current user with the fresh access token
-      const currentUser = await authApi.getCurrentUser();
-      setUser(currentUser);
-```
-
-**Files**: `src/contexts/AuthContext.tsx:L93-L128`.
-
-**Cross-link**: [`ERROR_RECOVERY.md` §7 Playbook A — User stuck with 401 loop](./ERROR_RECOVERY.md).
-
----
-
-### S-3. Cookies never arrive in prod (cross-subdomain deploy)
-
-**Symptom**: login works locally; in production the `access_token`, `refresh_token`, and `csrf_token` cookies never appear in DevTools → Application → Cookies. Every request after login is unauthenticated.
-
-**Root cause**: backend runs on `api.ownmyhealth.app`, frontend on `www.ownmyhealth.app`. Cookies set without an explicit `domain` attribute scope only to the exact host. Frontend on `www.` never sees cookies set by `api.`.
-
-**Workaround**: none — ship the fix.
-
-**Fix**: commits (2026-01-08):
-- `50d7426` "fix: add domain to all auth cookies for cross-domain support" — access, refresh cookies.
-- `8db4317` "fix: support cross-domain cookies for CSRF protection" — CSRF cookie.
-- `327b2f4` "fix: CORS configuration for cross-domain cookies" — `Access-Control-Allow-Credentials`, `Access-Control-Allow-Origin` with explicit origin (not `*`).
-- `ad2dff9` "fix: ensure CORS preflight requests are handled properly".
-
-**Files**:
-- Cookie domain: `backend/src/controllers/authController.ts` (set-cookie calls) — confirm `domain: '.ownmyhealth.app'` leading dot.
-- CORS: `backend/src/server.ts` / `backend/src/app.ts` CORS middleware registration.
-- CSRF cookie: `backend/src/middleware/csrf.ts:L43` documents `httpOnly: false` by design.
-
-**Cross-link**: [§5 CSRF symptoms](#5-csrf-symptoms), [`ARCHITECTURE.md`](./ARCHITECTURE.md).
-
----
-
-### S-4. Password is correct but login returns 401 `INVALID_CREDENTIALS`
-
-**Symptom**: user enters a password they just reset; gets 401 `INVALID_CREDENTIALS`.
-
-**Root cause**: one of:
-1. User pasted password with trailing whitespace (mobile keyboards).
-2. Password manager autofilled old value before reset applied (cache lag).
-3. Decryption layer bug — rare. `authController.ts:279` emits `INVALID_CREDENTIALS` whenever `attemptLogin` fails, for **any** reason other than lockout / unverified email.
-
-**Workaround**: trim whitespace; paste-then-type to force a fresh autofill; if persistent, request another password reset.
-
-**Fix**: not a code bug in normal cases. If persistent across users after a deploy, check:
-- `b9dc4e4` (2025-12-15) "add authTagLength to createDecipheriv calls for Node.js compatibility" — Node version bump can break AES-GCM decryption if authTagLength is missing. This breaks the decryption path used during login (per-user key derivation via PBKDF2-SHA512, then decrypt to compare password hash).
-
-**Files**: `backend/src/controllers/authController.ts:L270-L287`, `backend/src/services/authService.ts` (`attemptLogin`), `backend/src/services/userEncryption.ts`.
-
-**Cross-link**: [`ERROR_RECOVERY.md` §5 `INVALID_CREDENTIALS`](./ERROR_RECOVERY.md).
-
----
-
-### S-5. Session expires unexpectedly (idle watchdog)
-
-**Symptom**: user steps away for 15 minutes, returns to find they've been logged out with URL `/?sessionExpired=true`.
-
-**Root cause**: **by design**. HIPAA §164.312(a)(2)(iii) auto-logoff. `src/contexts/AuthContext.tsx:L40-L42` sets `INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000` with a warning dialog at 13 minutes. Activity events monitored: `mousedown`, `keydown`, `touchstart`, `scroll` (per `ACTIVITY_EVENTS` at L42). **Mouse-move is intentionally excluded** (`AuthContext.tsx:L205-L206`) so a wandering cursor on a secondary monitor cannot keep the session alive.
-
-**Workaround**: the "Stay signed in" button in the warning dialog resets both timers (`AuthContext.tsx:L189-L201`). User education: interact with the page during long reads.
-
-**Fix**: not a bug. If policy changes, edit `INACTIVITY_TIMEOUT_MS` / `INACTIVITY_WARNING_MS` at `AuthContext.tsx:L40-L41`.
-
-**Files**: `src/contexts/AuthContext.tsx:L40-L228`.
-
----
-
-## 5. CSRF symptoms
-
-### S-6. All POST / PUT / PATCH / DELETE return 403 `FORBIDDEN`
-
-**Symptom**: reads work (GETs succeed), but every mutation returns 403 with `code: FORBIDDEN` and message `"CSRF token missing"` or `"Invalid CSRF token"`.
-
-**Root cause**: one of three paths in `backend/src/middleware/csrf.ts:L155-L176`:
-1. `!cookieToken || !headerToken` → client never sent the `x-csrf-token` header, or the `csrf_token` cookie is absent.
-2. `cookieToken.length !== headerToken.length` → mismatch before `timingSafeEqual`.
-3. `timingSafeEqual` false → tokens differ.
-
-Frontend normally handles this automatically via `client.ts:L120-L134` (cookie regex) and `client.ts:L187-L195` (header attach on mutations). If the cookie regex is failing, the warning `"No CSRF token found in cookies"` appears in dev console.
-
-**Workaround**: hit `GET /api/v1/csrf-token` (`csrf.ts:L210-L219`) to set a fresh cookie, then retry.
-
-**Fix**:
-- Cookie regex tightening: commit `b721788` (2026-01-08) "fix: improve CSRF token cookie matching regex" — current regex `client.ts:L122` `/csrf[_-]?token=([^;]+)/i` tolerates `csrf_token` and `csrf-token` variants.
-- Cross-domain cookie scope: commit `8db4317` (see S-3).
-
-**Files**:
-- `backend/src/middleware/csrf.ts:L155-L176` (validation).
-- `backend/src/middleware/csrf.ts:L43` (cookie options — `httpOnly: false` so JS can read).
-- `src/services/api/client.ts:L120-L134` (frontend read).
-- `src/services/api/client.ts:L187-L195` (frontend attach).
-
-**Cross-link**: [`ERROR_RECOVERY.md` §5 CSRF family](./ERROR_RECOVERY.md).
-
----
-
-### S-7. CSRF passes in dev, fails in prod
-
-**Symptom**: POSTs work locally on `http://localhost:5173`; same build on `www.ownmyhealth.app` → 403 CSRF.
-
-**Root cause**: cookie `domain` attribute. In dev both frontend (5173) and backend (3001) share `localhost`; in prod they're on sibling subdomains (`www.` vs `api.`). A cookie set on `api.ownmyhealth.app` without `domain=.ownmyhealth.app` is never sent by the browser on `www.ownmyhealth.app` requests to `api.`.
-
-**Workaround**: none.
-
-**Fix**: commit `8db4317` (2026-01-08) "fix: support cross-domain cookies for CSRF protection" — CSRF cookie now gets `domain=.ownmyhealth.app` (with leading dot) in production. `50d7426` same day did the equivalent for access/refresh cookies.
-
-**Files**: `backend/src/middleware/csrf.ts` (cookie options, search for `setCsrfCookie`); `backend/src/controllers/authController.ts` (auth cookies).
-
----
-
-### S-8. File upload or AI guidance returns 403 `FORBIDDEN` "CSRF token missing"
-
-**Symptom**: `POST /upload/lab-report` or `GET /biomarkers/:id/guidance` fails with 403 even though the session is otherwise fine.
-
-**Root cause**: these routes are either intentionally exempt from CSRF (uploads — see `csrf.ts:L117-L122`) or were previously failing because the frontend helper didn't forward the `x-csrf-token` header. SSE / multipart have their own quirks.
-
-**Workaround**: ensure the route is using `uploadUtils.ts` (which attaches the header). For AI guidance SSE, use `requireBearerAuth` — CSRF is correctly bypassed for `/ai/chat` (`csrf.ts:L124-L132`).
-
-**Fix** (chronological):
-- `be803f3` (2026-01-07) "fix: add CSRF token to file upload requests".
-- `750357e` (2026-01-07) "fix: exempt file upload routes from CSRF validation" — belt-and-suspenders: exempt in middleware **and** send header via uploadUtils.
-- `adca319` (2026-01-07) "fix: skip CSRF validation for settings routes (Bearer token protected)".
-- `4d40b79` (2026-01-07) "fix: add CSRF token to DELETE requests in frontend API".
-- `b9203ef` (2026-01-08) "fix: exempt /biomarkers/:id/guidance from CSRF validation".
-- `7ad1272` (2026-01-08) "fix: include CSRF token in AI guidance API calls".
-
-**Files**:
-- `backend/src/middleware/csrf.ts:L95-L148` (exemption list — `publicAuthRoutes`, `uploadRoutes`, `bearerOnlyStreamingRoutes`).
-- Frontend upload helper (wherever `uploadUtils.ts` lives — see `FRONTEND_MAP.md` once generated).
-
----
-
-## 6. Database symptoms
-
-### S-9. Queries hang then fail with "connection timeout" or "all connections busy"
-
-**Symptom**: intermittent 500s under burst load; Cloud Run logs show `connection timeout` or Prisma errors mentioning the pool.
-
-**Root cause**: `pg` `Pool` was at `max: 5` and burst traffic exhausted it. Per comment at `backend/src/services/database.ts:L100-L107`: "Default falls back to 10 — the old `max: 5` was hitting 'all connections busy' under burst load."
-
-**Workaround**: restart Cloud Run revision (reset sockets); lower traffic.
-
-**Fix**: default pool size raised to 10; env-tunable via `DATABASE_POOL_SIZE`. Current code:
+**Root cause**: the fetch wrapper auto-retries a `401` exactly once through `/auth/refresh`. A real loop means either (a) a caller re-issues the request without the one-shot `isRetry` flag, or (b) the refresh token itself is terminally invalid (expired, revoked, or signed with a rotated `JWT_REFRESH_SECRET`). `/auth/refresh` and `/auth/logout` are deliberately exempt from the 401-retry path to break recursion — without that exemption the loop "produced 10,000+ 401s in dev".
 
 ```ts
-// Source: backend/src/services/database.ts:L108-L114
+// Source: src/services/api/client.ts:242-248
+const isAuthMgmtEndpoint = endpoint === '/auth/refresh' || endpoint === '/auth/logout';
+```
+
+```ts
+// Source: src/services/api/client.ts:303-311
+if (response.status === 401 && !isRetry && !isAuthMgmtEndpoint) {
+  const refreshed = await attemptTokenRefresh();
+  if (refreshed) {
+    return apiFetch<T>(endpoint, options, timeoutMs, true);
+  }
+  if (onAuthFailureCallback) {
+    onAuthFailureCallback();
+  }
+}
+```
+
+**Workaround**: log out fully (clears the in-memory token and cookies via `logout()` → `clearAuthToken()`, `AuthContext.tsx:179-187`) and log back in.
+
+**Fix / triage order**:
+1. Confirm one-shot: a true loop implies a caller bypassing `isRetry`. The guard is `!isRetry` (`client.ts:303`); the recursive retry passes `isRetry = true` (`client.ts:306`).
+2. **JWT secret rotation**: if a deploy changed `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (`backend/src/config/index.ts:61,65`), every existing session is invalid and `/auth/refresh` returns `401` → clean hard-logout. Expected; users just re-login. See [`RUNBOOK.md`](./RUNBOOK.md).
+3. **TTL misconfig**: `JWT_ACCESS_EXPIRES_SECONDS` (default 900) / `JWT_REFRESH_EXPIRES_SECONDS` (default 604800) at `config/index.ts:62,66`. A tiny refresh TTL causes constant re-login.
+
+**Files**: `src/services/api/client.ts:242-248,303-311`; `src/contexts/AuthContext.tsx:179-187`; `backend/src/config/index.ts:61-66`.
+
+**Cross-link**: [`ERROR_RECOVERY.md#unauthorized-http-401`](./ERROR_RECOVERY.md) (Playbook A — 401 loop).
+
+---
+
+### Data disappears after page refresh
+
+**Symptom**: the user sees biomarkers right after login, but after a hard refresh the dashboard is empty and the app renders as logged-out.
+
+**Root cause**: on mount, `AuthContext` must call `refreshToken()` **before** `getCurrentUser()`. The access-token cookie expires after 15 min but the refresh-token cookie lasts 7 days; calling `getCurrentUser()` first with an expired access token returns `401` and the app renders logged-out before the refresh completes. The fix enforces the ordering with an explicit comment block.
+
+```ts
+// Source: src/contexts/AuthContext.tsx:104-119
+try {
+  await authApi.refreshToken();
+  authLogger.debug('Access token refreshed from refresh token');
+} catch {
+  authLogger.debug('Refresh token invalid, user not authenticated');
+  setUser(null);
+  setIsLoading(false);
+  return;
+}
+// Now get current user with the fresh access token
+const currentUser = await authApi.getCurrentUser();
+setUser(currentUser);
+```
+
+**Workaround**: hard refresh again (an in-flight refresh completes before the 2nd mount).
+
+**Fix**: keep `await authApi.refreshToken()` ahead of `authApi.getCurrentUser()` in the mount effect (`AuthContext.tsx:105,119`). If both calls 200 but the list is still empty, the symptom is actually an [RLS mystery](#rls-mystery-fewer-rows-than-expected), not auth.
+
+**Files**: `src/contexts/AuthContext.tsx:93-131`.
+
+**Cross-link**: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (auth flow), [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (`UNAUTHORIZED`).
+
+---
+
+### Logged out after 15 minutes idle
+
+**Symptom**: a user complains they were signed out and redirected to `/?sessionExpired=true` while the tab was open but unattended; a 2-minute warning dialog appeared first.
+
+**Root cause**: this is **intended HIPAA §164.312(a)(2)(iii) auto-logoff**, not a bug. After 15 min with no `mousedown`/`keydown`/`touchstart`/`scroll`, the session ends. Mouse *move* is deliberately excluded so a wandering cursor on a second monitor cannot keep the session alive.
+
+```ts
+// Source: src/contexts/AuthContext.tsx:40-42
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const INACTIVITY_WARNING_MS = 13 * 60 * 1000; // 2 minutes before logout
+const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const;
+```
+
+**Workaround / fix**: click "Stay signed in" on the warning dialog (`resetIdleTimers`, `AuthContext.tsx:293`). There is no env var to extend the window — it is a hard-coded compliance control. Changing it means editing `INACTIVITY_TIMEOUT_MS`.
+
+**Files**: `src/contexts/AuthContext.tsx:40-42,192-204,210-231`.
+
+---
+
+### Login page fetch storm
+
+**Symptom**: the login page issues a flood of requests and the user gets `429`s before they can sign in.
+
+**Root cause**: historic bug (`862a300 fix(frontend): stop login-page fetch storm + add 429 backoff`, 2026-04-25). The current client backs off exponentially on `429` for non-auth-management routes (1 s, 2 s, 4 s ± 25 % jitter, up to 3 retries), preferring the `Retry-After` header.
+
+```ts
+// Source: src/services/api/client.ts:267-277
+if (
+  response.status === 429 &&
+  !isAuthMgmtEndpoint &&
+  !isRetry &&
+  retryCount429 < MAX_RETRY_429
+) {
+  const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
+  const delay = retryAfterMs ?? backoffDelayMs(retryCount429 + 1);
+  await sleep(delay);
+  return apiFetch<T>(endpoint, options, timeoutMs, isRetry, retryCount429 + 1);
+}
+```
+
+**Fix**: if a storm recurs, look for a caller that loops `apiFetch` without awaiting, or a `429` on an auth-management endpoint (those are exempt from backoff and hard-logout instead, by design — `client.ts:159-166`).
+
+**Files**: `src/services/api/client.ts:185-206,267-277`. Login rate limit is `strictAuthLimiter` keyed by `email:ip` (15 min) — see [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (`LOGIN_RATE_LIMIT_EXCEEDED`).
+
+---
+
+## CSRF symptoms
+
+### Mutation rejected with "CSRF token missing" / "Invalid CSRF token"
+
+**Symptom**: any `POST`/`PUT`/`PATCH`/`DELETE` returns `403 FORBIDDEN` with message "CSRF token missing" or "Invalid CSRF token".
+
+**Root cause**: this API uses a **double-submit cookie**. The server reads the `csrf_token` cookie and the `x-csrf-token` header, hashes both with SHA-256, and compares them in constant time. "Missing" means one side is absent; "Invalid" means they don't match (usually a stale cookie).
+
+```ts
+// Source: backend/src/middleware/csrf.ts:155-170
+if (!cookieToken || !headerToken) {
+  throw new ForbiddenError('CSRF token missing');
+}
+const cookieDigest = crypto.createHash('sha256').update(cookieToken).digest();
+const headerDigest = crypto.createHash('sha256').update(headerToken).digest();
+const tokensMatch = crypto.timingSafeEqual(cookieDigest, headerDigest);
+if (!tokensMatch) {
+  throw new ForbiddenError('Invalid CSRF token');
+}
+```
+
+**Workaround**: do a `GET` to any route first (this re-issues the cookie via `ensureCsrfToken`, `csrf.ts:66-76`), then resubmit.
+
+**Fix**: the frontend auto-attaches the header on every mutation by reading the cookie (`client.ts:228-238`, `getCsrfToken` at `client.ts:120-135`). If a custom call bypasses `apiFetch`, attach `x-csrf-token` yourself. **There is NO server-side CSRF secret** — do not look for a `CSRF_SECRET` env var.
+
+**CSRF-exempt routes** (these never throw a CSRF 403): the public auth routes (`/auth/login`, `/auth/register`, `/auth/demo`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`), `/marketplace/plans/search`, the bearer-only SSE `/ai/chat`, and `/internal/audit-cleanup` (`csrf.ts:98-139`). Upload routes are **no longer** exempt — the frontend pipes the token through `services/uploadUtils.ts`, so a new upload path that forgets it fails closed (`csrf.ts:120-125`).
+
+**Files**: `backend/src/middleware/csrf.ts:86-172`; `src/services/api/client.ts:120-135,228-238`.
+
+**Cross-link**: [`ERROR_RECOVERY.md#forbidden-http-403`](./ERROR_RECOVERY.md), [`ROUTING_TABLE.md`](./ROUTING_TABLE.md) (CSRF-exemption list).
+
+---
+
+## Database symptoms
+
+### RLS mystery (fewer rows than expected)
+
+**Symptom**: a query returns 0 rows, or noticeably fewer than the table contains, or a `findFirst`/`findUnique` returns `null` (which controllers convert to a `404`) for a row you can see in `psql` as a superuser.
+
+**Root cause**: Row-Level Security scopes every query to `app.current_user_id`, which is set with `SET LOCAL` inside `withRLSContext` / `withRLSTransaction`. Two failure modes:
+1. The query ran **outside** an RLS wrapper — RLS evaluates `app.current_user_id` as NULL → no rows.
+2. The query is **inside** a wrapper but a call went through the module-level `prisma` singleton instead of the transaction client `tx`. That call uses a *different* pooled connection that never received the `SET LOCAL`, so it silently bypasses RLS (and may return all rows or none, depending on the policy). This is the headline footgun.
+
+```ts
+// Source: backend/src/services/database.ts:368-377
+async function applyRLSContext(
+  tx: Prisma.TransactionClient,
+  userId: string | null,
+  isAdmin: boolean
+): Promise<void> {
+  const userIdValue = userId ?? '';
+  const isAdminValue = isAdmin ? 'true' : 'false';
+  await tx.$executeRaw`SELECT set_config('app.current_user_id', ${userIdValue}, true)`;
+  await tx.$executeRaw`SELECT set_config('app.is_admin', ${isAdminValue}, true)`;
+}
+```
+
+**How to confirm it's RLS and not a real-empty table** — connect as a superuser and read the row directly, then check the DB role's BYPASSRLS flag (the server hard-exits in production if the role has BYPASSRLS, `database.ts:248-255`):
+
+```sql
+-- Source: backend/src/services/database.ts:228-230 (the same check the server runs at boot)
+SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;
+-- Then reproduce the app's scoping manually:
+BEGIN;
+SELECT set_config('app.current_user_id', '<the-user-uuid>', true);
+SELECT count(*) FROM biomarkers;   -- should match what the app sees
+ROLLBACK;
+```
+
+**Workaround**: none at runtime — this is a correctness control.
+
+**Fix**: inside any RLS callback, use `tx.*`, never `prisma.*` or `getPrismaClient().*`. The CI guard `scripts/check-rls-wrappers.sh` fails the build on `prisma.` calls in controllers/services (`database.ts:26-30`). A 404 on a row owned by a *different* user is correct behavior (anti-enumeration), not a bug (`fhirController.ts:152-159`).
+
+**Files**: `backend/src/services/database.ts:14-31,368-377,424-445`; `backend/CLAUDE.md` RLS section.
+
+**Cross-link**: [`DATA_MODEL.md`](./DATA_MODEL.md) (RLS policies), [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (RLS masking as 404), [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+---
+
+### Connection pool exhaustion
+
+**Symptom**: requests hang or fail under burst load with Prisma "Timed out fetching a new connection from the connection pool" / "all connections busy".
+
+**Root cause**: the `pg` pool defaults to `max: 10`. RLS wrappers each open a transaction; long-running transactions or a burst can exhaust the pool. Cold starts on Cloud SQL via the Auth Proxy also need generous timeouts.
+
+```ts
+// Source: backend/src/services/database.ts:108-114
 pool = new Pool({
   connectionString,
   max: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
@@ -362,521 +332,653 @@ pool = new Pool({
 });
 ```
 
-**Files**: `backend/src/services/database.ts:L97-L126`.
+**Workaround**: tune `DATABASE_POOL_SIZE` up for the affected env. The default was raised from 5 to 10 because `max: 5` "was hitting 'all connections busy' under burst load" (`database.ts:99-107`).
 
-**Tuning guidance**: each Cloud Run instance holds up to `max` connections. Cloud SQL has per-instance limits; multiply by `--max-instances` and confirm < Cloud SQL cap. See [`RUNBOOK.md`](./RUNBOOK.md).
+**Fix**: keep RLS callbacks short — the wrapper sets `maxWait: 20_000` / `timeout: 30_000` for `withRLSContext` (`database.ts:452-455`). Avoid doing slow work (decrypt loops, external API calls) inside the transaction; note `52507c3 fix(ai-chat): move decryption out of withRLSContext transaction` did exactly this.
 
-**Cross-link**: [`ERROR_RECOVERY.md` §3 `DATABASE_ERROR`](./ERROR_RECOVERY.md).
+**Files**: `backend/src/services/database.ts:99-114,447-456`.
 
----
-
-### S-10. `prisma migrate deploy` fails on `CREATE INDEX CONCURRENTLY`
-
-**Symptom**: `prisma migrate deploy` fails with `ERROR: CREATE INDEX CONCURRENTLY cannot run inside a transaction block`.
-
-**Root cause**: Prisma wraps each migration file in a transaction. `CREATE INDEX CONCURRENTLY` cannot run inside a transaction. Prisma doesn't support a per-statement opt-out.
-
-**Workaround**: run the `CONCURRENTLY` statement manually via `psql`, then mark the migration applied with `prisma migrate resolve --applied`.
-
-**Fix**: commit `c00f8cc` (2026-01-06) "fix: remove CONCURRENTLY from migration indexes" — index-create SQL in migrations now uses plain `CREATE INDEX`. Non-blocking `CONCURRENTLY` creation remains an option for ops but is not in the migration files.
-
-**Files**: `backend/prisma/migrations/**/migration.sql`.
-
-**Cross-link**: [`RUNBOOK.md`](./RUNBOOK.md) for the manual-apply playbook.
+**Cross-link**: [`RUNBOOK.md`](./RUNBOOK.md), [`ENV_VARS.md`](./ENV_VARS.md) (`DATABASE_POOL_SIZE`).
 
 ---
 
-### S-11. Query returns fewer rows than expected (RLS mystery)
-
-**Symptom**: controller calls `tx.biomarker.findMany()` inside `withRLSContext(userId, ...)`; returns `[]` even though a row clearly exists for that user in `psql`.
-
-**Root cause**: one of:
-1. `userId` at the controller is not the actual owner of the row. Verify `req.user.id` matches `biomarker.user_id`.
-2. The query is inside `withRLSContext(null, ...)` (admin context) — unusual for a user-scoped flow.
-3. The row exists but its `user_id` column is NULL or a different UUID (data corruption or migration bug).
-
-**Workaround**: temporarily log `req.user.id` vs the expected owner. Check `psql` with the admin role (bypass RLS) to see the row's actual `user_id`.
-
-**Fix**: not a single fix — it's a diagnostic pattern. Canonical "RLS denial masquerades as NOT_FOUND" is documented at [`ERROR_RECOVERY.md` §5 PHI / data-access family](./ERROR_RECOVERY.md):
-
-> Every `findFirst` / `findUnique` inside `withRLSContext(userId, ...)` returns `null` both when the resource truly doesn't exist **and** when it exists under a different `user_id`.
-
-**Diagnostic query** (Cloud SQL proxy → psql):
-
-```sql
--- Bypass RLS to see what's actually there. Requires BYPASSRLS role or superuser.
-SELECT id, user_id, measured_at FROM biomarkers WHERE id = '<id>';
--- Compare with your expected req.user.id.
-```
-
-**Files**: `backend/src/services/database.ts:L456-L495` (`withRLSContext`), `backend/prisma/migrations/20260107_add_rls_policies/migration.sql` (policies).
-
-**Cross-link**: [`ERROR_RECOVERY.md` §5 `NOT_FOUND` as RLS denial](./ERROR_RECOVERY.md), [`CLAUDE.md` Row-Level Security](../CLAUDE.md).
-
----
-
-### S-12. Query silently returns ALL users' rows (RLS bypass)
-
-**Symptom**: admin reviews a PATIENT's dashboard and sees rows from other patients. Or a query returning more rows than the user should own.
-
-**Root cause**: **the RLS footgun documented at `backend/src/services/database.ts:L14-L31`**. Inside a `withRLSContext(userId, async (tx) => ...)` callback, calling the module-level `prisma.*` client instead of `tx.*` runs on a different pooled connection that never received the `SET LOCAL app.current_user_id`. RLS policies then evaluate against NULL and return all rows.
-
-**Workaround**: none — this is a security incident. Restart the service, triage audit logs, scan for the pattern.
-
-**Fix**: code pattern — **always `tx.*` inside RLS callbacks**. CI guard at `scripts/check-rls-wrappers.sh` (per `database.ts:L26-L27`) greps for `prisma.` calls inside controllers/services and fails the build.
-
-> Project-memory note (2026-04-16): RLS is structurally in place but the app runs as a BYPASSRLS role in both dev and prod, so policies don't actually enforce. PR #30 (2026-04-16) closes C-1/F-14/F-15 but doesn't fix the runtime-role issue. Until the role cutover (`RLS_ENFORCEMENT=strict` at `database.ts:L190-L228`) this bypass class of bug is undetectable by runtime behavior — only the CI grep guard protects against it. See commit `4290520` (2026-04-23) "feat(c-8): prepare code for RLS role cutover".
-
-**Files**:
-- `backend/src/services/database.ts:L14-L31` (footgun docblock).
-- `backend/src/services/database.ts:L190-L228` (`assertNoBypassRLS`).
-- `scripts/check-rls-wrappers.sh` (CI guard).
-
----
-
-## 7. Deployment symptoms
-
-### S-13. `gcloud run services update --update-env-vars` applied but prod behavior unchanged
-
-**Symptom**: you flipped an env var on Cloud Run (e.g., `ANTHROPIC_BAA_ACTIVE=true`). The revision was created, but AI endpoints still return 503 `"AI Health Guide is disabled: ANTHROPIC_BAA_ACTIVE must be \"true\"..."`.
-
-**Root cause** (**project-memory entry, 2026-04-17 postmortem**): `gcloud run services update --update-env-vars=…` creates a new revision but keeps 0% traffic on it if the service was previously pinned with `--to-revisions=…`. The detection signal is:
-
-```
-latestReadyRevisionName ≠ latestCreatedRevisionName
-```
-
-The new revision is ready, but all traffic is still pinned to the old one.
-
-**Workaround**: none.
-
-**Fix**: follow with:
-
-```bash
-gcloud run services update-traffic <service> --to-revisions=<NEW-REVISION>=100
-# or drop the pin:
-gcloud run services update-traffic <service> --to-latest
-```
-
-**Files / evidence**:
-- Project-memory doc: `cloud-run-env-update-pinning.md` (full postmortem of the 2026-04-17 `ANTHROPIC_BAA_ACTIVE` flip).
-- Backend check that produces the visible 503: `backend/src/controllers/aiChatController.ts:L134-L145`, `backend/src/routes/biomarkerRoutes.ts:L141-L147`, `backend/src/controllers/expenseController.ts:L637`.
-
-**Cross-link**: [`ERROR_RECOVERY.md` §5 `SERVICE_UNAVAILABLE` (HTTP 503) — BAA gate](./ERROR_RECOVERY.md), [`RUNBOOK.md`](./RUNBOOK.md).
-
----
-
-### S-14. GitHub Actions deploy workflow fails
-
-**Symptom**: `.github/workflows/deploy.yml` run goes red. Possibilities:
-
-| Sub-symptom | Commit with fix | Notes |
-|---|---|---|
-| YAML parse error | `9d0d812` (2025-12-10) "fix: correct YAML syntax in ci.yml" | Tabs vs spaces, missing `-` in sequences. |
-| Backend tests fail because no tests exist | `fdcac2d` (2025-12-09) "fix: allow CI to pass when no backend tests exist" | Jest `--passWithNoTests` flag. |
-| Vitest picks up backend files | `e2501d4` (2026-01-06) "fix: exclude backend from frontend Vitest config" | `vitest.config.ts` include/exclude. |
-| Lint errors in test files | `52cf0ba` (2026-01-06) "fix: resolve ESLint errors in test files" | — |
-| `npm audit` vulnerabilities (jws, hono, valibot) | `4cdb9d0` (2025-12-14) | Lockfile regeneration needed. |
-| Security-change cascade | `3df9313` (2026-02-06) "fix: resolve CI lint and test failures from Batch 3 security changes" | — |
-
-**Root cause**: varied — see commit messages above.
-
-**Workaround**: re-run the failing job; check PR checks.
-
-**Fix**: match the sub-symptom to the commit in the table.
-
-**Files**: `.github/workflows/deploy.yml`, `.github/workflows/ci.yml`, `vitest.config.ts`, `backend/jest.config.ts`.
-
----
-
-### S-15. Docker build fails during `prisma generate`
-
-**Symptom**: `docker build` fails inside the frontend or backend image with `Error: DATABASE_URL environment variable not found` during `prisma generate`, or module resolution errors for the generated Prisma client after the build.
-
-**Root cause**: Prisma tries to read `DATABASE_URL` at generation time in some paths; the Dockerfile didn't provide a stub. Separately, the generated Prisma client was output to a path TypeScript compile couldn't find in the final image.
-
-**Workaround**: pass a dummy `DATABASE_URL` at build time.
-
-**Fix**:
-- `b22c9a1` (2025-12-08) "fix: add DATABASE_URL fallback for build-time prisma generate" — dummy URL for codegen.
-- `3e3c972` (2025-12-08) "fix: copy prisma generated client to dist/generated for correct module resolution" — post-build copy so runtime can `require` it.
-- `f0eff7a` (2026-01-08) "fix: rebuild Docker image on every deploy" — cache-bust to avoid stale images.
-- `d07eb1a` (2025-12-08) "fix: rename root railway.toml to prevent interference with backend deployment" — legacy Railway artifact was shadowing Cloud Run build config.
-- `79ac04a` (2025-12-08) "fix: switch Railway to Nixpacks builder for more reliable deployment" — legacy.
-
-**Files**: `backend/Dockerfile`, `backend/package.json` (postinstall/build scripts), `backend/prisma/schema.prisma` (`generator client` output path).
-
----
-
-## 8. Frontend symptoms
-
-### S-16. Frontend loads blank page, no errors visible
-
-**Symptom**: navigating to the deployed frontend shows a blank white page. Browser console may be empty if built for prod.
-
-**Root cause**: typically a bundle error that throws before React mounts. Known causes:
-1. `forwardRef` error from Recharts being split across chunks (S-17).
-2. `crypto.randomUUID is not a function` because the page was served over HTTP (S-19).
-3. Stale GCS object cache after deploy — the HTML references a bundle hash that no longer exists.
-
-**Workaround**: hard refresh with DevTools → Network → "Disable cache" checked. Check console with "Preserve log" enabled before reload.
-
-**Fix**: match the specific cause; see S-17, S-19. For stale cache, the deploy workflow sets GCS `Cache-Control` on HTML; older revisions may have shipped without it.
-
-**Files**: `vite.config.ts` (chunking), `.github/workflows/deploy.yml` (GCS cache headers).
-
----
-
-### S-17. Dashboard charts crash "Cannot read properties of undefined (reading 'forwardRef')"
-
-**Symptom**: trend chart page renders blank or shows an overlay error about `React.forwardRef` being undefined. Only happens in the production bundle, not dev.
-
-**Root cause**: Vite's manual chunk splitting placed Recharts and React in different chunks; Recharts imported `React.forwardRef` before React's bundle had evaluated.
-
-**Workaround**: none in prod.
-
-**Fix**:
-- `e107665` (2026-01-07) "fix: remove manual chunk splitting to fix React forwardRef error" — eliminated `manualChunks` config.
-- `1e1bac0` (2026-01-08) "fix: keep React and recharts in same bundle to fix forwardRef error" — where chunking is needed, Recharts stays co-bundled with React.
-- `3d287e2` (2026-01-07) "fix: add null checks to prevent chart rendering errors" — defensive prop checks when data is empty.
-
-**Files**: `vite.config.ts` (chunk config), `src/components/analytics/*`, `src/components/trends/*`.
-
----
-
-### S-18. Browser console: "blocked by CORS policy"
-
-**Symptom**: network tab shows OPTIONS requests (or an actual GET/POST) failing with `CORS error`. Message in console mentions `Access-Control-Allow-Origin`.
-
-**Root cause**: backend CORS middleware not permitting the frontend origin, OR returning `Access-Control-Allow-Origin: *` with `Access-Control-Allow-Credentials: true` (browser rejects this combination).
-
-**Workaround**: run frontend on same origin as backend (proxy via Vite dev server), or set `VITE_API_URL` to a path the dev proxy rewrites.
-
-**Fix**:
-- `327b2f4` (2026-01-08) "fix: CORS configuration for cross-domain cookies" — explicit origin from `CORS_ORIGIN` env, not `*`; `credentials: true`.
-- `ad2dff9` (2026-01-08) "fix: ensure CORS preflight requests are handled properly" — OPTIONS 204 before CSRF middleware runs.
-
-**Files**: `backend/src/server.ts` / `backend/src/app.ts` (CORS setup), `backend/src/config/index.ts` (`CORS_ORIGIN`).
-
----
-
-### S-19. `crypto.randomUUID is not a function` on older browsers / HTTP contexts
-
-**Symptom**: blank page or thrown error referencing `crypto.randomUUID` on some browsers or when testing over `http://` rather than `https://` or `localhost`.
-
-**Root cause**: `crypto.randomUUID` is only available in secure contexts (HTTPS, localhost). Non-secure HTTP origins (including some staging URLs without TLS) have `window.crypto` but not `randomUUID`.
-
-**Workaround**: use HTTPS or localhost.
-
-**Fix**:
-- `ff51c61` (2025-12-09) "fix: add crypto.randomUUID polyfill for HTTP contexts".
-- `68e8478` (2025-12-09) "fix: move crypto.randomUUID polyfill to index.html to load before bundles" — polyfill must run before any `import` touches it.
-
-**Files**: `index.html` (polyfill `<script>` before module bundle).
-
----
-
-### S-20. Vite dev server fails on Windows ARM64 + Node 24
-
-**Symptom**: `npm run dev` on a Windows ARM64 (Surface / Copilot+ PC) with Node.js 24 errors with messages about `not a valid Win32 application` for Next.js SWC binaries — **applies to the sibling HealthcareProviderDB project, not directly OwnMyHealth** (OwnMyHealth uses Vite 7.3, not Next.js). Derived-from-architecture: OwnMyHealth's Vite toolchain uses `@vitejs/plugin-react` (not `@vitejs/plugin-react-swc`), so the same class of ARM64 SWC failure does not currently affect this repo.
-
-**Root cause** (**project-memory entry**, originally cataloged for HealthcareProviderDB):
-- Native SWC binaries for Next.js 14.x are incompatible with Node.js v24+ on Windows ARM64.
-- Next.js 14.x only auto-enables WASM fallback for a hardcoded list of platforms; `win32-arm64` is NOT in the list.
-
-**Workaround**: use Node 20 LTS; or run under WSL2.
-
-**Fix** (for Next-based projects — OwnMyHealth does not use it today): patch `next/dist/build/swc/index.js` to add `aarch64-pc-windows-msvc` to `knownDefaultWasmFallbackTriples` and remove the `useWasmBinary` gate. Postinstall script pattern at `packages/frontend/scripts/patch-next-swc.js`.
-
-**Files (for this repo, for prevention)**:
-- `package.json` — confirm `@vitejs/plugin-react` (Babel) rather than `@vitejs/plugin-react-swc`.
-- Root `package.json` — confirm Node engine range permits 20 LTS.
-
-> **Derived-from-architecture flag**: this symptom is included because the prompt explicitly lists "Vite/SWC on ARM64 per project memory". The memory entry is about Next.js in a sibling project (HealthcareProviderDB). If OwnMyHealth migrates to Next.js or `@vitejs/plugin-react-swc`, the same class of failure will resurface.
-
----
-
-## 9. API / 500 symptoms
-
-### S-21. API returns 500 with generic message
-
-**Symptom**: `POST /<something>` returns 500 with body:
-
-```json
-{ "success": false, "error": { "code": "INTERNAL_ERROR", "message": "An unexpected error occurred. Please try again later." } }
-```
-
-**Root cause**: the centralized error handler (`backend/src/middleware/errorHandler.ts:L144`) replaces `err.message` with a generic string in production **unless** `err instanceof AppError`. Any thrown `Error` (not a subclass) collapses to this message. Thrown `AppError` subclasses surface their message to the client.
-
-Per the error-handler logic:
+### Server refuses to start (FATAL boot)
+
+**Symptom**: the backend exits immediately on boot with a `FATAL: Cannot start server` message, or `process.exit(1)`, or a thrown config error.
+
+**Root cause**: startup is **fail-closed** by design for a HIPAA app. Common trips, by message:
+
+| Boot error message (substring) | Cause | Fix | Source |
+|---|---|---|---|
+| `Missing required environment variable: JWT_ACCESS_SECRET` | secret unset | set it (`openssl rand -base64 32`) | `config/index.ts:18-28,61` |
+| `JWT_ACCESS_SECRET must be at least 32 characters` | secret too short | regenerate | `config/index.ts:263-270` |
+| `AUDIT_LOG_SALT must be set and at least 16 characters` | salt unset/short | set it; **never rotate** (breaks audit decrypt) | `config/index.ts:283-293` |
+| `ANTHROPIC_BAA_ACTIVE must be set to "true" in production` | API key set, BAA flag unset, prod | set `ANTHROPIC_BAA_ACTIVE=true` or unset the key | `config/index.ts:300-306` |
+| `GOOGLE_BAA_ACTIVE must be set to "true" in production` | `GCP_PROCESSOR_ID` set, flag unset, prod | set `GOOGLE_BAA_ACTIVE=true` or unset processor | `config/index.ts:320-326` |
+| `PHI_ENCRYPTION_KEY must be at least 64 hex characters` | bad/placeholder key | regenerate (`openssl rand -hex 32`) | `config/index.ts:355-383` |
+| `CORS_ORIGIN must be set in production` | unset in prod | set it (no localhost) | `backend/src/app.ts:83-89` |
+| `DEMO_ACCOUNT_ENABLED cannot be true in production` | demo on in prod | set `DEMO_ACCOUNT_ENABLED=false` | `config/index.ts:408-414` |
+| `SENDGRID_SANDBOX_MODE cannot be true in production` | sandbox in prod (silently drops email) | remove it | `config/index.ts:421-427` |
+| `FATAL: ... database connection` | DB unreachable | check `DATABASE_URL` / Cloud SQL proxy | `database.ts:163-170` |
+| `FATAL: Production database role has BYPASSRLS` | role can bypass RLS in prod | rotate to `omh_app` (NOBYPASSRLS) | `database.ts:248-255` |
 
 ```ts
-// Source: backend/src/middleware/errorHandler.ts:L142-L158
-let message = config.isDevelopment ? err.message : GENERIC_ERROR_MESSAGE;
-// ...
-if (err instanceof AppError) {
-  apply({ statusCode: err.statusCode, code: err.code, message: err.message });
+// Source: backend/src/services/database.ts:248-255
+if (config.isProduction) {
+  logger.error(
+    'FATAL: Production database role has BYPASSRLS. ' +
+    'RLS policies are not enforcing. Refusing to start. ' +
+    'See C8_PART3_RUNBOOK.md.'
+  );
+  process.exit(1);
 }
 ```
 
-**Workaround**: reproduce in dev (`NODE_ENV=development`) — dev bypasses the generic message and shows the real error.
+**Workaround**: in dev/staging, a `BYPASSRLS` role only logs a WARNING and continues (`database.ts:257-260`); the AI/Document-AI BAA gates only `process.stderr.write` a warning (`config/index.ts:307-312,327-332`). Production is hard-fail for all of the above.
 
-**Fix**: code authors should throw `AppError` subclasses, not bare `Error`. Known non-compliant sites flagged in [`ERROR_RECOVERY.md` §3 item 8](./ERROR_RECOVERY.md) — `expenseController.ts:89,128,203,255,282,403,467,534,560,579,605,623,664,747,751,802` and `biomarkerController.ts:568-578` emit `{ error: '<string>' }` shapes.
+**Files**: `backend/src/config/index.ts:235-440`; `backend/src/services/database.ts:128-261`.
 
-**Files**: `backend/src/middleware/errorHandler.ts:L133-L201`.
-
-**Cross-link**: [`ERROR_RECOVERY.md` §3 `INTERNAL_ERROR`](./ERROR_RECOVERY.md).
+**Cross-link**: [`ENV_VARS.md`](./ENV_VARS.md), [`RUNBOOK.md`](./RUNBOOK.md).
 
 ---
 
-### S-22. Server fails to start — FATAL log lines before first request
+## Deployment symptoms
 
-**Symptom**: Cloud Run revision won't go healthy; logs show `FATAL: Cannot start server - <step>`.
+### Env-var change has no effect (Cloud Run pinning)
 
-**Root cause**: by design, `backend/src/services/database.ts:L134-L148` (`initStep`) and the startup sequence treat partial startup as never acceptable for a HIPAA system. Known FATAL steps:
+**Symptom**: you ran `gcloud run services update --update-env-vars=FOO=bar`, it reported success, but the running service behaves as if the change never happened (e.g. the 2026-04-17 `ANTHROPIC_BAA_ACTIVE=true` flip had zero effect).
 
-| FATAL step | Hint | Common cause |
+**Root cause**: the deploy pipeline promotes traffic with an **explicit revision pin** (`--to-revisions=$NEW_REV=100`, `.github/workflows/deploy.yml:168-171`), not `--to-latest`. A later `gcloud run services update` creates a *new* revision but leaves it at **0% traffic** — the old pinned revision keeps serving. This is intentional (it forces every prod traffic shift through a smoke-tested promotion, `deploy.yml:141-148`) but it traps ad-hoc env edits.
+
+**Detection** — `latestReadyRevisionName` ≠ `latestCreatedRevisionName` is the signal:
+
+```bash
+gcloud run services describe ownmyhealth-backend --region=us-central1 \
+  --project=ownmyhealth-prod \
+  --format='value(status.latestReadyRevisionName,status.latestCreatedRevisionName)'
+```
+
+If those two differ, a silent pin is holding traffic back.
+
+**Fix** — shift traffic to the new revision explicitly:
+
+```bash
+# Point traffic at the new revision that has your env change
+gcloud run services update-traffic ownmyhealth-backend --region=us-central1 \
+  --project=ownmyhealth-prod --to-revisions=<NEW_REVISION>=100
+
+# Or drop the pin so future env updates auto-roll-out again
+gcloud run services update-traffic ownmyhealth-backend --region=us-central1 \
+  --project=ownmyhealth-prod --to-latest
+```
+
+**Files**: `.github/workflows/deploy.yml:141-171`; project memory `cloud-run-env-update-pinning.md` (2026-04-17 postmortem).
+
+**Cross-link**: [`RUNBOOK.md`](./RUNBOOK.md) (env-flip playbook), [`ENV_VARS.md`](./ENV_VARS.md).
+
+---
+
+### Deploy fails at smoke-test
+
+**Symptom**: the GitHub Actions `Deploy to Cloud Run` workflow fails in the `smoke-test` job; production was **not** changed (the new revision was staged at 0% traffic).
+
+**Root cause**: the pipeline deploys to a tagged revision at `--no-traffic`, then probes `<staging_url>/api/v1/health` up to 6 times. If `/health` never returns `200` with `"success":true`, the promote job never runs. The most common cause is Cloud SQL connectivity on cold start (the failure mode behind the 2026-04-17 incident).
+
+```yaml
+# Source: .github/workflows/deploy.yml:122-138
+for i in 1 2 3 4 5 6; do
+  STATUS=$(curl -sS -o /tmp/body.json -w "%{http_code}" --max-time 30 "$URL" || echo "000")
+  echo "  attempt $i: HTTP $STATUS"
+  if [ "$STATUS" = "200" ]; then
+    BODY=$(cat /tmp/body.json)
+    if echo "$BODY" | grep -q '"success":true'; then
+      echo "PASS"; echo "  body: $BODY"; exit 0
+```
+
+Note: the `/health` endpoint (`backend/src/app.ts:301-312`) returns `{ status, checks: { database } }` and is `200` only when the DB is connected; the smoke test hits `/api/v1/health` (`backend/src/routes/index.ts:42`).
+
+**Workaround / fix**: re-run the workflow (absorbs cold-start). If it persistently fails, check Cloud SQL is up, the Auth Proxy/instance connection is correct, and `DATABASE_URL` is set on the new revision. Since traffic never shifted, no rollback is needed.
+
+**Files**: `.github/workflows/deploy.yml:110-138`; `backend/src/app.ts:301-324`.
+
+**Cross-link**: [`RUNBOOK.md`](./RUNBOOK.md) (deploy/rollback), [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md).
+
+---
+
+### Docker build / frontend deploy notes
+
+- The backend image builds from `backend/Dockerfile` and is tagged `:${github.sha}` only — the `:latest` tag was dropped (`deploy.yml:55-68`).
+- `--max-instances=3` bounds in-memory rate-limiter and AI-spend-accumulator dilution; raising it requires switching those stores to Redis first (`deploy.yml:78-89`; see `aiCostTracker.ts:29-38`).
+- The frontend deploys via `gsutil rsync -d -r dist/` (no 404 window) with `Cache-Control:no-cache` on `index.html` (`deploy.yml:224-235`). A botched frontend deploy surfaces client-side as a [stale-chunk crash](#blank-page-or-stale-chunk-crash).
+
+---
+
+## Frontend symptoms
+
+### Blank page or stale-chunk crash
+
+**Symptom**: after a deploy lands while a user has the SPA open, the page goes blank or shows "A new version of OwnMyHealth is available." Console shows `Loading chunk … failed` / `Failed to fetch dynamically imported module`.
+
+**Root cause**: the user's tab holds references to JS chunks that the new deploy replaced on the CDN. The `ErrorBoundary` detects chunk-load errors and renders a clean "reload" prompt instead of a generic crash (`3904c98 fix(frontend): recover gracefully from stale chunks after deploys`).
+
+```ts
+// Source: src/components/common/ErrorBoundary.tsx:43-51
+function isChunkLoadError(error: Error | null): boolean {
+  if (!error?.message) return false;
+  const msg = error.message;
+  return (
+    msg.includes('dynamically imported module') ||
+    msg.includes('Failed to fetch') ||
+    msg.includes('Loading chunk')
+  );
+}
+```
+
+**Workaround / fix**: reload (the boundary's button calls `window.location.reload()`, `ErrorBoundary.tsx:81-84,131`). The deploy sets `Cache-Control:no-cache` on `index.html` so the next load picks up the new chunk manifest (`deploy.yml:235`). If a *true* blank page persists after reload (not a chunk error), check the browser console for an uncaught error before React mounts and confirm the API base URL (`VITE_API_URL`, `client.ts:10`).
+
+**Files**: `src/components/common/ErrorBoundary.tsx:43-141`; `.github/workflows/deploy.yml:224-235`.
+
+> **Note on "Next.js SWC ARM64" failures (project memory):** that incompatibility (`@next/swc-win32-arm64-msvc` not loading on Node 24 / Windows ARM64) belongs to the **HealthcareProviderDB** project, which uses Next.js. OwnMyHealth's frontend is **Vite + React** (`vite.config.ts:1-5`), not Next.js, so the SWC fallback patch does not apply here. If you hit native-binary load errors locally, see [`LOCAL_DEV.md`](./LOCAL_DEV.md). (Logged under [Prompt drift log](#prompt-drift-log).)
+
+---
+
+### CORS rejected origin
+
+**Symptom**: browser requests fail with a CORS error; the backend log shows `CORS rejected origin`.
+
+**Root cause**: the request's `Origin` is not in the computed allowlist. The allowlist always unions `CORS_ORIGIN` (comma-separated) with hardcoded production hosts, in *every* environment — because Cloud Run revisions have been observed running with `NODE_ENV=development`, which previously bypassed the union and broke the real frontend.
+
+```ts
+// Source: backend/src/app.ts:65-68
+const HARDCODED_PRODUCTION_ORIGINS = [
+  'https://app.ownmyhealth.io',
+  'https://ownmyhealth.io',
+];
+```
+
+```ts
+// Source: backend/src/app.ts:157-164
+const origins = Array.isArray(allowedOrigins) ? allowedOrigins : [allowedOrigins];
+if (origins.includes(origin)) {
+  return callback(null, origin); // Return the specific origin, not true
+}
+logger.warn('CORS rejected origin', { data: { origin, allowedOrigins: origins } });
+return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+```
+
+**Workaround / fix**: add the missing origin to `CORS_ORIGIN` (or to `HARDCODED_PRODUCTION_ORIGINS` for a new permanent frontend host). In production, `CORS_ORIGIN` is required and may not contain `localhost`/`127.0.0.1` or the server refuses to boot (`app.ts:83-89`). Preflight cache is 1 hour, so policy changes take up to an hour to propagate to loaded clients (`app.ts:176-178`).
+
+**Files**: `backend/src/app.ts:61-107,148-179`.
+
+**Cross-link**: [`ENV_VARS.md`](./ENV_VARS.md) (`CORS_ORIGIN`), [`RUNBOOK.md`](./RUNBOOK.md).
+
+---
+
+### Cookies not set (SameSite / domain)
+
+**Symptom**: login succeeds (`200`) but the browser never stores the auth/CSRF cookies, so the very next request is `401`; common with a cross-domain setup (frontend on `app.ownmyhealth.io`, API on `api.ownmyhealth.io`).
+
+**Root cause**: cookie attributes are derived from env. Cross-domain requires `SameSite=none` + `Secure=true` + a `Domain`. The history here is dense: `327b2f4 fix: CORS configuration for cross-domain cookies`, `50d7426 fix: add domain to all auth cookies`, `8db4317 fix: support cross-domain cookies for CSRF protection`.
+
+```ts
+// Source: backend/src/config/index.ts:86-88
+sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
+  (process.env.COOKIE_DOMAIN ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax')),
+domain: process.env.COOKIE_DOMAIN || undefined,
+```
+
+**Fix** — for cross-domain, set all three:
+- `COOKIE_DOMAIN=.ownmyhealth.io` (leading dot)
+- `COOKIE_SAME_SITE=none`
+- `NODE_ENV=production` (makes `Secure=true`, required when `SameSite=none`; `config/index.ts:75`).
+
+Same-domain prod defaults to `strict` (tightened in the F-18 fix, `config/index.ts:84-87`); dev defaults to `lax`. Helmet's `crossOriginResourcePolicy` is auto-relaxed when `COOKIE_DOMAIN` is set (`app.ts:124,140`).
+
+**Files**: `backend/src/config/index.ts:69-93`; `backend/src/middleware/csrf.ts:32-58`; `backend/src/app.ts:124,140`.
+
+**Cross-link**: [`ENV_VARS.md`](./ENV_VARS.md) (`COOKIE_DOMAIN`, `COOKIE_SAME_SITE`), [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+---
+
+## API / 500 symptoms
+
+### Opaque 500 / `INTERNAL_ERROR`
+
+**Symptom**: an endpoint returns `500` with the generic body "An unexpected error occurred. Please try again later." and no detail.
+
+**Root cause**: in production the error handler **sanitizes** all non-`AppError` messages to a generic string and strips stack traces; the real message is only in the server logs and only stack-traced in dev.
+
+```ts
+// Source: backend/src/middleware/errorHandler.ts:190-196
+if (statusCode >= 500) {
+  logger.error(`${err.name}: ${err.message}`, logData);
+} else if (config.isDevelopment) {
+  logger.warn(`${err.name}: ${err.message}`, logData);
+}
+```
+
+**Fix**: read the Cloud Run logs (the handler always logs `≥500`). Common sources that degrade to `INTERNAL_ERROR`: external services (Anthropic/Document AI/SendGrid throw plain `Error`, not `AppError`), `storageService` write/delete (`storageService.ts` throws plain `Error`), and **decrypt failures** from a rotated `PHI_ENCRYPTION_KEY` (there is no `DECRYPTION_FAILED` code — it surfaces as `INTERNAL_ERROR` or, in the AI-chat path, `CONTEXT_ASSEMBLY_FAILED`).
+
+**Files**: `backend/src/middleware/errorHandler.ts:104-211`.
+
+**Cross-link**: [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (`INTERNAL_ERROR`, key-rotation §10), [`RUNBOOK.md`](./RUNBOOK.md).
+
+---
+
+### PHI leaking into logs
+
+**Symptom**: you suspect a log line contains a patient name, value, token, or other PHI.
+
+**Root cause / guard**: there are **two** redaction layers, used for different sinks. Confusing them is the usual mistake:
+
+| Sink | Guard | What it does | Source |
+|---|---|---|---|
+| Application logs (stdout/stderr → Cloud Logging) | `logger.sanitizeData` | Redacts any field whose key is in `SENSITIVE_FIELDS` (recursive, walks arrays) | `backend/src/utils/logger.ts:21-56` |
+| Text **sent to Claude** | `phiRedaction.redactPHI` / `stripPHIFromText` | Regex-scrubs SSN/MRN/NPI/DEA/phone/email/DOB/address/ZIP/name in extracted text | `backend/src/utils/phiRedaction.ts:14-110` |
+| Image **bytes sent to Claude Vision** | `pdfRedaction.redactPatientBanner` | Covers the top 15% banner of every PDF page with an opaque white box | `backend/src/utils/pdfRedaction.ts:35-90` |
+
+The logger's field redaction is the canonical answer for "PHI in a log line":
+
+```ts
+// Source: backend/src/utils/logger.ts:46-56
+function sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
+      sanitized[key] = '[REDACTED]';
+    } else {
+      sanitized[key] = sanitizeValue(value);
+    }
+  }
+  return sanitized;
+}
+```
+
+**How to detect a leak**:
+1. Confirm no raw `console.log` writes PHI. Grep `console\.log` over `backend/src` — every hit is inside `logger.ts` (the structured sink) or a comment in `pdfParser.ts` reminding *not* to use it. There are no PHI-bearing `console.log` calls in controllers/services.
+2. Inspect log output for `[REDACTED]` on sensitive keys; a *missing* `[REDACTED]` where one is expected means a new PHI field needs adding to `SENSITIVE_FIELDS` (`logger.ts:21-30`).
+3. `phiRedaction.redactPHI` returns `firedPatterns` so you can log *that* a pattern fired without logging the value (`phiRedaction.ts:97-110`).
+
+**Fix**: add any new PHI-bearing key to `SENSITIVE_FIELDS`. The redactor walks nested arrays/objects (F-21 fix), so `biomarkers: [{ valueEncrypted }]` is covered (`logger.ts:38-44`). `redactPHI` is regex-based and explicitly "NOT a complete PHI oracle" — defense-in-depth, not the sole control (`phiRedaction.ts:1-12`).
+
+**Files**: `backend/src/utils/logger.ts:21-56`; `backend/src/utils/phiRedaction.ts:14-110`; `backend/src/utils/pdfRedaction.ts:35-90`.
+
+**Cross-link**: [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md), [`SECURITY_STATUS.md`](./SECURITY_STATUS.md), [`HIPAA_CHECKLIST.md`](./HIPAA_CHECKLIST.md).
+
+---
+
+## PDF / OCR / Claude extraction symptoms
+
+### Upload returns 500 or "could not extract any biomarkers"
+
+**Symptom**: `POST /api/v1/upload/lab-report` or `/upload/lab-results-ocr` fails. Two distinct cases: (a) `422 VALIDATION_ERROR` "Could not extract any biomarkers…", or (b) `500 INTERNAL_ERROR`.
+
+**Root cause**:
+- **(a) Zero biomarkers extracted** — extraction *ran* but found nothing usable (unreadable scan, non-lab document). The controller logs a `PARSE_FAILED`/`OCR_PARSE_FAILED` audit row and throws a `ValidationError`.
+- **(b) Extraction threw** — Claude or Google Document AI errored (bad/missing API key, provider outage, malformed PDF). Plain errors degrade to `500 INTERNAL_ERROR`.
+
+```ts
+// Source: backend/src/controllers/upload/labUploadController.ts:54-62
+if (ocrResult.biomarkers.length === 0) {
+  await auditService.logAccess(LAB_REPORT_RESOURCE, undefined, { req, userId }, {
+    operation: 'PARSE_FAILED',
+    filename: file.originalname,
+    fileSize: file.size,
+    reason: 'No biomarkers extracted',
+  });
+  throw new ValidationError('Could not extract any biomarkers from the PDF. Please ensure it is a valid lab report.');
+}
+```
+
+**Workaround**: re-upload a clearer/native-text PDF; the OCR path (`/upload/lab-results-ocr`) accepts images and PDFs and runs Document AI, while `/upload/lab-report` uses Claude extraction (`labUploadController.ts:36,191`).
+
+**Fix for (b)**:
+1. Check `ANTHROPIC_API_KEY` + `ANTHROPIC_BAA_ACTIVE=true` (Claude path) and `GCP_PROJECT_ID` / `GCP_PROCESSOR_ID` + `GOOGLE_BAA_ACTIVE=true` (OCR path). A configured-but-no-BAA processor surfaces as `503` (BAA gate), not `500`.
+2. Note: SBC extraction falls back to a regex parser if Claude is unavailable (`shared.ts:324-457`), so SBC upload rarely hard-500s; lab extraction does not have a regex fallback.
+3. GCS persistence failure is **non-fatal** — biomarkers are still created; only the `UserFile` record is skipped and an error is logged (`labUploadController.ts:68-83`).
+
+**Files**: `backend/src/controllers/upload/labUploadController.ts:36-184,191-358`; `backend/src/controllers/upload/shared.ts:324-457`.
+
+**Cross-link**: [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (Playbook C — uploads), [`API_REFERENCE.md`](./API_REFERENCE.md) (upload contracts).
+
+---
+
+### Upload rejected before extraction
+
+**Symptom**: upload fails fast with `413 FILE_TOO_LARGE`, or `422` "File content does not match its declared type" / "Only PDF files are accepted" / "File size must be less than 10MB".
+
+**Root cause**: pre-extraction validation. The 10 MB cap is enforced by Multer (→ `413`) and re-checked in `validateUploadFile` (→ `422`). Magic-byte validation rejects a spoofed `Content-Type` (Multer's `fileFilter` only trusts the header, which is attacker-controlled).
+
+```ts
+// Source: backend/src/controllers/upload/shared.ts:83-92
+function validateMagicBytes(buffer: Buffer, mimetype: string): void {
+  const expected = MAGIC_BYTES[mimetype];
+  if (!expected) return; // No check for mimetypes not in the map
+  const matches = expected.some((magic) =>
+    buffer.length >= magic.length && buffer.subarray(0, magic.length).equals(magic)
+  );
+  if (!matches) {
+    throw new ValidationError('File content does not match its declared type');
+  }
+}
+```
+
+**Fix**: send a real PDF/PNG/JPEG/TIFF/GIF/WebP under 10 MB with a matching `Content-Type`. The 413 comes from `errorHandler.ts:171`; the 422s from `shared.ts:90,133,138`. PDF uploads also pass a header/version "PDF-bomb" check (`validatePdfHeader`, `labUploadController.ts:44,201`).
+
+**Files**: `backend/src/controllers/upload/shared.ts:55-150`; `backend/src/middleware/errorHandler.ts:165-174`.
+
+---
+
+## AI chat / spend-cap symptoms
+
+### "AI features are temporarily unavailable" (503)
+
+**Symptom**: an AI route returns `503 SERVICE_UNAVAILABLE` with "AI features are temporarily unavailable (daily budget reached). Please try again later." or "You've reached today's AI usage limit. Please try again tomorrow."
+
+**Root cause**: the **dollar** circuit breaker `aiSpendGuard` tripped. A rolling per-UTC-day spend accumulator (in `aiCostTracker`) hit either the global or per-user budget. This is a 503, **not** a 429 — it is distinct from request-count rate limiting.
+
+```ts
+// Source: backend/src/middleware/aiSpendGuard.ts:41-47
+next(
+  new ServiceUnavailableError(
+    scope === 'global'
+      ? 'AI features are temporarily unavailable (daily budget reached). Please try again later.'
+      : "You've reached today's AI usage limit. Please try again tomorrow."
+  )
+);
+```
+
+```ts
+// Source: backend/src/services/aiCostTracker.ts:69-78
+export function isAISpendExceeded(userId: string): { exceeded: boolean; scope: 'global' | 'user' | null } {
+  rollIfNewDay();
+  if (config.ai.dailyBudgetUsd > 0 && globalSpentUsd >= config.ai.dailyBudgetUsd) {
+    return { exceeded: true, scope: 'global' };
+  }
+  if (config.ai.userDailyBudgetUsd > 0 && (userSpentUsd.get(userId) ?? 0) >= config.ai.userDailyBudgetUsd) {
+    return { exceeded: true, scope: 'user' };
+  }
+  return { exceeded: false, scope: null };
+}
+```
+
+**Which env var**:
+- "daily budget reached" (global scope) → `AI_DAILY_BUDGET_USD` (default 50, `config/index.ts:196`).
+- "today's AI usage limit" (per-user scope) → `AI_USER_DAILY_BUDGET_USD` (default 5, `config/index.ts:197`).
+- A budget of `0` **disables** that scope (`aiCostTracker.ts:71,74`).
+
+**Workaround**: the accumulator resets at UTC midnight (`rollIfNewDay`, `aiCostTracker.ts:47-54`). Raising the env var takes effect on a new revision (watch the [Cloud Run pinning](#env-var-change-has-no-effect-cloud-run-pinning) trap).
+
+**Caveat**: the accumulator is **in-memory and per-instance**, so under Cloud Run autoscale the effective ceiling is N×budget (bounded by `--max-instances=3`, `deploy.yml:88`). Move to Memorystore/Redis for multi-instance precision (`aiCostTracker.ts:29-38`).
+
+**Distinct 503 — BAA gate, not budget**: if the message mentions `ANTHROPIC_BAA_ACTIVE` ("AI Health Guide is disabled…"), it's the BAA gate, not the spend cap — set `ANTHROPIC_BAA_ACTIVE=true` (`aiChatController.ts`, `biomarkerRoutes.ts`, `expenseController.ts`; see [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) §5).
+
+**Files**: `backend/src/middleware/aiSpendGuard.ts:23-48`; `backend/src/services/aiCostTracker.ts:39-105`; `backend/src/config/index.ts:188-198`.
+
+**Cross-link**: [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (Playbook B), [`ENV_VARS.md`](./ENV_VARS.md), [`RUNBOOK.md`](./RUNBOOK.md).
+
+---
+
+### 429 vs 503 on AI routes
+
+**Symptom**: an AI route returns `429 AI_RATE_LIMIT_EXCEEDED` "Too many AI requests. Please try again later."
+
+**Root cause**: this is the **request-count** limiter `aiLimiter` (10/hour per user), a different control from the dollar `aiSpendGuard` (503). Both are applied on AI routes.
+
+```
+AI request
+   │
+   ├── too many requests this hour? ──▶ 429 AI_RATE_LIMIT_EXCEEDED  (aiLimiter)
+   │
+   └── dollar budget exhausted today? ──▶ 503 SERVICE_UNAVAILABLE   (aiSpendGuard)
+```
+
+**Tell them apart**: `429` = wait an hour (count-based); `503` "budget reached" = wait until UTC midnight or raise `AI_*_BUDGET_USD` (dollar-based). The guard runs *after* `authenticate` so the per-user budget can resolve; with no user it falls through (`aiSpendGuard.ts:24-28`).
+
+**Files**: `backend/src/middleware/aiSpendGuard.ts:23-48`; rate limiter — see [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (`AI_RATE_LIMIT_EXCEEDED`).
+
+---
+
+## Quest FHIR / lab-sync symptoms
+
+### Connect bounces back with `?error=`
+
+**Symptom**: clicking "Connect Quest" either returns `503` immediately, or redirects the user back to the settings page with `?error=connection_failed` (or `?error=<provider-error>`) instead of `?labConnected=quest`.
+
+**Root cause**:
+- `503 SERVICE_UNAVAILABLE` "Quest FHIR integration is not configured…" — `QUEST_FHIR_CLIENT_ID` is unset (`isFeatureConfigured()` checks `config.quest.clientId.length > 0`, `fhirController.ts:30-32,43-52`).
+- `?error=connection_failed` — the OAuth **callback** failed (token exchange threw). The callback is a *redirect*, not a JSON error; the frontend reads `error=` off the URL.
+- `?error=<provider error>` — the user denied consent or the provider returned an error (`fhirController.ts:80-84`).
+
+```ts
+// Source: backend/src/controllers/fhirController.ts:100-106
+} catch (err) {
+  logger.error('OAuth callback failed', {
+    data: { error: err instanceof Error ? err.message : 'unknown' },
+  });
+  const sep = frontendBase.includes('?') ? '&' : '?';
+  res.redirect(`${frontendBase}${sep}error=connection_failed`);
+}
+```
+
+**Fix**: set the Quest env vars (`QUEST_FHIR_CLIENT_ID`, `QUEST_FHIR_CLIENT_SECRET`, `QUEST_FHIR_BASE_URL`, `QUEST_FHIR_REDIRECT_URI`, optional `QUEST_FHIR_AUTH_HOSTS`; `config/index.ts:205-224`). For `connection_failed`, inspect the server log line "OAuth callback failed" — the cause is the token exchange (bad client secret, expired PKCE state "Invalid or expired OAuth state", or an SSRF rejection on the token URL). Quest is also **plan-gated** (`questFhirIntegration`, FREE=false) — a `403 PLAN_LIMIT_EXCEEDED` before the redirect means the user's plan lacks it (`92f4841 fix(fhir): enforce questFhirIntegration plan gating`; `config/plans.ts:28,57,76`).
+
+**Files**: `backend/src/controllers/fhirController.ts:30-107`; `backend/src/services/fhir/labSyncService.ts:117-129`; `backend/src/config/index.ts:200-224`.
+
+**Cross-link**: [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (Playbook D), [`ENV_VARS.md`](./ENV_VARS.md).
+
+---
+
+### Sync fails / SSRF rejection / expired token
+
+**Symptom**: `POST /api/v1/fhir/sync/:connectionId` returns `500 SYNC_FAILED`, or the connection's `syncStatus` becomes `error` with a `syncError` message.
+
+**Root cause** — three distinct failure modes that all land in the catch block:
+
+| `syncError` substring | Cause | How to tell / fix |
 |---|---|---|
-| `database connection` | "Ensure DATABASE_URL is correct and PostgreSQL is running." | Cloud SQL Auth Proxy down, wrong instance connection name |
-| `encryption service initialization` | "Ensure PHI_ENCRYPTION_KEY is set and valid." | Missing env var, wrong key length (must be 64 hex chars) |
-| `audit logging service` | "HIPAA compliance requires audit logging to be operational." | DB unreachable after initial connect |
+| `Access token expired and no refresh token available` | OAuth access token (`accessTokenEncrypted`) expired and no `refreshTokenEncrypted` to renew it | Re-connect (re-run OAuth) to get fresh tokens | 
+| `... host "X" is not the trusted FHIR host ...` / `refusing cleartext http to public host` / `refusing non-HTTP(S) scheme` | **SSRF guard** rejected a server-supplied URL (pagination `link` or SMART endpoint) pointing off the allowlist or at a private/metadata host | A response tried to redirect credentials off-host — confirm `QUEST_FHIR_BASE_URL` / `QUEST_FHIR_AUTH_HOSTS` are correct; a genuine rejection is the guard working | 
+| `Connection has no FHIR patient ID` / map/import errors | data-shape issues, unmapped LOINC codes | unmapped codes are imported as category "Other"; check the "unmapped LOINC codes" log line | 
 
-Additionally, `assertNoBypassRLS()` (`database.ts:L190-L228`) will **warn** unless `RLS_ENFORCEMENT=strict`, in which case it hard-exits when the DB login has `BYPASSRLS`.
+The token-refresh-on-expiry logic distinguishes the expired-token case:
 
-**Workaround**: check env vars on the Cloud Run revision; check Cloud SQL instance status.
-
-**Fix**: not a code fix — ops. See [`RUNBOOK.md`](./RUNBOOK.md) startup playbook.
-
-**Files**: `backend/src/services/database.ts:L128-L228`, `backend/src/config/index.ts`.
-
----
-
-## 10. PDF / OCR / Claude extraction symptoms
-
-### S-23. Lab upload returns 500, or completes but "no biomarkers extracted"
-
-**Symptom**: user uploads PDF to `/upload/lab-report` or `/upload/lab-results-ocr`. Either gets 500, or 200 with `data.biomarkers = []`, or 422 `"Could not extract any biomarkers from the PDF..."`.
-
-**Root cause**: multiple classes of issue, fixed incrementally:
-
-| Sub-symptom | Root cause | Commit |
-|---|---|---|
-| "PDF bomb" stalls server | No DoS protection on PDF parsing | `f6c2b92` (2026-01-06) "fix: add PDF bomb DoS protection with timeout and memory limits" |
-| Wrong pdf-parse version | ESM/CJS path mismatch | `254e2ec`, `154e52e` (2026-01-08) "use pdf-parse v1.x with correct import path" |
-| Multi-line table rows in OCR | Document AI emits cells on separate lines | `f62796f` → `2cbf6e4` → `56fd294` (2026-01-08) |
-| Quest lab whitespace variation | Pattern too strict | `a59c547`, `e79e1e2` (2026-01-07) |
-| Pattern needed flexibility for OCR | Pattern didn't handle OCR noise | `8e87ea3`, `e79e1e2` (2026-01-07) |
-| Extracted date ignored | Used upload timestamp, not lab-collection date | `36b7306` (2026-01-08) "use extracted labDate from Claude for biomarker measurement date" |
-| Upload modal closed before results visible | UX bug | `45cef63` (2026-01-08) "keep lab upload modal open after extraction to show results" |
-| Biomarkers disappeared after list view | Pagination bug | `080ad8e` (2026-01-08) "prevent biomarkers from disappearing due to pagination" |
-| 400 on scanned PDF that has no text layer | Expected — `VALIDATION_ERROR` at `controllers/upload/shared.ts:113` | Re-upload via `/upload/lab-results-ocr` |
-| Missing `GOOGLE_APPLICATION_CREDENTIALS` | Can't init Document AI | `2b79d46` (2026-01-07) "support JSON credentials in GOOGLE_APPLICATION_CREDENTIALS" — allows inlining the service-account JSON |
-
-**Workaround**: retry via the OCR endpoint if the PDF is scanned.
-
-**Fix**: see commits per row.
-
-**Files**:
-- `backend/src/services/pdfParser.ts`.
-- `backend/src/services/ocrService.ts`.
-- `backend/src/services/claudeExtraction.ts`.
-- `backend/src/controllers/upload/shared.ts:L89-L113`.
-- `backend/src/controllers/upload/labUploadController.ts`.
-
-**Cross-link**: [`ERROR_RECOVERY.md` §3 `VALIDATION_ERROR`](./ERROR_RECOVERY.md).
-
----
-
-### S-24. AI endpoints return 503 `SERVICE_UNAVAILABLE`
-
-**Symptom**: `/ai/chat`, `/biomarkers/:id/guidance`, or `/expenses/ai-cost-analysis` returns 503 with message like `"AI Health Guide is disabled: ANTHROPIC_BAA_ACTIVE must be \"true\". See SECURITY_STATUS.md C-7."`.
-
-**Root cause**: HIPAA BAA gate. The backend refuses to call Anthropic unless the `ANTHROPIC_BAA_ACTIVE=true` env var is set, because sending PHI to a vendor without an executed BAA is an impermissible disclosure.
-
-**Workaround**: none (by design — do NOT bypass locally with PHI).
-
-**Fix**: flip the env var on Cloud Run:
-
-```bash
-gcloud run services update <service> --update-env-vars=ANTHROPIC_BAA_ACTIVE=true --region=<region>
-# THEN — critical, per S-13 / 2026-04-17 postmortem:
-gcloud run services update-traffic <service> --to-latest --region=<region>
+```ts
+// Source: backend/src/services/fhir/labSyncService.ts:221-227
+if (
+  connection.tokenExpiresAt &&
+  connection.tokenExpiresAt.getTime() < Date.now() + 60_000
+) {
+  if (!refreshTokenPlain) {
+    throw new Error('Access token expired and no refresh token available');
+  }
 ```
 
-**Files**: `backend/src/controllers/aiChatController.ts:L134-L145`, `backend/src/routes/biomarkerRoutes.ts:L141-L147`, `backend/src/controllers/expenseController.ts:L637`.
+The SSRF guard is the source of the host/scheme rejections:
 
-**Cross-link**: [`ERROR_RECOVERY.md` §5 AI family](./ERROR_RECOVERY.md), [S-13](#s-13-gcloud-run-services-update---update-env-vars-applied-but-prod-behavior-unchanged), [`RUNBOOK.md`](./RUNBOOK.md).
-
----
-
-### S-25. Claude API returns 400 `invalid_request_error` (max_tokens)
-
-**Symptom**: extraction fails with upstream error mentioning `max_tokens exceeds limit`.
-
-**Root cause**: request specified a `max_tokens` higher than the model's per-request cap. Claude models have explicit caps; older code requested `8192` on a model capped at `4096`.
-
-**Workaround**: none.
-
-**Fix**: commit `e029127` (2026-01-09) "fix: Reduce Claude API max_tokens to valid limit".
-
-**Files**: `backend/src/services/claudeExtraction.ts`, `backend/src/services/sbcExtraction.ts`.
-
----
-
-### S-26. Insurance SBC upload breaks with PDF.js worker error
-
-**Symptom**: user on `/insurance` page uploads SBC. Console shows PDF.js worker load error; upload fails or hangs.
-
-**Root cause**: PDF.js was being loaded in the frontend for preview / client-side parsing; its worker script couldn't resolve at runtime, and the full PDF.js bundle was too heavy. Backend already uses `pdf-parse` + Claude for extraction — no reason to also parse client-side.
-
-**Workaround**: go through the SBC upload flow that uploads raw bytes to the backend.
-
-**Fix** (sequence of removals, 2026-01-09):
-- `0d2cd7a` "Remove frontend PDF.js parsing from SBC upload".
-- `8f9314f` "Prevent PDF.js from loading on insurance pages".
-- `4654968` "Remove PDF.js from EnhancedInsuranceUpload".
-- `6cdf698` "Remove unused type imports in EnhancedInsuranceUpload".
-
-**Files**: `src/components/insurance/*`, `src/components/upload/*`.
-
----
-
-## 11. Quick diagnostic commands
-
-### 11.1 Prod health
-
-```bash
-# Backend health (replace with actual prod URL)
-curl -i https://api.ownmyhealth.app/api/v1/health
-
-# CSRF token round-trip (confirms cookie attach + domain scope)
-curl -i -c /tmp/cookies.txt https://api.ownmyhealth.app/api/v1/csrf-token
-grep csrf_token /tmp/cookies.txt   # must show the cookie
+```ts
+// Source: backend/src/services/fhir/urlSafety.ts:82-89
+if (!allowed.has(host)) {
+  throw new Error(
+    `${label}: host "${host}" is not the trusted FHIR host (${base.hostname}) or an allowed host`
+  );
+}
+if (target.protocol === 'http:' && !isPrivateOrLoopbackHost(host)) {
+  throw new Error(`${label}: refusing cleartext http to public host "${host}"`);
+}
 ```
 
-### 11.2 Cloud Run logs (GCP)
+**How to distinguish an SSRF rejection from an expired token**: read `LabConnection.syncError` (persisted, truncated to 500 chars at `labSyncService.ts:366`) or the `SYNC_FAILED` audit row (`labSyncService.ts:369-374`). An *expired token* message says "Access token expired"; an *SSRF rejection* names a host/scheme and comes from `urlSafety.ts`. Tokens (`accessTokenEncrypted`/`refreshTokenEncrypted`) are PHI-grade — never logged in plaintext (`labSyncService.ts:213-216`, encrypted at `:142-143,230-233`).
+
+**Workaround / fix**: for expired-token cases, disconnect and re-connect (`disconnectConnection` revokes best-effort then deletes, `labSyncService.ts:383-421`). For SSRF rejections, fix the host config — do not widen the allowlist to make an error go away.
+
+**Files**: `backend/src/services/fhir/labSyncService.ts:184-377`; `backend/src/services/fhir/urlSafety.ts:56-91`.
+
+**Cross-link**: [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (`SYNC_FAILED`, Playbook D), [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) (`LabConnection` token PHI), [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
+
+---
+
+## Onboarding / plan-gating symptoms
+
+### Onboarding wizard stuck
+
+**Symptom**: a new user can't advance past the onboarding wizard.
+
+**Root cause**: the wizard lives at `src/components/onboarding/OnboardingWizard.tsx`. If a step calls a backend endpoint that fails (e.g. health profile save blocked by plan gating, or a `401` because the access token wasn't refreshed), the wizard cannot progress.
+
+**Workaround / fix**: check the network tab for a failing step request. Common culprits:
+- `403 PLAN_LIMIT_EXCEEDED` on `healthProfile` — FREE plan has `healthProfile: false` (`config/plans.ts:54`), so saving a health profile during onboarding is gated. Upgrade or skip the profile step.
+- `401` mid-wizard — the [data-disappears-on-refresh](#data-disappears-after-page-refresh) ordering issue; ensure the session was restored before the wizard mounted.
+
+**Files**: `src/components/onboarding/OnboardingWizard.tsx`; `backend/src/config/plans.ts:46-58`.
+
+**Cross-link**: [`FRONTEND_MAP.md`](./FRONTEND_MAP.md), [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md).
+
+---
+
+### Plan-gating blocks a feature unexpectedly
+
+**Symptom**: a feature returns `403` with "This feature is not available on your current plan. Upgrade to access it." or "You've reached your plan limit (current/limit). Upgrade to continue.", even though the user *thinks* they're on a paid plan.
+
+**Root cause**: plan is read **fresh from the DB under RLS** at request time, **not** from the JWT (which can be up to 15 min stale). An expired `planExpiresAt` downgrades to FREE at request time — paid plans actually expire now.
+
+```ts
+// Source: backend/src/middleware/planGating.ts:66-75
+const userRow = await withRLSContext(userId, async (tx) => {
+  return tx.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, planExpiresAt: true },
+  });
+});
+effectivePlan = normalizePlan(userRow?.plan);
+if (userRow?.planExpiresAt && userRow.planExpiresAt.getTime() < Date.now()) {
+  effectivePlan = 'FREE';
+}
+```
+
+**Per-tier limits** (relevant gates): FREE has `healthProfile: false`, `providerSharing: false`, `questFhirIntegration: false`, `aiChatsPerDay: 3`, `maxBiomarkers: 50`; PRO/TEAM unlock most (`-1` = unlimited). `dataExport: true` on **every** tier (HIPAA requires it).
+
+```ts
+// Source: backend/src/config/plans.ts:47-58 (FREE limits)
+aiChatsPerDay: 3,
+pdfUploadsPerMonth: 2,
+maxBiomarkers: 50,
+insurancePlans: 1,
+aiGuidancePerDay: 5,
+costAnalysisPerMonth: 1,
+healthProfile: false,
+providerSharing: false,
+dataExport: true,            // HIPAA requires this regardless of plan
+questFhirIntegration: false,
+```
+
+**Workaround / fix**: confirm the user's actual `plan` and `planExpiresAt` in the DB. Plans are assigned manually (admin panel or DB update) — there is no payment processing yet (`plans.ts:1-13`). The `403` body carries `limit`/`current`/`feature`/`upgradeRequired` so the frontend renders an upgrade CTA via `isPlanLimitError()` (`planGating.ts:90-104`; `client.ts:55-62`). If the DB read fails, the gate falls back to the (possibly stale) JWT plan rather than wedging (`planGating.ts:76-84`).
+
+**Files**: `backend/src/middleware/planGating.ts:37-110`; `backend/src/config/plans.ts:40-98`; `src/services/api/client.ts:55-62`.
+
+**Cross-link**: [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) (`PLAN_LIMIT_EXCEEDED`), [`API_REFERENCE.md`](./API_REFERENCE.md).
+
+---
+
+## Quick diagnostic commands
+
+Backend health (no auth; `200` only when the DB is connected, `app.ts:301-312`):
 
 ```bash
-# Last 20 errors in the last hour
+# Production
+curl -i https://api.ownmyhealth.io/api/v1/health
+# Expected: HTTP/1.1 200 with body {"success":true, ...} (routes/index.ts:42)
+
+# Docker/container probe (different path, returns {status, checks})
+curl -i https://api.ownmyhealth.io/health
+```
+
+Last errors in Cloud Run (the handler always logs `≥500`, `errorHandler.ts:190-192`):
+
+```bash
 gcloud logging read \
-  'resource.type="cloud_run_revision" severity>=ERROR' \
-  --limit=20 --freshness=1h --format=json
-
-# Filter to a specific service
-gcloud logging read \
-  'resource.type="cloud_run_revision" resource.labels.service_name="ownmyhealth-backend" severity>=ERROR' \
-  --limit=50 --freshness=6h
-
-# Look for FATAL startup failures (S-22)
-gcloud logging read \
-  'resource.type="cloud_run_revision" textPayload=~"FATAL: Cannot start server"' \
-  --limit=20 --freshness=24h
-
-# Check which revision is serving traffic vs latest-ready (S-13)
-gcloud run services describe ownmyhealth-backend \
-  --region=<region> \
-  --format='value(status.latestReadyRevisionName,status.latestCreatedRevisionName,status.traffic[].revisionName,status.traffic[].percent)'
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="ownmyhealth-backend" AND severity>=ERROR' \
+  --project=ownmyhealth-prod --limit=20 --freshness=1h --format=json
 ```
 
-### 11.3 Cloud SQL via proxy + psql (S-9, S-11, S-12)
+Filter for a specific symptom (logs are structured JSON with `message`/`service` fields, `logger.ts:88-104`):
 
 ```bash
-# Start Auth Proxy in background
-cloud-sql-proxy --port=5432 <project>:<region>:<instance> &
-
-# Connect
-psql "host=127.0.0.1 port=5432 user=<db-user> dbname=<db-name>"
-
-# Verify the current role's RLS attributes (relates to S-12, 2026-04-16 project-memory)
-SELECT rolname, rolbypassrls, rolsuper FROM pg_roles WHERE rolname = CURRENT_USER;
-
-# See actual rows for a user without RLS filtering (admin context)
--- Session must be under a BYPASSRLS role, else this still filters.
-SELECT id, user_id, measured_at FROM biomarkers WHERE id = '<id>';
-```
-
-### 11.4 Verify CSRF exemptions (S-6, S-8)
-
-```bash
-# Hitting a CSRF-protected mutation without the header should return 403
-curl -i -X POST https://api.ownmyhealth.app/api/v1/biomarkers \
-  -H "Content-Type: application/json" --cookie "access_token=..." \
-  -d '{"name":"test"}'
-# Expect: 403 with {"error":{"code":"FORBIDDEN","message":"CSRF token missing"}}
-
-# Uploads are exempt — same shape without the header should NOT 403 on CSRF
-curl -i -X POST https://api.ownmyhealth.app/api/v1/upload/lab-report \
-  --cookie "access_token=..." -F "file=@/tmp/foo.pdf"
-# Expect: 401 if no auth, 422 if bad file — NOT 403 CSRF.
-```
-
-### 11.5 Detect PHI in logs (audit-critical)
-
-```bash
-# Scan Cloud Run logs for raw PHI markers (email-shaped strings, DOBs).
-# Finding these is a HIPAA incident — redirect to RUNBOOK.md "PHI in logs".
+# AI spend-cap trips
 gcloud logging read \
-  'resource.type="cloud_run_revision" textPayload=~"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"' \
-  --limit=20 --freshness=24h
+  'resource.type="cloud_run_revision" AND jsonPayload.service="AISpendGuard"' \
+  --project=ownmyhealth-prod --limit=20 --freshness=24h
 
-# Frontend: audit F-10 / F-18 codified that raw console.log leaked auth-flow
-# details. Replacement pattern: authLogger/apiLogger which gate on production.
-# See src/contexts/AuthContext.tsx:L105-L113 and src/services/api/client.ts:L125-L130.
+# CORS rejections
+gcloud logging read \
+  'resource.type="cloud_run_revision" AND jsonPayload.message="CORS rejected origin"' \
+  --project=ownmyhealth-prod --limit=20 --freshness=1h
+```
+
+Detect the Cloud Run pinning trap (see [§Deployment](#env-var-change-has-no-effect-cloud-run-pinning)):
+
+```bash
+gcloud run services describe ownmyhealth-backend --region=us-central1 \
+  --project=ownmyhealth-prod \
+  --format='value(status.latestReadyRevisionName,status.latestCreatedRevisionName)'
+# If the two differ → a silent pin is holding traffic on the old revision.
+```
+
+Connect to Cloud SQL and reproduce an RLS-scoped query (the DB is `ownmyhealth` in Cloud SQL, `omh` for local dev per the prompt's note):
+
+```bash
+# Start the proxy, then connect
+cloud-sql-proxy ownmyhealth-prod:us-central1:<instance-name>
+psql -h 127.0.0.1 -U <user> -d ownmyhealth
+```
+
+```sql
+-- Reproduce what the app sees for one user (mirrors withRLSContext)
+BEGIN;
+SELECT set_config('app.current_user_id', '<user-uuid>', true);
+SELECT count(*) FROM biomarkers;
+ROLLBACK;
+
+-- Confirm the login role cannot bypass RLS (server boot-check, database.ts:228-230)
+SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;
 ```
 
 ---
 
-## 12. Related Documents
+## Acceptance questions (self-check)
 
-- [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) — code-catalog-first counterpart. Every HTTP error `code` the backend emits and its recovery.
-- [`RUNBOOK.md`](./RUNBOOK.md) — operational playbooks (JWT rotation, env-flag flips, DB restore).
-- [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) — currently-open symptoms not yet resolved.
-- [`LOCAL_DEV.md`](./LOCAL_DEV.md) — local-dev failure modes (ports, certs, Cloud SQL proxy).
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — auth flow, RLS, middleware stack — to understand *why* a symptom arises.
-- [`API_REFERENCE.md`](./API_REFERENCE.md) — per-endpoint contracts and expected error codes.
-- [`DATA_MODEL.md`](./DATA_MODEL.md) — RLS policies, cascade behavior.
-
----
-
-## 13. Acceptance-question self-check
-
-Answered from this doc + siblings only.
-
-**Q1. Where's the canonical fix for "data disappears on refresh"?**
-→ [§S-2](#s-2-data-disappears-after-page-refresh). Commit `195ccc1` (2026-01-10); reorder to `await authApi.refreshToken()` before `authApi.getCurrentUser()` in `src/contexts/AuthContext.tsx:L93-L128`.
-
-**Q2. What's the decision tree for a stuck-on-login user?**
-→ [§3.1](#31-im-stuck-on-login--401-loop). Starts with "What does `POST /auth/login` return?" and branches on 429 / 401 `INVALID_CREDENTIALS` / 403 `EMAIL_NOT_VERIFIED` / "200 then bounce" / 403 CSRF / network error.
-
-**Q3. What symptom indicates the Cloud Run env-update pinning gotcha, and where's the fix?**
-→ [§S-13](#s-13-gcloud-run-services-update---update-env-vars-applied-but-prod-behavior-unchanged). Symptom: env-var update appears applied but prod behavior unchanged; detection via `latestReadyRevisionName ≠ latestCreatedRevisionName`. Fix: `gcloud run services update-traffic <service> --to-latest`. Full postmortem: project-memory `cloud-run-env-update-pinning.md` (2026-04-17).
-
-**Q4. What causes an RLS "mystery" (fewer rows than expected), and how do you confirm?**
-→ [§S-11](#s-11-query-returns-fewer-rows-than-expected-rls-mystery) + decision tree [§3.4](#34-rls-mystery--query-returns-fewer-rows-than-expected). Causes: wrong `userId` in context, call used `prisma.*` not `tx.*` (footgun at `database.ts:L14-L31`), or row's `user_id` differs from expected. Confirm via psql admin query [§11.3](#113-cloud-sql-via-proxy--psql-s-9-s-11-s-12).
-
-**Q5. How do you detect PHI leaking into logs?**
-→ [§11.5](#115-detect-phi-in-logs-audit-critical). `gcloud logging read` with a regex for email-shaped strings; escalate any hit to `RUNBOOK.md` "PHI in logs". Audit findings F-10/F-18 drove the switch to gated `authLogger`/`apiLogger` (`AuthContext.tsx:L105-L113`, `client.ts:L125-L130`).
-
-**Q6. What's the most common cause of blank page on frontend, and where is it fixed?**
-→ [§S-16](#s-16-frontend-loads-blank-page-no-errors-visible) + [§S-17](#s-17-dashboard-charts-crash-cannot-read-properties-of-undefined-reading-forwardref). Most common: Recharts/React chunk-split `forwardRef` crash. Fixed by commits `e107665` and `1e1bac0` (2026-01-07/08).
-
-**Q7. Which past fix covers upload 500 errors, and where is the commit?**
-→ [§S-23](#s-23-lab-upload-returns-500-or-completes-but-no-biomarkers-extracted). Many — anchored by commit `f6c2b92` (2026-01-06) "add PDF bomb DoS protection with timeout and memory limits"; the table in that section maps each sub-symptom to its commit.
-
-**Q8. What's the quick curl to verify prod health?**
-→ [§11.1](#111-prod-health). `curl -i https://api.ownmyhealth.app/api/v1/health` plus a CSRF-token round-trip to confirm cookie attach + domain scope.
-
-**Q9. Which failure matches "Next.js SWC ARM64 incompat" per project memory?**
-→ [§S-20](#s-20-vite-dev-server-fails-on-windows-arm64--node-24). Cataloged as derived-from-architecture: the memory entry applies to HealthcareProviderDB (Next.js 14.x). OwnMyHealth currently uses Vite + `@vitejs/plugin-react` (Babel), so the same SWC-ARM64 class of failure is inactive here, but the symptom card documents the pattern for when/if the stack changes.
-
-**Q10. Where does the doc point for each symptom that maps to a known `code`?**
-→ Every symptom with a known `code` has a "Cross-link" footer pointing at the specific `ERROR_RECOVERY.md` section. The master map is the **Symptom index** [§2](#2-symptom-index) — the rightmost column links each relevant symptom to `ERROR_RECOVERY.md`.
+1. **Canonical fix for "data disappears on refresh"?** Call `await authApi.refreshToken()` before `authApi.getCurrentUser()` in the mount effect (`src/contexts/AuthContext.tsx:104-119`). → [Data disappears after page refresh](#data-disappears-after-page-refresh).
+2. **Decision tree for a stuck-on-login user?** → [Stuck-on-login decision tree](#stuck-on-login-decision-tree): check 401 on `/auth/me`, whether `/auth/refresh` ran first and succeeded, then secret-rotation vs ordering.
+3. **Symptom that indicates Cloud Run env-update pinning, and the fix?** Env change reported success but had no effect; detect via `latestReadyRevisionName ≠ latestCreatedRevisionName`; fix with `update-traffic --to-revisions=NEW=100` (or `--to-latest`). → [Env-var change has no effect](#env-var-change-has-no-effect-cloud-run-pinning).
+4. **What causes an RLS "mystery" and how to confirm?** A `prisma.*` call outside/inside-but-not-`tx` an RLS wrapper, or a row owned by another user; confirm by reproducing the `set_config('app.current_user_id', …)` query in psql and checking `rolbypassrls`. → [RLS mystery](#rls-mystery-fewer-rows-than-expected).
+5. **How to detect PHI in logs, and which util guards it?** Look for missing `[REDACTED]` on sensitive keys; `logger.sanitizeData` (`utils/logger.ts:21-56`) guards log lines; `phiRedaction.ts` guards Claude text, `pdfRedaction.ts` guards Claude image bytes. → [PHI leaking into logs](#phi-leaking-into-logs).
+6. **Most common cause of a blank page, and where fixed?** A stale-chunk crash after a deploy; handled by `ErrorBoundary.isChunkLoadError` → reload prompt (`ErrorBoundary.tsx:43-141`). → [Blank page or stale-chunk crash](#blank-page-or-stale-chunk-crash).
+7. **Which past fix covers upload 500s, and the commit?** Multiple: the empty-extraction `ValidationError` path (`labUploadController.ts:54-62`); historically `e029127 fix: Reduce Claude API max_tokens to valid limit` and the SBC regex fallback. → [Upload returns 500](#upload-returns-500-or-could-not-extract-any-biomarkers).
+8. **Quick curl to verify prod health?** `curl -i https://api.ownmyhealth.io/api/v1/health` (expects `200` + `"success":true`). → [Quick diagnostic commands](#quick-diagnostic-commands).
+9. **Which failure matches "Next.js SWC ARM64" per memory?** None in *this* repo — OwnMyHealth is Vite, not Next.js; the SWC patch belongs to HealthcareProviderDB. → [Blank page or stale-chunk crash](#blank-page-or-stale-chunk-crash) note + [Prompt drift log](#prompt-drift-log).
+10. **Where does the doc point for symptoms that map to a known `code`?** Every section cross-links to [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) by code (e.g. `FORBIDDEN`, `SYNC_FAILED`, `PLAN_LIMIT_EXCEEDED`, `SERVICE_UNAVAILABLE`).
+11. **Symptom for the AI spend cap, and the env var/guard?** `503` "daily budget reached"/"today's AI usage limit" from `aiSpendGuard` (`aiSpendGuard.ts:41-47`); env vars `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD`. → [AI 503](#ai-features-are-temporarily-unavailable-503).
+12. **What does a Quest `urlSafety` SSRF rejection look like vs an expired OAuth token?** SSRF rejection names a host/scheme ("host X is not the trusted FHIR host", `urlSafety.ts:82-89`); expired token says "Access token expired and no refresh token available" (`labSyncService.ts:221-227`). Distinguish via `LabConnection.syncError` / the `SYNC_FAILED` audit row. → [Sync fails / SSRF rejection / expired token](#sync-fails--ssrf-rejection--expired-token).
 
 ---
 
-## 14. Prompt drift log
+## Related Documents
 
-- The prompt example for S-2 cites AuthContext line ranges as `Lxx-Lyy`; the current file has the ordering fix at `L93-L128` (verified against `src/contexts/AuthContext.tsx` at the time of generation).
-- The prompt's canonical decision-tree example references a "CSRF Token Missing" handler; the actual throw at `backend/src/middleware/csrf.ts:L161` uses message `'CSRF token missing'` and `code: 'FORBIDDEN'` — there is **no** dedicated `CSRF_MISMATCH` or `CSRF_TOKEN_MISSING` code (already noted in `ERROR_RECOVERY.md` §11).
-- The prompt lists "Vite/SWC on ARM64 per memory" under Frontend symptoms, but the relevant project-memory entry is scoped to the sibling HealthcareProviderDB (Next.js). OwnMyHealth's Vite + Babel React toolchain is not affected today. Catalogued as derived-from-architecture with an explicit flag at S-20.
-- The prompt's decision-tree example has a branch "`419 SESSION_EXPIRED`"; no 419 is emitted anywhere in this codebase (`ERROR_RECOVERY.md` §2 confirms). 401 `UNAUTHORIZED` / `TOKEN_EXPIRED` is the only session-expiry signal.
+- [ERROR_RECOVERY.md](./ERROR_RECOVERY.md) — error-code-first catalog; every symptom here cross-links to its `code` there.
+- [RUNBOOK.md](./RUNBOOK.md) — operational playbooks (key rotation, BAA flip, Cloud Run pinning, rollback).
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — currently-open symptoms not yet fixed.
+- [LOCAL_DEV.md](./LOCAL_DEV.md) — local-dev failure modes (Vite, DB, env setup).
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — auth, CSRF double-submit, and RLS enforcement flows that produce these symptoms.
+- [ENV_VARS.md](./ENV_VARS.md) — every env var referenced in fixes (`AI_*_BUDGET_USD`, `COOKIE_*`, `CORS_ORIGIN`, `QUEST_FHIR_*`, `DATABASE_POOL_SIZE`).
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — encrypted fields touched by decrypt-failure 500s and Quest token PHI.
+- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts (upload, AI, FHIR, plan gates).
+- [DATA_MODEL.md](./DATA_MODEL.md) — RLS policies behind the "RLS mystery" symptom.
+- [FRONTEND_MAP.md](./FRONTEND_MAP.md) — component map (onboarding wizard, error boundary, auth context).
+
+---
+
+## Prompt drift log
+
+- **`./18-troubleshooting-doc.md` lists "Next.js SWC on ARM64 per memory" as a frontend symptom.** OwnMyHealth's frontend is **Vite + React** (`vite.config.ts:1-5`), not Next.js — there is no `next` dependency, no `@next/swc-*` binary, and no `patch-next-swc.js`. The SWC-ARM64 memory note applies to the separate **HealthcareProviderDB** project. Captured as a "does not apply here" note under [Blank page or stale-chunk crash](#blank-page-or-stale-chunk-crash) rather than fabricating a non-existent failure mode. Prompt author should scope that bullet to Next.js projects only.
+- **Spec template references commit `195ccc1` (AuthContext ordering) and `50d7426` (regression test).** `195ccc1` is real and accurate — `Fix auth token restoration order on page refresh` (2026-01-10), matching the refresh-before-getCurrentUser "CRITICAL FIX" still in `AuthContext.tsx:96-119`. However `50d7426` is **not** the regression test — it is `fix: add domain to all auth cookies for cross-domain support` (2026-01-08), a cross-domain cookie fix. The doc cites the live code (the authoritative source) and uses `50d7426` only where it actually applies (cross-domain cookies). Prompt author should drop or re-point the `50d7426` regression-test reference.
+- **Spec assumes `ERROR_RECOVERY.md` anchors like `#unauthenticated`.** The actual sibling uses `#unauthorized-http-401` and similar; links here point at the doc generally and to verified section names where known.

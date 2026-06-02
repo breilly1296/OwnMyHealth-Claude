@@ -1,613 +1,361 @@
----
-doc: FRONTEND_MAP
-purpose: Component + context + API-service atlas for the React frontend
-audience: Claude Project answering "where does X live" and "what calls Y"
-updated: 2026-04-24
-sources_verified:
-  - src/App.tsx:1-289
-  - src/main.tsx:1-10
-  - src/contexts/AuthContext.tsx:1-313
-  - src/contexts/ThemeContext.tsx:1-105
-  - src/services/api/*.ts (17 modules)
-  - vite.config.ts:1-43
----
+# FRONTEND_MAP.md
 
-# FRONTEND_MAP.md — OwnMyHealth Frontend Atlas
+> Component + context + API-service atlas for the OwnMyHealth React frontend.
+> Generated 2026-06-01 against the live codebase. Every claim cites `file:path:line`.
+> Repo root for all paths below: `C:/Users/breil/Projects/OwnMyHealth/` (paths are repo-relative).
 
-This is the structural map of the React frontend (`src/`). It enumerates every component, every context, every API service module, and every context / API consumer — so a reader can jump straight to the file that renders "the biomarker dashboard" or serves "the insurance hub" without re-globbing.
+This document lets a reader answer "where do I add a new biomarker input field?" or "which component renders the insurance hub?" with **no repo access**. It is a reference, not a walkthrough — scan the tables and diagrams first.
 
 ---
 
 ## 1. Overview
 
-| Metric | Value | Source |
+| Fact | Value | Source |
 |---|---|---|
-| Total `.tsx` under `src/components/` | **66** | `Glob pattern: "src/components/**/*.tsx"` |
-| Total `.ts` (non-tsx) under `src/components/` | 13 (12 barrels + `insuranceKnowledgeBaseConstants.ts` + `useInsuranceKnowledgeBase.ts`) | `Glob pattern: "src/components/**/*.ts"` |
-| Component directories | **12** (`analytics, auth, biomarkers, common, dashboard, files, health, insurance, onboarding, settings, trends, upload`) | `ls src/components/` |
-| Contexts | 2 (`AuthContext`, `ThemeContext`) | `src/contexts/*.tsx` |
-| API modules | 17 (`admin, ai, auth, biomarkers, client, expenses, files, healthGoals, healthNeeds, index, insurance, onboarding, patient, plan, provider, settings, upload`) | `src/services/api/*.ts` |
-| Custom hooks | 7 (`useRBAC, useModals, useApi, useErrorNotification, useBiomarkerData, useBiomarkerStats, useBiomarkerTrends`) + `index.ts` | `src/hooks/*` |
-| Routing approach | **Conditional rendering (no router library)** — `App.tsx:98-273` switches on `isAuthenticated`, `authView` state, `specialRoute` URL sniff, and inside `Dashboard.tsx:180-244` a `switch(selectedCategory)` picks the page | `src/App.tsx:98-273`, `src/components/dashboard/Dashboard.tsx:85-244` |
-| State model | **React Context only** — no Redux, Zustand, MobX, React Query. Two providers (`AuthProvider`, `ThemeProvider`) wrap the tree at `App.tsx:276-286`. All remote state lives in component-local `useState` or custom hooks. | `src/App.tsx:276-286` |
-| HTTP client | Native `fetch` via `apiFetch<T>` wrapper at `src/services/api/client.ts:172-307`. **No axios** — CLAUDE.md and the prompt say "axios", but the code uses `fetch`. Logged in [§11 Prompt drift log](#11-prompt-drift-log). | `src/services/api/client.ts:172-307` |
-| Form library | **None** — every form is hand-rolled `useState` + `onSubmit`. No `react-hook-form`, `zod` (on the client), `formik`, or `yup` — `Grep pattern: "react-hook-form\|zod\|formik\|yup"` over `src/` returns zero matches. | `Grep over src/` |
+| Total component files | **73** `.tsx` files | `Glob "src/components/**/*.tsx"` (verified count 73) |
+| Component directories | **14** (`admin`, `analytics`, `auth`, `biomarkers`, `common`, `dashboard`, `files`, `health`, `insurance`, `onboarding`, `provider`, `settings`, `trends`, `upload`) | `Glob "src/components/*"` (14 dirs) |
+| Contexts | **2**: `AuthContext`, `ThemeContext` | `Glob "src/contexts/*.tsx"` |
+| API modules | **17** domain modules + `client.ts` core | `Glob "src/services/api/*.ts"` (18 files incl. `index.ts`) |
+| Routing library | **None** — no `react-router`; see [§3](#3-routing--url-map) | `package.json` has no router dep (`Grep "react-router"` → no match) |
+| State model | **React Context only** (no Redux, no Zustand). PHI is fetched on demand, never persisted. | `src/contexts/AuthContext.tsx:7-12` |
+
+**Routing approach (three layers, all conditional rendering — no `<Route>`):**
+
+1. **Unauthenticated view state** — `App.tsx` switches between `LoginPage` / `RegisterPage` / `ForgotPasswordPage` via a `useState<AuthView>` flag. `src/App.tsx:61`, `src/App.tsx:105`.
+2. **URL special routes** — `App.tsx` parses `window.location.pathname` for `/verify-email`, `/reset-password`, `/confirm-email-change` (token in query string). `src/App.tsx:72-90`.
+3. **In-app SPA paths** — once authenticated, `Dashboard` reads `window.location.pathname` against `pathToCategoryMap` and pushes history on category change. `src/components/dashboard/categoryRouting.ts:10`, `src/components/dashboard/Dashboard.tsx:100-102`, `:177-184`.
+
+```
+                         ┌─────────────────────────────────────────────┐
+   window.location  ───▶ │ App.tsx getSpecialRoute()  (src/App.tsx:72)  │
+                         └───────────────┬─────────────────────────────┘
+                  special route? ────────┤
+              yes │                       │ no
+                  ▼                       ▼
+   VerifyEmail / ResetPassword     isAuthenticated? (AuthContext)
+   / ConfirmEmailChange            ┌──────────┴──────────┐
+   (src/App.tsx:129-183)       no  │                     │ yes
+                                   ▼                     ▼
+                    LoginPage/RegisterPage/        Dashboard  (src/App.tsx:292)
+                    ForgotPasswordPage                  │
+                    (authView state, src/App.tsx:253)   ▼
+                                            pathToCategoryMap → selectedCategory
+                                            (categoryRouting.ts:10, Dashboard.tsx:100)
+```
 
 ---
 
 ## 2. Component directory catalog
 
-Twelve H3 sub-sections, one per directory. Every row cites the file and the exported function line.
+One H3 per directory. Component file → purpose, contexts consumed, API calls. "Calls API" cites the exact call site; components that get data through hooks are marked "(via hook)".
 
-### 2.1 `src/components/auth/`
+### `src/components/admin/`
 
-**Purpose**: unauthenticated and verification/reset flows. Routed by `App.tsx:AppContent` state (not by URL path, except `/verify-email` and `/reset-password` which carry tokens in query strings).
+Purpose: ADMIN-only console — user management, audit-log viewer, provider–patient relationship oversight, system stats.
 
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `LoginPage` | `src/components/auth/LoginPage.tsx:33` | Email/password form + demo-login button | (none) | `authApi.login` via `App.handleLogin` (`src/App.tsx:178`) |
-| `RegisterPage` | `src/components/auth/RegisterPage.tsx:35` | Registration form | (none) | `authApi.register` via `App.handleRegister` (`src/App.tsx:203`) |
-| `VerifyEmailPage` | `src/components/auth/VerifyEmailPage.tsx:17` | Token-based email confirmation | (none) | `authApi.verifyEmail` (`src/services/api/auth.ts:87`) |
-| `ResetPasswordPage` | `src/components/auth/ResetPasswordPage.tsx:17` | Token-based password reset | (none) | `authApi.resetPassword` (`src/services/api/auth.ts:100`) |
-| `ForgotPasswordPage` | `src/components/auth/ForgotPasswordPage.tsx:15` | Email entry → reset link | (none) | `authApi.forgotPassword` (`src/services/api/auth.ts:92`) |
-| barrel | `src/components/auth/index.ts:1-5` | re-exports | — | — |
+| `AdminPage` | `src/components/admin/AdminPage.tsx:1` | Tabbed admin console (users / audit / relationships / stats) | — (role gated upstream in `Dashboard`) | `adminApi.getStats` `:67`, `getUsers` `:128`, `deleteUserPermanently` `:165`, `updateUser` `:220`, `updateUserPlan` `:231`, `getAuditLogs` `:284`, `getProviderRelationships` `:371`, `updateProviderRelationship` `:384` |
 
-Form validation: hand-rolled (`useState` + `onSubmit`).
-Route/URL: conditional — unauthenticated state at `App.tsx:230-266`; `/verify-email?token=...` and `/reset-password?token=...` handled at `App.tsx:124-160`.
+Route/URL: SPA path `/admin` → category `Admin` (`categoryRouting.ts:20`). Mounted in `Dashboard.renderSpecialPage` `case 'Admin'` (`src/components/dashboard/Dashboard.tsx:312-317`). Role gate: `categories[].roles: ['ADMIN']` (`src/data/sampleData.ts:233`) filtered at `Dashboard.tsx:135` + deep-link gate `Dashboard.tsx:224-244`.
 
----
+### `src/components/analytics/`
 
-### 2.2 `src/components/analytics/`
+Purpose: health-goal tracking panel (this dir holds **one** component despite the name).
 
-**Purpose**: single-view analytics panels.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `GoalTrackerPanel` | `src/components/analytics/GoalTrackerPanel.tsx:170` | Health-goals list with progress bars + create/update form | (none) | `healthGoalsApi.*` (grep verified, the only consumer) |
-| barrel | `src/components/analytics/index.ts:7` | re-exports | — | — |
+| `GoalTrackerPanel` | `src/components/analytics/GoalTrackerPanel.tsx:1` | Goal list + progress + suggestions; uses `recharts` | — | `healthGoalsApi.getAll` `:201`, `getSummary` `:202`, `getSuggestions` `:217`, `delete` `:271`, `update` `:284`, `updateProgress` `:296`, `create` `:307` |
 
-Route/URL: conditional — `Dashboard.tsx:223-228` renders it when `selectedCategory === 'Goals'`.
+Route/URL: SPA path `/goals` → category `Goals` (`categoryRouting.ts:15`), mounted at `Dashboard.tsx:288-293`.
 
----
+### `src/components/auth/`
 
-### 2.3 `src/components/biomarkers/`
+Purpose: login, registration, email verification, password reset/forgot, email-change confirmation.
 
-**Purpose**: biomarker display, manual entry, charts, and the insurance-overlay panel.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `AddMeasurementModal` | `src/components/biomarkers/AddMeasurementModal.tsx:37` | Manual biomarker-entry modal | (none) | indirect via `Dashboard.handleAddMeasurement` → `useBiomarkerData` |
-| `BiomarkerActionPlan` | `src/components/biomarkers/BiomarkerActionPlan.tsx:83` | Per-biomarker action card | (none) | (none — presentational) |
-| `BiomarkerChart` | `src/components/biomarkers/BiomarkerChart.tsx:166` | Recharts history chart | (none) | (none) |
-| `BiomarkerGraph` | `src/components/biomarkers/BiomarkerGraph.tsx:28` | Sparkline/mini chart | (none) | (none) |
-| `BiomarkerInsurancePanel` | `src/components/biomarkers/BiomarkerInsurancePanel.tsx:43` | Per-biomarker insurance coverage slide-in | (none) | (none — receives `insurancePlans` prop) |
-| `BiomarkerRangeBar` | `src/components/biomarkers/BiomarkerRangeBar.tsx:25` | Normal-range bar indicator | (none) | (none) |
-| `BiomarkerSummary` | `src/components/biomarkers/BiomarkerSummary.tsx:27` | Summary stats for a category | (none) | (none) |
-| `TrendModal` | `src/components/biomarkers/TrendModal.tsx:29` | Dashboard's trend modal | (none) | (none) |
-| barrel | `src/components/biomarkers/index.ts:1-8` | re-exports | — | — |
+| `LoginPage` | `src/components/auth/LoginPage.tsx` | Email/password form + demo button | — (callbacks from `App`) | via `App` → `useAuth().login` (`src/App.tsx:201-209`) |
+| `RegisterPage` | `src/components/auth/RegisterPage.tsx` | Registration form | — | via `App` → `useAuth().register` (`src/App.tsx:226-234`) |
+| `ForgotPasswordPage` | `src/components/auth/ForgotPasswordPage.tsx:41` | Request reset email | — | `authApi.forgotPassword` `:41` |
+| `ResetPasswordPage` | `src/components/auth/ResetPasswordPage.tsx:62` | New-password form (token route) | — | `authApi.resetPassword` `:62` |
+| `VerifyEmailPage` | `src/components/auth/VerifyEmailPage.tsx:17` | Confirms email token | — | `authApi.verifyEmail` `:52` |
+| `ConfirmEmailChangePage` | `src/components/auth/ConfirmEmailChangePage.tsx:20` | Confirms email-change token | — | `authApi.confirmEmailChange` `:55` |
 
-Route/URL: biomarker components are child of `Dashboard.DashboardContent` / `CategoryContent` — no URL, state-switched.
+Route/URL: unauthenticated view state + URL special routes (`src/App.tsx:129-289`). See [§3](#3-routing--url-map).
 
----
+### `src/components/biomarkers/`
 
-### 2.4 `src/components/common/`
+Purpose: biomarker display, entry, range bars, charts, insurance panel. **Note:** components here do NOT call `biomarkersApi` directly — biomarker data flows in via props from the dashboard hooks (`useBiomarkerData`, `useBiomarkerStats`). The AI-guidance display lives in `trends/`, not here.
 
-**Purpose**: cross-cutting primitives — error boundary, toasts, modal, upload zone, RBAC guards.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `ErrorBoundary` | `src/components/common/ErrorBoundary.tsx:43` (class) | React error boundary (class component) — wraps `AppContent` at `App.tsx:278-284` | (none) | (none) |
-| `Modal` | `src/components/common/Modal.tsx:51` | Dialog primitive | (none) | (none) |
-| `UploadZone` | `src/components/common/UploadZone.tsx:53` | Drag-drop file picker | (none) | (none) |
-| `RoleGuard` | `src/components/common/RoleGuard.tsx:44` | Render gate based on role | `AuthContext` via `useRBAC` (`src/hooks/useRBAC.ts:19-111`) | (none) |
-| `PatientOnly` | `src/components/common/RoleGuard.tsx:72` | Wrapper — `RoleGuard roles={['PATIENT']}` | via `useRBAC` | (none) |
-| `ProviderOnly` | `src/components/common/RoleGuard.tsx:83` | Wrapper — `RoleGuard roles={['PROVIDER']}` | via `useRBAC` | (none) |
-| `AdminOnly` | `src/components/common/RoleGuard.tsx:94` | Wrapper — `RoleGuard roles={['ADMIN']}` | via `useRBAC` | (none) |
-| `ProviderOrAdmin` | `src/components/common/RoleGuard.tsx:105` | Wrapper — `RoleGuard minRole="PROVIDER"` | via `useRBAC` | (none) |
-| `RoleBadge` | `src/components/common/RoleGuard.tsx:117` | Colored role pill | via `useRBAC` | (none) |
-| `ErrorToast` | `src/components/common/ErrorToast.tsx:26` | Toast used by `Dashboard.tsx:265-269` | (none) | (none) |
-| `SuccessToast` | `src/components/common/SuccessToast.tsx:26` | Toast variant | (none) | (none) |
-| barrel | `src/components/common/index.ts:1-13` | re-exports | — | — |
+| `AddMeasurementModal` | `src/components/biomarkers/AddMeasurementModal.tsx` | Manual entry form | — | — (mutation via parent → `useBiomarkerData.handleAddMeasurement`, `Dashboard.tsx:463`) |
+| `BiomarkerActionPlan` | `src/components/biomarkers/BiomarkerActionPlan.tsx:83` | Expandable action-plan card for out-of-range markers | — | — (computes from biomarker + insurance props) |
+| `BiomarkerChart` | `src/components/biomarkers/BiomarkerChart.tsx:166` | Recharts line chart | — | — (props) |
+| `BiomarkerGraph` | `src/components/biomarkers/BiomarkerGraph.tsx:28` | Wraps `BiomarkerChart` for detail/compact views | — | — |
+| `BiomarkerInsurancePanel` | `src/components/biomarkers/BiomarkerInsurancePanel.tsx:43` | Modal: insurance coverage for recommended services | — | — (props) |
+| `BiomarkerRangeBar` | `src/components/biomarkers/BiomarkerRangeBar.tsx:25` | Compact SVG value-position bar | — | — |
+| `BiomarkerSummary` | `src/components/biomarkers/BiomarkerSummary.tsx:27` | Category summary list | — | — (props `biomarkers`, `category`) |
+| `TrendModal` | `src/components/biomarkers/TrendModal.tsx` | Modal embedding `BiomarkerChart` | — | — |
 
-```ts
-// Source: src/components/common/RoleGuard.tsx:L44-L66
-export function RoleGuard({ roles, minRole, fallback = null, children }: RoleGuardProps) {
-  const { hasRole, hasMinRole, isAuthenticated } = useRBAC();
-  if (!isAuthenticated) return <>{fallback}</>;
-  if (roles && roles.length > 0) {
-    if (!hasRole(...roles)) return <>{fallback}</>;
-  }
-  if (minRole) {
-    if (!hasMinRole(minRole)) return <>{fallback}</>;
-  }
-  return <>{children}</>;
-}
-```
+Form validation: **hand-rolled** — no Zod / react-hook-form on the frontend (`Grep "from 'zod'|react-hook-form|useForm"` over `src/` → no matches). See [§8](#8-notable-patterns).
 
----
+Route/URL: rendered inside `Dashboard` via biomarker category state (e.g. `Blood`, `Hormones` in `src/data/sampleData.ts:244-261`) → `CategoryContent` (`Dashboard.tsx:436-449`). These subcategories are **state-only**, not in `categoryRouting.ts` (`categoryRouting.ts:5-8`).
 
-### 2.5 `src/components/dashboard/`
+Related API routes: `GET /biomarkers`, `POST /biomarkers`, `POST /biomarkers/:id/guidance` — see [`API_REFERENCE.md`](./API_REFERENCE.md).
 
-**Purpose**: top-level authenticated shell. `Dashboard.tsx` is the hub — everything else is a sub-component.
+### `src/components/common/`
 
-| Component | File:line | Renders | Consumes contexts | Calls API |
+Purpose: shared UI primitives and guards.
+
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `Dashboard` | `src/components/dashboard/Dashboard.tsx:85` | Shell: header + sidebar + `switch(selectedCategory)` page selector | `AuthContext` (`useAuth` at line 86) | `onboardingApi.getStatus` (line 130) |
-| `DashboardHeader` | `src/components/dashboard/DashboardHeader.tsx:28` | Top nav + user menu | (none) | (none) |
-| `DashboardSidebar` | `src/components/dashboard/DashboardSidebar.tsx:108` | Category/navGroup list (mobile drawer + desktop fixed) | (none) | (none) |
-| `DashboardContent` | `src/components/dashboard/DashboardContent.tsx:110` | Overview grid — stats + category cards + actions | `AuthContext` (grep hit in §3) | (none) |
-| `DashboardModals` | `src/components/dashboard/DashboardModals.tsx:88` | Renders every dashboard modal lazily | (none) | indirect (modals call APIs) |
-| `CategoryContent` | `src/components/dashboard/CategoryContent.tsx:121` | Detail view for a selected category | (none) | (none) |
-| `CategoryTab` | `src/components/dashboard/CategoryTab.tsx:27` | Single tab pill | (none) | (none) |
-| `CollapsibleNavGroup` | `src/components/dashboard/CollapsibleNavGroup.tsx:22` | Grouped nav accordion | (none) | (none) |
-| `RecentActivity` | `src/components/dashboard/RecentActivity.tsx:68` | Activity feed | (none) | (none) |
-| `getIcon` | `src/components/dashboard/getIcon.tsx:55` | Icon-name → `<JSX.Element>` mapper | (none) | (none) |
-| barrel | `src/components/dashboard/index.ts:1-11` | re-exports | — | — |
+| `ErrorBoundary` | `src/components/common/ErrorBoundary.tsx` | React error boundary; used keyed-by-category in `Dashboard` (`Dashboard.tsx:387`) | — | — |
+| `ErrorToast` | `src/components/common/ErrorToast.tsx:26` | Fixed top-right error toast | — | — |
+| `SuccessToast` | `src/components/common/SuccessToast.tsx` | Fixed success toast | — | — |
+| `Modal` | `src/components/common/Modal.tsx` | Generic modal shell | — | — |
+| `RoleGuard` (+ `PatientOnly`, `ProviderOnly`, `AdminOnly`, `ProviderOrAdmin`, `RoleBadge`) | `src/components/common/RoleGuard.tsx:44` | Conditional render by role via `useRBAC` | `AuthContext` (through `useRBAC`) | — |
+| `UploadZone` | `src/components/common/UploadZone.tsx` | Drag-drop file input | — | — |
 
-Route/URL: conditional — `Dashboard.tsx:180-244` `renderSpecialPage()` switch selects which page component to lazy-load by `selectedCategory`.
+> **Drift:** `RoleGuard` and its wrappers are exported (`src/components/common/index.ts`) but have **no JSX consumers** in the app — `Grep "<RoleGuard|<ProviderOnly|<AdminOnly|<PatientOnly|<RoleBadge"` over `src/` returns only the definition file. Live role gating is done by filtering `categories[].roles` in `Dashboard.tsx:135` and the deep-link gate at `Dashboard.tsx:224`. See [§9](#9-drift-findings).
 
----
+### `src/components/dashboard/`
 
-### 2.6 `src/components/files/`
+Purpose: the authenticated app shell — header, sidebar, content router, modals.
 
-**Purpose**: user-uploaded lab file management.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `FilesPage` | `src/components/files/FilesPage.tsx:22` | List / download / delete files | (none) | `filesApi.getAll`, `filesApi.downloadFile`, `filesApi.delete` (`src/services/api/files.ts:23-59`) |
-| `FileCard` | `src/components/files/FileCard.tsx:23` | Single-file row | (none) | (none — callbacks) |
-| barrel | `src/components/files/index.ts:1-2` | re-exports | — | — |
+| `Dashboard` | `src/components/dashboard/Dashboard.tsx:93` | App shell + SPA router + role gate + onboarding gate | `useAuth()` (`:94`) | `onboardingApi.getStatus` `:150` (rest via hooks) |
+| `DashboardHeader` | `src/components/dashboard/DashboardHeader.tsx:28` | Top nav bar, user menu | — (`user` via props from `Dashboard.tsx:360`) | — |
+| `DashboardSidebar` | `src/components/dashboard/DashboardSidebar.tsx:110` | Category nav (mobile drawer + desktop); link hrefs from `categoryToPathMap` | — (props) | — |
+| `DashboardContent` | `src/components/dashboard/DashboardContent.tsx:121` | Overview stats grid | `useAuth()` (`:121`) | — (props) |
+| `CategoryContent` | `src/components/dashboard/CategoryContent.tsx` | Biomarker category detail view | — | — |
+| `CategoryTab` | `src/components/dashboard/CategoryTab.tsx` | Tab pill | — | — |
+| `CollapsibleNavGroup` | `src/components/dashboard/CollapsibleNavGroup.tsx` | Sidebar group accordion | — | — |
+| `DashboardModals` | `src/components/dashboard/DashboardModals.tsx` | Lazy-mounts all modals (upload, SBC, trend, insurance panel) | — | — (delegated to upload components) |
+| `RecentActivity` | `src/components/dashboard/RecentActivity.tsx` | Recent-events list | — | — |
+| `getIcon` | `src/components/dashboard/getIcon.tsx` | lucide icon resolver (helper) | — | — |
 
-Route/URL: conditional — `Dashboard.tsx:200-205` when `selectedCategory === 'Files'`.
+Non-component sibling: `categoryRouting.ts` — SPA path ↔ category maps (`pathToCategoryMap`, `categoryToPathMap`, `pathForCategory`) (`src/components/dashboard/categoryRouting.ts:10`, `:24`, `:44`).
 
-Download flow note: `filesApi.downloadFile` bypasses `apiFetch` and calls `fetch` directly so it can materialize a blob URL (`src/services/api/files.ts:42-55`). Backend streams the file, not a signed URL.
+Route/URL: the shell itself is the authenticated root (`src/App.tsx:292`); in-app paths in [§3b](#3b-in-app-dashboard-spa-paths).
 
----
+### `src/components/files/`
 
-### 2.7 `src/components/health/`
+Purpose: uploaded-file management (list, view, download, delete).
 
-**Purpose**: conversational Health Guide + Health Needs board. (Not listed in CLAUDE.md "Project Structure", but the directory exists on disk — drift noted in §11.)
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `HealthGuidePage` | `src/components/health/HealthGuidePage.tsx:86` | Chat UI streaming `/ai/chat` | (none) | `aiApi.chat` (`src/services/api/ai.ts:65`), `settingsApi.getHealthProfile` (profile summary) |
-| `HealthNeedsPage` | `src/components/health/HealthNeedsPage.tsx:82` | Grouped health-needs cards + analyze panel | (none) | `healthNeedsApi.*` (`src/services/api/healthNeeds.ts:27`) |
+| `FilesPage` | `src/components/files/FilesPage.tsx` | File list + actions; signed-URL download via blob | — | `filesApi.getAll` `:35`, `downloadFile` `:61`/`:77`, `delete` `:104` |
+| `FileCard` | `src/components/files/FileCard.tsx:23` | Single file card | — | — (props + callbacks) |
 
-Route/URL: conditional — `Dashboard.tsx:212-234` when `selectedCategory === 'Health Guide'` / `'Needs'`.
+Route/URL: SPA path `/files` → category `Files` (`categoryRouting.ts:13`), mounted `Dashboard.tsx:265-270`.
 
----
+### `src/components/health/`
 
-### 2.8 `src/components/insurance/`
+Purpose: AI health-guide chat and health-needs management.
 
-**Purpose**: plan CRUD, SBC upload / re-analysis, cost optimization, expense tracking, knowledge base.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `InsuranceHub` | `src/components/insurance/InsuranceHub.tsx:185` | Top-level insurance landing page | (none) | (none — receives `insurancePlans` prop) |
-| `InsuranceSBCUpload` | `src/components/insurance/InsuranceSBCUpload.tsx:40` | Single-file SBC upload | (none) | `insuranceApi.uploadSBC` (line 78) |
-| `EnhancedInsuranceUpload` | `src/components/insurance/EnhancedInsuranceUpload.tsx:191` | Multi-step SBC upload modal | (none) | `insuranceApi.uploadSBC` (line 233) |
-| `AddInsurancePlanModal` | `src/components/insurance/AddInsurancePlanModal.tsx:60` | Manual plan entry + optional SBC | (none) | `insuranceApi.uploadSBC` (line 177), create/update |
-| `InsurancePlanDetail` | `src/components/insurance/InsurancePlanDetail.tsx:240` | Plan detail view + re-analyze | (none) | `insuranceApi.reanalyzePlan` (line 282) |
-| `InsurancePlanCard` | `src/components/insurance/InsurancePlanCard.tsx:98` | Summary card | (none) | (none) |
-| `InsurancePlanCompare` | `src/components/insurance/InsurancePlanCompare.tsx:121` (exports `InsuranceKnowledgePanel`) | Side-by-side plan compare | (none) | (none) |
-| `InsurancePlanViewer` | `src/components/insurance/InsurancePlanViewer.tsx:51` | Plan list viewer modal | (none) | (none) |
-| `InsuranceStatsGrid` | `src/components/insurance/InsuranceStatsGrid.tsx:19` | Stats panel | (none) | (none) |
-| `InsuranceUtilizationTracker` | `src/components/insurance/InsuranceUtilizationTracker.tsx:60` | Utilization panel | (none) | (none) |
-| `InsuranceKnowledgeBase` | `src/components/insurance/InsuranceKnowledgeBase.tsx:26` | Knowledge base page | (none) | (none) |
-| `InsuranceLearnTab` | `src/components/insurance/InsuranceLearnTab.tsx:46` | Educational tab | (none) | (none) |
-| `InsuranceGuide` | `src/components/insurance/InsuranceGuide.tsx:58` (exports `InsuranceEducationPanel`) | Educational panel | (none) | (none) |
-| `DeductibleProgressBar` | `src/components/insurance/DeductibleProgressBar.tsx:18` | Progress bar | (none) | (none) |
-| `CostOptimization` | `src/components/insurance/CostOptimization.tsx:147` | AI cost optimization | (none) | `expensesApi.analyzeCosts`, projections CRUD |
-| `ExpenseProjectionModal` | `src/components/insurance/ExpenseProjectionModal.tsx:53` | Add/edit projection | (none) | `expensesApi.createProjection`, `updateProjection` |
-| `ExpenseActualModal` | `src/components/insurance/ExpenseActualModal.tsx:112` | Add/edit actual claim | (none) | `expensesApi.createActual`, `updateActual` |
-| `ExpenseActualsList` | `src/components/insurance/ExpenseActualsList.tsx:56` | Actuals table | (none) | `expensesApi.getActuals`, `deleteActual` |
-| `useInsuranceKnowledgeBase` (hook) | `src/components/insurance/useInsuranceKnowledgeBase.ts:16` | Hook used by `InsuranceKnowledgeBase` | (none) | (none) |
-| `insuranceKnowledgeBaseConstants` | `src/components/insurance/insuranceKnowledgeBaseConstants.ts` | Constants | — | — |
-| barrel | `src/components/insurance/index.ts:1-11` | re-exports | — | — |
+| `HealthGuidePage` | `src/components/health/HealthGuidePage.tsx:92` | Streaming AI chat about your health data | — | `settingsApi.getHealthProfile` `:114`, `aiApi.chat` `:179` (streaming) |
+| `HealthNeedsPage` | `src/components/health/HealthNeedsPage.tsx` | Health-needs cards grouped by urgency | — | `healthNeedsApi.getAll` `:107`, `updateStatus` `:140`, `delete` `:153`, `analyze` `:166`, `create` `:185`/`:202` |
 
-Route/URL: conditional — `Dashboard.tsx:181-199` (`'Insurance'`, `'Knowledge Base'`).
+Route/URL: `/health-guide` → `Health Guide` (`categoryRouting.ts:17`, `Dashboard.tsx:277-287`); `/needs` → `Needs` (`categoryRouting.ts:16`, `Dashboard.tsx:294-299`).
 
----
+### `src/components/insurance/`
 
-### 2.9 `src/components/onboarding/`
+Purpose: insurance hub, plan CRUD, SBC upload + Claude extraction, expense projections/actuals, cost analysis, plan compare, knowledge base. **Largest directory (18 components).**
 
-**Purpose**: first-session wizard (welcome → lab upload → health profile → done).
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `OnboardingWizard` | `src/components/onboarding/OnboardingWizard.tsx:68` | Inline 4-step wizard (not a modal); mounts LabUploadModal lazily | `AuthContext` (`useAuth` at line 73) | `onboardingApi.complete`, uses `status` prop from `onboardingApi.getStatus` (fetched by `Dashboard.tsx:130`) |
-| barrel | `src/components/onboarding/index.ts:1` | re-exports | — | — |
+| `InsuranceHub` | `src/components/insurance/InsuranceHub.tsx:185` | Insurance landing (plans, upload CTAs, stats) | — | — (props/callbacks from `Dashboard.tsx:248`) |
+| `InsuranceKnowledgeBase` | `src/components/insurance/InsuranceKnowledgeBase.tsx` | Plan analysis / comparison hub | — | — (props) |
+| `AddInsurancePlanModal` | `src/components/insurance/AddInsurancePlanModal.tsx:94` | Manual plan entry + SBC upload | — | `insuranceApi.createPlan` `:94`, `uploadSBC` `:177` |
+| `InsuranceSBCUpload` | `src/components/insurance/InsuranceSBCUpload.tsx:40` | SBC PDF upload (basic) | — | `insuranceApi.uploadSBC` `:78` |
+| `EnhancedInsuranceUpload` | `src/components/insurance/EnhancedInsuranceUpload.tsx:194` | SBC PDF upload ("smart") | — | `insuranceApi.uploadSBC` `:237` |
+| `InsurancePlanCompare` | `src/components/insurance/InsurancePlanCompare.tsx:163` | Side-by-side compare + benefit search | — | `insuranceApi.comparePlans` `:163`, `searchBenefits` `:177` |
+| `InsurancePlanDetail` | `src/components/insurance/InsurancePlanDetail.tsx:282` | Single-plan detail + re-analyze | — | `insuranceApi.reanalyzePlan` `:282` |
+| `CostOptimization` | `src/components/insurance/CostOptimization.tsx` | Projections + AI cost analysis; `recharts` | — | `expensesApi.getProjections` `:166`, `getAnalyses` `:180`, `deleteProjection` `:229`, `analyzeCosts` `:253` |
+| `ExpenseProjectionModal` | `src/components/insurance/ExpenseProjectionModal.tsx` | Projection create/edit | — | `expensesApi.updateProjection` `:128`, `createProjection` `:131` |
+| `ExpenseActualModal` | `src/components/insurance/ExpenseActualModal.tsx` | Actual-cost create/edit | — | `expensesApi.updateActual` `:202`, `createActual` `:204` |
+| `ExpenseActualsList` | `src/components/insurance/ExpenseActualsList.tsx` | Actuals table | — | `expensesApi.getActuals` `:76`, `deleteActual` `:107` |
+| `InsuranceGuide` / `InsuranceLearnTab` / `InsurancePlanCard` / `InsurancePlanViewer` / `InsuranceStatsGrid` / `DeductibleProgressBar` / `InsuranceUtilizationTracker` | (presentational, see `Glob "src/components/insurance/*.tsx"`) | Cards, tabs, stat grids, progress bars | — | — (props) |
 
-Route/URL: conditional — `Dashboard.tsx:299-313` renders it when `showOnboarding` is true.
+Route/URL: `/insurance` → `Insurance` (`categoryRouting.ts:11`, `Dashboard.tsx:246-258`); `/knowledge-base` → `Knowledge Base` (`categoryRouting.ts:12`, `Dashboard.tsx:259-264`). SBC modals open via `useModals` keys `sbcUpload` / `enhancedUpload` (`src/hooks/useModals.ts:19-20`, wired in `DashboardModals.tsx:143-158`).
 
----
+### `src/components/onboarding/`
 
-### 2.10 `src/components/settings/`
+Purpose: new-user wizard.
 
-**Purpose**: account settings, profile, password, notifications, plan, health profile, data export / account deletion.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `AccountSettingsPage` | `src/components/settings/AccountSettingsPage.tsx:64` | Top-level settings shell (profile, theme, notifications, data & privacy, health focus) | `AuthContext` (line 65), `ThemeContext` (line 66) | `settingsApi.getProfile/updateProfile`, `settingsApi.deleteAllData` (line 168), `settingsApi.deleteAccount` (line 192) |
-| `ChangePasswordModal` | `src/components/settings/ChangePasswordModal.tsx:14` | Password change dialog | (none) | `settingsApi.changePassword` |
-| `HealthProfileSection` | `src/components/settings/HealthProfileSection.tsx:136` | Health profile form (biological sex, conditions, medications, family history, smoking, exercise) | (none) | `settingsApi.getHealthProfile/updateHealthProfile` |
-| `NotificationSettingsSection` | `src/components/settings/NotificationSettingsSection.tsx:36` | Email notification toggles | (none) | `settingsApi.updateNotificationPreferences` |
-| `PlanSection` | `src/components/settings/PlanSection.tsx:56` | Current plan + usage display | (none) | `planApi.getCurrentPlan` |
-| barrel | `src/components/settings/index.ts:1-4` | re-exports | — | — |
+| `OnboardingWizard` | `src/components/onboarding/OnboardingWizard.tsx:68` | Step-by-step setup; lazy-mounts `LabUploadModal` | `useAuth()` (`:73`) | `onboardingApi.complete` `:111`/`:124` (status fetched by `Dashboard`, `Dashboard.tsx:150`) |
 
-Route/URL: conditional — `Dashboard.tsx:236-240` when `selectedCategory === 'Account Settings'`.
+Route/URL: not a category. Rendered by `Dashboard` when `onboardingStatus.completed === false` (`Dashboard.tsx:164`, `:405-419`).
 
----
+### `src/components/provider/`
 
-### 2.11 `src/components/trends/`
+Purpose: provider–patient collaboration (consent-based data sharing).
 
-**Purpose**: trend visualizations and AI guidance.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `TrendsPage` | `src/components/trends/TrendsPage.tsx:85` | Trends landing page | (none) | (none directly — fed biomarkers prop) |
-| `TrendSparkline` | `src/components/trends/TrendSparkline.tsx:50` | Mini trend chart | (none) | (none) |
-| `TrendDetailModal` | `src/components/trends/TrendDetailModal.tsx:42` | Detail view for a biomarker | (none) | (embeds `BiomarkerAIGuidance`) |
-| `BiomarkerAIGuidance` | `src/components/trends/BiomarkerAIGuidance.tsx:36` | AI educational guidance panel with error/loading/retry | (none) | `biomarkersApi.getGuidance` (line 56) |
-| barrel | `src/components/trends/index.ts:9-12` | re-exports | — | — |
+| `CareTeamPage` | `src/components/provider/CareTeamPage.tsx` | **Patient-facing** consent management (approve/deny/edit/revoke providers) | — | `patientApi.getPendingRequests` `:125`, `getProviders` `:126`, `approveProvider` `:154`, `denyProvider` `:173`, `updateProviderPermissions` `:187`, `revokeProvider` `:201`, `removeProvider` `:215` |
+| `MyPatientsPage` | `src/components/provider/MyPatientsPage.tsx` | **Provider-facing** patient list + scoped data | — | `providerApi.getPatients` `:100`, `requestPatientAccess` `:118`, `getPatient` `:140`, `getPatientBiomarkers` `:144`, `getPatientHealthNeeds` `:147`, `removePatient` `:160` |
 
-Route/URL: conditional — `Dashboard.tsx:206-211` when `selectedCategory === 'Trends'`.
+Route/URL: `/care-team` → `Care Team` (`categoryRouting.ts:18`, `Dashboard.tsx:300-305`, all roles); `/my-patients` → `My Patients` (`categoryRouting.ts:19`, `Dashboard.tsx:306-311`, gated `roles: ['PROVIDER','ADMIN']` at `src/data/sampleData.ts:230`).
 
-Error state example: `BiomarkerAIGuidance.tsx:L42-L60` — sets `error` state on catch and renders a retry button.
+### `src/components/settings/`
 
----
+Purpose: account settings hub, password/email change, health profile, plan, notifications, lab connections, data export/deletion.
 
-### 2.12 `src/components/upload/`
-
-**Purpose**: lab / clinical / PDF upload modals.
-
-| Component | File:line | Renders | Consumes contexts | Calls API |
+| Component | File:line | Renders | Contexts | Calls API |
 |---|---|---|---|---|
-| `PDFUploadModal` | `src/components/upload/PDFUploadModal.tsx:65` | Client-side PDF parsing modal | (none) | (parsing is client-side; persists via parent's `handlePDFExtract` in `useBiomarkerData`) |
-| `LabUploadModal` | `src/components/upload/LabUploadModal.tsx:81` | OCR-based lab upload (Google Document AI) | (none) | `uploadFile('/lab/ocr', ...)` via `uploadUtils.ts` — **not** `uploadApi.uploadLabReport` |
-| `ClinicalFileUpload` | `src/components/upload/ClinicalFileUpload.tsx:86` | Claude AI clinical-file extraction modal | (none) | `uploadFile` via `uploadUtils.ts` |
-| `ExtractionReviewStep` | `src/components/upload/ExtractionReviewStep.tsx:70` | Shared biomarker review UI | (none) | (none) |
-| barrel | `src/components/upload/index.ts:1-3` | re-exports | — | — |
+| `AccountSettingsPage` | `src/components/settings/AccountSettingsPage.tsx:69` | Settings shell; theme toggle, export, **account & data deletion** | `useAuth()` `:69`, `useTheme()` `:70` | `settingsApi.getProfile` `:115`, `updateProfile` `:135`, `exportData` `:161`, `deleteAllData` `:190`, `deleteAccount` `:215`; `authApi.logoutAll` `:149` |
+| `ChangePasswordModal` | `src/components/settings/ChangePasswordModal.tsx:81` | Change password | — | `settingsApi.changePassword` `:81` |
+| `ChangeEmailModal` | `src/components/settings/ChangeEmailModal.tsx:24` | Request email change (step 1 of 2) | — | `authApi.requestEmailChange` `:65` |
+| `HealthProfileSection` | `src/components/settings/HealthProfileSection.tsx:163` | Demographics + conditions + meds | — | `settingsApi.getHealthProfile` `:163`, `updateHealthProfile` `:252` |
+| `PlanSection` | `src/components/settings/PlanSection.tsx:77` | Current plan tier + usage | — | `planApi.getCurrentPlan` `:94` |
+| `NotificationSettingsSection` | `src/components/settings/NotificationSettingsSection.tsx:50` | Email/notification prefs | — | `settingsApi.getNotificationPreferences` `:69`, `updateNotificationPreferences` `:104` |
+| `LabConnectionsSection` | `src/components/settings/LabConnectionsSection.tsx:103` | Quest / SMART-on-FHIR lab connections | — | `fhirApi.listConnections` `:120`, `connectQuest` `:170`, `syncConnection` `:192`, `disconnect` `:225` |
 
-Route/URL: modals — opened from `DashboardModals` and `OnboardingWizard`.
+Route/URL: `/settings` → `Account Settings` (`categoryRouting.ts:21`, `Dashboard.tsx:318-323`). Section components mounted inside `AccountSettingsPage` (imports `src/components/settings/AccountSettingsPage.tsx:40-45`; render `:406-419`; modals `:514`/`:520`). The email-change **confirm** half is `ConfirmEmailChangePage` in `auth/` (URL route `/confirm-email-change`).
+
+### `src/components/trends/`
+
+Purpose: trend visualizations, AI guidance display, export.
+
+| Component | File:line | Renders | Contexts | Calls API |
+|---|---|---|---|---|
+| `TrendsPage` | `src/components/trends/TrendsPage.tsx` | Trend overview, embeds `TrendSparkline` | — | — (props `biomarkers`) |
+| `BiomarkerAIGuidance` | `src/components/trends/BiomarkerAIGuidance.tsx:36` | Renders AI guidance for a biomarker (collapsible sections, skeleton loading, error+retry) | — | `biomarkersApi.getGuidance` `:56` |
+| `TrendSparkline` | `src/components/trends/TrendSparkline.tsx:50` | Mini recharts sparkline | — | — |
+| `TrendDetailModal` | `src/components/trends/TrendDetailModal.tsx` | Full-trend modal | — | — |
+| `ExportMenu` | `src/components/trends/ExportMenu.tsx` | CSV / PDF report export | — | `settingsApi.getProfile` `:81`; dynamic-imports `exportBiomarkers` `:64` + `pdfReportGenerator` `:88` |
+
+Route/URL: `/trends` → `Trends` (`categoryRouting.ts:14`, `Dashboard.tsx:271-276`). `BiomarkerAIGuidance` is also embedded in trend views (`TrendsPage`, `TrendDetailModal`).
+
+### `src/components/upload/`
+
+Purpose: lab-report / clinical-file upload (PDF parse + OCR + Claude extraction).
+
+| Component | File:line | Renders | Contexts | Calls API |
+|---|---|---|---|---|
+| `PDFUploadModal` | `src/components/upload/PDFUploadModal.tsx` | Client-side PDF parse via `parseLabReport` | — | — (local parse: `utils/biomarkers/labReportParser` `:14`) |
+| `LabUploadModal` | `src/components/upload/LabUploadModal.tsx:81` | Server OCR upload | — | `uploadFile('/upload/lab-results-ocr')` (`:146-147`, via `services/uploadUtils`) |
+| `ClinicalFileUpload` | `src/components/upload/ClinicalFileUpload.tsx` | Clinical doc upload | — | (extraction path) |
+| `ExtractionReviewStep` | `src/components/upload/ExtractionReviewStep.tsx` | Shared review/confirm step for extracted biomarkers | — | — |
+
+Route/URL: not categories — opened as modals from `Dashboard` via `useModals` keys `pdfUpload` / `labUpload` / `clinicalUpload` (`src/hooks/useModals.ts:15-17`, wired in `DashboardModals.tsx`).
 
 ---
 
 ## 3. Routing / URL map
 
-**Routing approach: conditional rendering** (no React Router, no Next.js router). Three tiers:
+There is **no react-router**. Two layers, both verified against code.
 
-1. **URL-based special routes** (`App.tsx:71-85`) — sniffs `window.location.pathname` for `/verify-email` and `/reset-password` when a `token` query-string is present. All other paths render the normal flow.
-2. **Auth state** (`App.tsx:98-273`) — chooses Login / Register / ForgotPassword / Dashboard based on `isAuthenticated` + `authView` state.
-3. **Category state** (`Dashboard.tsx:85-244`) — once authenticated, a `selectedCategory` string selects which page component to render inside `<main>`.
+### 3a. App.tsx special URL routes + unauthenticated view state
 
-| URL | Top-level component | Feature | Requires auth | Source |
+Source: `src/App.tsx`. View state: `useState<AuthView>` (`:105`). Special routes parsed by `getSpecialRoute()` (`:72`).
+
+| Path / view state | Top-level component | Feature | Requires auth | Source |
 |---|---|---|---|---|
-| `/verify-email?token=...` | `VerifyEmailPage` | Email verification | no | `App.tsx:76-78, 124-140` |
-| `/reset-password?token=...` | `ResetPasswordPage` | Password reset | no | `App.tsx:80-82, 143-159` |
-| `/` (unauth, default) | `LoginPage` | Auth | no | `App.tsx:254-265` |
-| `/` (unauth, `authView === 'register'`) | `RegisterPage` | Auth | no | `App.tsx:231-242` |
-| `/` (unauth, `authView === 'forgot-password'`) | `ForgotPasswordPage` | Auth | no | `App.tsx:244-252` |
-| `/` (auth) | `Dashboard` (`selectedCategory` state) | Home shell | yes | `App.tsx:269-273` |
-| ↳ `'Overview' \| 'Dashboard'` | `DashboardContent` | Overview | yes | `Dashboard.tsx:316-328` |
-| ↳ other biomarker category | `CategoryContent` | Biomarker detail | yes | `Dashboard.tsx:329-343` |
-| ↳ `'Insurance'` | `InsuranceHub` | Insurance | yes | `Dashboard.tsx:181-193` |
-| ↳ `'Knowledge Base'` | `InsuranceKnowledgeBase` | Insurance kb | yes | `Dashboard.tsx:194-199` |
-| ↳ `'Files'` | `FilesPage` | Files | yes | `Dashboard.tsx:200-205` |
-| ↳ `'Trends'` | `TrendsPage` | Trends | yes | `Dashboard.tsx:206-211` |
-| ↳ `'Health Guide'` | `HealthGuidePage` | AI chat | yes | `Dashboard.tsx:212-222` |
-| ↳ `'Goals'` | `GoalTrackerPanel` | Health goals | yes | `Dashboard.tsx:223-228` |
-| ↳ `'Needs'` | `HealthNeedsPage` | Health needs | yes | `Dashboard.tsx:229-234` |
-| ↳ `'Account Settings'` | `AccountSettingsPage` | Settings | yes | `Dashboard.tsx:235-240` |
-| ↳ onboarding mode | `OnboardingWizard` | Onboarding | yes | `Dashboard.tsx:299-313` |
+| `authView === 'login'` | `LoginPage` | Auth | no | `src/App.tsx:277-288` |
+| `authView === 'register'` | `RegisterPage` | Auth | no | `src/App.tsx:254-265` |
+| `authView === 'forgot-password'` | `ForgotPasswordPage` | Auth | no | `src/App.tsx:267-275` |
+| `/verify-email?token=` | `VerifyEmailPage` | Email verification | no | `src/App.tsx:130-146` |
+| `/reset-password?token=` | `ResetPasswordPage` | Password reset | no | `src/App.tsx:148-164` |
+| `/confirm-email-change?token=` | `ConfirmEmailChangePage` | Email-change confirm | no | `src/App.tsx:166-182` |
+| (authenticated, default) | `Dashboard` | App shell | yes | `src/App.tsx:292-296` |
 
-Note: token is cleared from URL immediately after reading (`App.tsx:116-121`) — the pathname stays but `?token=...` is wiped from `window.history`.
+Security note: tokens are stripped from the URL immediately after read via `history.replaceState` (`src/App.tsx:121-126`).
 
----
+### 3b. In-app dashboard SPA paths
 
-## 4. Context dependency graph (Mermaid)
+Source: `src/components/dashboard/categoryRouting.ts`. All require auth; all render inside `Dashboard`. The path↔category sync happens at `Dashboard.tsx:100-102` (init), `:177-184` (push on select), `:187-194` (popstate).
 
-Split into four sub-graphs for scan-ability. Every arrow is grep-verified.
-
-### 4.1 AuthContext consumers
-
-```mermaid
-graph LR
-  AuthContext["AuthContext<br/>src/contexts/AuthContext.tsx:79"]
-  useAuth["useAuth()<br/>AuthContext.tsx:305"]
-  useRBAC["useRBAC()<br/>src/hooks/useRBAC.ts:19"]
-
-  AuthContext --> useAuth
-  useAuth --> App["App / AppContent<br/>src/App.tsx:99"]
-  useAuth --> Dashboard["Dashboard<br/>dashboard/Dashboard.tsx:86"]
-  useAuth --> DashboardContent["DashboardContent<br/>dashboard/DashboardContent.tsx"]
-  useAuth --> AccountSettings["AccountSettingsPage<br/>settings/AccountSettingsPage.tsx:65"]
-  useAuth --> OnboardingWizard["OnboardingWizard<br/>onboarding/OnboardingWizard.tsx:73"]
-  useAuth --> useRBAC
-  useRBAC --> RoleGuard["RoleGuard + PatientOnly/ProviderOnly/AdminOnly/ProviderOrAdmin/RoleBadge<br/>common/RoleGuard.tsx:44-127"]
-```
-
-### 4.2 ThemeContext consumers
-
-```mermaid
-graph LR
-  ThemeContext["ThemeContext<br/>src/contexts/ThemeContext.tsx:18"]
-  ThemeContext --> useTheme["useTheme()<br/>ThemeContext.tsx:98"]
-  useTheme --> AccountSettings["AccountSettingsPage<br/>settings/AccountSettingsPage.tsx:66"]
-```
-
-Grep-confirmed single consumer — every other dark-mode behavior is driven by Tailwind's `dark:` class on the document root, which `ThemeContext` toggles at `ThemeContext.tsx:77-84`.
-
-### 4.3 Biomarkers + Trends + Analytics → APIs
-
-```mermaid
-graph LR
-  biomarkersApi["biomarkers.ts<br/>services/api/biomarkers.ts:46"]
-  expensesApi["expenses.ts<br/>services/api/expenses.ts:112"]
-  healthGoalsApi["healthGoals.ts<br/>services/api/healthGoals.ts:71"]
-  healthNeedsApi["healthNeeds.ts<br/>services/api/healthNeeds.ts:27"]
-  aiApi["ai.ts<br/>services/api/ai.ts:60"]
-
-  BiomarkerAIGuidance["BiomarkerAIGuidance<br/>trends/BiomarkerAIGuidance.tsx:56"] --> biomarkersApi
-  useBiomarkerData["useBiomarkerData hook<br/>hooks/useBiomarkerData.ts"] --> biomarkersApi
-  useBiomarkerData --> insuranceApi2["insurance.ts"]
-  useApi["useApi.ts hooks<br/>hooks/useApi.ts"] --> biomarkersApi
-  useApi --> insuranceApi2
-  useApi --> healthNeedsApi
-  GoalTrackerPanel["GoalTrackerPanel<br/>analytics/GoalTrackerPanel.tsx"] --> healthGoalsApi
-  HealthNeedsPage["HealthNeedsPage<br/>health/HealthNeedsPage.tsx"] --> healthNeedsApi
-  HealthGuidePage["HealthGuidePage<br/>health/HealthGuidePage.tsx"] --> aiApi
-  HealthGuidePage --> settingsApi["settings.ts"]
-```
-
-### 4.4 Insurance + Settings + Auth + Files → APIs
-
-```mermaid
-graph LR
-  authApi["auth.ts<br/>services/api/auth.ts:28"]
-  insuranceApi["insurance.ts<br/>services/api/insurance.ts:184"]
-  expensesApi["expenses.ts"]
-  settingsApi["settings.ts"]
-  filesApi["files.ts"]
-  planApi["plan.ts"]
-  onboardingApi["onboarding.ts"]
-
-  AuthContext["AuthContext"] --> authApi
-  App["App.tsx"] --> authApi
-  LoginPage["LoginPage / RegisterPage / ForgotPasswordPage / ResetPasswordPage / VerifyEmailPage"] --> authApi
-
-  InsuranceSBCUpload["InsuranceSBCUpload"] --> insuranceApi
-  EnhancedInsuranceUpload["EnhancedInsuranceUpload"] --> insuranceApi
-  AddInsurancePlanModal["AddInsurancePlanModal"] --> insuranceApi
-  InsurancePlanDetail["InsurancePlanDetail"] --> insuranceApi
-
-  CostOptimization["CostOptimization"] --> expensesApi
-  ExpenseProjectionModal["ExpenseProjectionModal"] --> expensesApi
-  ExpenseActualModal["ExpenseActualModal"] --> expensesApi
-  ExpenseActualsList["ExpenseActualsList"] --> expensesApi
-
-  AccountSettingsPage["AccountSettingsPage"] --> settingsApi
-  NotificationSettingsSection["NotificationSettingsSection"] --> settingsApi
-  HealthProfileSection["HealthProfileSection"] --> settingsApi
-  ChangePasswordModal["ChangePasswordModal"] --> settingsApi
-
-  FilesPage["FilesPage"] --> filesApi
-  PlanSection["PlanSection"] --> planApi
-  OnboardingWizard["OnboardingWizard"] --> onboardingApi
-  Dashboard["Dashboard"] --> onboardingApi
-```
-
----
-
-## 5. API client overview
-
-File: **`src/services/api/client.ts`** (307 lines, zero deps beyond the platform `fetch`).
-
-### 5.1 Setup
-
-- `API_BASE_URL` reads `import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'` (`client.ts:10`).
-- `DEFAULT_TIMEOUT_MS = 30000` (`client.ts:12`).
-- Access token stored **in-memory only** (`authToken` module-scoped, `client.ts:65`). No `localStorage` / `sessionStorage` for tokens — per CLAUDE.md Security Rule #1.
-- Refresh token lives in an httpOnly cookie handled by the backend.
-
-### 5.2 Interceptor-equivalent behavior (composed inside `apiFetch`)
-
-`apiFetch<T>` (`client.ts:172-307`) performs every cross-cutting concern inline:
-
-| Concern | Where | Code |
-|---|---|---|
-| Bearer token injection | `client.ts:183-185` | `headers['Authorization'] = \`Bearer ${authToken}\`` when present |
-| CSRF double-submit header | `client.ts:187-195` | For `POST/PUT/PATCH/DELETE`, reads CSRF cookie via `getCsrfToken()` (line 120-134) and sets `x-csrf-token` header |
-| Cookie attach (credentials) | `client.ts:212` | `credentials: 'include'` always |
-| Timeout | `client.ts:114-118, 206, 289-295` | `AbortController` + `setTimeout(abort, 30000)`; thrown as `ApiError{ code: 'TIMEOUT', status: 408 }` |
-| 401 retry / refresh | `client.ts:222-231, 242-250` | On 401 (non-retry, non-auth-mgmt endpoint): calls `attemptTokenRefresh` (line 136-170); on success, re-issues request; on failure, calls `onAuthFailureCallback` (registered by `AuthContext.useEffect` at `AuthContext.tsx:236-241`) |
-| Auth-mgmt endpoint exemption | `client.ts:204` | `/auth/refresh` and `/auth/logout` skip the 401-retry path to prevent infinite loops (see comment lines 198-204) |
-| Error normalization | `client.ts:86-112, 259-280` | `getUserFriendlyMessage` maps status codes to human strings; `PLAN_LIMIT_EXCEEDED` errors carry `planLimit: { limit, current, feature, upgradeRequired }` for upgrade CTA UI |
-| Network error | `client.ts:296-306` | Thrown as `ApiError{ code: 'NETWORK_ERROR', status: 0 }` |
-
-### 5.3 Token refresh sequence
-
-```mermaid
-sequenceDiagram
-  participant C as Component
-  participant A as apiFetch
-  participant R as attemptTokenRefresh
-  participant B as Backend
-
-  C->>A: apiFetch('/biomarkers')
-  A->>B: GET /biomarkers (cookies + Bearer)
-  B-->>A: 401
-  A->>R: attemptTokenRefresh()
-  R->>B: POST /auth/refresh (refresh cookie)
-  B-->>R: 200 { token } OR 401
-  alt 200
-    R-->>A: true
-    A->>B: GET /biomarkers (retry, isRetry=true)
-    B-->>A: 200 { data }
-    A-->>C: response
-  else 401
-    R-->>A: false
-    A->>A: onAuthFailureCallback() → AuthContext.logout()
-    A-->>C: throw ApiError{ status: 401 }
-  end
-```
-
-### 5.4 Non-client fetch consumers
-
-Two modules call `fetch` directly instead of going through `apiFetch`:
-
-| Module | Why | Source |
-|---|---|---|
-| `aiApi.chat` | Needs `ReadableStream` body reader for SSE streaming | `src/services/api/ai.ts:80-166` |
-| `filesApi.downloadFile` | Needs to read raw bytes into a `Blob` and return an object URL | `src/services/api/files.ts:42-55` |
-
-Both still attach `credentials: 'include'` to pass auth cookies.
-
----
-
-## 6. API-to-component matrix
-
-| API module | Key functions | Consumed by (grep-verified) | Grep pattern |
+| Path | Sidebar category | Top-level component | Source (mount) |
 |---|---|---|---|
-| `api/auth.ts` (`authApi`) | `login, register, logout, refreshToken, getCurrentUser, demoLogin, changePassword, verifyEmail, forgotPassword, resetPassword, resendVerification` | `AuthContext`, `App.tsx`, `VerifyEmailPage`, `ResetPasswordPage`, `ForgotPasswordPage` | `authApi\.` |
-| `api/biomarkers.ts` (`biomarkersApi`) | `getAll, getById, getHistory, create, createBatch, update, delete, getCategories, getSummary, getGuidance` | `BiomarkerAIGuidance`, `hooks/useBiomarkerData`, `hooks/useApi` (+ `Dashboard.test`) | `biomarkersApi\.` |
-| `api/insurance.ts` (`insuranceApi`) | `getPlans, getPlanById, createPlan, updatePlan, deletePlan, getBenefits, uploadSBC, reanalyzePlan` | `InsuranceSBCUpload`, `EnhancedInsuranceUpload`, `AddInsurancePlanModal`, `InsurancePlanDetail`, `hooks/useBiomarkerData`, `hooks/useApi` | `insuranceApi\.` |
-| `api/expenses.ts` (`expensesApi`) | projections CRUD, actuals CRUD, `analyzeCosts, getAnalyses, updateCurrentSpending` | `CostOptimization`, `ExpenseProjectionModal`, `ExpenseActualModal`, `ExpenseActualsList` | `expensesApi\.` |
-| `api/files.ts` (`filesApi`) | `getAll, getById, downloadFile, delete` | `FilesPage` | `filesApi\.` |
-| `api/upload.ts` (`uploadApi`) | `uploadLabReport` | **None (drift — see §10)** | `uploadApi\.` / `uploadLabReport` |
-| `api/healthGoals.ts` (`healthGoalsApi`) | `getAll, getById, create, update, updateProgress, delete, getSummary, getSuggestions` | `GoalTrackerPanel` | `healthGoalsApi\.` |
-| `api/healthNeeds.ts` (`healthNeedsApi`) | `getAll, getById, create, updateStatus, delete, analyze` | `HealthNeedsPage`, `hooks/useApi` | `healthNeedsApi\.` |
-| `api/ai.ts` (`aiApi`) | `chat` (SSE stream) | `HealthGuidePage` | `aiApi\.` |
-| `api/settings.ts` (`settingsApi`) | profile, notifications, health profile, password, export, delete-data, delete-account | `AccountSettingsPage`, `NotificationSettingsSection`, `HealthProfileSection`, `ChangePasswordModal`, `HealthGuidePage` | `settingsApi\.` |
-| `api/onboarding.ts` (`onboardingApi`) | `getStatus, complete` | `Dashboard`, `OnboardingWizard` | `onboardingApi\.` |
-| `api/plan.ts` (`planApi`) | `getCurrentPlan, getAvailablePlans` | `PlanSection` | `planApi\.` |
-| `api/provider.ts` (`providerApi`) | `getPatients, requestPatientAccess, getPatient, getPatientBiomarkers, getPatientHealthNeeds, removePatient` | **None in `src/components` or `src/hooks` — drift (§10)** | `providerApi\.` |
-| `api/patient.ts` (`patientApi`) | `getProviders, getPendingRequests, approveProvider, denyProvider, updateProviderPermissions, revokeProvider, removeProvider` | **None in `src/components` or `src/hooks` — drift (§10)** | `patientApi\.` |
-| `api/admin.ts` (`adminApi`) | `getUsers, getUser, createUser, updateUser, deactivateUser, deleteUserPermanently, getStats, getAuditLogs` | **None in `src/components` or `src/hooks` — drift (§10)** | `adminApi\.` |
-| `api/client.ts` | `apiFetch, setAuthToken, getAuthToken, clearAuthToken, setOnAuthFailure, attemptTokenRefresh, getCsrfToken, isPlanLimitError` | every other api module | — |
-| `api/index.ts` | barrel | every component that imports from `../services/api` | — |
-
----
-
-## 7. Chunk-split components
-
-From `vite.config.ts:11-40`, `manualChunks` splits vendor modules into three named chunks (component-level lazy loading is separate, via `React.lazy`).
-
-| Chunk (vite.config.ts) | Vendor packages | Components that transitively pull it | Reason |
-|---|---|---|---|
-| `pdf` | `pdfjs-dist`, `jspdf`, `pdf-lib`, `html2canvas-pro` | `PDFUploadModal` (client-side PDF parse), `ClinicalFileUpload`, settings export (if using `jspdf`) | Large libs, only needed when uploading/viewing PDFs |
-| `ocr` | `tesseract.js`, `tesseract.js-core` | Dead code — no grep match for `tesseract` in `src/**`. Backend-only OCR (Google Document AI) is used now; `LabUploadModal` uploads the raw file and the backend does the OCR. **Potential drift — see §10** | Was planned for client-side OCR; unused |
-| `charts` | `recharts`, `d3-*`, `victory-vendor` | `BiomarkerChart`, `BiomarkerGraph`, `TrendSparkline`, `TrendsPage`, `TrendDetailModal`, `GoalTrackerPanel` | Chart libs lazy-load on Trends / Analytics pages |
-
-Component-level code-splitting (`React.lazy`) is used at:
-
-| Lazy component | File:line |
-|---|---|
-| `Dashboard` | `App.tsx:37` |
-| `LoginPage / RegisterPage / VerifyEmailPage / ResetPasswordPage / ForgotPasswordPage` | `App.tsx:38-42` |
-| `InsuranceHub / InsuranceKnowledgeBase / FilesPage / TrendsPage / AccountSettingsPage / GoalTrackerPanel / HealthNeedsPage / HealthGuidePage / OnboardingWizard` | `Dashboard.tsx:43-51` |
-| `LabUploadModal` | `DashboardModals.tsx:19`, `OnboardingWizard.tsx:29` |
-
----
-
-## 8. Notable patterns
-
-### 8.1 Role-based access control (RBAC)
-
-Pattern: `useRBAC()` hook reads role from `AuthContext`, applies a hierarchy (`ADMIN=3, PROVIDER=2, PATIENT=1`), exposes `hasRole`, `hasMinRole`, and `permissions`. `RoleGuard` + the `PatientOnly / ProviderOnly / AdminOnly / ProviderOrAdmin` wrappers render-gate children.
+| `/` | Overview / Dashboard | `DashboardContent` | `Dashboard.tsx:422-434` |
+| `/insurance` | Insurance | `InsuranceHub` | `Dashboard.tsx:246-258` |
+| `/knowledge-base` | Knowledge Base | `InsuranceKnowledgeBase` | `Dashboard.tsx:259-264` |
+| `/files` | Files | `FilesPage` | `Dashboard.tsx:265-270` |
+| `/trends` | Trends | `TrendsPage` | `Dashboard.tsx:271-276` |
+| `/goals` | Goals | `GoalTrackerPanel` | `Dashboard.tsx:288-293` |
+| `/needs` | Needs | `HealthNeedsPage` | `Dashboard.tsx:294-299` |
+| `/health-guide` | Health Guide | `HealthGuidePage` | `Dashboard.tsx:277-287` |
+| `/care-team` | Care Team | `CareTeamPage` | `Dashboard.tsx:300-305` |
+| `/my-patients` | My Patients | `MyPatientsPage` (PROVIDER/ADMIN) | `Dashboard.tsx:306-311` |
+| `/admin` | Admin | `AdminPage` (ADMIN) | `Dashboard.tsx:312-317` |
+| `/settings` | Account Settings | `AccountSettingsPage` | `Dashboard.tsx:318-323` |
 
 ```ts
-// Source: src/hooks/useRBAC.ts:L13-L17
-const ROLE_HIERARCHY: Record<UserRole, number> = {
-  ADMIN: 3,
-  PROVIDER: 2,
-  PATIENT: 1,
+// Source: src/components/dashboard/categoryRouting.ts:10-22
+export const pathToCategoryMap: Record<string, string> = {
+  '/insurance': 'Insurance',
+  '/knowledge-base': 'Knowledge Base',
+  '/files': 'Files',
+  '/trends': 'Trends',
+  '/goals': 'Goals',
+  '/needs': 'Needs',
+  '/health-guide': 'Health Guide',
+  '/care-team': 'Care Team',
+  '/my-patients': 'My Patients',
+  '/admin': 'Admin',
+  '/settings': 'Account Settings',
 };
 ```
 
-Currently only used for the `RoleBadge` display in the UI (no grep hits for `<RoleGuard`, `<AdminOnly`, `<ProviderOnly`, `<PatientOnly`, `<ProviderOrAdmin` in `src/components`). The wrappers exist but are not mounted anywhere — see §10.
-
-### 8.2 Form validation
-
-**Hand-rolled.** No form library. `Grep pattern: "react-hook-form|zod|formik|yup"` over `src/` returns zero matches. Example pattern (typical):
-
 ```ts
-// Source: src/contexts/AuthContext.tsx:L133-L147
-const login = useCallback(async (email: string, password: string) => {
-  setIsLoading(true);
-  setError(null);
-  try {
-    const response: AuthResponse = await authApi.login({ email, password });
-    setUser(response.user);
-  } catch (err) {
-    const message = (err as { message?: string }).message || 'Login failed';
-    setError(message);
-    throw err;
-  } finally {
-    setIsLoading(false);
+// Source: src/components/dashboard/Dashboard.tsx:177-184
+const handleCategorySelect = useCallback((category: string) => {
+  setSelectedCategory(category);
+  setSelectedBiomarker(null);
+  const newPath = categoryToPathMap[category] || '/';
+  if (window.location.pathname !== newPath) {
+    window.history.pushState(null, '', newPath);
   }
 }, []);
 ```
 
-Each form manages `isLoading`, `error`, field values with local `useState` and shows errors inline.
-
-### 8.3 Error display
-
-Two patterns, both in `src/components/common/`:
-
-1. **`ErrorBoundary`** (`ErrorBoundary.tsx:43`, class component) wraps the whole app at `App.tsx:278`.
-2. **`ErrorToast`** (`ErrorToast.tsx:26`) — transient toast. Dashboard uses `useErrorNotification` hook to drive it (`Dashboard.tsx:88, 265-269`).
-
-Inline errors on forms use local `error: string | null` state rendered as a red banner (pattern in `LoginPage`, `RegisterPage`, `HealthNeedsPage:85`, etc.).
-
-### 8.4 Loading states
-
-Two conventions:
-
-- **Page-level**: `<Loader2 className="animate-spin" />` (lucide-react) inside a full-screen centered div. See `App.tsx:45-57, 163-175` and `Dashboard.tsx:60-69, 250-260`.
-- **Inline**: `isLoading ? <Loader2 ... /> : <Content />` in buttons and sections.
-
-### 8.5 Inactivity auto-logout (HIPAA §164.312(a)(2)(iii))
-
-`AuthContext.tsx:40-42` defines `INACTIVITY_TIMEOUT_MS = 15*60*1000` and `INACTIVITY_WARNING_MS = 13*60*1000`. Activity events watched: `'mousedown', 'keydown', 'touchstart', 'scroll'` (line 42) — deliberately **not** `mousemove` (comment line 205-207). Warning dialog rendered inline in `AuthProvider` at line 258-299.
-
-```ts
-// Source: src/contexts/AuthContext.tsx:L40-L42
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
-const INACTIVITY_WARNING_MS = 13 * 60 * 1000; // 2 minutes before logout
-const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const;
-```
-
-### 8.6 AuthContext ↔ API failure wire
-
-`AuthContext.tsx:236-241` registers `logout` as the callback for the API client's 401-refresh-failure path:
-
-```ts
-// Source: src/contexts/AuthContext.tsx:L236-L241
-useEffect(() => {
-  setOnAuthFailure(() => { logout(); });
-  return () => setOnAuthFailure(() => {});
-}, [logout]);
-```
-
-`setOnAuthFailure` is exported from `client.ts:82-84`. This is the only cross-module side effect between auth state and the API client.
-
-### 8.7 Session restore order (refresh-first)
-
-`AuthContext.tsx:104-115` calls `refreshToken()` **before** `getCurrentUser()` on mount. Comment at line 95-103 explains: the 15-min access-token cookie may have expired while the 7-day refresh cookie is still valid; calling `/auth/me` first would 401 and never reach refresh.
+Biomarker subcategories (`Blood`, `Hormones`, `Vitamins`, etc., `src/data/sampleData.ts:243-261`) are **state-only** — not in `categoryRouting.ts` — and render `CategoryContent` (`Dashboard.tsx:436-449`).
 
 ---
 
-## 9. Contexts — provided shape
+## 4. Context dependency graph
 
-### 9.1 `AuthContext` (`src/contexts/AuthContext.tsx:58-77`)
+Two contexts. `AuthContext` is consumed indirectly by most role/data logic via the `useRBAC` hook; `ThemeContext` has a single consumer.
+
+```mermaid
+graph LR
+  AuthProvider["AuthProvider (src/contexts/AuthContext.tsx:81)"]
+  ThemeProvider["ThemeProvider (src/contexts/ThemeContext.tsx:29)"]
+
+  AuthProvider -->|useAuth| AppContent["App.tsx:104"]
+  AuthProvider -->|useAuth| Dashboard["Dashboard.tsx:94"]
+  AuthProvider -->|useAuth| DashboardContent["DashboardContent.tsx:121"]
+  AuthProvider -->|useAuth| OnboardingWizard["OnboardingWizard.tsx:73"]
+  AuthProvider -->|useAuth| AccountSettings["AccountSettingsPage.tsx:69"]
+  AuthProvider -->|useAuth| useRBAC["useRBAC.ts:20"]
+  useRBAC -->|hasRole/permissions| RoleGuard["RoleGuard.tsx:45 (exported, unused in JSX)"]
+
+  ThemeProvider -->|useTheme| AccountSettings
+```
+
+`useAuth` consumers (full list from `Grep "useAuth\(\)"` over `src/`, excluding tests):
+`App.tsx:104`, `DashboardContent.tsx:121`, `Dashboard.tsx:94`, `OnboardingWizard.tsx:73`, `AccountSettingsPage.tsx:69`, and `useRBAC.ts:20` (which `RoleGuard.tsx:45`/`:118` consumes).
+
+`useTheme` consumer: **only** `AccountSettingsPage.tsx:70` (`Grep "useTheme\(\)"` → single app consumer). Theme is otherwise applied globally by `ThemeProvider` toggling the `dark` class on `document.documentElement` (`src/contexts/ThemeContext.tsx:77-84`).
+
+**What `AuthContext` exposes** (`src/contexts/AuthContext.tsx:58-77`):
 
 ```ts
+// Source: src/contexts/AuthContext.tsx:58-77
 interface AuthContextType {
-  user: User | null;                // { id, email, role } — no PHI
-  isAuthenticated: boolean;
+  user: User | null;          // { id, email, role } — NO PHI (:48-52)
+  isAuthenticated: boolean;   // !!user (:248)
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email, password) => Promise<void>;
   register: (email, password, firstName?, lastName?) => Promise<void>;
   logout: () => Promise<void>;
   error: string | null;
@@ -616,91 +364,239 @@ interface AuthContextType {
 }
 ```
 
-User role lives at `user.role` (`AuthContext.tsx:48-52`) and is consumed via `useRBAC()` → `const role = (user?.role as UserRole) || null` (`useRBAC.ts:22`).
+`AuthContext` also runs a HIPAA inactivity watchdog (15-min logout, 13-min warning) — `src/contexts/AuthContext.tsx:40-41`, `:192-231`.
 
-### 9.2 `ThemeContext` (`src/contexts/ThemeContext.tsx:12-16`)
+---
+
+## 5. API client overview
+
+The client uses native `fetch` (NOT axios, despite older `CLAUDE.md` text). Single wrapper `apiFetch<T>` (`src/services/api/client.ts:212`). All domain modules call through it.
+
+| Concern | Mechanism | Source |
+|---|---|---|
+| Base URL | `import.meta.env.VITE_API_URL` ?? `http://localhost:3001/api/v1` | `src/services/api/client.ts:10` |
+| Auth header | `Authorization: Bearer <authToken>` when token in memory | `client.ts:224-226` |
+| Token storage | **in-memory only** (`let authToken`), never localStorage | `client.ts:65`, `:70-80` |
+| CSRF | reads `csrf[_-]?token` cookie, sends `x-csrf-token` header on POST/PUT/PATCH/DELETE | `client.ts:120-135`, `:229-239` |
+| Credentials | `credentials: 'include'` on every request (httpOnly cookies) | `client.ts:256` |
+| Timeout | 30s default via `AbortController` | `client.ts:12`, `:114-118`, `:250` |
+| 401 → refresh | on non-auth-mgmt 401, calls `attemptTokenRefresh()` then retries once; on failure fires `onAuthFailureCallback` | `client.ts:284-311`, `:137-177` |
+| Refresh dedup | single in-flight refresh promise shared across callers | `client.ts:66-67`, `:138-141` |
+| Auth-failure hook | `setOnAuthFailure` wired to `logout` in `AuthContext` | `client.ts:82-84`; `AuthContext.tsx:239-244` |
+| 429 retry | exponential backoff (1s/2s/4s ±25% jitter, max 3), honors `Retry-After`; auth-mgmt endpoints exempt | `client.ts:185-206`, `:267-277` |
+| Plan-limit errors | `code: 'PLAN_LIMIT_EXCEEDED'` parsed into `error.planLimit { limit, current, feature, upgradeRequired }`; narrow with `isPlanLimitError` | `client.ts:44-62`, `:328-341` |
 
 ```ts
-interface ThemeContextType {
-  theme: 'light' | 'dark' | 'system';
-  setTheme: (theme: Theme) => void;
-  resolvedTheme: 'light' | 'dark';
+// Source: src/services/api/client.ts:55-62
+export function isPlanLimitError(err: unknown): err is ApiError & { planLimit: NonNullable<ApiError['planLimit']> } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as ApiError).code === 'PLAN_LIMIT_EXCEEDED' &&
+    !!(err as ApiError).planLimit
+  );
 }
 ```
 
-Persists to `localStorage` key `'omh-theme'` (`ThemeContext.tsx:20, 86-89`). Default when unset: `'dark'` (line 39, 44). Applies by toggling `class="dark"` on `document.documentElement` at line 77-84.
+```mermaid
+sequenceDiagram
+  participant Cmp as Component / hook
+  participant F as apiFetch (client.ts:212)
+  participant API as Backend /api/v1
+  Cmp->>F: domainApi.method()
+  F->>API: fetch(+Bearer +x-csrf-token, credentials:include)
+  alt 401 (not auth-mgmt, not retry)
+    F->>API: POST /auth/refresh (attemptTokenRefresh :137)
+    alt refresh ok
+      F->>API: retry original request (:287/:305)
+    else refresh fails
+      F->>Cmp: onAuthFailureCallback() → logout (:289/:308)
+    end
+  else 429 (not auth-mgmt)
+    F->>F: sleep(backoff/Retry-After) then retry (:273-276)
+  else PLAN_LIMIT_EXCEEDED 403
+    F-->>Cmp: throw ApiError{ planLimit } (:328-343)
+  end
+  F-->>Cmp: ApiResponse<T>
+```
+
+`api/ai.ts` is the exception: it calls `fetch` directly for SSE streaming (not through `apiFetch`) and reuses the same plan-limit field shape (`src/services/api/ai.ts:107-141`).
 
 ---
 
-## 10. Drift findings
+## 6. API-to-component matrix
 
-### 10.1 Unused API modules
+All 17 domain modules (each export `<domain>Api`, re-exported from `src/services/api/index.ts`) + the `client.ts` core. Consumers from `Grep "<module>Api\."` over `src/` (excludes `__tests__`).
 
-| Module | Status | Evidence |
+| API module (export) | Key functions | Consumed by (file:line) |
 |---|---|---|
-| `uploadApi` (`src/services/api/upload.ts:7-15`) | **Zero consumers in `src/` (outside its own file and the barrel in `index.ts`)** | `Grep pattern: "uploadApi\\.|uploadLabReport"` — only hits in `services/api/upload.ts` and `services/api/index.ts`. The actual lab upload at `LabUploadModal.tsx:19` uses `uploadFile` from `services/uploadUtils` directly, bypassing `uploadApi`. |
-| `providerApi` (`src/services/api/provider.ts:33-71`) | Exported but no component consumer | `Grep pattern: "providerApi\\."` — only hit is the export itself |
-| `patientApi` (`src/services/api/patient.ts:39-105`) | Exported but no component consumer | `Grep pattern: "patientApi\\."` — only hit is the export itself |
-| `adminApi` (`src/services/api/admin.ts:37-134`) | Exported but no component consumer | `Grep pattern: "adminApi\\."` — only hit is the export itself |
+| `api/auth.ts` (`authApi`) | `login`, `register`, `logout`, `logoutAll`, `getCurrentUser`, `demoLogin`, `refreshToken`, `verifyEmail`, `resetPassword`, `forgotPassword`, `requestEmailChange`, `confirmEmailChange` | `AuthContext.tsx:105,119,143,159,181`; `App.tsx:216`; `VerifyEmailPage.tsx:52`; `ResetPasswordPage.tsx:62`; `ForgotPasswordPage.tsx:41`; `ConfirmEmailChangePage.tsx:55`; `ChangeEmailModal.tsx:65`; `AccountSettingsPage.tsx:149` |
+| `api/biomarkers.ts` (`biomarkersApi`) | `getAll`, `getById`, `getHistory`, `getSummary`, `getCategories`, `create`, `createBatch`, `update`, `delete`, `getGuidance` | `useBiomarkerData.ts:120,210,253,299,331`; `useApi.ts:108,118,130,140,145,252,256,261,267`; `BiomarkerAIGuidance.tsx:56` |
+| `api/insurance.ts` (`insuranceApi`) | `getPlans`, `getPlanById`, `getBenefits`, `createPlan`, `updatePlan`, `deletePlan`, `uploadSBC`, `comparePlans`, `searchBenefits`, `reanalyzePlan` | `useBiomarkerData.ts:163,229,383,413`; `useApi.ts:154,161,173,272,277,283,287`; `AddInsurancePlanModal.tsx:94,177`; `InsuranceSBCUpload.tsx:78`; `EnhancedInsuranceUpload.tsx:237`; `InsurancePlanCompare.tsx:163,177`; `InsurancePlanDetail.tsx:282` |
+| `api/expenses.ts` (`expensesApi`) | `getProjections`, `createProjection`, `updateProjection`, `deleteProjection`, `getActuals`, `createActual`, `updateActual`, `deleteActual`, `getAnalyses`, `analyzeCosts` | `CostOptimization.tsx:166,180,229,253`; `ExpenseProjectionModal.tsx:128,131`; `ExpenseActualModal.tsx:202,204`; `ExpenseActualsList.tsx:76,107` |
+| `api/healthGoals.ts` (`healthGoalsApi`) | `getAll`, `getSummary`, `getSuggestions`, `create`, `update`, `updateProgress`, `delete` | `GoalTrackerPanel.tsx:201,202,217,271,284,296,307` |
+| `api/healthNeeds.ts` (`healthNeedsApi`) | `getAll`, `getById`, `create`, `updateStatus`, `delete`, `analyze` | `HealthNeedsPage.tsx:107,140,153,166,185,202`; `useApi.ts:187,194,292,297,302` |
+| `api/files.ts` (`filesApi`) | `getAll`, `downloadFile`, `delete` | `FilesPage.tsx:35,61,77,104` |
+| `api/upload.ts` (`uploadApi`) | `uploadLabReport` | **No direct consumer** — see [§9](#9-drift-findings). Upload components call `uploadFile()` from `services/uploadUtils` directly (`LabUploadModal.tsx:146`). |
+| `api/provider.ts` (`providerApi`) | `getPatients`, `requestPatientAccess`, `getPatient`, `getPatientBiomarkers`, `getPatientHealthNeeds`, `removePatient` | `MyPatientsPage.tsx:100,118,140,144,147,160` |
+| `api/patient.ts` (`patientApi`) | `getProviders`, `getPendingRequests`, `approveProvider`, `denyProvider`, `updateProviderPermissions`, `revokeProvider`, `removeProvider` | `CareTeamPage.tsx:125,126,154,173,187,201,215` |
+| `api/admin.ts` (`adminApi`) | `getStats`, `getUsers`, `updateUser`, `updateUserPlan`, `deleteUserPermanently`, `getAuditLogs`, `getProviderRelationships`, `updateProviderRelationship` | `AdminPage.tsx:67,128,165,220,231,284,371,384` |
+| `api/ai.ts` (`aiApi`) | `chat` (SSE streaming) | `HealthGuidePage.tsx:179` |
+| `api/settings.ts` (`settingsApi`) | `changePassword`, `getProfile`, `updateProfile`, `getNotificationPreferences`, `updateNotificationPreferences`, `getHealthProfile`, `updateHealthProfile`, `exportData`, `deleteAllData`, `deleteAccount` | `AccountSettingsPage.tsx:115,135,161,190,215`; `HealthProfileSection.tsx:163,252`; `NotificationSettingsSection.tsx:69,104`; `ChangePasswordModal.tsx:81`; `ExportMenu.tsx:81`; `HealthGuidePage.tsx:114` |
+| `api/onboarding.ts` (`onboardingApi`) | `getStatus`, `complete` | `Dashboard.tsx:150`; `OnboardingWizard.tsx:111,124` |
+| `api/plan.ts` (`planApi`) | `getCurrentPlan` (+ `isUnlimited` helper) | `PlanSection.tsx:94` |
+| `api/fhir.ts` (`fhirApi`) | `listConnections`, `connectQuest`, `syncConnection`, `disconnect` | `LabConnectionsSection.tsx:120,170,192,225` |
+| `client.ts` (core) | `apiFetch`, `setAuthToken`, `clearAuthToken`, `setOnAuthFailure`, `attemptTokenRefresh`, `isPlanLimitError`, `getCsrfToken` | every `*Api` module; `AuthContext.tsx:34` (`clearAuthToken`, `setOnAuthFailure`) |
 
-Implication: provider / patient / admin features have frontend scaffolding (types + API) but no UI pages. CLAUDE.md lists "Admin Panel" as an active feature, but the admin-panel component does not exist in `src/components/`. Either there's a missing UI, or these APIs are consumed only by a sibling app not in this repo.
-
-### 10.2 Unused RoleGuard wrappers
-
-`RoleGuard`, `PatientOnly`, `ProviderOnly`, `AdminOnly`, `ProviderOrAdmin` are all **exported from the barrel** (`src/components/common/index.ts:4-11`) but **never mounted** in any component (no `<RoleGuard` / `<AdminOnly` / etc. in `src/components`). Only `RoleBadge` is used (indirectly via the barrel by callers of `common`). This reinforces the provider/admin UI gap.
-
-### 10.3 `ocr` vite chunk may be dead
-
-`vite.config.ts:27-30` carves out a `tesseract.js` chunk, but `Grep pattern: "tesseract"` over `src/` shows no match. Lab OCR is server-side (Google Document AI) — `LabUploadModal` just uploads the file. If no feature imports tesseract, the chunk is empty at build time (harmless) or pulled in transitively by an unused dep. Candidate for removal.
-
-### 10.4 CLAUDE.md directory mismatch
-
-CLAUDE.md lists 10 component dirs but actually 12 exist on disk. Missing in CLAUDE.md:
-
-- `src/components/health/` — `HealthGuidePage`, `HealthNeedsPage` (actively used, lazy-loaded from `Dashboard.tsx:50-51`)
-- `src/components/onboarding/` — `OnboardingWizard` (actively used, lazy-loaded from `Dashboard.tsx:52`)
-
-### 10.5 CLAUDE.md API count mismatch
-
-CLAUDE.md says "13 API files" under `services/api/`. Actual count is **17** (missing in the CLAUDE.md list: `ai.ts`, `healthGoals.ts`, `onboarding.ts`, `plan.ts`).
+```mermaid
+graph LR
+  AuthContext --> authApi[api/auth]
+  useBiomarkerData --> biomarkersApi[api/biomarkers]
+  useBiomarkerData --> insuranceApi[api/insurance]
+  BiomarkerAIGuidance --> biomarkersApi
+  HealthGuidePage --> aiApi[api/ai]
+  HealthGuidePage --> settingsApi[api/settings]
+  LabConnectionsSection --> fhirApi[api/fhir]
+  OnboardingWizard --> onboardingApi[api/onboarding]
+  Dashboard --> onboardingApi
+  PlanSection --> planApi[api/plan]
+  CareTeamPage --> patientApi[api/patient]
+  MyPatientsPage --> providerApi[api/provider]
+  AdminPage --> adminApi[api/admin]
+  CostOptimization --> expensesApi[api/expenses]
+  GoalTrackerPanel --> healthGoalsApi[api/healthGoals]
+  HealthNeedsPage --> healthNeedsApi[api/healthNeeds]
+  FilesPage --> filesApi[api/files]
+```
 
 ---
 
-## 11. Prompt drift log
+## 7. Chunk-split components
 
-- Prompt `./39-frontend-component-map-doc.md:37` says `src/components` has **79** files across **12** dirs. Actual: 66 `.tsx` + 13 `.ts` = 79 total files, **12 dirs** — total count matches if you include `.ts` barrels; `.tsx` count alone is 66.
-- Prompt `./39-frontend-component-map-doc.md:35, 52` says `17 API modules` — matches actual (17 including `client.ts` and `index.ts`).
-- Prompt `./39-frontend-component-map-doc.md:37` and §5 wording call it "axios setup". **Actual transport is native `fetch`**, not axios (`src/services/api/client.ts:209`). No axios import anywhere (`Grep pattern: "axios"` — not searched but `package.json`-absent; reading `client.ts` shows `fetch`). Prompt should say "fetch-based HTTP client with axios-like wrapper".
-- Prompt `./39-frontend-component-map-doc.md:59` says the services README claims 13 API modules. Actual is 17. See §10.5.
-- Prompt lists dirs `auth, analytics, biomarkers, common, dashboard, files, health, insurance, onboarding, settings, trends, upload` — matches reality (12 dirs). No drift here.
+Two layers: Rollup `manualChunks` vendor splits (`vite.config.ts:17-38`) and route-level `lazy()` per-page chunks.
+
+### 7a. Vendor splits (`manualChunks`)
+
+| Chunk | Libraries | Pulled in by (file:line) | Source |
+|---|---|---|---|
+| `pdf` | `pdfjs-dist`, `jspdf`, `pdf-lib`, `html2canvas-pro` | `utils/biomarkers/labReportParser.ts:8,10` (← `PDFUploadModal.tsx:14`); `utils/documents/documentParser.ts:1,3` (← `EnhancedInsuranceUpload.tsx`); `utils/insurance/sbcParser.ts:1`; `utils/biomarkers/exportBiomarkers.ts:1` (← `ExportMenu.tsx:64`); `utils/pdfReportGenerator.ts:12-14` (← `ExportMenu.tsx:88`) | `vite.config.ts:19-24` |
+| `ocr` | `tesseract.js`, `tesseract.js-core` | `utils/biomarkers/labReportParser.ts:10`; `utils/documents/documentParser.ts:3` (lab/clinical upload path) | `vite.config.ts:27-30` |
+| `charts` | `recharts`, `d3-*`, `victory-vendor` | `BiomarkerChart.tsx:28`; `TrendSparkline.tsx:23`; `GoalTrackerPanel.tsx:37`; `CostOptimization.tsx:36` | `vite.config.ts:33-37` |
+
+```ts
+// Source: vite.config.ts:19-24
+if (id.includes('node_modules/pdfjs-dist/') ||
+    id.includes('node_modules/jspdf/') ||
+    id.includes('node_modules/pdf-lib/') ||
+    id.includes('node_modules/html2canvas-pro/')) {
+  return 'pdf';
+}
+```
+
+> Note: the chunk split is keyed on the **library import**, which lives in `src/utils/*`, not directly in the components. The components above are the *entry points* that transitively load these chunks. `pdf-lib` / `d3-*` / `victory-vendor` are transitive deps of the named libraries (no direct app import found via `Grep`).
+
+### 7b. Route-level `lazy()` per-page chunks
+
+| Lazy component | Loaded when | Source |
+|---|---|---|
+| `Dashboard`, `LoginPage`, `RegisterPage`, `VerifyEmailPage`, `ResetPasswordPage`, `ForgotPasswordPage`, `ConfirmEmailChangePage` | App-level route resolution | `src/App.tsx:37-43` |
+| `InsuranceHub`, `InsuranceKnowledgeBase`, `FilesPage`, `TrendsPage`, `AccountSettingsPage`, `GoalTrackerPanel`, `HealthNeedsPage`, `HealthGuidePage`, `OnboardingWizard`, `CareTeamPage`, `MyPatientsPage`, `AdminPage` | Navigating to that dashboard category | `src/components/dashboard/Dashboard.tsx:44-55` |
+| `LabUploadModal`, `PDFUploadModal`, `ClinicalFileUpload`, `InsuranceSBCUpload`, `EnhancedInsuranceUpload`, `BiomarkerInsurancePanel`, `TrendModal`, `InsurancePlanViewer` | Opening the corresponding modal | `src/components/dashboard/DashboardModals.tsx:14-22` |
+| `BiomarkerGraph`, `BiomarkerActionPlan` | Expanding a biomarker detail | `src/components/dashboard/CategoryContent.tsx:28-29` |
+
+Loading fallbacks: `LoadingFallback` (full-screen, `src/App.tsx:46-58`) and `PageLoadSpinner` (in-content, `src/components/dashboard/Dashboard.tsx:68-77`).
 
 ---
 
-## 12. Acceptance question self-answers
+## 8. Notable patterns
 
-> Answered using only this doc + its siblings.
+**Role gating (live mechanism).** Not `RoleGuard`. The dashboard filters the nav `categories` by `roles` and gates deep links:
 
-1. **Which directory contains insurance-related components?** → `src/components/insurance/` (§2.8).
-2. **Which component renders the biomarker dashboard list, and which API function does it call?** → `DashboardContent` (`src/components/dashboard/DashboardContent.tsx:110`) renders the overview grid; biomarker data is fetched by the `useBiomarkerData` hook via `biomarkersApi.getAll` (`biomarkers.ts:47`). The per-category detail list is `CategoryContent` (`CategoryContent.tsx:121`).
-3. **What context does `Nav` consume, and for what state?** → There is no component named `Nav`. The closest is `DashboardHeader` (`DashboardHeader.tsx:28`) — it does not consume any context directly; `user` is passed as a prop from `Dashboard.tsx:273` where `useAuth()` supplies it (§2.5, §4.1).
-4. **How does a component get the current user's role?** → Via `useRBAC()` (`src/hooks/useRBAC.ts:19-111`), which internally calls `useAuth()` and reads `user.role`. `user.role` is typed `'PATIENT' | 'PROVIDER' | 'ADMIN'` at `AuthContext.tsx:51` (§9.1).
-5. **Which components are blocked to non-PROVIDER users?** → None in the current tree. `ProviderOnly` / `ProviderOrAdmin` exist (`RoleGuard.tsx:83, 105`) but are not mounted anywhere (§10.2).
-6. **Where is the AuthContext defined, and what does it expose?** → `src/contexts/AuthContext.tsx:79` (`AuthContext`), `AuthContext.tsx:81` (`AuthProvider`), `AuthContext.tsx:305` (`useAuth`). Exposes `{ user, isAuthenticated, isLoading, login, register, logout, error, setError, clearError }` (§9.1).
-7. **Which API module handles SBC upload, and which component uses it?** → `insuranceApi.uploadSBC` (`src/services/api/insurance.ts:220-226`). Consumers: `InsuranceSBCUpload`, `EnhancedInsuranceUpload`, `AddInsurancePlanModal` (§2.8, §6).
-8. **Which components are in the pdf-libs chunk, and why?** → The `pdf` manual-chunk (`vite.config.ts:19-24`) holds `pdfjs-dist`, `jspdf`, `pdf-lib`, `html2canvas-pro`. Pulled by `PDFUploadModal` (client-side parse) and anything else in `src/components/upload/` that imports PDF libs (§7).
-9. **How many total `.tsx` files exist in `src/components/`?** → 66 (§1).
-10. **What's the routing approach (react-router, conditional, other)?** → Conditional rendering, no router (§1, §3). Three tiers: URL sniffing for `/verify-email` and `/reset-password` tokens → auth state → dashboard `selectedCategory`.
-11. **Which component handles account deletion and consent revocation?** → `AccountSettingsPage` (`settings/AccountSettingsPage.tsx:64`) calls `settingsApi.deleteAccount` (line 192) and `settingsApi.deleteAllData` (line 168). Consent revocation (provider-side) would be `patientApi.revokeProvider` (`patient.ts:92-98`) — but no component currently uses it (§10.1).
-12. **Which component displays an AI guidance response, and how does error state look?** → `BiomarkerAIGuidance` (`trends/BiomarkerAIGuidance.tsx:36`). Error state: local `error: string | null` (line 42), rendered as a red banner with a retry button calling `fetchGuidance(true)` to skip the cache (§2.11, §8.3).
-13. **Is there a shared form library used across the codebase, or is each form hand-rolled?** → Hand-rolled — no `react-hook-form`, `zod`, `formik`, or `yup` (§1, §8.2).
-14. **Which components subscribe to `ThemeContext`?** → Only `AccountSettingsPage` (`AccountSettingsPage.tsx:66`) via `useTheme()` (§4.2). All other dark-mode styling is Tailwind's `dark:` prefix driven by the root-level class toggled in `ThemeContext.tsx:77-84`.
+```ts
+// Source: src/components/dashboard/Dashboard.tsx:134-138
+const role = user?.role ?? 'PATIENT';
+const visibleCategories = categories.filter((c) => !c.roles || c.roles.includes(role));
+const visibleNavGroups = navGroups.filter((g) =>
+  visibleCategories.some((c) => c.group === g.id)
+);
+```
+
+Role data comes from `useRBAC` (`src/hooks/useRBAC.ts:19`), which reads `user.role` from `AuthContext` and exposes `hasRole`, `hasMinRole`, and a `permissions` object (`isAdmin`, `canViewPatients`, etc., `:40-49`). `RoleGuard` (`src/components/common/RoleGuard.tsx:44`) wraps `useRBAC` but is currently unused in JSX.
+
+**Form validation.** Hand-rolled — no validation library. `Grep "from 'zod'|react-hook-form|useForm|zodResolver"` over `src/` returns **no matches**. Forms validate inline (e.g. `AccountSettingsPage` password checks `:182-186`, `:207-211`).
+
+**Error / success display.** `ErrorToast` (`src/components/common/ErrorToast.tsx:26`) and `SuccessToast` (`src/components/common/SuccessToast.tsx`), driven by the `useErrorNotification` hook (`src/hooks/index.ts`) at the dashboard level (`Dashboard.tsx:95`, `:352-356`). Component-local errors use `useState<string | null>` (e.g. `BiomarkerAIGuidance.tsx:42`).
+
+**AI guidance error/loading state.** `BiomarkerAIGuidance` shows a skeleton during load (`:152-159`) and an error block with a retry that clears the cache:
+
+```ts
+// Source: src/components/trends/BiomarkerAIGuidance.tsx:82-87
+const handleRetry = () => {
+  guidanceCache.delete(cacheKey);
+  setGuidance(null);
+  setError(null);
+  fetchGuidance(true);
+};
+```
+
+**Modal state.** Centralized in `useModals` — a single `Record<ModalName, boolean>` with `open`/`close`/`toggle`/`isOpen` (`src/hooks/useModals.ts:13-24`, `:60-90`). 11 modal names enumerated.
+
+**Error boundaries.** `Dashboard` wraps page content in an `ErrorBoundary` keyed by category (`Dashboard.tsx:387`) and modals in a `fallback={null}` boundary (`:455`), so one page's render error cannot unmount the shell.
+
+---
+
+## 9. Drift findings
+
+| # | Finding | Evidence |
+|---|---|---|
+| D1 | **`RoleGuard` is dead in JSX.** Exported from `common/index.ts` with `PatientOnly`/`ProviderOnly`/`AdminOnly`/`ProviderOrAdmin`/`RoleBadge`, but `Grep "<RoleGuard\|<ProviderOnly\|<AdminOnly\|<PatientOnly\|<RoleBadge"` over `src/` finds **0** usages. Live gating is the `categories[].roles` filter (`Dashboard.tsx:135`). The spec's Q4/Q5 assume `RoleGuard` is the guard; it is not. | `RoleGuard.tsx:44`; `Dashboard.tsx:134-138`, `:224-244` |
+| D2 | **`uploadApi.uploadLabReport` has no consumer.** Exported (`index.ts:49`) but `Grep "uploadApi\."` over `src/` (excl. tests/defs) finds none. Upload components call `uploadFile()` from `services/uploadUtils` directly (`LabUploadModal.tsx:146`). | `upload.ts:7`; `LabUploadModal.tsx:19,146` |
+| D3 | **Duplicate SBC upload components.** `InsuranceSBCUpload` (`InsuranceSBCUpload.tsx:40`) and `EnhancedInsuranceUpload` (`EnhancedInsuranceUpload.tsx:194`) both call `insuranceApi.uploadSBC` and are both wired (`DashboardModals.tsx:143-158`, opened via `onUploadSBC`/`onSmartUpload` from `InsuranceHub`). Functional overlap. | `DashboardModals.tsx:143-158`; `Dashboard.tsx:251-252` |
+| D4 | **`CLAUDE.md` says the client is "axios + interceptors".** It is native `fetch` with a hand-written `apiFetch` wrapper. | `CLAUDE.md` "Project Structure" vs `client.ts:212,253` |
+| D5 | **`CLAUDE.md` lists "13 API modules" / 10 component dirs.** Actual: 17 domain API modules (+`client.ts`+`index.ts`) and 14 component dirs. New since: `ai`, `fhir`, `onboarding`, `plan`, `expenses`, `files`, `patient`, `settings`, `admin`, `provider`; new dirs `analytics`, `health`, `onboarding`, `provider`, plus split `trends`/`upload`. | `Glob "src/services/api/*.ts"` (18); `Glob "src/components/*"` (14) |
+| D6 | **`analytics/` dir holds a single component** (`GoalTrackerPanel`), not the "TrendChart, BiomarkerChart" the `CLAUDE.md` structure implies; charts live in `biomarkers/` and `trends/`. | `Glob "src/components/analytics/*.tsx"` → 1 file |
+
+---
+
+## Acceptance questions (self-answered from this doc)
+
+1. **Which directory contains insurance-related components?** `src/components/insurance/` — 18 components ([§2](#srccomponentsinsurance)).
+2. **Which component renders the biomarker summary, and which API function does it call?** `BiomarkerSummary` (`BiomarkerSummary.tsx:27`) — calls **no** API; it renders from `biomarkers`/`category` props supplied by the dashboard hooks. The AI-guidance display `BiomarkerAIGuidance` (`trends/`) calls `biomarkersApi.getGuidance` (`:56`). ([§2](#srccomponentsbiomarkers), [§6](#6-api-to-component-matrix))
+3. **What context does `DashboardHeader`/`DashboardSidebar` consume, and for what state?** Neither consumes context directly — `user` and nav state arrive via props from `Dashboard` (`Dashboard.tsx:360`, `:369`). `Dashboard` itself reads `useAuth()` for `user`/`logout` (`:94`). ([§2](#srccomponentsdashboard), [§4](#4-context-dependency-graph))
+4. **How does a component get the current user's role?** `useRBAC()` (`src/hooks/useRBAC.ts:19-22`), which calls `useAuth()` and reads `user.role` from `AuthContext` (`AuthContext.tsx:48-52`, `:246-256`). ([§4](#4-context-dependency-graph), [§8](#8-notable-patterns))
+5. **Which components are gated to PROVIDER/ADMIN, and via what guard?** `MyPatientsPage` (PROVIDER/ADMIN, `sampleData.ts:230`) and `AdminPage` (ADMIN, `sampleData.ts:233`). Guard = the `categories[].roles` filter + deep-link gate in `Dashboard.tsx:135,224` — **not** `RoleGuard` (see drift D1). ([§3b](#3b-in-app-dashboard-spa-paths), [§9](#9-drift-findings))
+6. **Where is `AuthContext` defined and what does it expose?** `src/contexts/AuthContext.tsx:79`; exposes `user{id,email,role}`, `isAuthenticated`, `isLoading`, `login`, `register`, `logout`, `error`, `setError`, `clearError` (`:58-77`). ([§4](#4-context-dependency-graph))
+7. **Which API module handles SBC upload, and which component uses it?** `insuranceApi.uploadSBC` (`api/insurance.ts`); used by `InsuranceSBCUpload.tsx:78`, `EnhancedInsuranceUpload.tsx:237`, `AddInsurancePlanModal.tsx:177`. ([§6](#6-api-to-component-matrix))
+8. **Which components are in the `pdf` chunk, and why?** Entry points `PDFUploadModal`, `EnhancedInsuranceUpload`, `ExportMenu` (via `utils/*` that import `pdfjs-dist`/`jspdf`/`html2canvas-pro`/`pdf-lib`); the libs are split out because they are large and lazy-loaded (`vite.config.ts:19-24`). ([§7a](#7a-vendor-splits-manualchunks))
+9. **How many `.tsx` files in `src/components/`, across how many dirs?** **73** files across **14** directories. ([§1](#1-overview))
+10. **Routing approach?** No react-router. `App.tsx` view-state + URL special routes ([§3a](#3a-apptsx-special-url-routes--unauthenticated-view-state)) + dashboard `categoryRouting.ts` SPA paths ([§3b](#3b-in-app-dashboard-spa-paths)).
+11. **Which component handles account deletion and consent revocation?** Account/data deletion: `AccountSettingsPage` (`deleteAllData:190`, `deleteAccount:215`). Provider-consent revocation (patient side): `CareTeamPage` (`revokeProvider:201`). ([§2](#srccomponentssettings), [§2](#srccomponentsprovider))
+12. **Which component displays an AI guidance response, and how does error state look?** `BiomarkerAIGuidance` (`trends/BiomarkerAIGuidance.tsx:36`); on error it sets `error` state and renders an error block with a retry that clears the cache (`:82-87`); skeleton during load (`:152-159`). ([§8](#8-notable-patterns))
+13. **Shared form library?** No — forms are hand-rolled, no Zod/react-hook-form (`Grep` → 0 matches). ([§8](#8-notable-patterns))
+14. **Which components subscribe to `ThemeContext`?** Only `AccountSettingsPage` (`useTheme()` `:70`); the provider applies the theme globally to `<html>` (`ThemeContext.tsx:77-84`). ([§4](#4-context-dependency-graph))
+15. **Which component drives onboarding, and which API feeds it?** `OnboardingWizard` (`onboarding/OnboardingWizard.tsx:68`) calling `onboardingApi.complete`; status is fetched by `Dashboard` via `onboardingApi.getStatus` (`Dashboard.tsx:150`). ([§6](#6-api-to-component-matrix))
+16. **Which component manages Quest/FHIR lab connections, and which API?** `LabConnectionsSection` (`settings/LabConnectionsSection.tsx:103`) → `fhirApi` (`listConnections:120`, `connectQuest:170`, `syncConnection:192`, `disconnect:225`). ([§2](#srccomponentssettings), [§6](#6-api-to-component-matrix))
+17. **Which component shows plan tier/usage, and which API?** `PlanSection` (`settings/PlanSection.tsx:77`) → `planApi.getCurrentPlan` (`:94`). ([§6](#6-api-to-component-matrix))
+18. **Which component(s) handle the email-change flow?** Request: `ChangeEmailModal` (`settings/ChangeEmailModal.tsx:24` → `authApi.requestEmailChange:65`). Confirm: `ConfirmEmailChangePage` (`auth/ConfirmEmailChangePage.tsx:20` → `authApi.confirmEmailChange:55`, URL `/confirm-email-change`). ([§2](#srccomponentsauth), [§2](#srccomponentssettings))
+19. **Which component manages notification preferences?** `NotificationSettingsSection` (`settings/NotificationSettingsSection.tsx:50`) → `settingsApi.getNotificationPreferences:69` / `updateNotificationPreferences:104`. ([§6](#6-api-to-component-matrix))
 
 ---
 
 ## Related Documents
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — full-stack diagram, request flow, middleware stack; companion for the backend side of every API call listed here.
-- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts (request/response, middleware, rate limits); each entry in §6 above maps to one or more endpoints there.
-- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — backend-side middleware chain for each endpoint; complements the client-side `apiFetch` view in §5.
-- [LOCAL_DEV.md](./LOCAL_DEV.md) — dev server + chunking + `VITE_API_URL` setup.
-- [TESTING_PATTERNS.md](./TESTING_PATTERNS.md) — frontend test recipes (Vitest + React Testing Library).
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — full-stack diagram, middleware stack, data flows the frontend talks to.
+- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts behind each `*Api` module (request/response, auth, rate limits).
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — backend route + middleware chain for every endpoint these components call.
+- [LOCAL_DEV.md](./LOCAL_DEV.md) — Vite dev server, ports, chunking, env vars (`VITE_API_URL`, `VITE_DEMO_MODE`).
+- [TESTING_PATTERNS.md](./TESTING_PATTERNS.md) — frontend Vitest recipes (see `src/__tests__/`).
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — which fields rendered by these components are PHI and how they're decrypted server-side.
+
+---
+
+## Prompt drift log
+
+- `./39-frontend-component-map-doc.md` and `CLAUDE.md` imply `RoleGuard`/`useRBAC` is the role-gating mechanism (Q4, Q5, §8). **Actual:** `RoleGuard` and all its wrappers are exported but have **0 JSX consumers**; live gating is `categories[].roles` filtering in `Dashboard.tsx:134-138` + the deep-link gate at `Dashboard.tsx:224-244`. `useRBAC` is used only by `RoleGuard` itself. Drift D1.
+- The spec's API-matrix stub lists `uploadApi` as consumed by SBC components. **Actual:** `uploadApi.uploadLabReport` has no consumer (`Grep "uploadApi\."` → none); upload components call `uploadFile()` from `services/uploadUtils` directly. Drift D2.
+- `CLAUDE.md` "Project Structure" describes `client.ts` as "axios + interceptors" and "13 API modules". **Actual:** native `fetch` wrapper (`client.ts:212`), 17 domain modules. Drift D4/D5 — prompt author should update `00-index.md` "Verified codebase counts".
+- The spec's chunk-split table attributes the `pdf`/`ocr`/`charts` chunks directly to components. **Actual:** the Rollup `manualChunks` predicate keys on `node_modules/...` library paths (`vite.config.ts:17-38`); the heavy imports live in `src/utils/*` (`labReportParser.ts`, `documentParser.ts`, `sbcParser.ts`, `exportBiomarkers.ts`, `pdfReportGenerator.ts`) and chart components, which the listed components load transitively. Documented in §7a.
+- The spec's per-directory example calls `analytics/` "Trend charts (TrendChart, BiomarkerChart)". **Actual:** `analytics/` holds only `GoalTrackerPanel`; there is no `TrendChart` file anywhere (`Glob` → not found). Drift D6.

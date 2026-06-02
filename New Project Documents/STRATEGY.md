@@ -1,524 +1,448 @@
----
-doc: STRATEGY
-purpose: Product + business-direction reference — mission, feature map, roadmap, strategic decisions
-audience: Claude Project answering "what is this product and where is it going"
-updated: 2026-04-24
-sources_verified:
-  - CLAUDE.md (Current Features / Removed Features / Deprecated / Critical Rules)
-  - README.md (product description, feature table)
-  - git log --since='6 months ago' (347 commits, 1 PR-merge line + 74 PR numbers in commit titles)
-  - New Project Documents/ARCHITECTURE.md, DATA_MODEL.md, API_REFERENCE.md, FRONTEND_MAP.md, SECURITY_STATUS.md, CHANGELOG.md
----
+# STRATEGY.md — OwnMyHealth Product + Business Direction
 
-# STRATEGY.md — OwnMyHealth Product & Business Direction
+> Reference doc for product strategy: mission, principles, target user, code-grounded feature map, AI strategy, provider/lab/plan strategy, roadmap, decisions, risks, and open questions. Every claim cites `file:path:line`. Generated 2026-06-01.
 
-> This doc is the single reference for what OwnMyHealth is, who it serves, what's shipped, what's coming, and the strategic decisions behind those choices. Every feature claim cites concrete backend code (routes + models) **and** frontend evidence (component or gap). When frontend and backend disagree, we report both honestly.
+## Required reading before generating
+
+This doc was generated against the live codebase per [`prompts/14-strategy-doc.md`](../prompts/14-strategy-doc.md) and the shared protocol in [`prompts/_doc-quality.md`](../prompts/_doc-quality.md). It must pass the five quality tests (question-answering, path-and-line, snippet, diagram, reproducibility). Where the prompt or `CLAUDE.md` disagrees with the code, the code wins and the divergence is logged under [Prompt drift log](#prompt-drift-log).
 
 ---
 
 ## 1. Mission / vision
 
-### Code-derived product description (quoted verbatim)
+OwnMyHealth is a **privacy-first, HIPAA-compliant health biomarker tracking platform** that lets a patient own their own health data: track biomarkers and trends, manage insurance documents and out-of-pocket cost projections, get educational (non-diagnostic) AI guidance, sync labs directly from Quest, and selectively share scoped data with their providers under explicit consent.
 
-From [`CLAUDE.md:3-4`](../CLAUDE.md):
+Code-derived product statement (the durable, citable version):
 
-> "Privacy-first HIPAA-compliant health biomarker tracking platform with insurance document management, AI-powered guidance, provider-patient collaboration, and expense tracking. Focused on secure tracking of health metrics with Claude AI educational insights, insurance cost analysis, and provider data sharing via consent-based access control."
+```text
+// Source: README.md:3
+A privacy-first, HIPAA-compliant health biomarker tracking platform with
+insurance document management. Built for patients managing chronic conditions
+like osteoporosis.
+```
 
-From [`README.md:3`](../README.md):
+`CLAUDE.md:4` adds the wider scope:
 
-> "A privacy-first, HIPAA-compliant health biomarker tracking platform with insurance document management. Built for patients managing chronic conditions like osteoporosis."
+```text
+// Source: CLAUDE.md:4 (What This Is)
+Privacy-first HIPAA-compliant health biomarker tracking platform with insurance
+document management, AI-powered guidance, provider-patient collaboration, and
+expense tracking.
+```
 
-### Working mission (derived, one sentence)
-
-**Give patients full ownership of their health data — biomarkers, insurance, expenses — and let Claude AI educate (never diagnose) on top of that data, while keeping PHI under AES-256-GCM + RLS with BAA-gated third-party access.**
-
-### Vision
-
-**TBD** (external: crisp one-paragraph vision statement beyond code-derived description — resolution path: project owner interview; if unavailable, continue using §1 "Working mission" as the operational statement).
-
----
+A single crisp **brand mission sentence** (one-line tagline, vision horizon) is not stated verbatim anywhere in the repo. `TBD (external: owner mission statement / tagline, resolve via founder interview; the code-derived statement above is the working stand-in)`.
 
 ## 2. Core principles
 
-Each principle is enforced by a specific code artifact. No principle is merely aspirational.
+These are enforced rules in the codebase, not aspirations. Each cites the mechanism.
 
-| # | Principle | Enforcer (file:line) | Code evidence |
-|---|---|---|---|
-| 1 | **Privacy-first — never localStorage for sensitive data** | [`CLAUDE.md:115`](../CLAUDE.md) + `src/services/api/client.ts:10,65` | Access token stored **in-memory only** (module-scoped `authToken`); refresh-token in httpOnly cookie only. See [`FRONTEND_MAP.md:410`](./FRONTEND_MAP.md). |
-| 2 | **All PHI encrypted before DB write (AES-256-GCM, per-user key)** | `backend/src/services/encryption.ts:57-61,263-279` + `services/userEncryption.ts:29-137` | Master key validation rejects 3 known-insecure constants in every env (`encryption.ts:129-141`); per-user salt via PBKDF2-SHA512 @ 600k iters. 36 encrypted columns in schema. |
-| 3 | **Every PHI access audit-logged (7-year retention)** | `backend/src/services/auditLog.ts:9,475-503` (retention cleanup) + `schema.prisma:657` (`AuditAction` enum) | `RETENTION_DAYS=2555`; daily scheduler deletes rows older than 7y. Controller call sites: `biomarkerController.ts:160,273,363,409,442`. |
-| 4 | **Row-Level Security at the DB** | `backend/prisma/migrations/20260107_add_rls_policies/migration.sql:68-83` + `services/database.ts:456-483` | 16 tables with RLS ENABLE; `withRLSContext` sets `app.current_user_id` in-transaction. **Open caveat**: app currently runs as BYPASSRLS role — see [SECURITY_STATUS.md#c-8](./SECURITY_STATUS.md#2-open-findings). |
-| 5 | **Consent-first provider sharing — explicit patient approval required** | `backend/prisma/schema.prisma:568-574` (`ProviderPatientStatus` enum) + `middleware/rbac.ts:205-258` (`checkProviderPatientAccess`) | State machine `PENDING→ACTIVE→…` enforced both at app layer and via DB helper `has_provider_access(user_id, permission_type)` at `migration.sql:39-62`. See §6. |
-| 6 | **AI is educational, not diagnostic — disclaimers required** | [`CLAUDE.md:175-178`](../CLAUDE.md) Product Guidelines + `services/claudeExtraction.ts:118-120` BAA gate | Every AI endpoint gated by `config.anthropic.baaActive`; Claude responses tagged with `disclaimer` field in the guidance controller. Demo accounts blocked from AI entirely via `blockDemoAI` (`middleware/demoProtection.ts:164-175`). |
-| 7 | **User owns their data — export + deletion required** | `backend/src/controllers/settingsController.ts` (`deleteAllData`, `deleteAccount`) + `services/storageService.ts:204-223` (`deleteFiles` batch GCS op) | C-6 closure (`0f7970a`, PR #37, 2026-04-16) guarantees GCS objects are removed on account/data deletion. |
-| 8 | **BAA-gated third parties — no PHI crosses a line without a signed agreement** | `backend/src/config/index.ts:245-258` (prod hard-fail) + `services/claudeExtraction.ts:118-120` (runtime block) | Anthropic BAA signed 2026-04-16 (commit `2bd7e36`); production boot hard-fails if `ANTHROPIC_API_KEY` set without `ANTHROPIC_BAA_ACTIVE=true`. |
+| Principle | Rule (CLAUDE.md) | Code that enforces it |
+|---|---|---|
+| Privacy-first / all PHI encrypted | "All PHI must be encrypted with AES-256-GCM" (`CLAUDE.md` Security §2) | `PHI_FIELDS` + `encrypt()` in `backend/src/services/encryption.ts`; per-user keys in `backend/src/services/userEncryption.ts` (PBKDF2-SHA512) |
+| Consent-first sharing | "provider access only via explicit patient consent" (`CLAUDE.md` Product §3) | Provider read paths gated on `status === 'ACTIVE'` + permission flag + expiry — `backend/src/routes/providerRoutes.ts:443-447` |
+| AI is educational, never diagnostic | "always include disclaimers on AI-generated content" (`CLAUDE.md` Product §1/§4) | Disclaimer baked into the guidance prompt: `backend/src/routes/biomarkerRoutes.ts:221` |
+| User owns their data (export + delete) | "export and deletion capabilities required" (`CLAUDE.md` Product §2) | `dataExport: true` for **every** tier incl. FREE — `backend/src/config/plans.ts:56`; settings/export controller `backend/src/controllers/settingsController.ts` |
+| Every PHI access audit-logged (7y) | "Every PHI access must be audit logged - 7-year retention" (`CLAUDE.md` Security §3) | `auditService.logAccess(...)` on PHI paths, e.g. `backend/src/routes/providerRoutes.ts:540`; retention cleanup in `backend/src/services/auditLog.ts` |
+| Row-level isolation (defense in depth) | "users can only access their own data" (`CLAUDE.md` RLS §) | `withRLSContext` / `withRLSTransaction` (`backend/src/services/database.ts`); boot-time `assertNoBypassRLS()` hard-exits prod on `BYPASSRLS` — `backend/src/services/database.ts:194,250` |
 
----
+The privacy posture extends to AI: PHI is **gated behind a signed BAA flag** before any Claude/Document AI call — see [§5](#5-ai-integration-strategy).
 
 ## 3. Target user
 
-### Primary persona (derived from features)
+Derived from the feature set and stated scope; no explicit persona doc exists in the repo.
 
-A **patient managing a chronic condition** (README explicitly calls out osteoporosis at `README.md:3`) who needs to:
+| Signal | Evidence | Implied user |
+|---|---|---|
+| "Built for patients managing chronic conditions like osteoporosis" | `README.md:3` | Solo patient with ongoing labs to track |
+| DEXA / bone-density tracking called out | `CLAUDE.md` Current Features (DEXA Scan Support) | Osteoporosis / bone-health patient |
+| Insurance SBC + cost projection + actuals | `backend/src/routes/expenseRoutes.ts`, models `ExpenseProjection`/`ExpenseActual`/`CostAnalysis` | Cost-conscious self-payer / high-deductible plan holder |
+| TEAM tier "For families and caregivers" | `backend/src/config/plans.ts:84` | Caregiver managing others (family plan) |
+| Provider-patient consent + provider UI | `backend/src/routes/providerRoutes.ts`, `src/components/provider/MyPatientsPage.tsx` | A clinician the patient invites (provider-led collaboration, patient-initiated consent) |
 
-| Need | Evidenced by |
-|---|---|
-| Track biomarker values + normal ranges over time | `Biomarker` + `BiomarkerHistory` models ([DATA_MODEL.md#biomarker](./DATA_MODEL.md)); `biomarkerRoutes.ts` 15 endpoints |
-| Store insurance plans, read their SBCs without effort | `InsurancePlan` + `InsuranceBenefit` models; `insuranceApi.uploadSBC` ([FRONTEND_MAP.md:474](./FRONTEND_MAP.md)); SBC Claude extraction at `services/sbcExtraction.ts:325` |
-| Forecast and track medical expenses against a deductible | `ExpenseProjection`, `ExpenseActual`, `CostAnalysis` models (see [DATA_MODEL.md](./DATA_MODEL.md) §ExpenseActual/§ExpenseProjection) |
-| Set health goals tied to biomarkers and journal progress | `HealthGoal`, `GoalProgressHistory` models; `GoalTrackerPanel` component |
-| Ask AI educational questions over their own health data | `aiRoutes.ts` streaming `/ai/chat` SSE (`HealthGuidePage`) |
-
-### Secondary personas (backend-ready, frontend-pending)
-
-CLAUDE.md's "Roles & Access Control" table (lines 269-274) names three personas — PATIENT, PROVIDER, ADMIN — but the frontend tree only serves PATIENT. See §4 Feature map for the gap.
-
-- **PROVIDER** — backend has 15 endpoints (`providerRoutes.ts`), model (`ProviderPatient`), and RBAC (`rbac.ts:31-56`). Frontend: **no components** consume `providerApi` ([FRONTEND_MAP.md#10-drift-findings](./FRONTEND_MAP.md) §10.1).
-- **ADMIN** — backend has admin routes + `adminApi` client. Frontend: **no admin-panel component** exists in `src/components/` despite CLAUDE.md listing "Admin Panel" as a Current Feature.
-
-### Explicit demographic/psychographic persona
-
-**TBD** (external: detailed persona specs — age bracket, tech comfort, caregiver vs self-managed split, condition mix beyond osteoporosis — resolution path: project-owner interview or user-research doc; nothing in the repo fixes these).
-
----
+Default role at signup is `PATIENT` (`backend/prisma/schema.prisma:28`). The platform is **patient-owned, consent-out** to providers — not a provider-led EHR. Crisp committed personas (primary vs. secondary) → `TBD (external: owner persona definition; resolve via product owner)`.
 
 ## 4. Feature map
 
-### 4.1 Shipped (backend + frontend)
+Counts verified 2026-06-01: 16 mounted route modules (`backend/src/routes/index.ts:82-113`) plus separately-mounted internal routes (`backend/src/routes/internalRoutes.ts`); 8 named rate limiters (`backend/src/middleware/rateLimiter.ts:17-157`); 22 Prisma migrations under `backend/prisma/migrations/` (excluding `migration_lock.toml`).
 
-Every row cites both a backend code artifact **and** a frontend consumer. If the frontend is missing, the feature is split into §4.2 or §4.3.
+### 4a. Shipped features
 
-| Feature | Backend evidence | Frontend evidence | Status |
-|---|---|---|---|
-| **Biomarker tracking** (manual entry, history, trends, normal ranges, in-range indicator) | `routes/biomarkerRoutes.ts` (15 endpoints per [API_REFERENCE.md](./API_REFERENCE.md)); `Biomarker` + `BiomarkerHistory` models ([DATA_MODEL.md](./DATA_MODEL.md)) | `src/components/biomarkers/` (9 components incl. `BiomarkerChart`, `AddMeasurementModal`, `TrendModal`) + `src/components/trends/` ([FRONTEND_MAP.md §2.3, §2.11](./FRONTEND_MAP.md)) | Shipped |
-| **AI biomarker guidance** (Claude, educational) | `POST /api/v1/biomarkers/guidance` (`biomarkerRoutes.ts:120-122`: `aiLimiter` + `blockDemoAI` + `requirePlanLimit('aiGuidancePerDay')`); `services/claudeExtraction.ts:57,118-120` | `BiomarkerAIGuidance` (`src/components/trends/BiomarkerAIGuidance.tsx:36`) calls `biomarkersApi.getGuidance` | Shipped |
-| **Insurance SBC upload + Claude extraction** | `uploadRoutes.ts` → `sbcUploadController`; `services/sbcExtraction.ts:325`; `InsurancePlan` + `InsuranceBenefit` models | `InsuranceSBCUpload`, `EnhancedInsuranceUpload`, `AddInsurancePlanModal` ([FRONTEND_MAP.md §2.8](./FRONTEND_MAP.md)) | Shipped |
-| **Insurance plan management** (CRUD + re-analyze) | `routes/insuranceRoutes.ts` (`insuranceApi.*`); `POST /insurance/:id/reanalyze` | `InsuranceHub`, `InsurancePlanDetail`, `InsurancePlanCard`, `InsurancePlanCompare` | Shipped |
-| **Expense projections** (forecast future costs vs plan) | `routes/expenseRoutes.ts`; `ExpenseProjection` model ([DATA_MODEL.md](./DATA_MODEL.md)) | `ExpenseProjectionModal`, `CostOptimization` | Shipped |
-| **Expense actuals** (record real claims) | `routes/expenseRoutes.ts` actuals endpoints (PR #56, `92fd090`, 2026-04-17); `ExpenseActual` model | `ExpenseActualModal`, `ExpenseActualsList` | Shipped |
-| **AI cost analysis** (Claude over projections + plan) | `expenseRoutes.ts POST /analyze`; `CostAnalysis` model (`claudeResponse` encrypted); `aiLimiter` + `blockDemoAI` + plan gating | `CostOptimization` (`src/components/insurance/CostOptimization.tsx:147`) → `expensesApi.analyzeCosts` | Shipped |
-| **Health goals** (numeric goal + progress history) | `routes/healthGoalsRoutes.ts`; `HealthGoal` + `GoalProgressHistory` models; `targetValueEncrypted` migration `20260420_encrypt_health_goal_target` | `GoalTrackerPanel` (`src/components/analytics/GoalTrackerPanel.tsx:170`) | Shipped |
-| **Health needs** (tasks / conditions / follow-ups) | `routes/healthNeedsRoutes.ts`; `HealthNeed` model; AI analyze endpoint | `HealthNeedsPage` (`src/components/health/HealthNeedsPage.tsx:82`) | Shipped |
-| **AI Health Guide chat** (streaming SSE conversational AI) | `routes/aiRoutes.ts` `/ai/chat`; `services/knowledge/` + `healthContextService`; `requireBearerAuth` + CSRF exempt (`csrf.ts:126-148`) | `HealthGuidePage` (`src/components/health/HealthGuidePage.tsx:86`) calls `aiApi.chat` | Shipped (2026-04-17, PRs #58/#59/#60) |
-| **Self-reported health profile** (conditions, meds, family history — fuels AI context) | `services/healthProfileService`; migration `20260418_add_health_profile` | `HealthProfileSection` (`src/components/settings/HealthProfileSection.tsx:136`) | Shipped (2026-04-17, PR #60) |
-| **File upload + OCR** (lab reports PDF + image) | `uploadRoutes.ts` `/upload/lab-report`, `/upload/lab-results-ocr`; `services/ocrService.ts:283` (Google Document AI); `services/pdfTextExtraction.ts`; `services/storageService.ts` (GCS) | `LabUploadModal`, `ClinicalFileUpload`, `PDFUploadModal` + `FilesPage`/`FileCard` for management | Shipped |
-| **File management** (list/download/delete with signed URLs) | `routes/fileRoutes.ts`; `storageService.ts:104-154` (15-min signed URLs); streamed download path in `filesApi.downloadFile` | `FilesPage`, `FileCard` ([FRONTEND_MAP.md §2.6](./FRONTEND_MAP.md)) | Shipped |
-| **Quest SMART-on-FHIR lab imports** | `routes/fhirRoutes.ts`; `services/fhir/fhirClient.ts:32`; `LabConnection` model (migration `20260418_add_lab_connections`); LOINC → internal biomarker mapping | **Frontend integration**: disabled until `QUEST_FHIR_CLIENT_ID` set (per `config/index.ts:158-169`); `LabConnectionsSection` import pulled in `8ee5486` 2026-04-18 — effectively off-by-default on UI | Shipped (backend + mapping; UI gate pending) |
-| **Plan gating** (feature limits per UserPlan tier) | `middleware/planGating.ts` (`requirePlanLimit('aiGuidancePerDay' | 'aiChatsPerDay')`); migration `20260420_add_user_plan` | `PlanSection` (`src/components/settings/PlanSection.tsx:56`) → `planApi.getCurrentPlan` | Shipped (2026-04-23, PR #73) |
-| **Onboarding flow** (first-session wizard) | `routes/onboardingRoutes.ts`; migration `20260420_add_onboarding` | `OnboardingWizard` (`src/components/onboarding/OnboardingWizard.tsx:68`) | Shipped (2026-04-23, PR #73) |
-| **Auth — JWT + refresh rotation + CSRF + email verification + password reset** | `routes/authRoutes.ts`; `authService.ts:200-285,407-476`; `middleware/csrf.ts`; `services/emailService.ts` (SendGrid) | `LoginPage`, `RegisterPage`, `VerifyEmailPage`, `ResetPasswordPage`, `ForgotPasswordPage` + `AuthContext` | Shipped |
-| **Inactivity auto-logout** (HIPAA §164.312(a)(2)(iii) — 15 min idle) | — | `src/contexts/AuthContext.tsx:40-42` (`INACTIVITY_TIMEOUT_MS = 15*60*1000`); warning at 13 min | Shipped |
-| **Audit logging** (immutable, 7y retention, HIPAA) | `services/auditLog.ts` + daily cleanup scheduler (`auditLog.ts:520-546`); `schema.prisma:657` (`AuditAction` enum) | Admin audit log viewer UI — **not shipped** (see §4.2) | Shipped (backend only) |
-| **PHI encryption** (AES-256-GCM, per-user keys) | `services/encryption.ts` (36 fields across 18 models); `userEncryption.ts` | Transparent to frontend | Shipped |
-| **Row-Level Security policies** | 16 tables under `ENABLE ROW LEVEL SECURITY` in `20260107_add_rls_policies/migration.sql:68-83` | — | Shipped **structurally**; runtime enforcement pending DB-role cutover (C-8 Part 3) |
-| **Demo account** (read-only + AI-blocked) | `services/authService.ts` demo paths; `middleware/demoProtection.ts` (5 blocker middlewares); hard-fail in prod (`config/index.ts:319-325`) | `LoginPage` demo-login button | Shipped |
-| **Dark mode** | — | `src/contexts/ThemeContext.tsx`; persists to `localStorage` key `omh-theme`; default dark (2026-01-09, `b949fa6`) | Shipped |
-| **Cloud deployment** (Cloud Run + GCS + Cloud SQL + staging pipeline) | `.github/workflows/deploy.yml`, `deploy-staging.yml` (2026-04-23, PR #73); `backend/Dockerfile` | — | Shipped |
-
-### 4.2 Backend shipped, frontend pending
-
-These are live backend capabilities without a matching UI in `src/components/`. CLAUDE.md's "Current Features" list overstates these — they are not user-visible in this repo.
-
-| Feature | Backend evidence | Frontend gap | Resolution path |
-|---|---|---|---|
-| **Admin panel** (user management, audit log viewer, system health) | `routes/adminRoutes.ts` (mounted at `routes/index.ts:92`); `api/admin.ts` (8 exported methods: `getUsers, getUser, createUser, updateUser, deactivateUser, deleteUserPermanently, getStats, getAuditLogs`) | Zero consumers of `adminApi` in `src/components/` or `src/hooks/` ([FRONTEND_MAP.md §10.1](./FRONTEND_MAP.md) — grep-verified). `<AdminOnly>` guard exists but is never mounted. | Build `src/components/admin/` pages OR confirm that admin UI ships in a sibling app (see §9 Open Questions). |
-| **Provider dashboard** (view consented patient data) | `routes/providerRoutes.ts` (mounted at `routes/index.ts:90`); `api/provider.ts` 6 methods; RBAC matrix in `rbac.ts:31-56` | Zero consumers of `providerApi`; `<ProviderOnly>` / `<ProviderOrAdmin>` guards never mounted ([FRONTEND_MAP.md §10.1, §10.2](./FRONTEND_MAP.md)). | Same — build provider pages or confirm external rollout. |
-| **Patient consent management** (approve / deny / revoke provider access) | `routes/patientRoutes.ts` (mounted at `routes/index.ts:91`); `api/patient.ts` 7 methods (`approveProvider, denyProvider, updateProviderPermissions, revokeProvider, ...`) | Zero consumers of `patientApi` ([FRONTEND_MAP.md §10.1](./FRONTEND_MAP.md)). `AccountSettingsPage` does not expose consent management. | Build consent UI in `AccountSettingsPage` OR dedicated component. Critical gap: consent state machine from `schema.prisma:568-574` has no user-facing control surface. |
-| **Audit log viewer** | `GET /api/v1/admin/audit-logs` (`adminApi.getAuditLogs`); rows written by `auditService.log*` everywhere | No UI consumer — same `adminApi` gap | Dependent on admin panel above. |
-| **Lab connections UI** (Quest FHIR sync status) | `fhirRoutes.ts` + `LabConnection` model | `LabConnectionsSection` component was pulled in commit `8ee5486` 2026-04-18 (unused import cleanup); no UI entry point currently | Re-enable when `QUEST_FHIR_CLIENT_ID` configured in prod. |
-
-### 4.3 Removed features
-
-| Feature | Removed (date) | Evidence | Replacement / rationale |
-|---|---|---|---|
-| **Health Scoring** (0-100 scores + risk assessments) | Jan 2025 (per [`CLAUDE.md:34`](../CLAUDE.md)) | `CLAUDE.md:34` strike-through; the only remaining in-range metric is the dashboard's "Biomarkers in Range %" computed from `normalRangeMin/Max` (see `src/utils/biomarkers/trendCalculations.ts:57` `isInRange`; `src/utils/analytics.ts:173,351-363`; backend summary at `API_REFERENCE.md:638`) | Replaced by "Biomarkers in Range %" — a simple ratio, not a scoring system. Rationale: scoring over-promised clinical value; the ratio is transparently derived from lab normal ranges. |
-| **CMS Marketplace Integration** (healthcare.gov plan search) | Jan 2025 (per [`CLAUDE.md:35`](../CLAUDE.md)) | `CLAUDE.md:35`; CSRF exempt list still carries `/marketplace/plans/search` (`middleware/csrf.ts:98-108`) — dead exemption, route no longer mounted in `routes/index.ts` | Dropped — external dependency (CMS) introduced brittleness without clear user value. |
-| **Provider Directory** (doctor search + recommendations) | Jan 2025 (per [`CLAUDE.md:36`](../CLAUDE.md)) | `CLAUDE.md:36` | Scope moved to sibling project `HealthcareProviderDB` (user memory note). |
-| **Client-side Tesseract.js OCR** | Effectively dead (2026-01-10, `0d2cd7a` "remove frontend PDF.js parsing from SBC upload") | `tesseract.js` still listed in `package.json:32` and chunked into `ocr` split (`vite.config.ts:26-30`), but zero grep matches for `tesseract` in `src/**` ([FRONTEND_MAP.md §7](./FRONTEND_MAP.md)) | Server-side OCR via Google Document AI is now canonical (`services/ocrService.ts:283`). |
-| **DNA / Genetics feature** | 2026-04-23 (PR #74, commits `a793880`, `d62a8e7`) — tables + frontend types purged | [`CHANGELOG.md` Unreleased / Removed](./CHANGELOG.md); `CLAUDE.md:38-41` "Deprecated (Still in Schema)" is now stale | Feature cut — no user-visible UI had ever shipped; tables retained too long as noise. |
-
-### 4.4 Deprecated (still in schema as of 2026-04-24)
-
-| Model / Feature | Evidence | Removal plan |
+| Feature | Code evidence | Status |
 |---|---|---|
-| `DNAData`, `DNAVariant`, `GeneticTrait` | [`CLAUDE.md:38-41`](../CLAUDE.md); `backend/prisma/schema.prisma:383-435` | **CONFLICTING SIGNALS**: PR #74 (`a793880`, `d62a8e7` 2026-04-23) claims DNA models + tables purged per [`CHANGELOG.md` Unreleased](./CHANGELOG.md), but CLAUDE.md and [`DATA_MODEL.md:18-21`](./DATA_MODEL.md) still list them as deprecated-but-present. Resolution: re-read `schema.prisma` after PR #74 promotes to production, then strike this row. Tracked in CLAUDE.md drift (next doc-refresh cycle). |
+| Biomarker tracking (manual entry, history, trends, normal ranges, AI guidance) | `backend/src/routes/biomarkerRoutes.ts`; models `Biomarker`/`BiomarkerHistory` (`schema.prisma:141,179`); `src/components/biomarkers/` | Shipped |
+| DEXA / bone-density tracking | `CLAUDE.md` Current Features; stored as biomarkers via `DataSourceType` `LAB_UPLOAD`/`MANUAL` (`schema.prisma:523`) | Shipped |
+| Insurance management (SBC upload + Claude extraction, benefit search, coverage matrix) | `backend/src/routes/insuranceRoutes.ts`; `backend/src/services/sbcExtraction.ts`, `claudeExtraction.ts`; models `InsurancePlan`/`InsuranceBenefit` (`schema.prisma:192,361`); benefit-search wired `feat(insurance)` 2026-05-31 | Shipped |
+| Expense tracking (projections, actuals, AI cost analysis) | `backend/src/routes/expenseRoutes.ts`; models `ExpenseProjection`/`ExpenseActual`/`CostAnalysis` (`schema.prisma:614,636,664`); `analyzeCosts` `backend/src/controllers/expenseController.ts:614` | Shipped |
+| Health goals (progress notes, history, reminder cadence) | `backend/src/routes/healthGoalsRoutes.ts`; models `HealthGoal`/`GoalProgressHistory` (`schema.prisma:404,444`) | Shipped |
+| Health needs (type, urgency, status) | `backend/src/routes/healthNeedsRoutes.ts`; model `HealthNeed` (`schema.prisma:384`) | Shipped |
+| Provider-patient consent collaboration (+ provider UI) | `backend/src/routes/providerRoutes.ts`, `patientRoutes.ts`; model `ProviderPatient` (`schema.prisma:94`); UI `src/components/provider/MyPatientsPage.tsx`, `CareTeamPage.tsx` | Shipped |
+| File management (lab report upload, PDF parse + OCR, list/download/delete) | `backend/src/routes/uploadRoutes.ts`, `fileRoutes.ts`; `backend/src/controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`); `fileController.ts`; `ocrService.ts`, `pdfParser.ts` | Shipped |
+| AI Health Guide chat (SSE streaming) | `backend/src/routes/aiRoutes.ts`; `backend/src/controllers/aiChatController.ts`; `backend/src/services/anthropicClient.ts`; `backend/src/services/knowledge/` | Shipped |
+| Quest FHIR lab connections (SMART-on-FHIR OAuth) | `backend/src/routes/fhirRoutes.ts`; `backend/src/controllers/fhirController.ts`; `backend/src/services/fhir/`; model `LabConnection` (`schema.prisma:692`) | Shipped |
+| Onboarding wizard | `backend/src/routes/onboardingRoutes.ts`; `backend/src/services/onboardingService.ts`; `src/components/onboarding/OnboardingWizard.tsx` | Shipped |
+| Plan tiers / gating (FREE/PRO/TEAM, no billing) | `backend/src/routes/planRoutes.ts`; `backend/src/config/plans.ts`; `backend/src/middleware/planGating.ts` | Shipped |
+| Admin panel (user mgmt, audit viewer, system stats) + UI | `backend/src/routes/adminRoutes.ts`; `src/components/admin/AdminPage.tsx` | Shipped |
+| Audit logging (7-year retention + scheduler) | `backend/src/services/auditLog.ts`; model `AuditLog` (`schema.prisma:458`); Cloud Scheduler cleanup `backend/src/routes/internalRoutes.ts` | Shipped |
+| Email verification + password reset + email change | `backend/src/services/authService.ts`, `emailService.ts`, `emailTemplates.ts`; migration `20260601_add_email_change`; `User.pendingEmail`/`emailChangeToken` (`schema.prisma:24-26`) | Shipped |
+| Notification preferences + goal reminders | `backend/src/services/notificationService.ts`; `User.notificationPreferences` (`schema.prisma:32`); migration `20260417_add_notification_preferences`; reminder cadence `backend/src/schedulers/emailScheduler.ts:187` | Shipped |
+| Doctor PDF report + CSV export (Trends page) | `src/utils/pdfReportGenerator.ts`; wired `feat(trends)` 2026-05-29 (PR #114), test added PR #132 | Shipped (frontend-generated) |
+| Demo mode (blocked in prod) | `backend/src/middleware/demoProtection.ts` (`blockDemoAI`); prod guard `backend/src/config/index.ts:408` | Shipped |
 
----
+### 4b. Removed features
+
+| Feature | Removed | Evidence | Reason |
+|---|---|---|---|
+| Health Scoring (0-100 scores, risk assessments) | Jan 2025 (per `CLAUDE.md`) | `CLAUDE.md` Removed Features §; dashboard now shows "Biomarkers in Range %" — `src/components/dashboard/DashboardContent.tsx:168,171` | Over-promised diagnostic advice; replaced by a simple in-range ratio |
+| CMS Marketplace Integration (healthcare.gov plan search) | Jan 2025 | `CLAUDE.md` Removed Features § | External dependency; out of scope |
+| Provider Directory (doctor search/recommendations) | Jan 2025 | `CLAUDE.md` Removed Features § | Moved to sibling project HealthcareProviderDB (project memory) |
+| DNA / Genetics (`DNAVariant`, `GeneticTrait` models + encrypted genotype/trait fields) | 2026-04-25 | Migration `20260423_drop_dna_genetics`; commit `Cleanup/remove dna genetics (#75)`; zero hits for `DNAVariant`/`GeneticTrait`/`genotypeEncrypted` in `backend/` | Fully **dropped** (not deprecated) — models gone from `schema.prisma` and `PHI_FIELDS` |
+
+> `uploadController.ts` no longer exists. Upload logic moved to `backend/src/controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`), wired via `backend/src/routes/uploadRoutes.ts`; `fileController.ts` handles only list/download/delete. `CLAUDE.md`'s controller list (which still names `uploadController.ts`) is stale — see [Prompt drift log](#prompt-drift-log).
+
+### 4c. Deprecated (still in schema, candidate for removal)
+
+| Model/Field | Evidence | Removal plan |
+|---|---|---|
+| `SystemConfig` model | `schema.prisma:487`; audit salt moved to env (`config/index.ts:54`), so the historic `system_config.audit_encryption_salt` row is read only during the one-time prod salt migration (`config/index.ts:46-53`) | Removable once every environment has migrated the audit salt to `AUDIT_LOG_SALT` — verify before drop |
+
+> **No** truly-dead deprecated row for `reminderFrequency`. The earlier project-memory note calling `reminderFrequency` / `ReminderFrequency` dead code is **out of date**: the field is read by the goal-reminder scheduler at `backend/src/schedulers/emailScheduler.ts:187,194` and is part of the create/update/export contract (`healthGoalsController.ts:413,510`; `settingsController.ts:550`). It is live, not deprecated — logged under [Prompt drift log](#prompt-drift-log).
 
 ## 5. AI integration strategy
 
-All AI paths route through Anthropic Claude with a shared lazy client (`timeout: 30_000, maxRetries: 2`) and the same runtime gate.
+OwnMyHealth uses Anthropic Claude for four distinct jobs and Google Document AI for image OCR. **All PHI-bearing AI calls are gated behind a signed-BAA flag**, rate-limited, and bounded by a dollar budget.
 
-### 5.1 BAA status
+### 5a. Claude use cases
 
-| Item | Value | Source |
-|---|---|---|
-| Anthropic BAA | **Signed 2026-04-16** | Commit `2bd7e36` (`docs: Anthropic BAA signed 2026-04-16; C-7 now the production gate`) |
-| Runtime flag | `ANTHROPIC_BAA_ACTIVE=true` | `backend/src/config/index.ts:150` |
-| Production boot gate | Hard-fail if `ANTHROPIC_API_KEY` set without BAA flag | `config/index.ts:245-250` |
-| Service-level gate | Every Claude call checks `config.anthropic.baaActive` first | `services/claudeExtraction.ts:118-120`, `services/sbcExtraction.ts` |
-| GCP BAA | Signed | [`SECURITY_STATUS.md:64`](./SECURITY_STATUS.md) diff line |
-| SendGrid BAA | Signed | [`SECURITY_STATUS.md:64`](./SECURITY_STATUS.md) |
-
-### 5.2 Claude use cases
-
-| Use case | Entry point | File:line | Cost controls |
+| Use case | Entry point | Model | BAA gate |
 |---|---|---|---|
-| **Biomarker educational guidance** | `POST /api/v1/biomarkers/guidance` | `routes/biomarkerRoutes.ts:120-122` | `aiLimiter` (10/hr keyed by userId, `rateLimiter.ts:102-118`) + `blockDemoAI` + `requirePlanLimit('aiGuidancePerDay')` |
-| **SBC document extraction** (plan metadata, benefits, Rx, inpatient, outpatient, therapy) | `POST /api/v1/upload/insurance-sbc` | `services/sbcExtraction.ts:325` + `controllers/upload/sbcUploadController.ts` | `uploadLimiter` (20/hr) + `blockDemoAI`; PHI pre-redaction via `redactPatientBanner` + `stripPHIFromText` ([ARCHITECTURE.md §10b](./ARCHITECTURE.md)) |
-| **Cost analysis** (Claude over plan + projections → OOP recommendations) | `POST /api/v1/expenses/analyze` | `expenseRoutes.ts`; persists `CostAnalysis.claudeResponse` (encrypted — `encryption.ts:481-485`) | `aiLimiter` + `blockDemoAI` + `requirePlanLimit` |
-| **Health Guide conversational chat (streaming)** | `POST /api/v1/ai/chat` (SSE) | `aiRoutes.ts` with `requireBearerAuth` (`middleware/auth.ts:166-201`) — CSRF-exempt by design (`csrf.ts:126-148`) | `aiLimiter` + `blockDemoAI` + `requirePlanLimit('aiChatsPerDay')`; decryption moved out of RLS tx to avoid holding DB locks across streaming (PR `52507c3` 2026-04-18) |
-| **Lab report Claude extraction** (PDF → biomarkers JSON) | `POST /api/v1/upload/lab-report` | `services/claudeExtraction.ts:57,115-140` | `uploadLimiter` + `blockDemoAI`; PHI redaction upstream |
+| Biomarker educational guidance | `backend/src/routes/biomarkerRoutes.ts:120` (POST `/:id/guidance`, via fetch, no SDK — `:114`) | (fetch call; Claude API) | `:137` blocks unless `baaActive` |
+| SBC / insurance document extraction | `backend/src/services/sbcExtraction.ts` | (Claude Sonnet) | `:767` `if (!config.anthropic.baaActive)` |
+| Generic document extraction | `backend/src/services/claudeExtraction.ts` | (Claude) | `:106` `if (!config.anthropic.baaActive)` |
+| Expense cost analysis | `backend/src/controllers/expenseController.ts:614` `analyzeCosts` | `claude-sonnet-4-5-20250929` (`:689`) | `:627` `if (!config.anthropic.baaActive)` |
+| Health Guide chat (SSE streaming) | `backend/src/controllers/aiChatController.ts` | `claude-haiku-4-5-20251001` (`:39`) | shared `config.anthropic.baaActive` (`:9`) |
 
-### 5.3 Cost + safety controls
+All five funnel through one shared SDK client (`backend/src/services/anthropicClient.ts`) — one place to set timeout/retry, gate, and reset on key rotation:
 
-- **Per-user rate limiting**: `aiLimiter` — 10 requests/hour keyed by `req.user.id || ip` (`rateLimiter.ts:102-118`).
-- **Per-plan daily budgets**: `requirePlanLimit('aiGuidancePerDay' | 'aiChatsPerDay')` (`middleware/planGating.ts`), backed by `UserPlan` tiering (migration `20260420_add_user_plan`).
-- **Cost observability**: `services/aiCostTracker.ts` records tokens per model per user; `services/usageTracker.ts` feeds plan-gate counters.
-- **PHI minimization before external call** (closed C-7, 2026-04-16, PR #39): local PDF text extraction + `phiRedaction` + `pdfRedaction` run **before** bytes leave the app (`services/claudeExtraction.ts:115-140`, `utils/phiRedaction.ts`).
-- **Prompt injection defense**: `promptSafeString` Zod refinement caps untrusted input size and character classes (commit `eecf14f` 2026-02-06, "Prevent prompt injection in Claude API endpoints").
-- **Demo users blocked**: `blockDemoAI` middleware on every AI endpoint (`demoProtection.ts:164-175`).
-
-### 5.4 Model choice
-
-| Task | Model used | Source |
-|---|---|---|
-| SBC extraction | Claude Sonnet (structured JSON output) | commit `019eb46` 2026-01-09 "feat: Insurance feature with Claude Sonnet SBC parsing" |
-| Other calls (biomarker guidance, cost analysis, chat) | Anthropic default via `@anthropic-ai/sdk@^0.90.0` | `backend/package.json` (bumped 2026-04-18, `da0eee8`) |
-
----
-
-## 6. Provider collaboration strategy
-
-The data model and consent state machine are shipped and defended at both the app layer and the DB layer. The frontend UI is the gap — see §4.2.
-
-### 6.1 Consent state machine
-
-Enum values are the source of truth — `backend/prisma/schema.prisma:568-574`:
-
-```prisma
-enum ProviderPatientStatus {
-  PENDING
-  ACTIVE
-  SUSPENDED
-  REVOKED
-  EXPIRED
+```ts
+// Source: backend/src/services/anthropicClient.ts:46-59
+export function getAnthropicClient(options: AnthropicClientOptions = {}): Anthropic {
+  if (client) return client;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new InternalServerError('ANTHROPIC_API_KEY environment variable is not set');
+  }
+  client = new Anthropic({
+    apiKey,
+    timeout: options.timeout ?? DEFAULT_TIMEOUT_MS,
+    maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
+  });
+  return client;
 }
 ```
 
-```
-   Provider requests access                Patient approves (sets flags)
-          │                                           │
-          ▼                                           ▼
-      PENDING ─────── patient denies ──────▶   REVOKED ──▶ [terminal]
-          │                                           ▲
-          │ patient approves                          │
-          ▼                                           │
-       ACTIVE ◀──── patient re-enables ─── SUSPENDED ─┤
-          │                                           │
-          │ patient revokes                           │
-          ├──────────────────────────────────────────▶│
-          │                                           │
-          │ consentExpiresAt < now (DB-side)          │
-          └────────────────▶  EXPIRED ──▶ [terminal]
-```
+The Health Guide assembles structured (non-encrypted-blob) health context, runs `stripPHIFromText` as defense-in-depth, never logs the question or the answer, and audit-logs `PHI_ACCESS` with an `externalApiCall` flag (`backend/src/controllers/aiChatController.ts:8-16`).
 
-Full Mermaid version in [ARCHITECTURE.md §9](./ARCHITECTURE.md).
+### 5b. Dual BAA gates
 
-### 6.2 Permission flags
+Two independent flags assert signed Business Associate Agreements before PHI leaves the system:
 
-Granular permission columns on `provider_patients` — checked in both app and DB layers.
-
-| Flag | Column | Resource gate |
-|---|---|---|
-| `canViewBiomarkers` | `can_view_biomarkers` | `has_provider_access(user_id, 'view_biomarkers')` — `migration.sql:51` |
-| `canViewInsurance` | `can_view_insurance` | insurance SELECT policy |
-| `canViewDna` | `can_view_dna` | dna_* SELECT policies |
-| `canViewHealthNeeds` | `can_view_health_needs` | health_needs SELECT policy |
-| `canEditData` | `can_edit_data` | any provider write (`rbac.ts:242-244`) |
-
-### 6.3 Enforcement
-
-- **App layer**: `checkProviderPatientAccess` (`rbac.ts:205-258`) looks up the relationship under admin RLS context, confirms `status === 'ACTIVE'` + `consentExpiresAt > now` + required permission flag.
-- **DB layer**: every biomarker/insurance/etc. SELECT policy includes `OR has_provider_access(user_id, '<perm>')` — `migration.sql:39-62,151-157`.
-- **Request validation**: `schemas.providerPatient.{request,approve,updatePermissions}` (`validation.ts:534-557`); `consentDurationDays` clamped to 1–365.
-
-### 6.4 Routes (15 provider + patient endpoints, backend-shipped)
-
-| Route group | Endpoints | File |
-|---|---|---|
-| Provider-side | `GET /provider/patients`, `POST /provider/patients`, `GET /provider/patients/:id`, `GET /provider/patients/:id/biomarkers`, `GET /provider/patients/:id/health-needs`, `DELETE /provider/patients/:id` | `providerRoutes.ts` |
-| Patient-side (consent mgmt) | `GET /patient/providers`, `GET /patient/providers/pending`, `POST /patient/providers/:id/approve`, `POST /patient/providers/:id/deny`, `PATCH /patient/providers/:id/permissions`, `POST /patient/providers/:id/revoke`, `DELETE /patient/providers/:id` | `patientRoutes.ts` |
-
-Full contracts in [API_REFERENCE.md §13-14](./API_REFERENCE.md).
-
-### 6.5 Strategic gap
-
-**Patients cannot currently use this feature** — the frontend has no UI for approving / denying / revoking provider access, despite the entire backend being shipped. See §4.2 and [FRONTEND_MAP.md §10.1](./FRONTEND_MAP.md). Until a UI is built, provider collaboration is a paper capability.
-
----
-
-## 7. Roadmap
-
-Derived from PR-labeled commits in `git log --since='6 months ago'` (347 commits total, 74 referenced PR numbers). Grouping: **Shipped** (already merged to master), **In flight** (partial code + docs, needs a final step), **Planned** (known next steps with no code yet).
-
-### 7.1 Shipped (last 6 months, selected)
-
-| Date | Scope | Evidence |
-|---|---|---|
-| 2026-04-23 | Dead-code sweep — DNA models + unused analytics pruned (PR #74) | commits `eb45a57`, `a793880`, `d62a8e7`, `5303e30` |
-| 2026-04-23 | Staging deploy pipeline + onboarding + plan gating + encrypted health-goal target (PR #73) | commit `dfdb111`; migrations `20260420_add_onboarding`, `20260420_add_user_plan`, `20260420_encrypt_health_goal_target` |
-| 2026-04-23 | C-8 code prep — audit salt env var, bare-prisma sweep, startup assertion | commit `4290520` (`feat(c-8): prepare code for RLS role cutover`) |
-| 2026-04-18 | Quest SMART-on-FHIR integration (PRs #68/#69/#71) | `63dd1d8`, `394cc3a`, `799c61c`; migration `20260418_add_lab_connections` |
-| 2026-04-18 | AI chat tx decryption ordering fix + CSRF exempt `/ai/chat` | `52507c3`, `2843339`, `5e4241e` PR #72 |
-| 2026-04-18 | F-3/F-4/F-5/F-7 trust gaps closed (High batch) | `b2b762e`, PR #52 |
-| 2026-04-17 | AI Health Guide chat streaming + knowledge layer + health profile (PRs #58/#59/#60) | `34b861f`, `334c247`, `3cd6c44`; migration `20260418_add_health_profile` |
-| 2026-04-17 | Expenses actuals endpoints + UI (PR #56) | `781b881` |
-| 2026-04-17 | Insurance hub refactor + expense visualization (PR #55) | `31f3c28` |
-| 2026-04-17 | Dashboard overview + biomarker UX pass + upload review step (PR #54) | `2c680d7` |
-| 2026-04-17 | C-8 Part 2b-ii RLS wraps (adminRoutes, auditLog runtime) (PR #43) | `74af20e` |
-| 2026-04-17 | deploy.yml hardened — `--no-traffic` guard + smoke test + explicit promote (PR #51) | `bf381e7` |
-| 2026-04-16 | **C-1 through C-7 Critical sweep** (6 Criticals closed same day; Anthropic BAA signed) (PRs #30-#42) | `9727492`, `f6bdc9a`, `2808b97`, `ea67ccb`, `4a08802`, `0f7970a`, `8c19438`, `2bd7e36` |
-| 2026-04-16 | C-8 filed + Part 1 + Part 2a + Part 2b-i (PRs #31, #40, #41, #42) | `56bba28`, `65f9ffb`, `a648eb8`, `4fa6460` |
-| 2026-02-06 | Batch 3 security — PHI redaction, AI cost tracking, demo restrictions | `6a5d56e` |
-| 2026-02-06 | Backend security hardening — RLS, IDOR fixes, timeouts, validation, logging | `efaec73` |
-| 2026-01-10 | Expense tracking backend + frontend (projections + cost optimization) | `baa6425`, `6aba34a` |
-| 2026-01-10 | `Re-analyze Plan` feature for SBC extraction | `0239e81` |
-| 2026-01-09 | Initial insurance feature with Claude Sonnet SBC parsing | `019eb46` |
-| 2026-01-09 | Comprehensive SBC extraction (coverage details, coinsurance) | `4badc6e`, `df1747e` |
-| 2026-01-09 | Dark mode default + login UI redesign | `b949fa6` |
-| 2025-12-09 | Deployment docs PR (PR #1 — only "Merge pull request" commit in 6-month window) | commit message matches `git log --grep='Merge pull request'` |
-
-### 7.2 In flight (as of 2026-04-24)
-
-| Priority | Scope | Current state | Blocker |
+| Flag | Covers | Config | Prod boot behavior |
 |---|---|---|---|
-| **P0 — Critical** | **C-8 Part 3 DB-role cutover** — provision `omh_app` NOBYPASSRLS role in Cloud SQL, rotate `DATABASE_URL`, flip `RLS_ENFORCEMENT=strict` | Code prerequisites all merged (Parts 1 / 2a / 2b-i / 2b-ii, 2026-04-16/17); runbook filed (PR #53, `61f19c0` 2026-04-17); startup assertion in `database.ts:220-270` | Requires infrastructure owner to execute in Cloud SQL + Secret Manager. See [SECURITY_STATUS.md#c-8](./SECURITY_STATUS.md). |
-| P1 | Provider / patient / admin UI — connect 3 scaffolded API clients to React components | Backend shipped (§4.2); `<RoleGuard>` + `<AdminOnly>` / `<ProviderOnly>` / `<ProviderOrAdmin>` wrappers exist but unmounted ([FRONTEND_MAP.md §10.2](./FRONTEND_MAP.md)) | Product decision — solo-patient vs multi-role launch (§9 Open Questions). |
-| P1 | Quest FHIR UI surface | Backend shipped (PRs #68-#71); LOINC mapping live; `LabConnectionsSection` pulled in commit `8ee5486` as unused import | `QUEST_FHIR_CLIENT_ID` env var not set; UI entry point needs a settings section. |
-| P2 | CLAUDE.md drift cleanup | CHANGELOG Unreleased notes DNA removal leaves CLAUDE.md "Deprecated" section stale; Frontend tree has no admin panel despite CLAUDE.md listing one | Next doc-refresh cycle — see [CHANGELOG.md](./CHANGELOG.md) Unreleased. |
-| P2 | Redis-backed rate limiter | Currently in-memory, bounded by `--max-instances=3` (`rateLimiter.ts:6-13`, `deploy.yml:72`) | Works for current scale; becomes a problem on horizontal scale-out. |
-| P2 | Key rotation runbook | `TODO(key-rotation)` at `encryption.ts:81-85`; legacy 100k PBKDF2 fallback still present at `encryption.ts:304-315` | Required for SECURITY_STATUS A-grade ([SECURITY_STATUS.md §4.4](./SECURITY_STATUS.md)). |
-| P2 | CSP nonce migration | Currently HTTP-equiv meta tag (per [SECURITY_STATUS.md](./SECURITY_STATUS.md) §Related findings) | Needs helmet config change + SPA coordination. |
-| P3 | Upload routes CSRF header re-enablement | `csrf.ts:117-122` TODO comment: remove upload-route exemption once callers confirmed to attach header | Client audit of 4 upload routes. |
+| `ANTHROPIC_BAA_ACTIVE` | All Claude calls | `config.anthropic.baaActive` (`backend/src/config/index.ts:185`) | If API key set but flag unset → **prod refuses to boot**; dev/staging warn (`:300-313`) |
+| `GOOGLE_BAA_ACTIVE` | Document AI image OCR | `config.gcp.documentAiBaaActive` (`backend/src/config/index.ts:176`) | If `GCP_PROCESSOR_ID` set but flag unset → **prod refuses to boot**; dev/staging warn (`:320-333`) |
 
-### 7.3 Planned (named, no code yet — derived from CLAUDE.md / SECURITY_STATUS / open TODOs)
+```ts
+// Source: backend/src/config/index.ts:300-306
+if (config.anthropic.apiKey && !config.anthropic.baaActive) {
+  if (config.isProduction) {
+    throw new Error(
+      'ANTHROPIC_BAA_ACTIVE must be set to "true" in production when ANTHROPIC_API_KEY is configured. ' +
+      'This flag asserts that a signed Business Associate Agreement is in effect. ' +
+      'If no BAA is in place, unset ANTHROPIC_API_KEY to disable AI features.'
+    );
+```
 
-**TBD** (external: prioritized backlog beyond the above — resolution path: project-owner interview; no formal roadmap artifact exists in the repo). Candidates visible in code:
+Current values in checked-in examples: `ANTHROPIC_BAA_ACTIVE=false` (`backend/.env.example:215`). Whether a BAA is **actually signed** with Anthropic / Google in production → `TBD (external: signed BAA status; resolve via legal/owner and the prod Secret Manager value of ANTHROPIC_BAA_ACTIVE / GOOGLE_BAA_ACTIVE)`. Per project memory, the Anthropic flag was flipped to true in prod on 2026-04-17.
 
-- DEXA scan UI beyond generic biomarker entry (CLAUDE.md lists DEXA as a feature but no dedicated component exists in `src/components/biomarkers/`).
-- Multi-user (caregiver proxy) mode — no model support yet.
-- Labcorp FHIR (alongside Quest) — `fhirClient.ts` abstraction is provider-agnostic but only Quest is wired.
+### 5c. Cost controls
 
----
+| Control | Mechanism | Source |
+|---|---|---|
+| Per-route AI rate limit | `aiLimiter` (one of 8 limiters) | `backend/src/middleware/rateLimiter.ts:108`; applied `aiRoutes.ts:32`, `biomarkerRoutes.ts:122` |
+| Rolling daily $ budget (global + per-user) | `aiSpendGuard` middleware reads accumulator, fails closed with 503 | `backend/src/middleware/aiSpendGuard.ts:23-48` |
+| Spend accounting | `aiCostTracker` (`trackAIUsage`, `isAISpendExceeded`) | `backend/src/services/aiCostTracker.ts` |
+| Usage / plan-limit accounting | `usageTracker` (`checkPlanLimit`) | `backend/src/services/usageTracker.ts` |
+| Budget env vars | `AI_DAILY_BUDGET_USD` (default 50), `AI_USER_DAILY_BUDGET_USD` (default 5) | `backend/src/config/index.ts:196-197` |
+
+> Known limitation, stated in code: the spend accumulator and rate-limit counters are in-memory/per-instance, so under Cloud Run autoscale the effective ceiling is N×budget (`backend/src/config/index.ts:190-194`). Mitigation = Redis store (`REDIS_URL`, `config/index.ts:125`) and `--max-instances`.
+
+## 6. Provider collaboration strategy
+
+**Model:** patient-owned, consent-out. A provider requests access by patient email; the patient approves with granular, time-boxed permissions; either side can revoke. Backend enforces consent at the app layer **and** as an RLS backstop.
+
+`ProviderPatient` carries four permission flags, a relation type, a status, and an expiry (`backend/prisma/schema.prisma:94-117`):
+
+```prisma
+// Source: backend/prisma/schema.prisma:98-105
+  canViewBiomarkers  Boolean               @default(true)  @map("can_view_biomarkers")
+  canViewInsurance   Boolean               @default(false) @map("can_view_insurance")
+  canViewHealthNeeds Boolean               @default(true)  @map("can_view_health_needs")
+  canEditData        Boolean               @default(false) @map("can_edit_data")
+  relationshipType   ProviderRelationType  @default(PRIMARY_CARE) @map("relationship_type")
+  status             ProviderPatientStatus @default(PENDING)
+```
+
+Enums (`schema.prisma:507-521`):
+
+- `ProviderRelationType`: `PRIMARY_CARE`, `SPECIALIST`, `CONSULTANT`, `EMERGENCY`, `OTHER`.
+- `ProviderPatientStatus`: `PENDING`, `ACTIVE`, `SUSPENDED`, `REVOKED`, `EXPIRED`.
+
+Consent lifecycle (state machine):
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING: provider POST /provider/patients/request
+  PENDING --> ACTIVE: patient POST /patient/providers/:id/approve (sets scopes + expiry)
+  PENDING --> [*]: patient deny (row deleted)
+  ACTIVE --> ACTIVE: patient PATCH /patient/providers/:id (edit scopes)
+  ACTIVE --> REVOKED: patient POST /patient/providers/:id/revoke
+  ACTIVE --> EXPIRED: consentExpiresAt < now (runtime check)
+  REVOKED --> [*]: patient DELETE /patient/providers/:id
+```
+
+Every provider PHI read requires the relationship to be `ACTIVE`, the right flag, and unexpired — the viability gate:
+
+```ts
+// Source: backend/src/routes/providerRoutes.ts:443-447
+const viable =
+  rel &&
+  rel.status === 'ACTIVE' &&
+  rel.canViewBiomarkers &&
+  !(rel.consentExpiresAt && new Date(rel.consentExpiresAt) < new Date());
+```
+
+Approve sets scopes + optional expiry; cross-user reads (`canViewBiomarkers` etc.) decrypt the patient's PHI with the **patient's** key and audit-log a `PHI_ACCESS` row (`providerRoutes.ts:513,540`). Routes: `backend/src/routes/providerRoutes.ts` (provider side), `backend/src/routes/patientRoutes.ts` (approve/deny/revoke/update/delete). See [`ROUTING_TABLE.md`](./ROUTING_TABLE.md) and [`DATA_MODEL.md`](./DATA_MODEL.md#providerpatient).
+
+**UI status:** provider-facing UI now exists (`src/components/provider/MyPatientsPage.tsx`, `CareTeamPage.tsx`, built 2026-05-31 via PR #128 `feat/complete-wiring-and-ui` and covered by tests in PR #129). This **supersedes** the older "backend-complete, no provider UI" note in project memory — logged under [Prompt drift log](#prompt-drift-log). Open strategic question: whether providers self-register or are admin-provisioned (see [§9](#9-open-strategic-questions)).
+
+## 6a. Lab connection strategy (Quest FHIR)
+
+SMART-on-FHIR OAuth pulls labs directly from Quest into the user's biomarker store, removing manual entry / PDF upload for connected labs.
+
+| Component | Source |
+|---|---|
+| Routes (connect/callback/sync/list/delete) | `backend/src/routes/fhirRoutes.ts:24-60` |
+| Controller | `backend/src/controllers/fhirController.ts` |
+| Services | `backend/src/services/fhir/` — `smartAuth.ts` (PKCE handshake), `labSyncService.ts` (token enc/dec + import), `loincMapper.ts`, `fhirClient.ts`, `urlSafety.ts` (SSRF guard), `mockFhirServer.ts` (local) |
+| Model | `LabConnection` — `accessTokenEncrypted` / `refreshTokenEncrypted` (`schema.prisma:700-701`) |
+| Config | `QUEST_FHIR_CLIENT_ID/SECRET/BASE_URL/REDIRECT_URI/SUCCESS_REDIRECT/AUTH_HOSTS` (`config/index.ts:205-223`; `backend/.env.example:225-230`) |
+| Feature gate | `requirePlanFeature('questFhirIntegration')` on connect/sync (`fhirRoutes.ts:34,47`) |
+
+The OAuth callback is the one unauthenticated route — bound to the user by PKCE + a stashed 24-byte state with a 10-minute TTL:
+
+```ts
+// Source: backend/src/routes/fhirRoutes.ts:24
+router.get('/callback', asyncHandler(fhir.handleCallback));
+```
+
+Security notes: OAuth tokens are PHI (a stolen access token reaches live lab PHI), encrypted with the user's per-user key; `urlSafety.ts` plus the `QUEST_FHIR_AUTH_HOSTS` allowlist (`config/index.ts:219-223`) prevent SSRF/token exfiltration. **Tier gate:** Quest FHIR is **PRO and TEAM only** (`questFhirIntegration: false` on FREE — `config/plans.ts:57`). See [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) and [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#labconnection).
+
+## 6b. Plan / tier strategy
+
+Three tiers — **FREE / PRO / TEAM** — defined in `backend/src/config/plans.ts:40-98`. **No billing/Stripe yet**: plans are assigned manually via the admin panel or a direct DB update (`plans.ts:6-7`); prices are display-only placeholders (`plans.ts:13,35`).
+
+| Limit / feature | FREE | PRO | TEAM | Source |
+|---|---|---|---|---|
+| Price (monthly, cents — display only) | 0 | 999 | 1999 | `plans.ts:46,65,84` |
+| `aiChatsPerDay` | 3 | 50 | unlimited (-1) | `plans.ts:48,67,86` |
+| `pdfUploadsPerMonth` | 2 | 20 | unlimited | `plans.ts:49,68,87` |
+| `maxBiomarkers` | 50 | unlimited | unlimited | `plans.ts:50,69,88` |
+| `insurancePlans` | 1 | 5 | unlimited | `plans.ts:51,70,89` |
+| `aiGuidancePerDay` | 5 | unlimited | unlimited | `plans.ts:52,71,90` |
+| `costAnalysisPerMonth` | 1 | unlimited | unlimited | `plans.ts:53,72,91` |
+| `healthProfile` | off | on | on | `plans.ts:54,73,92` |
+| `providerSharing` | off | on | on | `plans.ts:55,74,93` |
+| `dataExport` | **on** (HIPAA) | on | on | `plans.ts:56,75,94` |
+| `questFhirIntegration` | off | on | on | `plans.ts:57,76,95` |
+
+Enforcement is `requirePlanLimit(key)` / `requirePlanFeature(flag)` (`backend/src/middleware/planGating.ts:37,120`). The middleware reads the plan from the **DB, not the JWT** (a stale token could keep premium access for 15 min after a downgrade) and applies `planExpiresAt` at request time so expired paid plans fall back to FREE:
+
+```ts
+// Source: backend/src/middleware/planGating.ts:66-75
+const userRow = await withRLSContext(userId, async (tx) => {
+  return tx.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, planExpiresAt: true },
+  });
+});
+effectivePlan = normalizePlan(userRow?.plan);
+if (userRow?.planExpiresAt && userRow.planExpiresAt.getTime() < Date.now()) {
+  effectivePlan = 'FREE';
+}
+```
+
+Over-limit responses return 403 `PLAN_LIMIT_EXCEEDED` with `upgradeRequired: true` so the UI can swap in an upgrade CTA (`planGating.ts:8-10,90-104`). Committed prices + whether Stripe ships → see [`FINANCIAL_TRACKER.md`](./FINANCIAL_TRACKER.md); `TBD (external: committed pricing + billing model; resolve via owner / FINANCIAL_TRACKER.md — config/plans.ts numbers are placeholders)`.
+
+## 7. Roadmap (from PR titles)
+
+Merge history clusters in two waves: an initial scaffold PR (#1, 2025-12-09) and a large security-hardening + feature-completion sprint (#103-#132, 2026-05-29 → 2026-06-01). PRs #2-#102 do not appear as merge commits in `git log` (squash-merged / history-rewritten) — feature dates below come from the underlying `feat:` commits.
+
+| Status | Scope | Evidence |
+|---|---|---|
+| Shipped | AI Health Guide — streaming conversational AI over user health data | commit `feat(ai): Health Guide ... (#58)` 2026-04-17 |
+| Shipped | Knowledge layer for Health Guide | commit `feat(ai): knowledge layer ... (#59)` 2026-04-17 |
+| Shipped | Self-reported health profile + condition-aware AI context | commit `feat(health-profile): ... (#60)` 2026-04-17; migration `20260418_add_health_profile` |
+| Shipped | Quest SMART-on-FHIR lab integration | commits `(#68/#69/#71)` 2026-04-18; PR #115 `feat/fhir-lab-connect` 2026-05-29; migration `20260418_add_lab_connections` |
+| Shipped | Plan tiers + onboarding | migrations `20260420_add_user_plan`, `20260420_add_onboarding` |
+| Shipped | DNA/Genetics removal | PR `#75` 2026-04-25; migration `20260423_drop_dna_genetics` |
+| Shipped | C-8 prep — audit salt to env, BYPASSRLS bar | commit `feat(c-8) ... (#76)` 2026-04-25 |
+| Shipped | Security hardening P1-P8 (RLS context, spend/export, FHIR SSRF, BAA gates, enumeration) | PRs #103,#108,#109,#110,#111,#113,#116 (2026-05-29/30) |
+| Shipped | Redis rate-limit store + Cloud Scheduler audit retention | PR #125 (#37), PR #126 (#38) 2026-05-30 |
+| Shipped | Doctor PDF report + CSV export | PR #114 2026-05-29; test PR #132 2026-06-01 |
+| Shipped | Complete wiring + provider/admin UI | PR #128 2026-05-31; coverage PRs #129/#130 2026-06-01 |
+| Shipped | Verified email-change flow (request → confirm) | commit `feat: verified email-change flow (#133)`; migration `20260601_add_email_change`; PR #131 2026-06-01 |
+| In flight / planned | C-8 BYPASSRLS role cutover (NOBYPASSRLS app role in prod) | `assertNoBypassRLS()` live (`database.ts:194`); cutover steps in `docs/c-8-part-c-runbook.md`; per project memory production still on superuser `DATABASE_URL` |
+| In flight / planned | Move AI spend accumulator + rate-limit counters to shared store for multi-instance precision | `config/index.ts:190-194` |
+| Planned | Billing / Stripe (plans currently manual) | `config/plans.ts:6-7` |
+| Planned | Soft-revoke for provider-side relationship delete (F-23) | `providerRoutes.ts:702-708` (deferred hard-delete) |
+
+Next-best PR-title roadmap evidence (reproducible):
+
+```bash
+git -C "C:/Users/breil/Projects/OwnMyHealth" log --since='6 months ago' \
+  --grep='Merge pull request' --pretty='%ad %s' --date=short
+```
 
 ## 8. Strategic decisions log
 
-Pulled from commit bodies, user memory, and CLAUDE.md rationale. Every row is a deliberate choice made between 2026-01 and 2026-04.
-
 | Decision | Rationale | Evidence |
 |---|---|---|
-| **Remove Health Scoring** (0-100), replace with "Biomarkers in Range %" | Scoring over-promised clinical value; in-range ratio is transparently derived from lab normal ranges and carries no diagnostic claim | [`CLAUDE.md:34`](../CLAUDE.md); implementation in `src/utils/biomarkers/trendCalculations.ts:57`, `analytics.ts:173` |
-| **Remove CMS Marketplace + Provider Directory** | External dependencies (CMS API, doctor search) introduced brittleness without clear user value; Provider Directory scope moved to sibling `HealthcareProviderDB` | [`CLAUDE.md:35-36`](../CLAUDE.md); user memory `ownmyhealth-project.md` |
-| **Kill DNA / Genetics feature entirely** | Feature scaffolding had lived without user-visible UI for months; schema/complexity tax outweighed any future return | 2026-04-23 PR #74 (`a793880`, `d62a8e7`); [CHANGELOG.md Unreleased](./CHANGELOG.md) |
-| **Anthropic BAA + prod hard-fail gate** | PHI must not cross to Anthropic without a BAA; a runtime flag alone is insufficient — boot must refuse to start in production if the flag is off but key is set | 2026-04-16 commit `2bd7e36`; `config/index.ts:245-258` |
-| **PHI minimization before Claude** (C-7 close) | Closing C-7 made PHI redaction the gate even with BAA — defense in depth; BAA signed same day as C-7 fix | 2026-04-16 PR #39 (`8c19438`) |
-| **RLS enforced via transaction-scoped `SET LOCAL`** (C-1 close) | Pre-fix, `set_config` ran outside a transaction and was silently dropped when Prisma reused a pooled connection — tenant isolation was **not** enforced at the DB | 2026-04-16 PR #30 (`9727492`); regression test `f336f3d` |
-| **Bcrypt 13 rounds** (not 12) | HIPAA 2024+ baseline; commit log + config | `config/index.ts:90-94`; inline comment "HIPAA 2024+ baseline" |
-| **PBKDF2-SHA512 @ 600k iterations** | OWASP 2023 baseline; 100k legacy fallback on auth-tag failure for in-flight rotation | `encryption.ts:86-87,193-201,304-315` |
-| **Cloud Run --max-instances=3 + in-memory rate limiter** | Scale cap intentionally bounded so the in-memory `express-rate-limit` store remains effective without Redis | `.github/workflows/deploy.yml:72`; `rateLimiter.ts:6-13` comment |
-| **Conditional rendering, no Router** (frontend) | Deliberate simplicity — two top-level state switches (`isAuthenticated`, `selectedCategory`) cover every page; no path-driven navigation needed | [`FRONTEND_MAP.md:31-33`](./FRONTEND_MAP.md); `src/App.tsx:98-273`, `Dashboard.tsx:180-244` |
-| **Native `fetch` + hand-rolled `apiFetch`, no axios** | Zero runtime deps; drift from CLAUDE.md's claim of axios is noted in [FRONTEND_MAP.md §11](./FRONTEND_MAP.md) | `src/services/api/client.ts:172-307` |
-| **React Context only for state (no Redux / Zustand / React Query)** | Simplicity — two providers (`AuthProvider`, `ThemeProvider`) cover everything; remote state lives in component `useState` or custom hooks | [`FRONTEND_MAP.md:32`](./FRONTEND_MAP.md) |
-| **Form validation hand-rolled, no library** (`react-hook-form` / Zod / Formik / Yup all absent on client) | Zero matches in `src/` per grep; Zod only on backend for API input validation | [`FRONTEND_MAP.md:34`](./FRONTEND_MAP.md) |
-| **15-minute inactivity auto-logout** | HIPAA §164.312(a)(2)(iii) — comment at `AuthContext.tsx:37-42` | `src/contexts/AuthContext.tsx:40-42` |
-| **Refresh-token-first session restore** | Avoids 401-loop at mount when the 15-min access cookie has expired but the 7-day refresh cookie is valid | `AuthContext.tsx:104-115`; comment at lines 95-103 |
-| **Explicit traffic promote (not `--to-latest`)** | Cloud Run env-var update silently holds traffic if the service was previously pinned; explicit `--to-revisions=NEW=100` is the only reliable promote | User memory `cloud-run-env-update-pinning.md` (2026-04-17 postmortem); `.github/workflows/deploy.yml:133-175` comment `:126-132` |
-| **Reject known-insecure PHI encryption keys in every env** (C-4 close) | Previously only blocked in production — dev could silently run with placeholder keys and then carry the same data shape to prod | 2026-04-16 PR #34 (`ea67ccb`) |
-| **Signed URL avoidance for PHI downloads — stream through backend instead** | Signed URLs give 15 min of raw access once issued; streamed proxy with `Cache-Control: no-store` plus audit logging is the tighter path | `storageService.ts:90-103` comment; `filesApi.downloadFile` in `src/services/api/files.ts:42-55` |
-| **Staging pipeline as separate workflow** (2026-04-23) | Staging gets its own revision + smoke test before master promote — decouples "merged" from "production" | PR #73 — `.github/workflows/deploy-staging.yml` |
-
----
+| Gate all PHI-bearing AI behind explicit BAA flags; prod hard-fails without them | No PHI to a third party without a signed BAA; a missing flag must crash, not silently send | `config/index.ts:295-333` (C-7) |
+| Document AI image OCR gets its own BAA gate (`GOOGLE_BAA_ACTIVE`) | Image pixels carry demographics text-redaction can't reach | `config/index.ts:172-176,315-333` |
+| Encrypt **all** monetary expense fields as strings, not Decimal | Amounts are PHI; keep them ciphertext, not queryable numbers | migration `20260206_fix_expense_encryption_types`; `CLAUDE.md` PHI Encryption § |
+| Drop DNA/Genetics entirely rather than deprecate | Reduce PHI blast radius for an unshipped feature | migration `20260423_drop_dna_genetics`; PR #75 |
+| Move audit salt from DB to env var | Boot must not depend on an admin-bypass DB read, which blocks the NOBYPASSRLS cutover | `config/index.ts:43-54` |
+| Read plan from DB (not JWT) + enforce `planExpiresAt` at request time | A 15-min-stale token must not preserve premium access after downgrade/expiry | `planGating.ts:50-75` |
+| Per-day AI dollar budget as a circuit breaker | Bound runaway Anthropic billing from a buggy loop, leaked key, or unlimited-tier abuse | `aiSpendGuard.ts:1-15`; `config/index.ts:188-198` |
+| Ship plans + gating before billing | Establish the tier shape and limits now; wire Stripe later against the same `users.plan` column | `config/plans.ts:6-7` |
+| Bearer-only auth + CSRF-exempt for SSE chat | EventSource can't send `x-csrf-token`; bearer-only closes the "auth via cookie + no CSRF" attack shape | `aiRoutes.ts:17-21` |
+| Provider relationship is consent-out with RLS backstop | App-layer check is primary gate + audit driver; RLS turns a missed check into no-disclosure | `providerRoutes.ts:300-304,423-427` |
 
 ## 9. Open strategic questions
 
-| # | Question | Who must answer | Resolution path |
-|---|---|---|---|
-| 1 | **Mission wording** — is the §1 "Working mission" the canonical line, or is there a different tagline in external marketing? | Project owner | Owner interview; update §1. |
-| 2 | **Primary persona sharpness** — solo-patient-managing-chronic-condition (README) vs caregiver-proxy vs provider-led onboarding? Each implies a very different UI roadmap. | Product owner | Persona doc in `New Project Documents/` or external user-research artifact. |
-| 3 | **Provider / admin UI ship-or-cut decision** — should provider/patient/admin frontends be built in this repo, built in a sibling app, or dropped entirely? Backend is already shipped ([FRONTEND_MAP.md §10.1](./FRONTEND_MAP.md)). | Product + engineering owner | Decision and a dated milestone in this doc. |
-| 4 | **Pricing + plan tiers** — `UserPlan` exists (`migration.sql 20260420_add_user_plan`) with gating middleware, but the tier ladder (Free / Pro / …) and prices are not documented in-repo. | Business owner | `FINANCIAL_TRACKER.md` (in-flight, prompt 23); owner interview. |
-| 5 | **Competitive positioning** — what's the differentiator vs MyChart / Apple Health / Lyric / Healthie? | Business owner | External competitive-research doc; § 10 below marks TBD. |
-| 6 | **DNA / Genetics status finality** — CLAUDE.md says "Deprecated (still in schema)", PR #74 says tables/models removed. Which is authoritative as of 2026-04-24? | Engineering owner | Re-read `schema.prisma` post-promotion and reconcile CLAUDE.md. |
-| 7 | **C-8 Part 3 cutover date** — all code prerequisites shipped; needs infra-owner execution in GCP | Infrastructure owner (GCP Console project `ownmyhealth-prod`) | Scheduling in [SECURITY_STATUS.md#c-8](./SECURITY_STATUS.md) + `docs/STAGING.md`. |
-| 8 | **Labcorp and other lab networks beyond Quest** — is Quest a pilot or the long-term choice? | Product owner | Partnership strategy doc. |
-| 9 | **Multi-region / geographic scope** — Cloud Run region `us-central1` is single-region (`deploy.yml`); no DR plan in repo | Infrastructure owner | Runbook extension. |
+| Question | Owner to answer | Why it's open in code |
+|---|---|---|
+| Committed pricing + whether Stripe ships | Product owner / [`FINANCIAL_TRACKER.md`](./FINANCIAL_TRACKER.md) | `config/plans.ts` prices are flagged placeholders; no billing wired (`plans.ts:6-13`) |
+| Production RLS posture — finish C-8 cutover to a NOBYPASSRLS app role? | Eng owner | `assertNoBypassRLS()` only warns off-prod; per memory prod still uses superuser `DATABASE_URL` (`database.ts:212-218`) |
+| Provider acquisition — self-register vs. admin-provisioned providers? | Product owner | Routes require `PROVIDER` role (`providerRoutes.ts:26`) but no provider self-signup flow is evident |
+| Multi-instance spend/limit precision before scaling AI | Eng owner | Accumulator is per-instance (`config/index.ts:190-194`) |
+| Crisp mission + primary persona | Founder | Not stated verbatim in repo (see [§1](#1-mission--vision), [§3](#3-target-user)) |
+| Competitive positioning | External research | Not in repo (see [§11](#11-competitive-posture)) |
 
----
+## 10. User journey
 
-## 10. Competitive posture
+Plan-gated steps annotated; `questFhirIntegration`, `healthProfile`, and `providerSharing` are PRO/TEAM (`config/plans.ts:54-57,73-76`).
 
-**TBD** (external: competitive analysis — resolution path: external research doc or product-owner interview; no competitive analysis exists in the repo).
-
-**Posture levers derivable from code**:
-
-- **Privacy / HIPAA posture** is above industry baseline — AES-256-GCM + RLS + 7-year audit + per-user keys + BAA-gated AI + 15-min idle logoff is materially stronger than typical consumer health apps. See [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md).
-- **AI posture** is opt-in and educational-only — no diagnostic claims, disclaimers on every AI surface, PHI redaction before external call. Rare in consumer health tools.
-- **Data ownership posture** — export + delete-account flows shipped (`settingsApi.deleteAccount`, `deleteAllData` + GCS object deletion from C-6 close).
-- **Insurance + expense posture** — SBC Claude extraction + projected-vs-actual tracking + deductible-met-month are not standard in consumer tracker apps. Potential differentiator.
-
----
-
-## 11. User journey (ASCII)
-
-```
-Unauthenticated ──▶ POST /api/v1/auth/register       (authController.register)
-                           │
-                           ▼
-                   Email sent via SendGrid          (services/emailService.ts)
-                           │
-                           ▼
-            GET /api/v1/auth/verify-email?token=... (authController.verifyEmail)
-                           │
-                           ▼
-                   POST /api/v1/auth/login           (authController.login)
-                   Set-Cookie: access, refresh, csrf
-                           │
-                           ▼
-                   OnboardingWizard                 (components/onboarding/...)
-                   ├─ Welcome
-                   ├─ LabUploadModal (optional)     → /upload/lab-report (Claude)
-                   ├─ HealthProfile form            → /settings/health-profile
-                   └─ done → onboardingApi.complete
-                           │
-                           ▼
-                   Dashboard.DashboardContent       (selectedCategory='Overview')
-                   │  Shows "Biomarkers in Range %" (utils/analytics.ts:173-178)
-                   │
-        ┌──────────┼──────────────────┬─────────────────┬────────────┐
-        ▼          ▼                  ▼                 ▼            ▼
-  First biomarker  Upload SBC         Add projection    Create goal  Grant provider
-  (manual entry)   /upload/           POST /expenses/   POST /health- (§6 — UI pending)
-  POST /bio-       insurance-sbc      projections       goals
-  markers           │                  │
-        │           ▼                  ▼
-        │     InsurancePlanDetail    CostOptimization    │
-        │           │                  │ expensesApi     │
-        │           └── Claude SBC ──▶ .analyzeCosts     │
-        │              extraction      │                 │
-        │              → benefits      ▼                 ▼
-        ▼                          CostAnalysis      Track progress
-  Biomarker history              (claudeResponse    over time
-  + trend charts                  encrypted)        (GoalProgressHistory)
-  + AI guidance (opt-in)
-        │
-        ▼
-  HealthGuidePage (AI chat over user's health data)
-  /ai/chat SSE streaming    (BAA-gated, PHI-redacted, rate-limited)
+```text
+  Register ──▶ Verify email ──▶ Login ──▶ Onboarding wizard ──▶ First biomarker entry
+   /auth        SendGrid        JWT       /onboarding            (manual or lab upload)
+                                          (suggests: upload_lab          │
+                                           → health_profile [PRO]        ▼
+                                           → insurance)          Dashboard ("Biomarkers in Range %")
+                                                                         │
+                            ┌──────────────────────────┐                │
+                            │ Connect Quest lab         │  [PRO/TEAM]    │
+                            │ (FHIR OAuth, /fhir)       │────────────────┤
+                            └──────────────────────────┘                │
+                                                                         │
+        ┌──────────────────────────────┬─────────────────────┬─────────┴───────────────┐
+        ▼                              ▼                     ▼                           ▼
+ Insurance SBC upload ──▶ benefit   AI Health Guide chat   Add health goal / need   Doctor PDF /
+ (Claude extract) ──▶ Cost          (/ai/chat, SSE)        (reminders)              CSV export
+ analysis (Claude) ──▶ Expense                                       │
+ projection/actuals                                                  ▼
+                                                          Grant provider access [PRO/TEAM]
+                                                          (patient approves scopes + expiry)
+                                                                     │
+                                                                     ▼
+                                                          Provider views scoped PHI
+                                                          (consent + RLS enforced)
 ```
 
-Component-level wiring: [FRONTEND_MAP.md §3 Routing/URL map](./FRONTEND_MAP.md). Request-lifecycle per step: [ARCHITECTURE.md §3](./ARCHITECTURE.md).
+Onboarding suggested-step priority: lab upload → health profile → insurance → explore (`backend/src/services/onboardingService.ts:49-54`).
 
----
+## 11. Competitive posture
+
+No competitive analysis exists in the repo. `TBD (external: competitive positioning vs. patient-facing health-record / lab-tracking apps; resolve via market research / owner)`. Code-grounded differentiators worth positioning around: (1) per-user-key AES-256-GCM PHI encryption (`encryption.ts` + `userEncryption.ts`); (2) BAA-gated AI that hard-fails closed (`config/index.ts:295-333`); (3) consent-out provider sharing with RLS backstop (`providerRoutes.ts`); (4) direct Quest FHIR lab sync (`services/fhir/`).
 
 ## 12. Success metrics
 
-### 12.1 Primary product metric (in-code)
+**Primary dashboard metric: "Biomarkers in Range %"** — the simple in-range ratio that replaced the removed Health Scoring feature.
 
-**"Biomarkers in Range %"** — ratio of user biomarkers whose latest measurement falls within `normal_range_min`..`normal_range_max`.
+```tsx
+// Source: src/components/dashboard/DashboardContent.tsx:168-174
+{stats.biomarkersInRangePercent >= 0 ? `${stats.biomarkersInRangePercent}%` : '—'}
+...
+<p className="text-sm opacity-90">Biomarkers in Range</p>
+...
+{stats.biomarkersInRangePercent >= 0
+  ? `${stats.inRangeCount} of ${stats.totalCount} within normal range`
+```
 
-| Surface | Source |
-|---|---|
-| Replaced the removed Health Scoring system | [`CLAUDE.md:34`](../CLAUDE.md) |
-| Backend summary endpoint payload | `API_REFERENCE.md:638` — `{ totalBiomarkers, inRangeCount, outOfRangeCount, byCategory: [{ category, total, inRange, outOfRange }], ... }` |
-| Frontend calculation helper | `src/utils/biomarkers/trendCalculations.ts:57` (`isInRange`) |
-| Dashboard stat cards | `src/components/biomarkers/BiomarkerSummary.tsx:27`; test at `src/__tests__/components/BiomarkerSummary.test.tsx:60` |
-| Analytics insights | `src/utils/analytics.ts:173,351-363` ("stable biomarkers in range") |
-
-### 12.2 Secondary metrics derivable from the data model
-
-| Metric | Data backing | Notes |
-|---|---|---|
-| Biomarker trend direction (improved / stable / declined) | `src/utils/biomarkers/trendCalculations.ts:77-81` | Uses crossing the normal-range boundary vs prior measurement |
-| Goal completion rate | `HealthGoal.status` + `GoalProgressHistory` | Status enum: IN_PROGRESS / COMPLETED / etc. |
-| Deductible met month | `CostAnalysis.deductibleMetMonth` (plaintext Int) | Populated by the AI cost analysis |
-| AI usage per user | `services/aiCostTracker.ts` + `usageTracker.ts` | Per-token per-model; fuels plan gating |
-
-### 12.3 Business metrics (acquisition, retention, revenue)
-
-**TBD** (external: no product analytics stack is evident in `src/` — no segment, mixpanel, amplitude, or posthog imports found; resolution path: add analytics layer or rely on external dashboards; business-metric target values live outside the repo).
-
----
+Per-category in-range % is also rendered (`DashboardContent.tsx:303`). Business KPIs (activation, retention, conversion to PRO, AI cost/user) are not tracked in-repo → `TBD (external: business KPI targets; resolve via owner / analytics — FINANCIAL_TRACKER.md tracks AI cost economics)`.
 
 ## 13. Risks (top 5)
 
-| # | Risk | Severity | Source | Mitigation / next step |
-|---|---|---|---|---|
-| 1 | **RLS not enforced at runtime** — app connects as `BYPASSRLS` role. Tenant isolation relies solely on app-layer `withRLSContext` wrappers. A missed wrapper, raw SQL path, or SQLi would return cross-tenant data with no DB-level safety net. | **Critical** | [SECURITY_STATUS.md#c-8](./SECURITY_STATUS.md); user memory critical finding | C-8 Part 3 DB-role cutover in Cloud SQL + `RLS_ENFORCEMENT=strict` flip. Code prerequisites already merged (see §7.2). |
-| 2 | **Provider / admin / patient-consent features have no UI** despite backend being shipped. Consent state machine is enforced at both app and DB layers but patients cannot exercise it from the UI. | **High** | [FRONTEND_MAP.md §10.1](./FRONTEND_MAP.md); §4.2 above | Ship provider / patient / admin pages, OR drop the backend routes if feature scope has narrowed. Decision needed (§9 Q3). |
-| 3 | **AI availability & provider lock-in** — single AI vendor (Anthropic) with 30s timeout / 2 retries. Outage or policy change breaks biomarker guidance, SBC extraction, cost analysis, and Health Guide chat simultaneously. | Medium-High | [ARCHITECTURE.md §10](./ARCHITECTURE.md); `config/index.ts:144-151` | Vendor-abstracted SDK wrapper; keep PHI redaction strict so swap cost stays low. Consider fallback model selection in `aiCostTracker`. |
-| 4 | **CLAUDE.md drift** — feature list is out of date (Admin Panel listed as shipped, DNA listed as deprecated-but-present, axios claimed as HTTP client). Readers and Claude Project answers based on CLAUDE.md will be wrong in specific cases. | Medium | [FRONTEND_MAP.md §11](./FRONTEND_MAP.md); [CHANGELOG.md Unreleased](./CHANGELOG.md) | Next doc-refresh cycle; possibly move "Current Features" to be auto-generated from `New Project Documents/`. |
-| 5 | **HIPAA compliance gaps** — no key-rotation runbook; upload-routes CSRF exemption still in place with TODO; CSP still via meta tag (not nonce). Any one is a future-audit finding. | Medium | [SECURITY_STATUS.md §4.4, §4.7](./SECURITY_STATUS.md); `encryption.ts:81-85` `TODO(key-rotation)` | Three distinct work items. All are **non-blocking for HIPAA** at the current posture (see [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md)) but needed for A-grade. |
+| # | Risk | Evidence | Sibling |
+|---|---|---|---|
+| 1 | **Production may still run a superuser DB role** — RLS is the tenant-isolation backstop but off-prod `assertNoBypassRLS()` only warns; the C-8 cutover to a NOBYPASSRLS role is unfinished | `database.ts:212-218`; project memory; `docs/c-8-part-c-runbook.md` | [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) |
+| 2 | **Per-instance AI spend cap** — under Cloud Run autoscale the effective ceiling is N×budget; a compromised key or abusive unlimited-tier account could overrun the intended dollar cap | `config/index.ts:190-194`; `aiSpendGuard.ts` | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) |
+| 3 | **BAA dependency for AI** — if `ANTHROPIC_BAA_ACTIVE`/`GOOGLE_BAA_ACTIVE` are unset, prod won't boot with keys present; AI features go dark until a BAA is confirmed (compliance + product risk) | `config/index.ts:300-333`; `.env.example:215` | [`HIPAA_CHECKLIST.md`](./HIPAA_CHECKLIST.md) |
+| 4 | **No billing wired** — plans are manual; no revenue path until Stripe ships (business risk) | `config/plans.ts:6-7` | [`FINANCIAL_TRACKER.md`](./FINANCIAL_TRACKER.md) |
+| 5 | **PHI-to-third-party surface** — Claude (5 call sites) + Document AI + Quest tokens; redaction (`stripPHIFromText`, `urlSafety`) is defense-in-depth, not a guarantee | `aiChatController.ts:8-16`; `services/fhir/urlSafety.ts` | [`SECURITY_STATUS.md`](./SECURITY_STATUS.md), [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) |
 
-**Business risks** (runway, churn, go-to-market, legal exposure beyond HIPAA): **TBD** (external: resolution path — project-owner interview; no business-risk register exists in the repo).
-
----
-
-## 14. Related Documents
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — request lifecycle, middleware stack, RLS/encryption/audit flows, consent state machine, deployment topology.
-- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts for all 108 endpoints powering each feature.
-- [DATA_MODEL.md](./DATA_MODEL.md) — 18 active models + 3 deprecated; per-model fields, RLS policies, cascades.
-- [FRONTEND_MAP.md](./FRONTEND_MAP.md) — component atlas; identifies the provider/patient/admin UI gap.
-- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — C-8 open Critical; C-1..C-7 + 5 Highs closed in current cycle.
-- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — administrative / physical / technical safeguards status.
-- [CHANGELOG.md](./CHANGELOG.md) — shipped milestones in chronological detail (292 commits processed).
-- [FINANCIAL_TRACKER.md](./FINANCIAL_TRACKER.md) — unit economics + runway (doc pending — see `prompts/23-financial-tracker-doc.md`).
-- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — middleware chain per route.
-- [RUNBOOK.md](./RUNBOOK.md) — deploy/rollback playbook (Cloud Run env-update pinning caveat).
-- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — open bugs not tracked as security findings.
+Additional business risks (regulatory positioning, market timing, fundraising) → `TBD (external: business risk register; resolve via owner)`.
 
 ---
 
-## 15. Acceptance questions (self-answered from this doc + siblings)
+## Acceptance questions (self-answered)
 
-**Q1. What's the mission in one sentence?**
-A. "Give patients full ownership of their health data — biomarkers, insurance, expenses — and let Claude AI educate (never diagnose) on top of that data, while keeping PHI under AES-256-GCM + RLS with BAA-gated third-party access." (§1, Working mission; the vision-statement wording is flagged as external TBD pending owner interview.)
-
-**Q2. What four user-visible feature pillars are live?**
-A. Per §4.1 the four live pillars with both backend and frontend evidence are: **(1) Biomarker tracking + AI guidance**, **(2) Insurance (SBC upload via Claude + plan management)**, **(3) Expense tracking (projections + actuals + AI cost analysis)**, **(4) AI Health Guide chat over user's own health data**. Health Goals and Health Needs are a close fifth/sixth; file management, plan gating, and onboarding round it out.
-
-**Q3. Which feature was removed in Jan 2025 and what replaced it?**
-A. Three things removed in Jan 2025 per §4.3: Health Scoring (0-100), CMS Marketplace Integration, and Provider Directory. The most notable replacement is Health Scoring → **"Biomarkers in Range %"** — a simple ratio from lab normal ranges, implemented in `src/utils/biomarkers/trendCalculations.ts:57` and exposed via the biomarker summary endpoint. CMS Marketplace has no replacement (dropped outright). Provider Directory scope moved to sibling project HealthcareProviderDB.
-
-**Q4. Which models remain deprecated in `schema.prisma`?**
-A. Per §4.4, `DNAData`, `DNAVariant`, `GeneticTrait` are listed deprecated in [`CLAUDE.md:38-41`](../CLAUDE.md) and [DATA_MODEL.md:18-21](./DATA_MODEL.md) but PR #74 (2026-04-23) claims they were purged. Conflicting signals until PR #74 promotes to production and `schema.prisma` is re-read. No other active model is deprecated.
-
-**Q5. What's the Anthropic BAA status?**
-A. Per §5.1, **Signed 2026-04-16** (commit `2bd7e36`). Runtime enforcement: `ANTHROPIC_BAA_ACTIVE=true` env var (`config/index.ts:150`); production boot hard-fails if `ANTHROPIC_API_KEY` is set without the flag (`config/index.ts:245-250`); every Claude call checks `config.anthropic.baaActive` before constructing the client.
-
-**Q6. How does provider access work (consent → permissions → revocation)?**
-A. Per §6: (1) Provider calls `POST /provider/patients` → `ProviderPatient` row in `PENDING` (enum `schema.prisma:568-574`). (2) Patient approves via `POST /patient/providers/:id/approve` → status `ACTIVE` with permission flags set (`canViewBiomarkers`, `canViewInsurance`, `canViewDna`, `canViewHealthNeeds`, `canEditData`) and `consentExpiresAt` (1-365 days). (3) Access is enforced at both app layer (`rbac.ts:205-258` `checkProviderPatientAccess`) and DB layer (every policy `OR`s `has_provider_access(user_id, 'view_biomarkers')` — `migration.sql:39-62`). (4) Patient can `SUSPEND` (pause), `REVOKE` (permanent end), or let expire (`EXPIRED` is DB-side via `consent_expires_at <= NOW()`). **Frontend UI is the gap** — backend shipped, no `patientApi` consumer exists in components (§4.2, §6.5).
-
-**Q7. What are the top 3 strategic risks?**
-A. Per §13 rows 1-3: **(1)** RLS inert at runtime (BYPASSRLS role) — Critical, C-8 Part 3 pending infra-owner cutover. **(2)** Provider/admin/patient-consent features have no UI despite full backend — High, blocks patients from exercising the consent state machine. **(3)** Single AI vendor (Anthropic) lock-in — Medium-High, any outage or policy change hits biomarker guidance, SBC extraction, cost analysis, and Health Guide chat simultaneously.
-
-**Q8. What's the next on the roadmap (highest-priority in-flight)?**
-A. Per §7.2, **P0 Critical: C-8 Part 3 DB-role cutover** — provision `omh_app` NOBYPASSRLS role in Cloud SQL, rotate `DATABASE_URL` in Secret Manager, flip `RLS_ENFORCEMENT=strict`. All code prerequisites shipped (Parts 1, 2a, 2b-i, 2b-ii between 2026-04-16 and 2026-04-17). Blocker: requires GCP Cloud SQL infrastructure owner execution.
-
-**Q9. What's the current primary success metric (dashboard-level)?**
-A. Per §12.1, **"Biomarkers in Range %"** — ratio of user biomarkers whose latest value is within `normal_range_min..normal_range_max`. Backend summary payload includes `inRangeCount`, `outOfRangeCount`, and per-category breakdown (`API_REFERENCE.md:638`). Frontend calc at `src/utils/biomarkers/trendCalculations.ts:57`. Replaced the removed Health Scoring system per CLAUDE.md:34.
-
-**Q10. What strategic questions remain open, and who needs to answer each?**
-A. Per §9, nine open questions. The most critical four: **Q3 Provider/admin UI ship-or-cut decision** (product + engineering owner); **Q4 Pricing + plan tiers** (business owner; see pending `FINANCIAL_TRACKER.md`); **Q7 C-8 Part 3 cutover date** (infrastructure owner — GCP Console project `ownmyhealth-prod`); **Q1 Mission wording** (project owner). Questions Q2 (persona), Q5 (competitive positioning), Q8 (lab-network strategy), and Q9 (multi-region / DR) require external input.
+1. **Mission in one sentence?** Privacy-first, HIPAA-compliant patient-owned health biomarker tracking with insurance/cost management, BAA-gated educational AI, Quest lab sync, and consent-based provider sharing ([§1](#1-mission--vision)). Crisp tagline is external-TBD.
+2. **Live feature pillars?** Biomarkers (incl. DEXA), insurance/SBC, expenses + AI cost analysis, health goals/needs, provider sharing, AI Health Guide chat, Quest FHIR lab sync, onboarding, plan tiers, admin ([§4a](#4a-shipped-features)).
+3. **Removed Jan 2025 + replacement; dropped 2026-04?** Health Scoring removed → replaced by "Biomarkers in Range %"; CMS Marketplace + Provider Directory also removed; DNA/Genetics fully dropped 2026-04-25 (migration `20260423_drop_dna_genetics`) ([§4b](#4b-removed-features)).
+4. **Fully removed vs. deprecated-but-present?** Dropped: DNA/Genetics (gone from schema). Deprecated-but-present: `SystemConfig` (post-salt-migration). `reminderFrequency` is **live**, not deprecated ([§4b](#4b-removed-features), [§4c](#4c-deprecated-still-in-schema-candidate-for-removal)).
+5. **Anthropic + Google BAA status?** Both gated by env flags (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`); prod hard-fails if a key/processor is set without its flag; checked-in example has Anthropic false; actual signed status is external-TBD ([§5b](#5b-dual-baa-gates)).
+6. **Provider access flow?** Provider requests by email → patient approves with scopes + expiry → reads gated on ACTIVE+flag+unexpired + audited → patient can edit/revoke/delete ([§6](#6-provider-collaboration-strategy)).
+7. **Top 3 risks?** Superuser DB role / unfinished RLS cutover; per-instance AI spend cap; BAA dependency for AI ([§13](#13-risks-top-5)).
+8. **Next on roadmap?** C-8 NOBYPASSRLS cutover (highest-priority in-flight) ([§7](#7-roadmap-from-pr-titles)).
+9. **Primary success metric?** "Biomarkers in Range %" on the dashboard ([§12](#12-success-metrics)).
+10. **Open questions + owners?** Pricing/billing (owner/FINANCIAL_TRACKER), RLS cutover (eng), provider acquisition (product), multi-instance precision (eng), mission/persona (founder), competition (research) ([§9](#9-open-strategic-questions)).
+11. **Plan tiers + gates + billing?** FREE/PRO/TEAM in `config/plans.ts`; gated by `requirePlanLimit`/`requirePlanFeature`; **no billing wired** (manual assignment) ([§6b](#6b-plan--tier-strategy)).
+12. **Quest FHIR strategy + tier?** SMART-on-FHIR OAuth lab sync via `/fhir` + `services/fhir/`; **PRO/TEAM only** (`questFhirIntegration`) ([§6a](#6a-lab-connection-strategy-quest-fhir)).
 
 ---
 
-## 16. Prompt drift log
+## Prompt drift log
 
-- Prompt §"Shipped features table" lists "Admin panel" under `adminRoutes.ts` as Shipped. **Actual**: backend shipped, frontend never built — `adminApi` has zero component consumers ([FRONTEND_MAP.md §10.1](./FRONTEND_MAP.md)). Reflected honestly in §4.2.
-- Prompt §"Deprecated (still in schema)" row lists `DNAData`, `DNAVariant`, `GeneticTrait` with the removal plan marked as owner-confirm. **Actual**: PR #74 (2026-04-23, `a793880`, `d62a8e7`) already purged the models per [CHANGELOG.md Unreleased](./CHANGELOG.md), but CLAUDE.md and DATA_MODEL.md still list them. Noted as conflicting signal in §4.4.
-- Prompt §"Removed features table" lists just 3 removed features. **Actual**: add Tesseract.js client-side OCR (effectively dead 2026-01-10) and DNA/Genetics entire feature (2026-04-23, PR #74) — 5 removed items now.
-- Prompt §"Roadmap table" example shows only C-1/F-14/F-15 + BAA. **Actual**: §7.1 surfaces 20+ material shipped items in the 6-month window.
-- Prompt expects `git log --grep='Merge pull request'` as the PR-history source. **Actual**: only **one** commit in the 6-month window matches that filter (`2025-12-09 #1 deployment docs`) — the rest of the repo uses squash-merged commits with `(#NN)` suffixes (e.g., `#30`, `#42`, `#73`, `#74`). §7 sources from the broader `git log --since='6 months ago'` (347 commits, 74 referenced PR numbers) as the realistic roadmap signal.
-- Prompt "Questions to ask the user" step is labeled "last resort". No blocking gaps were hit — all external TBDs (§1 vision, §3 persona, §7.3 planned backlog, §10 competitive posture, §12.3 business metrics, §13 business risks) are marked with clear resolution paths per `_doc-quality.md`.
+- **`reminderFrequency` is NOT dead code.** `prompts/14-strategy-doc.md` (Deprecated table) and project memory `ownmyhealth-feature-map.md` list `reminderFrequency` / `ReminderFrequency` as dead code to plan for removal. The field is actively read by the goal-reminder scheduler (`backend/src/schedulers/emailScheduler.ts:187,194`) and is part of the goal create/update/export contract (`healthGoalsController.ts:413,510`; `settingsController.ts:550`; validation `validation.ts:512,528`). Removed it from the Deprecated table; prompt + memory should be corrected.
+- **Provider UI now exists.** `prompts/14-strategy-doc.md` §6 and project memory state provider collaboration is "backend-complete with NO provider-facing UI." UI shipped 2026-05-31 (PR #128 `feat/complete-wiring-and-ui`) — `src/components/provider/MyPatientsPage.tsx`, `src/components/provider/CareTeamPage.tsx`, plus admin UI `src/components/admin/AdminPage.tsx` (test coverage PR #129/#130). Marked Shipped with the UI; prompt/memory should be refreshed.
+- **`CLAUDE.md` controller list is stale.** `CLAUDE.md` Project Structure lists `backend/src/controllers/uploadController.ts` and "10 controllers." That single file no longer exists; upload logic is in `backend/src/controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`) wired from `uploadRoutes.ts`. Newer controllers (`aiChatController.ts`, `fhirController.ts`, `healthGoalsController.ts`, `healthNeedsController.ts`, `onboardingService`-backed routes) are also absent from the list.
+- **`CLAUDE.md` route count is stale.** It says "13 route files, 60+ endpoints"; the routes index mounts 16 modules (`backend/src/routes/index.ts:82-113`) plus separately-mounted `internalRoutes.ts`. New since: `aiRoutes`, `fhirRoutes`, `planRoutes`, `onboardingRoutes`.
+- **`CLAUDE.md`/`README.md` "Removed Features" omit DNA/Genetics.** Both predate migration `20260423_drop_dna_genetics`; DNA/Genetics belongs in Removed, not Current. README's "Security Audit: PASS / 0 findings / Jan 2025" banner also predates the 2026 multi-agent audits (see [`SECURITY_STATUS.md`](./SECURITY_STATUS.md)).
+- **`CLAUDE.md` bcrypt rounds.** CLAUDE.md/README say bcrypt 12 rounds; config default is 13 (`backend/src/config/index.ts:100`).
+- **Notification migration name.** The spec's Shipped-features note references migration `20260601_add_email_change` for *notifications*; notification preferences are migration `20260417_add_notification_preferences` (`20260601_add_email_change` is the email-change flow). Both exist; cited to the correct one.
+
+---
+
+## Related Documents
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — how shipped features map to components, middleware stack, RLS plumbing.
+- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts for each feature (auth, rate limits, request/response).
+- [DATA_MODEL.md](./DATA_MODEL.md) — Prisma models behind each feature (`ProviderPatient`, `LabConnection`, expense models) + RLS policies.
+- [FINANCIAL_TRACKER.md](./FINANCIAL_TRACKER.md) — committed pricing, billing model, AI cost economics + runway.
+- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — strategic risks (RLS cutover, BAA gates, AI spend, enumeration fixes).
+- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — compliance maturity (encryption, audit retention, BAA coverage).
+- [CHANGELOG.md](./CHANGELOG.md) — shipped milestones mapped to PRs/migrations.
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — full route + middleware-chain reference (provider/patient/fhir/ai).
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — every PHI field × encryption × audit coverage (incl. Quest OAuth tokens).
+- [ENV_VARS.md](./ENV_VARS.md) — BAA flags, Quest FHIR vars, AI budget vars, plan/secret config.
