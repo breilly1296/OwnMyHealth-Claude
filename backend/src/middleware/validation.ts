@@ -48,17 +48,37 @@ function sanitizeString(str: string): string {
     .replace(/'/g, '&#x27;');
 }
 
+/** Minimum (and default) sanitize length cap for prompt-interpolated text. */
+export const SANITIZE_PROMPT_DEFAULT_MAX = 200;
+
 /**
  * Sanitize string input for LLM prompt interpolation.
  * Strips control characters, collapses excessive newlines, and enforces a length cap
  * to prevent prompt injection attacks.
+ *
+ * The length cap defaults to 200 — appropriate for short interpolated fields
+ * (biomarker names, units, categories, etc.). Callers handling longer free-text
+ * that has already been bounded by a Zod schema (e.g. chat messages, validated to
+ * 2000/5000) MUST pass an explicit `maxLength`, otherwise legitimate input would be
+ * silently truncated at 200. (L-32)
+ *
+ * The effective cap is floored at 200 so that callers which pass this function
+ * straight to `Array.prototype.map` (where the 2nd arg is the element index, not a
+ * cap) keep the original 200-char behavior instead of truncating to the index.
+ * Short fields whose Zod `.max()` is below 200 are unaffected — the schema already
+ * rejected anything longer before this transform runs.
+ *
+ * Structure-stripping (control chars + collapsed newlines) is applied regardless.
  */
-export function sanitizeForPrompt(input: string): string {
+export function sanitizeForPrompt(input: string, maxLength = SANITIZE_PROMPT_DEFAULT_MAX): string {
+  const cap = Number.isFinite(maxLength)
+    ? Math.max(SANITIZE_PROMPT_DEFAULT_MAX, maxLength)
+    : SANITIZE_PROMPT_DEFAULT_MAX;
   return input
     // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x1F\x7F]/g, '')   // Strip control characters
     .replace(/\n{2,}/g, '\n')           // Collapse multiple newlines
-    .substring(0, 200);                  // Hard length cap
+    .substring(0, cap);                 // Length cap (floored at 200; override upward for bounded free-text)
 }
 
 /**
@@ -93,7 +113,9 @@ const promptSafeString = (minLength = 0, maxLength = 200) =>
   z.string()
     .min(minLength)
     .max(maxLength)
-    .transform(sanitizeForPrompt);
+    // Pass maxLength explicitly so the sanitize cap matches the schema bound
+    // (and so Zod's RefinementCtx isn't forwarded as sanitizeForPrompt's 2nd arg).
+    .transform((val) => sanitizeForPrompt(val, maxLength));
 
 // ============================================
 // Custom Validators

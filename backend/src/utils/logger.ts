@@ -2,13 +2,20 @@
  * Logger Utility
  *
  * Provides environment-aware logging that:
- * - Suppresses debug/info logs in production
+ * - Suppresses debug/info logs in production AND staging
  * - Always logs errors and warnings
  * - Provides structured logging for different services
  * - Never logs PHI, tokens, or passwords
  */
 
 import { config } from '../config/index.js';
+
+// L-4: staging is a deployed, production-like tier (structured logging, same
+// rate limits/CORS — see config/index.ts). Gating log format/level and the
+// auth-flow suppression on `isProduction` alone meant a deployed STAGING box
+// emitted verbose pretty-text plus auth logs. Treat staging like production
+// for log format + level suppression; local dev (`npm run dev`) stays verbose.
+const useProductionLogging = config.isProduction || config.isStaging;
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -91,13 +98,13 @@ const SEVERITY_BY_LEVEL: Record<LogLevel, string> = {
  * Log a message with environment awareness.
  *
  * - Dev/test: pretty text format, readable in a terminal.
- * - Production: single-line JSON with Cloud Logging's reserved field names
- *   (`severity`, `message`, `timestamp`) so GCP parses log lines correctly
- *   and logs are searchable by service + severity in the console.
+ * - Production AND staging: single-line JSON with Cloud Logging's reserved
+ *   field names (`severity`, `message`, `timestamp`) so GCP parses log lines
+ *   correctly and logs are searchable by service + severity in the console.
  */
 function log(level: LogLevel, message: string, options?: LogOptions): void {
-  // In production, only log warnings and errors
-  if (config.isProduction && (level === 'debug' || level === 'info')) {
+  // In production/staging, only log warnings and errors
+  if (useProductionLogging && (level === 'debug' || level === 'info')) {
     return;
   }
 
@@ -105,7 +112,7 @@ function log(level: LogLevel, message: string, options?: LogOptions): void {
   const prefix = options?.prefix;
   const sanitizedData = options?.data ? sanitizeData(options.data) : undefined;
 
-  if (config.isProduction) {
+  if (useProductionLogging) {
     // Structured JSON for Cloud Logging. stderr for warn/error so Cloud Run's
     // default log splitter routes them to the error log stream.
     const entry: Record<string, unknown> = {
@@ -165,10 +172,11 @@ export const logger = {
   error: (message: string, options?: LogOptions) => log('error', message, options),
 
   /**
-   * Log auth-related events (only in non-production for security)
+   * Log auth-related events (only in local dev for security — suppressed in
+   * both production and the production-like staging tier; L-4)
    */
   auth: (message: string, data?: Record<string, unknown>) => {
-    if (!config.isProduction) {
+    if (!useProductionLogging) {
       log('info', message, { prefix: 'Auth', data });
     }
   },

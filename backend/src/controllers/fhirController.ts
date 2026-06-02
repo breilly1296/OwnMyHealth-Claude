@@ -44,6 +44,7 @@ export async function initiateQuestConnect(
   const userId = req.user!.id;
   if (!isFeatureConfigured()) {
     res.status(503).json({
+      success: false,
       error: {
         code: 'SERVICE_UNAVAILABLE',
         message:
@@ -64,6 +65,7 @@ export async function initiateQuestConnect(
       data: { error: err instanceof Error ? err.message : 'unknown' },
     });
     res.status(500).json({
+      success: false,
       error: { code: 'CONNECT_FAILED', message: 'Could not start the Quest connection flow.' },
     });
   }
@@ -86,7 +88,11 @@ export async function handleCallback(req: Request, res: Response): Promise<void>
     return;
   }
   if (!code || !state) {
-    res.status(400).json({ error: 'Missing code or state' });
+    // Consistent with the other callback failure branches: bounce back to the
+    // frontend with an ?error= marker rather than rendering a raw JSON body the
+    // browser-redirect target can't use.
+    const sep = frontendBase.includes('?') ? '&' : '?';
+    res.redirect(`${frontendBase}${sep}error=${encodeURIComponent('missing_code_or_state')}`);
     return;
   }
 
@@ -175,7 +181,10 @@ export async function triggerSync(
     });
   });
   if (!connection) {
-    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Connection not found' } });
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Connection not found' },
+    });
     return;
   }
 

@@ -550,19 +550,22 @@ export async function bulkCreateBiomarkers(
     }
   });
 
-  // If no valid items, return error with proper error object format
+  // If no valid items, return error with proper error object format.
+  // NOTE: `error.details` is reserved by the ApiResponse contract for
+  // ValidationError field errors. These per-item failures are app-level
+  // exception strings, not field errors, so they go in `meta.failedItems`.
   if (validBiomarkerData.length === 0) {
     res.status(400).json({
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
         message: 'All biomarkers failed validation',
-        details: failedItems,
       },
       meta: {
         total: inputs.length,
         succeeded: 0,
         failed: failedItems.length,
+        failedItems,
       },
     });
     return;
@@ -600,21 +603,24 @@ export async function bulkCreateBiomarkers(
       },
     });
 
+    // NOTE: `error.details` is reserved by the ApiResponse contract for
+    // ValidationError field errors. The per-item breakdown here is operational
+    // (a batch DB failure), not field-validation, so it goes in `meta`.
     res.status(500).json({
       success: false,
       error: {
         code: 'DATABASE_ERROR',
         message: 'Failed to create biomarkers',
-        details: validBiomarkerData.map((_, i) => ({
-          index: i,
-          name: validBiomarkerData[i].name,
-          error: 'Database operation failed',
-        })),
       },
       meta: {
         total: inputs.length,
         succeeded: 0,
         failed: inputs.length,
+        failedItems: validBiomarkerData.map((_, i) => ({
+          index: i,
+          name: validBiomarkerData[i].name,
+          error: 'Database operation failed',
+        })),
       },
     });
     return;

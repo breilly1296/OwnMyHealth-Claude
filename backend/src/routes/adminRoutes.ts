@@ -950,15 +950,30 @@ router.get(
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
 
+    // Route-side cap on the lookback window so a no-startDate query cannot scan
+    // the full 7-year retention table. We always pin a `gte` floor: either the
+    // requested startDate (clamped to the max lookback) or, when none is given,
+    // the max-lookback floor itself. The validation schema is owned by another
+    // partition; this is the defensive route-side enforcement.
+    const MAX_LOOKBACK_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
+    const lookbackFloor = new Date(Date.now() - MAX_LOOKBACK_MS);
+
     const where: Record<string, unknown> = {};
     if (userId) where.userId = userId;
     if (action) where.action = action;
     if (resourceType) where.resourceType = resourceType;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) (where.createdAt as Record<string, Date>).gte = new Date(startDate);
-      if (endDate) (where.createdAt as Record<string, Date>).lte = new Date(endDate);
-    }
+
+    const requestedStart = startDate ? new Date(startDate) : undefined;
+    // Effective start = max(requestedStart, lookbackFloor). Falls back to the
+    // floor when no startDate is supplied so the range is always bounded.
+    const effectiveStart =
+      requestedStart && requestedStart.getTime() > lookbackFloor.getTime()
+        ? requestedStart
+        : lookbackFloor;
+
+    const createdAt: Record<string, Date> = { gte: effectiveStart };
+    if (endDate) createdAt.lte = new Date(endDate);
+    where.createdAt = createdAt;
 
     const { logs, total } = await withRLSContext(
       null,
@@ -969,7 +984,23 @@ router.get(
             orderBy: { createdAt: 'desc' },
             skip: (page - 1) * limit,
             take: limit,
-            include: {
+            // Explicit allowlist: never return the encrypted PHI snapshot columns
+            // (previousValueEncrypted / newValueEncrypted) to the admin client.
+            // The UI does not use them, and exposing PHI ciphertext over the wire
+            // is unnecessary egress. Keep this in sync with the frontend
+            // AdminAuditLog interface (src/services/api/admin.ts).
+            select: {
+              id: true,
+              userId: true,
+              actorType: true,
+              ipAddress: true,
+              action: true,
+              resourceType: true,
+              resourceId: true,
+              metadata: true,
+              success: true,
+              errorMessage: true,
+              createdAt: true,
               user: {
                 select: { id: true, email: true, role: true },
               },

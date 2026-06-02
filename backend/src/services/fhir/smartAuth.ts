@@ -25,6 +25,12 @@ export interface SMARTConfig {
   /** Resolved from /.well-known/smart-configuration; caller may pre-set for speed. */
   authorizeUrl?: string;
   tokenUrl?: string;
+  /**
+   * RFC 7009 revocation endpoint, discovered as `revocation_endpoint` in the
+   * SMART configuration (see discoverEndpoints). When set, revokeToken uses it
+   * directly instead of heuristically deriving it from tokenUrl.
+   */
+  revokeUrl?: string;
   scopes: string[];
   /**
    * Hosts (besides the FHIR base host) that the SMART authorize/token/revoke
@@ -109,12 +115,15 @@ function base64UrlEncode(buf: Buffer): string {
 
 /**
  * Fetch the SMART configuration from /.well-known/smart-configuration.
- * Returns just the authorize + token URLs — everything else is optional.
+ * Returns the authorize + token URLs (required) and the revocation URL
+ * (optional — only present when the server advertises `revocation_endpoint`).
+ * Callers should forward `revokeUrl` into SMARTConfig so revokeToken can use
+ * the published endpoint rather than a heuristic.
  */
 export async function discoverEndpoints(
   fhirBaseUrl: string,
   allowedAuthHosts: string[] = []
-): Promise<{ authorizeUrl: string; tokenUrl: string }> {
+): Promise<{ authorizeUrl: string; tokenUrl: string; revokeUrl?: string }> {
   const url = `${fhirBaseUrl.replace(/\/$/, '')}/.well-known/smart-configuration`;
   const response = await fetchWithTimeout(url, {
     headers: { Accept: 'application/json' },
@@ -132,6 +141,14 @@ export async function discoverEndpoints(
   // on a compromised/MITM'd FHIR server). Confine them to the trusted host set
   // before we ever redirect the user or POST the client_secret to them.
   const policy = { baseUrl: fhirBaseUrl, extraAllowedHosts: allowedAuthHosts };
+  // The revocation_endpoint is optional in SMART config; confine it to the
+  // same trusted host set before we ever POST a token to it.
+  const revokeUrl = config.revocation_endpoint
+    ? assertAllowedFhirUrl(config.revocation_endpoint, {
+        ...policy,
+        label: 'SMART revocation_endpoint',
+      }).toString()
+    : undefined;
   return {
     authorizeUrl: assertAllowedFhirUrl(config.authorization_endpoint, {
       ...policy,
@@ -141,6 +158,7 @@ export async function discoverEndpoints(
       ...policy,
       label: 'SMART token_endpoint',
     }).toString(),
+    ...(revokeUrl ? { revokeUrl } : {}),
   };
 }
 
@@ -282,12 +300,27 @@ export async function revokeToken(
   token: string,
   tokenTypeHint: 'access_token' | 'refresh_token' = 'access_token'
 ): Promise<void> {
-  if (!smartConfig.tokenUrl) return;
-  // Derive the revocation endpoint heuristically — most servers publish
-  // it in SMART config as `revocation_endpoint`. Callers that resolved
-  // that can pass it via smartConfig. Falling back to replacing /token
-  // with /revoke is common but not universal, so we just log-and-skip
-  // when unknown.
+  // Resolve the revocation endpoint. Prefer the endpoint published in the
+  // SMART configuration (`revocation_endpoint`, surfaced as smartConfig.revokeUrl
+  // by discoverEndpoints) — that is the authoritative, server-declared URL.
+  //
+  // Only when no published endpoint is available do we fall back to the common
+  // /token → /revoke convention, and ONLY if tokenUrl actually ends in /token.
+  // The previous unconditional `.replace(/\/token$/, '/revoke')` was a silent
+  // no-op when the token URL did not end in /token (it would POST the token
+  // straight back to the token endpoint), so we now log-and-skip instead of
+  // sending the token to an endpoint we can't sensibly derive.
+  let rawRevokeUrl: string | undefined = smartConfig.revokeUrl;
+  if (!rawRevokeUrl) {
+    if (smartConfig.tokenUrl && /\/token$/.test(smartConfig.tokenUrl)) {
+      rawRevokeUrl = smartConfig.tokenUrl.replace(/\/token$/, '/revoke');
+    } else {
+      logger.warn('Token revocation skipped: no revocation_endpoint and tokenUrl is not derivable', {
+        data: { hasTokenUrl: Boolean(smartConfig.tokenUrl) },
+      });
+      return;
+    }
+  }
   try {
     const body = new URLSearchParams({
       token,
@@ -301,11 +334,11 @@ export async function revokeToken(
       const creds = Buffer.from(`${smartConfig.clientId}:${smartConfig.clientSecret}`).toString('base64');
       headers.Authorization = `Basic ${creds}`;
     }
-    // Use the token endpoint URL replaced with 'revoke' as a fallback —
-    // if that 404s, swallow. Re-validate the host before sending the token.
+    // Re-validate the host before sending the token — defends against a
+    // malicious well-known response pointing the revoke URL at an attacker.
     const revokeUrl = assertSmartEndpoint(
       smartConfig,
-      smartConfig.tokenUrl.replace(/\/token$/, '/revoke'),
+      rawRevokeUrl,
       'SMART revoke endpoint'
     );
     const response = await fetchWithTimeout(revokeUrl, { method: 'POST', headers, body: body.toString() });
@@ -336,9 +369,20 @@ const challengeCache = new Map<string, CachedChallenge>();
 
 /**
  * Store a PKCE verifier keyed by the OAuth `state` parameter. Used to
- * validate the callback and exchange the returned auth code. Single
- * backend instance only — if this runs across multiple Cloud Run
- * instances we'd need a shared cache (Redis).
+ * validate the callback and exchange the returned auth code.
+ *
+ * L-39 (KNOWN LIMITATION — SHARED STORE REQUIRED): this Map is per-process.
+ * The OAuth callback (GET /api/v1/fhir/callback) can be routed by the load
+ * balancer to a DIFFERENT Cloud Run instance than the one that stashed the
+ * verifier, in which case consumeChallenge returns null and the connect flow
+ * fails intermittently whenever more than one instance is serving traffic.
+ *
+ * The correct fix is a shared, low-latency store (Redis / Cloud Memorystore)
+ * keyed by `state` with the same 10-minute TTL and single-use (delete-on-read)
+ * semantics implemented below. That is infrastructure work and is intentionally
+ * NOT implemented here; tracked as L-39. Until then the deployment must pin
+ * `--max-instances=1` for correctness (NOT for security — PKCE state is still
+ * unguessable; the failure mode is a dropped callback, not a forged one).
  */
 export function stashChallenge(state: string, codeVerifier: string, userId: string): void {
   prune();

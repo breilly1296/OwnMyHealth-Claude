@@ -521,66 +521,11 @@ export async function getHealthNeedsSummary(
   res.json(response);
 }
 
-// Bulk create health needs (e.g., from analysis)
-export async function bulkCreateHealthNeeds(
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> {
-  const userId = req.user!.id;
-  const { needs } = req.body as {
-    needs: {
-      needType: string;
-      name: string;
-      description: string;
-      urgency: string;
-      relatedBiomarkerIds?: string[];
-    }[];
-  };
-
-  const prisma = getPrismaClient();
-  const encryptionService = getEncryptionService();
-  const userSalt = await getUserEncryptionSalt(userId);
-  const auditService = getAuditLogService(prisma);
-
-  // Transaction with RLS ensures all creates succeed or fail together
-  const createdRecords = await withRLSTransaction(userId, async (tx) => {
-    const records: { created: PrismaHealthNeed; need: typeof needs[number] }[] = [];
-    for (const need of needs) {
-      const created = await tx.healthNeed.create({
-        data: {
-          userId,
-          needType: need.needType as 'CONDITION' | 'ACTION' | 'SERVICE' | 'FOLLOW_UP',
-          name: need.name,
-          descriptionEncrypted: encryptionService.encrypt(need.description, userSalt),
-          urgency: need.urgency as 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE',
-          status: 'PENDING',
-          relatedBiomarkerIds: need.relatedBiomarkerIds || [],
-        },
-      });
-      records.push({ created, need });
-    }
-    return records;
-  });
-
-  // Build response and audit logs outside transaction (non-critical)
-  const createdNeeds: HealthNeedResponse[] = [];
-  for (const { created, need } of createdRecords) {
-    await auditService.logCreate(RESOURCE_TYPE, created.id, {
-      needType: need.needType,
-      name: need.name,
-      urgency: need.urgency,
-    }, { req, userId });
-
-    createdNeeds.push(toResponse(created, userSalt));
-  }
-
-  const response: ApiResponse<HealthNeedResponse[]> = {
-    success: true,
-    data: createdNeeds,
-    meta: {
-      total: createdNeeds.length,
-    },
-  };
-
-  res.status(201).json(response);
-}
+// L-? / F-6 — Removed dead `bulkCreateHealthNeeds`. It read `req.body.needs` as
+// untyped objects (needType/urgency cast straight to enum unions) and wrote each
+// to the DB with no Zod schema, length cap, or array bound, but was not wired to
+// any route (healthNeedsRoutes.ts exposes only get/create/update/delete/analyze/
+// summary) and had no other reference. Deleted to eliminate the unvalidated-input
+// footgun. If bulk creation is needed later, add a route with a validated
+// `schemas.healthNeed.bulkCreate` Zod schema (capped array length + per-item
+// enum validation) rather than reinstating this.

@@ -10,10 +10,18 @@
  * (e.g. the cloud metadata endpoint 169.254.169.254). These guards confine such
  * URLs to the configured, trusted host(s) and refuse cleartext to public hosts.
  *
- * NOTE: this validates the URL's HOST against an allowlist; it does not pin the
- * resolved IP, so it is not a defense against DNS rebinding of an
- * already-trusted host. The realistic threat — a response pointing credentials
- * at an arbitrary attacker/internal host — is fully blocked by the allowlist.
+ * ACCEPTED RESIDUAL RISK (L-40 — DNS rebinding): this validates the URL's HOST
+ * against an allowlist; it does NOT pin the resolved IP. A trusted host whose
+ * DNS resolves to an attacker-controlled/internal address at fetch time (DNS
+ * rebinding, or a compromised authoritative DNS for the trusted host) is not
+ * caught here. This residual is knowingly ACCEPTED: the realistic threat — a
+ * server response pointing credentials at an arbitrary attacker/internal host —
+ * is fully blocked by the host allowlist, and the trusted hosts are operator-
+ * configured FHIR/auth servers (not arbitrary user input), so rebinding them
+ * requires also subverting their DNS. Fully closing it would require resolving
+ * the host, pinning the IP, and connecting to that pinned IP (custom lookup /
+ * agent), which is disproportionate to the residual exposure. Revisit if the
+ * allowlist ever becomes user-supplied.
  */
 
 /** True for IPv4 private/loopback/link-local + IPv6 loopback/ULA/link-local. */

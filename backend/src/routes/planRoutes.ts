@@ -69,7 +69,16 @@ router.get(
       });
     });
 
-    const tier = normalizePlan(row?.plan);
+    // Report the EFFECTIVE (post-expiry) tier so the UI matches what
+    // requirePlanLimit actually enforces. The stored plan column is the
+    // billing/subscription tier, but a lapsed planExpiresAt downgrades
+    // enforcement to FREE at request time (see planGating.ts). If we reported
+    // the stored tier's limits here, the settings page would advertise PRO
+    // limits while gated routes were already rejecting requests as FREE.
+    const storedTier = normalizePlan(row?.plan);
+    const expired =
+      row?.planExpiresAt != null && row.planExpiresAt.getTime() < Date.now();
+    const tier: PlanTier = expired ? 'FREE' : storedTier;
     const config = getPlanConfig(tier);
     const usage = await getUserUsage(userId);
 

@@ -74,16 +74,27 @@ export function requirePlanLimit(limitKey: keyof PlanLimits) {
         effectivePlan = 'FREE';
       }
     } catch (err) {
-      // DB unreachable — fall through to the JWT value rather than wedging
-      // every gated route behind a transient DB outage. Log so the signal
-      // shows up in ops dashboards.
-      logger.warn('Plan lookup failed; falling back to JWT plan', {
+      // DB unreachable — fail CLOSED to FREE rather than trusting the JWT.
+      // The JWT plan is a stale, more-permissive snapshot that also lacks the
+      // request-time planExpiresAt downgrade, so falling back to it would let a
+      // transient DB outage reopen premium access (or already-expired access)
+      // for the life of the access token. FREE limits keep the gate honest;
+      // legitimate paid users get a degraded-but-safe experience until the DB
+      // recovers. Log so the signal shows up in ops dashboards.
+      logger.warn('Plan lookup failed; failing closed to FREE limits', {
         data: { userId, error: err instanceof Error ? err.message : 'Unknown' },
       });
-      effectivePlan = normalizePlan(authReq.user?.plan);
+      effectivePlan = 'FREE';
     }
 
     try {
+      // KNOWN RACE (TOCTOU) — checkPlanLimit reads the current usage count and
+      // returns allowed/denied, but the actual usage row is written later by the
+      // route handler (not under a lock that spans this gate and that write).
+      // Concurrent requests for the same user can therefore each pass the gate
+      // and collectively overshoot a finite limit. Fully closing this requires an
+      // atomic reservation in the same transaction as the usage write — see the
+      // detailed note in usageTracker.checkPlanLimit. Tracked, not fixed here.
       const check = await checkPlanLimit(userId, effectivePlan, limitKey);
 
       if (!check.allowed) {

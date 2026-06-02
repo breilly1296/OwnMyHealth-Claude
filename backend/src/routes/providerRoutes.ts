@@ -25,6 +25,31 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('PROVIDER', 'ADMIN'));
 
+// ---------------------------------------------------------------------------
+// L-25 — ORPHANED PERMISSIONS: canViewInsurance / canEditData are grantable
+// but have NO consuming provider route. FLAGGED.
+//
+// Patients can grant `canViewInsurance` and `canEditData` (see
+// patientRoutes.ts consent grant/update + validation.ts
+// providerPatient.consent/update schemas) and the consent UI
+// (src/components/provider/CareTeamPage.tsx) presents them as real
+// capabilities ("Insurance & coverage", "Edit data"). But the provider API
+// surface below only exposes READ endpoints gated on canViewBiomarkers
+// (/patients/:id/biomarkers) and canViewHealthNeeds
+// (/patients/:id/health-needs). There is:
+//   - NO provider insurance endpoint that reads canViewInsurance, and
+//   - NO provider write endpoint that reads canEditData.
+// So granting either flag currently changes nothing a provider can do — the
+// consent UI overstates the provider's actual capability.
+//
+// Do NOT remove the columns/flags: dropping them would break the existing
+// grant/update API + UI contract and the admin override path. The correct
+// long-term fix is to either (a) wire the consuming routes (a read-only
+// /patients/:id/insurance gated on canViewInsurance, and edit endpoints gated
+// on canEditData) or (b) hide the unsupported toggles in the consent UI until
+// the routes exist. Tracked as L-25 in the security audit.
+// ---------------------------------------------------------------------------
+
 /**
  * GET /api/v1/provider/patients
  * Get all patients the provider has relationships with
@@ -243,7 +268,7 @@ router.post(
         }
       }
 
-      return tx.providerPatient.upsert({
+      const upserted = await tx.providerPatient.upsert({
         where: {
           providerId_patientId: {
             providerId,
@@ -263,16 +288,22 @@ router.post(
           notesEncrypted: encryptedNotes,
         },
       });
-    });
 
-    // Audit log: Provider requested access to patient. Kept outside the
-    // RLS transaction because auditService internally uses the outer
-    // prisma singleton — Part 2b territory.
-    await auditService.logCreate('provider_patient_request', relationship.id, {
-      patientId: patient.id,
-      relationshipType: relationship.relationshipType,
-      status: relationship.status,
-    }, { req, userId: providerId });
+      // L-24: Audit log: Provider requested access to patient. Threaded onto
+      // `tx` so the CREATE audit row commits atomically with the PENDING
+      // relationship write (#17). logCreate is failClosed, so a failed audit
+      // re-throws and rolls back the upsert — previously this ran AFTER the tx
+      // committed, so a failClosed 500 could leave an orphaned PENDING row with
+      // no audit trail. Sharing the connection also avoids a second pooled
+      // connection mid-transaction.
+      await auditService.logCreate('provider_patient_request', upserted.id, {
+        patientId: patient.id,
+        relationshipType: upserted.relationshipType,
+        status: upserted.status,
+      }, { req, userId: providerId, tx });
+
+      return upserted;
+    });
 
     const response: ApiResponse<{ relationshipId: string; status: string }> = {
       success: true,

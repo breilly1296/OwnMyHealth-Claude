@@ -240,14 +240,19 @@ export async function getFileDownloadUrl(
   // Sanitize filename for Content-Disposition — strip anything that would
   // let an attacker inject header delimiters or make the browser render
   // HTML. The value is wrapped in quotes; strip embedded quotes + CRLF.
-  const safeFilename = (file.originalFilename || file.filename || 'download').replace(
-    /["\r\n\\]/g,
-    '_'
-  );
+  const rawFilename = file.originalFilename || file.filename || 'download';
+  const safeFilename = rawFilename.replace(/["\r\n\\]/g, '_');
+  // RFC 5987/6266: the ASCII `filename` token can only carry ISO-8859-1, so a
+  // non-ASCII name (accents, CJK, etc.) gets mangled. Emit `filename*` with a
+  // UTF-8 percent-encoding alongside the ASCII fallback so modern browsers keep
+  // the original name and older ones fall back gracefully. Header injection is
+  // already blocked above; encodeURIComponent additionally percent-escapes any
+  // CR/LF/quote, so the starred value cannot break out of the header.
+  const encodedFilename = encodeURIComponent(rawFilename);
 
   res.set({
     'Content-Type': file.fileType || 'application/octet-stream',
-    'Content-Disposition': `attachment; filename="${safeFilename}"`,
+    'Content-Disposition': `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`,
     'Cache-Control': 'no-store, no-cache, private, must-revalidate',
     Pragma: 'no-cache',
     'X-Content-Type-Options': 'nosniff',

@@ -122,7 +122,8 @@ router.delete(
 );
 
 // POST /api/v1/biomarkers/:id/guidance - Get AI-powered educational guidance
-// Uses Anthropic Claude API via fetch (no SDK) to provide educational health information
+// Uses Anthropic Claude via the shared SDK client (services/anthropicClient.ts)
+// to provide educational health information.
 // Rate limited to 10 AI requests/hour per user to control API costs
 //
 // C-7: BAA gate blocks the call unless ANTHROPIC_BAA_ACTIVE=true.
@@ -254,16 +255,17 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
       const rawText = textContent && textContent.type === 'text' ? textContent.text : '';
       const guidance = stripPHIFromText(rawText || 'Unable to generate guidance');
 
-      // Track AI usage for cost monitoring
-      if (response.usage) {
-        trackAIUsage({
-          endpoint: 'biomarker-guidance',
-          model: response.model,
-          inputTokens: response.usage.input_tokens,
-          outputTokens: response.usage.output_tokens,
-          userId,
-        });
-      }
+      // Track AI usage for cost monitoring. Always call trackAIUsage — a
+      // missing `usage` object must not silently skip cost tracking. Mirrors
+      // the other 4 Anthropic call sites which fall back to `?? 0` rather than
+      // gating the call on `response.usage` being present.
+      trackAIUsage({
+        endpoint: 'biomarker-guidance',
+        model: response.model,
+        inputTokens: response.usage?.input_tokens ?? 0,
+        outputTokens: response.usage?.output_tokens ?? 0,
+        userId,
+      });
 
       // Audit log: PHI disclosed to external AI API for guidance.
       // F-16 fix: biomarkerName previously included `biomarker.name` in
@@ -292,13 +294,19 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
         logger.error('AI guidance request timed out');
         return res.status(504).json({
           success: false,
-          error: 'AI guidance request timed out. Please try again.',
+          error: {
+            code: 'GATEWAY_TIMEOUT',
+            message: 'AI guidance request timed out. Please try again.',
+          },
         });
       }
       logger.error('AI guidance request failed', { data: { error: errorMessage } });
       return res.status(500).json({
         success: false,
-        error: 'Failed to generate AI guidance',
+        error: {
+          code: 'AI_GUIDANCE_FAILED',
+          message: 'Failed to generate AI guidance',
+        },
       });
     }
   })

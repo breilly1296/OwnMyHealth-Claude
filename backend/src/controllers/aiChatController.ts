@@ -36,9 +36,25 @@ import { logger } from '../utils/logger.js';
 import { stripPHIFromText } from '../utils/phiRedaction.js';
 
 const RESOURCE_TYPE = 'HealthGuide';
+// L-35: Blocked/failed chats must NOT consume the daily aiChatsPerDay quota.
+// The quota counter (usageTracker.getUserUsage) counts audit rows matching
+// resourceType='HealthGuide' AND action='READ'. logAccess() always writes
+// action='READ', so logging a blocked/failed attempt under RESOURCE_TYPE would
+// burn a quota slot for an attempt that never reached Claude. We log those
+// attempts under a SEPARATE resourceType the counter does not match, so the
+// audit trail still records the attempt (with success:false) without consuming
+// quota. Keep usageTracker unchanged — this is a controller-side fix only.
+const RESOURCE_TYPE_ATTEMPT = 'HealthGuideAttempt';
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_OUTPUT_TOKENS = 1000;
 const HISTORY_MAX_MESSAGES = 20; // 10 user/assistant exchanges
+
+// sanitizeForPrompt length caps for chat free-text. These MUST match the Zod
+// bounds in schemas.ai.chat (message .max(2000), history content .max(5000)),
+// otherwise sanitizeForPrompt's 200-char default would silently truncate
+// validated, legitimate-length questions before they reach Claude. (L-32)
+const MESSAGE_MAX_CHARS = 2000;
+const HISTORY_CONTENT_MAX_CHARS = 5000;
 
 // Size of the trailing buffer held back from each SSE flush so PHI patterns
 // that straddle a chunk boundary still match. Longest regex in phiRedaction
@@ -127,10 +143,17 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
 
   // BAA gate — refuse before any data assembly or API call.
   if (!config.anthropic.baaActive) {
-    await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
-      operation: 'CHAT_BLOCKED_NO_BAA',
-    });
+    // L-35: log under RESOURCE_TYPE_ATTEMPT so a blocked attempt is not counted
+    // toward the daily quota (the chat never reached Claude).
+    await auditService.logAccess(
+      RESOURCE_TYPE_ATTEMPT,
+      undefined,
+      { req, userId },
+      { operation: 'CHAT_BLOCKED_NO_BAA' },
+      { success: false, errorMessage: 'BAA gate: ANTHROPIC_BAA_ACTIVE not true' }
+    );
     res.status(503).json({
+      success: false,
       error: {
         code: 'SERVICE_UNAVAILABLE',
         message:
@@ -149,6 +172,7 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
       data: { userId, error: err instanceof Error ? err.message : String(err) },
     });
     res.status(500).json({
+      success: false,
       error: { code: 'CONTEXT_ASSEMBLY_FAILED', message: 'Unable to prepare your health context.' },
     });
     return;
@@ -164,14 +188,16 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
   const systemPrompt = buildSystemPrompt(serializedContext, retrieved.documents);
 
   // 2. Sanitize user-supplied message + history. The Zod schema already
-  //    bounded the lengths; sanitizeForPrompt strips control characters
-  //    and trims length for prompt-injection safety.
-  const sanitizedMessage = sanitizeForPrompt(message);
+  //    bounded the lengths; sanitizeForPrompt strips control characters and
+  //    collapses newlines for prompt-injection safety. We pass the validated
+  //    bounds explicitly (instead of the 200-char default) so legitimate
+  //    long questions aren't silently truncated before reaching Claude. (L-32)
+  const sanitizedMessage = sanitizeForPrompt(message, MESSAGE_MAX_CHARS);
   const sanitizedHistory: ChatMessage[] = (conversationHistory || [])
     .slice(-HISTORY_MAX_MESSAGES)
     .map((m) => ({
       role: m.role,
-      content: sanitizeForPrompt(m.content),
+      content: sanitizeForPrompt(m.content, HISTORY_CONTENT_MAX_CHARS),
     }));
 
   const messages = [...sanitizedHistory, { role: 'user' as const, content: sanitizedMessage }];
@@ -286,10 +312,19 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
     }
     res.end();
 
-    await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
-      operation: 'CHAT_FAILED',
-      externalApiCall: true,
-      error: err instanceof Error ? err.message.substring(0, 200) : 'unknown',
-    });
+    // L-35: log a failed chat under RESOURCE_TYPE_ATTEMPT so it does not consume
+    // the daily quota — the user got no answer, so the attempt shouldn't count
+    // against aiChatsPerDay. The attempt is still durably recorded (success:false).
+    await auditService.logAccess(
+      RESOURCE_TYPE_ATTEMPT,
+      undefined,
+      { req, userId },
+      {
+        operation: 'CHAT_FAILED',
+        externalApiCall: true,
+        error: err instanceof Error ? err.message.substring(0, 200) : 'unknown',
+      },
+      { success: false, errorMessage: err instanceof Error ? err.message.substring(0, 200) : 'unknown' }
+    );
   }
 }

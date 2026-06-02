@@ -117,6 +117,22 @@ export function requirePermission(resource: ResourceType, permission: Permission
  * For patients: must own the resource
  * For providers: must have active relationship with patient who owns the resource
  * For admins: full access
+ *
+ * L-26 — DEAD CODE / PARALLEL AUTHZ (FLAGGED). This middleware (together with
+ * `requireOwnership`, `checkProviderPatientAccess`, `getTargetUserId`, and
+ * `enforceUserScope` below) is NOT mounted on any route — the provider
+ * collaboration endpoints (providerRoutes.ts) and every other route inline
+ * their own status/expiry/capability checks. This is a second, parallel
+ * implementation of the same authorization logic that can silently drift from
+ * the live enforcement path, and its green unit tests (rbac.test.ts) give false
+ * assurance because they don't exercise the code that actually runs.
+ *
+ * Kept (not deleted) because rbac.test.ts — which lives outside this hardening
+ * partition — imports `requireResourceAccess` and `requireOwnership`; removing
+ * them here would break that out-of-partition test's compilation. Recommended
+ * fix: delete these helpers AND rbac.test.ts together in a single change, or
+ * actually mount them so the inline route checks become the backstop instead of
+ * the primary gate. Tracked as L-26.
  */
 export function requireResourceAccess(resource: ResourceType, permission: Permission = 'read') {
   return async (req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> => {
@@ -234,9 +250,23 @@ async function checkProviderPatientAccess(
     return false;
   }
 
-  // Check specific resource permissions using if/else to avoid break fallthrough issues
-  if (resource === 'biomarker' || resource === 'healthNeed') {
+  // Check specific resource permissions using if/else to avoid break fallthrough issues.
+  //
+  // L-27 (FIXED): biomarker and healthNeed reads were previously collapsed into
+  // ONE branch that returned canViewBiomarkers for both — so a health-needs read
+  // would have been authorized by the *biomarker* capability flag, not
+  // canViewHealthNeeds. Latent (this helper is dead — see L-26), but a real
+  // permission-scope inversion if ever wired. The live route
+  // (providerRoutes.ts /patients/:id/health-needs) correctly gates on
+  // canViewHealthNeeds; the branches are now split to match it.
+  if (resource === 'biomarker') {
     if (permission === 'read') return relationship.canViewBiomarkers;
+    if (permission === 'write') return relationship.canEditData;
+    return false;
+  }
+
+  if (resource === 'healthNeed') {
+    if (permission === 'read') return relationship.canViewHealthNeeds;
     if (permission === 'write') return relationship.canEditData;
     return false;
   }
@@ -316,6 +346,13 @@ export function requireOwnership(resourceGetter: (req: AuthenticatedRequest) => 
 /**
  * Middleware to ensure user can only access their own data
  * Adds userId filter to request for use in controllers
+ *
+ * L-26 — DEAD CODE (FLAGGED): not mounted on any route; the `req.userScope` it
+ * sets is read nowhere. Part of the parallel-authz cluster (see
+ * requireResourceAccess above). Kept rather than deleted because the
+ * `userScope` request-type augmentation lives in types/index.ts /
+ * types/express.d.ts, outside this hardening partition. Recommended fix: drop
+ * this helper together with that type augmentation in a single change.
  */
 export function enforceUserScope() {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {

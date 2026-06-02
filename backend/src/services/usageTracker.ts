@@ -145,6 +145,26 @@ export async function checkPlanLimit(
     return { allowed: true, current: 0, limit: -1, remaining: -1 };
   }
 
+  // KNOWN RACE (TOCTOU) — finite numeric limits are enforced as count-then-allow
+  // with no atomic reservation. Two concurrent requests for the same user can
+  // both read `current = limit - 1`, both decide `allowed = true`, and then both
+  // perform the action, overshooting the limit by the number of concurrent
+  // requests. The window is the gap between this read and the caller's write
+  // (e.g. the audit row in aiChatController, or the userFile/biomarker insert).
+  //
+  // This cannot be closed correctly from a read-only helper. The recommended fix
+  // is an atomic reservation in the SAME transaction that records the usage:
+  //   1. Maintain a per-user/per-window counter row and, inside
+  //      withRLSTransaction, do an atomic `UPDATE ... SET n = n + 1 WHERE n <
+  //      :limit RETURNING n` (or `SELECT ... FOR UPDATE` on the counter), then
+  //      perform the gated write in the same tx, rolling back if the reservation
+  //      fails; OR
+  //   2. Add a partial unique/exclusion constraint or DB-side trigger that
+  //      rejects the (limit+1)-th row per window so the insert itself fails.
+  // Either approach makes the check-and-consume a single serialized step.
+  // Deliberately NOT implementing a half-locking scheme here (a lock around the
+  // count without holding it through the caller's write would not actually close
+  // the window and would add contention for no guarantee).
   const usage = await getUserUsage(userId);
   const usageKey = NUMERIC_LIMIT_TO_USAGE[action as string];
   const current = usageKey ? usage[usageKey] : 0;

@@ -33,6 +33,24 @@ interface SendGridMailData {
 let sgMail: { setApiKey: (key: string) => void; send: (msg: SendGridMailData) => Promise<unknown> } | null = null;
 
 /**
+ * Mask a recipient address for logging (L-7). The email address is a direct
+ * identifier and must never reach the logs in cleartext. We keep just enough
+ * to correlate logs during an incident (first char of local part + domain)
+ * without recording the full PII. The logger's SENSITIVE_FIELDS set redacts a
+ * field named `email` but NOT one named `to`, and the prior code also
+ * interpolated the raw address straight into the message string — both
+ * bypassed redaction. `maskEmail` is applied before anything is logged.
+ */
+function maskEmail(address: string): string {
+  const at = address.lastIndexOf('@');
+  if (at <= 0) return '[redacted]';
+  const local = address.slice(0, at);
+  const domain = address.slice(at + 1);
+  const maskedLocal = local.length <= 1 ? '*' : `${local[0]}***`;
+  return `${maskedLocal}@${domain}`;
+}
+
+/**
  * Initialize SendGrid client
  */
 async function getSendGridClient() {
@@ -303,7 +321,7 @@ async function sendEmail(
   try {
     const client = await getSendGridClient();
     if (!client) {
-      logger.warn(`Email not sent (SendGrid unavailable): ${subject} to ${to}`, { prefix: 'Email' });
+      logger.warn(`Email not sent (SendGrid unavailable): ${subject}`, { prefix: 'Email' });
       return { success: true }; // Don't fail the operation
     }
 
@@ -327,15 +345,18 @@ async function sendEmail(
 
     await client.send(msg);
     const deliveryLabel = config.email.sandboxMode ? 'Email validated (sandbox)' : 'Email sent';
-    logger.info(`${deliveryLabel}: ${subject} to ${to}`, { prefix: 'Email' });
+    // L-7: log the template subject only, never the recipient address.
+    logger.info(`${deliveryLabel}: ${subject}`, { prefix: 'Email' });
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // L-7: `recipient` is a masked address (not the raw `to`), so it survives
+    // an incident triage without writing the full address to the logs.
     if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
-      logger.error('Email sending timed out', { prefix: 'Email', data: { to, subject } });
+      logger.error('Email sending timed out', { prefix: 'Email', data: { recipient: maskEmail(to), subject } });
       return { success: false, error: 'Email service timed out. Please try again.' };
     }
-    logger.error(`Failed to send email: ${errorMessage}`, { prefix: 'Email', data: { to, subject } });
+    logger.error(`Failed to send email: ${errorMessage}`, { prefix: 'Email', data: { recipient: maskEmail(to), subject } });
     return { success: false, error: errorMessage };
   }
 }
