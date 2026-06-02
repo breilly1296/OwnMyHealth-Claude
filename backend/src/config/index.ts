@@ -59,6 +59,22 @@ if (process.env.OMH_DEPLOY_ENFORCE_PROD === 'true' && isDevelopmentEnv) {
   );
 }
 
+// M-4 helper — parse an AI spend-budget env var. A NaN/negative value (env typo)
+// would make aiCostTracker treat that scope as "disabled" and silently neuter the
+// spend circuit breaker; rather than crash boot we warn loudly and fall back to
+// the safe default so the breaker stays ON. 0 is valid (explicit per-scope disable).
+function parseBudget(raw: string | undefined, fallback: number, name: string): number {
+  const n = Number(raw ?? String(fallback));
+  if (Number.isNaN(n) || n < 0) {
+    console.warn(
+      `⚠️  ${name} is invalid (got: ${JSON.stringify(raw)}); using default ${fallback}. ` +
+      `Use a non-negative number (0 disables that AI spend-cap scope).`
+    );
+    return fallback;
+  }
+  return n;
+}
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -217,8 +233,8 @@ export const config = {
   // (Memorystore) for multi-instance precision. A backstop against runaway
   // Anthropic billing from a buggy loop, compromised key, or abusive account.
   ai: {
-    dailyBudgetUsd: Number(process.env.AI_DAILY_BUDGET_USD ?? '50'),
-    userDailyBudgetUsd: Number(process.env.AI_USER_DAILY_BUDGET_USD ?? '5'),
+    dailyBudgetUsd: parseBudget(process.env.AI_DAILY_BUDGET_USD, 50, 'AI_DAILY_BUDGET_USD'),
+    userDailyBudgetUsd: parseBudget(process.env.AI_USER_DAILY_BUDGET_USD, 5, 'AI_USER_DAILY_BUDGET_USD'),
   },
 
   // Quest Diagnostics SMART on FHIR integration.
@@ -316,28 +332,12 @@ if (!config.auditSalt || config.auditSalt.length < MIN_AUDIT_SALT_LENGTH) {
   );
 }
 
-// M-4 — validate the AI spend circuit-breaker budgets at boot. These come from
-// env via `Number(...)`, so a typo like AI_DAILY_BUDGET_USD="5O" (letter O) or a
-// stray sign yields NaN/negative, which would silently neuter the breaker: the
-// `> 0` guards in aiCostTracker.isAISpendExceeded treat NaN and negatives as
-// "scope disabled", so a fat-fingered value disables the cap entirely. 0 is a
-// legitimate value (explicitly disable a scope) and is preserved; we only reject
-// NaN and negatives. Note: the accumulator is still in-memory/per-instance — for
-// multi-instance correctness under Cloud Run autoscale it needs a shared store
-// (REDIS_URL / Memorystore). That's infra and out of scope here (see config.redis
+// M-4 — AI spend-budget validation happens in parseBudget() at config build time
+// (warn + fall back to the safe default on a NaN/negative env typo, so a
+// fat-fingered budget keeps the breaker ON instead of crashing boot). NOTE: the
+// accumulator is still in-memory/per-instance — multi-instance precision needs a
+// shared store (REDIS_URL / Memorystore); infra, out of scope (see config.redis
 // and the aiCostTracker module header).
-for (const [key, value] of [
-  ['AI_DAILY_BUDGET_USD', config.ai.dailyBudgetUsd],
-  ['AI_USER_DAILY_BUDGET_USD', config.ai.userDailyBudgetUsd],
-] as const) {
-  if (Number.isNaN(value) || value < 0) {
-    throw new Error(
-      `${key} must be a non-negative number (got: ${JSON.stringify(process.env[key])}). ` +
-      `Use 0 to disable that budget scope. A NaN/negative value would silently ` +
-      `disable the AI spend circuit breaker.`
-    );
-  }
-}
 
 // C-7 — require explicit acknowledgment of Anthropic BAA coverage before
 // Claude calls are allowed. Production refuses to boot with API key set
