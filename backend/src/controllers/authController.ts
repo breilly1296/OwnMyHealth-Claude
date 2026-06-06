@@ -570,12 +570,12 @@ export async function changePassword(
   if (currentAccessToken) {
     revokeAccessToken(currentAccessToken);
   }
-  // NOTE: full cross-device access-token invalidation (not just this node /
-  // this request's token) needs a per-user `tokensValidAfter` timestamp checked
-  // in authenticate() against the JWT `iat`, backed by a shared store
-  // (Redis/Memorystore) so it survives restarts and spans replicas. The
-  // in-memory blacklist above only covers this instance. Out of scope here —
-  // tracked as M-4 (infra).
+  // M-4 (closed): revokeAllUserTokens above also stamps the user's
+  // tokensValidAfter cutoff, so cross-device access tokens (not just this node /
+  // this request's token) are rejected by authenticate() against the JWT `iat`
+  // on every replica within the short cutoff-cache TTL. The fresh tokens minted
+  // just below survive — they're issued at/after the cutoff second and the
+  // staleness check uses a strict second-granularity comparison.
 
   // Get updated user and generate new tokens for this session
   const updatedUser = await findUserById(user.id);

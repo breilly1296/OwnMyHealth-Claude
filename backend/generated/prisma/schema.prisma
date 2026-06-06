@@ -29,6 +29,11 @@ model User {
   failedLoginAttempts      Int                 @default(0) @map("failed_login_attempts")
   lockedUntil              DateTime?           @map("locked_until") @db.Timestamptz(6)
   lastFailedLogin          DateTime?           @map("last_failed_login") @db.Timestamptz(6)
+  // M-4: cross-instance access-token cutoff. Any access JWT with iat before this
+  // instant is rejected by authenticate() on every replica. Stamped on
+  // logout-all / password change+reset / email change / admin deactivation+role
+  // change so revocation spans instances, not just the in-memory blacklist.
+  tokensValidAfter         DateTime?           @map("tokens_valid_after") @db.Timestamptz(6)
   notificationPreferences  Json                @default("{}") @map("notification_preferences")
   healthProfileEncrypted   String?             @map("health_profile_encrypted")
   plan                     String              @default("FREE") @db.VarChar(20)
@@ -471,7 +476,13 @@ model AuditLog {
   resourceId             String?     @map("resource_id") @db.Uuid
   previousValueEncrypted String?     @map("previous_value_encrypted")
   newValueEncrypted      String?     @map("new_value_encrypted")
+  // Legacy plaintext metadata (pre-encryption rows). New rows write
+  // metadataEncrypted instead; this column is retained read-only for history.
   metadata               String?
+  // AES-256-GCM ciphertext of the metadata JSON (system-salt key), so PHI that
+  // can ride in metadata (e.g. filenames) is held to the same field-level
+  // encryption standard as previous/new values.
+  metadataEncrypted      String?     @map("metadata_encrypted")
   success                Boolean     @default(true)
   errorMessage           String?     @map("error_message")
   createdAt              DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)

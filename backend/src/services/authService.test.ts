@@ -94,6 +94,7 @@ const MOCK_USER: PrismaUser = {
   plan: 'FREE',
   planExpiresAt: null,
   planUpdatedAt: null,
+  tokensValidAfter: null,
 };
 
 const MOCK_DEMO_USER: PrismaUser = {
@@ -449,6 +450,55 @@ describe('authService', () => {
         mockPrisma.session.deleteMany.mockResolvedValueOnce({ count: 2 });
         await authService.revokeAllUserTokens(MOCK_USER_ID);
         expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: MOCK_USER_ID } });
+    });
+
+    it('revokeAllUserTokens also stamps tokensValidAfter (cross-instance cutoff, M-4)', async () => {
+        mockPrisma.session.deleteMany.mockResolvedValueOnce({ count: 1 });
+        mockPrisma.user.update.mockResolvedValueOnce({});
+        await authService.revokeAllUserTokens(MOCK_USER_ID);
+        expect(mockPrisma.user.update).toHaveBeenCalledWith({
+            where: { id: MOCK_USER_ID },
+            data: { tokensValidAfter: expect.any(Date) },
+        });
+    });
+
+    describe('isAccessTokenStale (M-4 cross-instance cutoff)', () => {
+        // The cutoff cache is module-level and survives beforeEach; clear the
+        // userId under test so each case starts from a cold cache.
+        const UID = 'stale-test-user';
+        beforeEach(() => authService.invalidateTokensValidAfterCache(UID));
+
+        it('returns false when the user has no cutoff set', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({ tokensValidAfter: null });
+            expect(await authService.isAccessTokenStale(UID, 1_000_000)).toBe(false);
+        });
+
+        it('returns true when the token iat predates the cutoff', async () => {
+            const cutoff = new Date(2_000_000 * 1000); // cutoff second = 2_000_000
+            mockPrisma.user.findUnique.mockResolvedValueOnce({ tokensValidAfter: cutoff });
+            expect(await authService.isAccessTokenStale(UID, 1_999_999)).toBe(true);
+        });
+
+        it('returns false for a token issued in/after the cutoff second (fresh token survives)', async () => {
+            const cutoff = new Date(2_000_000 * 1000 + 500); // sub-second component
+            mockPrisma.user.findUnique.mockResolvedValueOnce({ tokensValidAfter: cutoff });
+            // iat == floor(cutoff/1000) → NOT stale (strict <), so the fresh token
+            // a password change hands back in the same second keeps working.
+            expect(await authService.isAccessTokenStale(UID, 2_000_000)).toBe(false);
+        });
+
+        it('fails open (returns false) and warns when the lookup throws', async () => {
+            mockPrisma.user.findUnique.mockRejectedValueOnce(new Error('db down'));
+            expect(await authService.isAccessTokenStale(UID, 1_000_000)).toBe(false);
+            expect(logger.warn).toHaveBeenCalled();
+        });
+
+        it('caches the cutoff so repeated checks hit the DB once', async () => {
+            mockPrisma.user.findUnique.mockResolvedValue({ tokensValidAfter: null });
+            await authService.isAccessTokenStale(UID, 1_000_000);
+            await authService.isAccessTokenStale(UID, 1_000_000);
+            expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
+        });
     });
 
     it('refreshTokens should return new tokens and isDemo flag on valid refresh', async () => {

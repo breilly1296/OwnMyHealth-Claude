@@ -142,6 +142,18 @@ function prismaUserToUser(prismaUser: PrismaUser): User {
 
 const revokedTokens: Map<string, number> = new Map();
 
+// ============================================
+// Cross-instance access-token cutoff (M-4)
+// ============================================
+// The in-memory `revokedTokens` blacklist only stops a token on THIS instance.
+// `tokensValidAfter` is a per-user, DB-backed cutoff (User.tokensValidAfter):
+// any access JWT issued before it is rejected by authenticate() on EVERY
+// replica. A short read-through cache bounds the DB cost to ~1 lookup/user/TTL;
+// same-instance propagation is immediate (the stamping path clears the local
+// entry), cross-instance is bounded by the TTL.
+const TOKENS_VALID_AFTER_TTL_MS = 15_000;
+const tokensValidAfterCache: Map<string, { validAfterMs: number; fetchedAt: number }> = new Map();
+
 /**
  * Add an access token to the in-memory revocation set. Called from the
  * logout / logout-all / password-change controllers so the route-auth
@@ -183,6 +195,73 @@ export function sweepRevokedTokens(): void {
   for (const [token, expMs] of revokedTokens) {
     if (expMs <= now) revokedTokens.delete(token);
   }
+  // Evict stale tokensValidAfter cache entries so a long-lived instance can't
+  // accumulate one per user ever authenticated.
+  for (const [userId, entry] of tokensValidAfterCache) {
+    if (now - entry.fetchedAt > TOKENS_VALID_AFTER_TTL_MS) {
+      tokensValidAfterCache.delete(userId);
+    }
+  }
+}
+
+/**
+ * Read a user's tokensValidAfter cutoff (epoch ms; 0 = no cutoff) from the DB
+ * under the user's own RLS context.
+ */
+async function fetchTokensValidAfterMs(userId: string): Promise<number> {
+  const user = await withRLSContext(userId, async (tx) => {
+    return tx.user.findUnique({
+      where: { id: userId },
+      select: { tokensValidAfter: true },
+    });
+  });
+  return user?.tokensValidAfter ? user.tokensValidAfter.getTime() : 0;
+}
+
+/**
+ * True if an access token (identified by its `iat`, in seconds) was issued
+ * before the user's tokensValidAfter cutoff — i.e. it was invalidated by a
+ * logout-all, password change/reset, email change, or admin deactivation/role
+ * change on ANY instance. Consulted by the auth middleware on every protected
+ * request, so results are cached for a short TTL.
+ *
+ * Comparison is at second granularity (JWT `iat` is whole seconds) with a strict
+ * `<`, so a token re-issued in the same wall-clock second as the cutoff (e.g. the
+ * fresh token a password change hands back) is NOT invalidated.
+ *
+ * Fails OPEN (returns false) on a DB error: a transient blip must not mass-
+ * logout users, and the in-memory blacklist still covers same-instance
+ * revocation. During a real DB outage a stale token can't reach PHI anyway.
+ */
+export async function isAccessTokenStale(userId: string, iatSeconds: number): Promise<boolean> {
+  const now = Date.now();
+  const cached = tokensValidAfterCache.get(userId);
+  let validAfterMs: number;
+  if (cached && now - cached.fetchedAt <= TOKENS_VALID_AFTER_TTL_MS) {
+    validAfterMs = cached.validAfterMs;
+  } else {
+    try {
+      validAfterMs = await fetchTokensValidAfterMs(userId);
+    } catch (error) {
+      logger.warn('tokensValidAfter lookup failed; allowing token (fail-open)', {
+        prefix: 'Auth',
+        data: { error: error instanceof Error ? error.message : String(error) },
+      });
+      return false;
+    }
+    tokensValidAfterCache.set(userId, { validAfterMs, fetchedAt: now });
+  }
+  if (validAfterMs === 0) return false; // no cutoff set
+  return iatSeconds < Math.floor(validAfterMs / 1000);
+}
+
+/**
+ * Drop a user's cached tokensValidAfter so the next request re-reads it from the
+ * DB. Called right after stamping the cutoff so same-instance revocation is
+ * immediate (other instances converge within the cache TTL).
+ */
+export function invalidateTokensValidAfterCache(userId: string): void {
+  tokensValidAfterCache.delete(userId);
 }
 
 // ============================================
@@ -429,7 +508,17 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
     await tx.session.deleteMany({
       where: { userId },
     });
+    // M-4: also stamp the cross-instance access-token cutoff so in-flight access
+    // JWTs (not just refresh sessions) stop authenticating on EVERY replica, not
+    // just this instance's in-memory blacklist. Same transaction → atomic with
+    // the session wipe.
+    await tx.user.update({
+      where: { id: userId },
+      data: { tokensValidAfter: new Date() },
+    });
   });
+  // This instance sees the new cutoff immediately; others within the cache TTL.
+  invalidateTokensValidAfterCache(userId);
 }
 
 /**
@@ -1194,17 +1283,13 @@ export async function resetPassword(token: string, newPassword: string): Promise
   // Revoke all existing refresh sessions (security: force re-login everywhere)
   await revokeAllUserTokens(updatedPrismaUser.id);
 
-  // RT-M1: this revokes refresh SESSION rows, but any in-flight ACCESS token
-  // (short-lived JWT) keeps authenticating until natural expiry. Unlike the
-  // authenticated change-password flow, reset-password is a public token-based
-  // flow with NO logged-in request, so there is no request access token to
-  // revoke here (revokeAccessToken needs the raw JWT). The cross-device gap
-  // therefore remains: a stolen/active access token on another device stays
-  // valid for up to ~15 min after a reset.
-  // TODO (M-4 infra): close this with a per-user `tokensValidAfter` timestamp,
-  // stamped here on reset, checked in authenticate() against the JWT `iat`, and
-  // backed by a shared store (Redis/Memorystore) so invalidation survives
-  // restarts and spans replicas.
+  // M-4 (closed): revokeAllUserTokens above deletes the refresh SESSION rows AND
+  // stamps the user's tokensValidAfter cutoff, so any in-flight ACCESS token
+  // issued before the reset is now rejected by authenticate() on every replica
+  // (not just this instance) within the short cutoff-cache TTL. reset-password is
+  // a public token-based flow with no logged-in request, so there is no single
+  // request access token to blacklist here — the DB-backed cutoff is what closes
+  // the former ~15-min cross-device gap.
 
   return {
     success: true,
@@ -1365,15 +1450,12 @@ export async function confirmEmailChange(token: string): Promise<EmailChangeConf
     });
   });
 
-  // RT-M1: revokes refresh SESSION rows, but any in-flight ACCESS token
-  // (short-lived JWT) keeps authenticating until natural expiry. confirm-email-
-  // change is a public token-based flow with NO logged-in request, so there is
-  // no request access token to revoke here (revokeAccessToken needs the raw
-  // JWT). The cross-device gap remains: a still-valid access token on another
-  // device works for up to ~15 min after the email swap.
-  // TODO (M-4 infra): close this with a per-user `tokensValidAfter` timestamp,
-  // stamped here, checked in authenticate() against the JWT `iat`, backed by a
-  // shared store (Redis/Memorystore) so invalidation survives restarts/replicas.
+  // M-4 (closed): revokeAllUserTokens below deletes the refresh SESSION rows AND
+  // stamps the user's tokensValidAfter cutoff, so a still-valid ACCESS token on
+  // another device is rejected by authenticate() on every replica within the
+  // short cutoff-cache TTL after the email swap — closing the former ~15-min
+  // cross-device gap. confirm-email-change is a public token-based flow with no
+  // logged-in request, so there is no single request access token to blacklist.
   await revokeAllUserTokens(lookup.userId);
 
   return {

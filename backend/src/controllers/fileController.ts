@@ -312,27 +312,33 @@ export async function deleteFile(
     throw new NotFoundError('File not found');
   }
 
-  // Audit log: DELETE file (log before deletion)
-  const auditService = getAuditLogService(prisma);
-  await auditService.logDelete(RESOURCE_TYPE, id, {
-    filename: file.filename,
-    biomarkersExtracted: file.biomarkersExtracted,
-  }, { req, userId });
-
-  // Delete from GCS storage
+  // Delete the GCS object FIRST and fail hard on any non-404 error (F-22).
+  // storageService.deleteFile() already treats a 404 (object already gone) as
+  // success and rethrows everything else, so this catch only fires on real
+  // failures. We deliberately do NOT swallow them: the DB row is the only
+  // pointer to storageKey, so deleting it after a failed GCS delete would
+  // orphan PHI in the bucket with no way to ever find it. Aborting here keeps
+  // the object AND its DB pointer intact for a clean retry — mirroring the
+  // bulk-delete policy in settingsController.deleteAllData / deleteAccount (C-6).
   try {
     await deleteFromStorage(file.storageKey);
   } catch (error) {
-    logger.error('Failed to delete file from GCS', {
+    logger.error('Failed to delete file from GCS; aborting DB deletion to avoid orphaned PHI', {
       data: {
         fileId: id,
         storageKey: file.storageKey,
         error: error instanceof Error ? error.message : 'Unknown error',
       },
     });
-    // Continue with database deletion even if GCS fails
-    // The file might already be deleted or the storage key might be invalid
+    throw error;
   }
+
+  // Audit log: DELETE file (GCS object is gone; record the actual deletion).
+  const auditService = getAuditLogService(prisma);
+  await auditService.logDelete(RESOURCE_TYPE, id, {
+    filename: file.filename,
+    biomarkersExtracted: file.biomarkersExtracted,
+  }, { req, userId });
 
   // Unlink biomarkers and delete file record within RLS context
   await withRLSTransaction(userId, async (tx) => {

@@ -256,13 +256,39 @@ export class AuditLogService {
   }
 
   /**
+   * Decrypt an audit row's metadata for an authorized viewer (admin audit view /
+   * compliance export). New rows store the metadata JSON in `metadataEncrypted`;
+   * legacy rows kept plaintext JSON in `metadata`. Returns the JSON string (the
+   * caller/UI parses it) or null. A decrypt failure is logged and returns null
+   * rather than leaking ciphertext to the client.
+   */
+  decryptMetadata(row: { metadata?: string | null; metadataEncrypted?: string | null }): string | null {
+    if (row.metadataEncrypted) {
+      try {
+        return getEncryptionService().decrypt(row.metadataEncrypted, this.systemSalt);
+      } catch (error) {
+        logger.error('Failed to decrypt audit metadata', {
+          prefix: 'AuditLog',
+          data: { error: error instanceof Error ? error.message : String(error) },
+        });
+        return null;
+      }
+    }
+    return row.metadata ?? null;
+  }
+
+  /**
    * Log an audit event
    */
   async log(entry: AuditLogEntry): Promise<void> {
     try {
-      // Encryption is CPU-only, outside the transaction.
+      // Encryption is CPU-only, outside the transaction. metadata is now
+      // encrypted with the same field-level AES-256-GCM as previous/new values:
+      // it can carry PHI (e.g. uploaded filenames logged on download/export), so
+      // it must not sit in the audit row as plaintext JSON.
       const previousValueEncrypted = this.encryptValue(entry.previousValue);
       const newValueEncrypted = this.encryptValue(entry.newValue);
+      const metadataEncrypted = this.encryptValue(entry.metadata);
 
       const data = {
         userId: entry.userId,
@@ -275,7 +301,7 @@ export class AuditLogService {
         ipAddress: entry.ipAddress,
         userAgent: entry.userAgent,
         sessionId: entry.sessionId,
-        metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
+        metadataEncrypted,
         success: entry.success ?? true,
         errorMessage: entry.errorMessage ?? null,
       };
@@ -547,7 +573,7 @@ export class AuditLogService {
     return withRLSContext(
       null,
       async (tx) => {
-        const [logs, total] = await Promise.all([
+        const [rawLogs, total] = await Promise.all([
           tx.auditLog.findMany({
             where,
             orderBy: { createdAt: 'desc' },
@@ -556,6 +582,17 @@ export class AuditLogService {
           }),
           tx.auditLog.count({ where }),
         ]);
+        // Decrypt metadata for the authorized viewer and strip the raw
+        // ciphertext column so it never leaves the service.
+        const logs = rawLogs.map((row) => {
+          const r = row as Record<string, unknown> & {
+            metadata?: string | null;
+            metadataEncrypted?: string | null;
+          };
+          const metadata = this.decryptMetadata(r);
+          const { metadataEncrypted: _enc, ...rest } = r;
+          return { ...rest, metadata };
+        });
         return { logs, total };
       },
       { isAdmin: true }

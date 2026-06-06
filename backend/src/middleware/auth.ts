@@ -14,7 +14,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
 import { UnauthorizedError } from './errorHandler.js';
-import { isTokenRevoked } from '../services/authService.js';
+import { isTokenRevoked, isAccessTokenStale } from '../services/authService.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 interface JwtPayload {
@@ -68,11 +68,11 @@ function extractBearerToken(req: AuthenticatedRequest): string | null {
  * Main authentication middleware
  * Verifies JWT and attaches user to request
  */
-export function authenticate(
+export async function authenticate(
   req: AuthenticatedRequest,
   _res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
     const token = extractToken(req);
 
@@ -94,6 +94,14 @@ export function authenticate(
     // Ensure it's an access token, not a refresh token
     if (decoded.type && decoded.type !== 'access') {
       throw new UnauthorizedError('Invalid token type');
+    }
+
+    // Cross-instance revocation: reject any token issued before the user's
+    // tokensValidAfter cutoff (logout-all / password change+reset / email
+    // change / admin deactivation+role change on ANY replica). The in-memory
+    // blacklist above only covers this instance. See authService.isAccessTokenStale.
+    if (await isAccessTokenStale(decoded.id, decoded.iat)) {
+      throw new UnauthorizedError('Session has been revoked. Please log in again.');
     }
 
     // Attach user info to request
@@ -123,11 +131,11 @@ export function authenticate(
  * Optional authentication middleware
  * Attaches user if valid token is present, but doesn't fail if absent
  */
-export function optionalAuth(
+export async function optionalAuth(
   req: AuthenticatedRequest,
   _res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
     const token = extractToken(req);
 
@@ -144,6 +152,12 @@ export function optionalAuth(
 
     // Ensure it's an access token
     if (decoded.type && decoded.type !== 'access') {
+      return next();
+    }
+
+    // Cross-instance revocation: a stale token means "no authenticated user"
+    // for optional auth — drop the identity, don't fail the request.
+    if (await isAccessTokenStale(decoded.id, decoded.iat)) {
       return next();
     }
 
@@ -177,11 +191,11 @@ export function optionalAuth(
  * Semantics are otherwise identical to `authenticate`: verifies an access
  * JWT, rejects refresh tokens, attaches `req.user`.
  */
-export function requireBearerAuth(
+export async function requireBearerAuth(
   req: AuthenticatedRequest,
   _res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
     const token = extractBearerToken(req);
 
@@ -198,6 +212,12 @@ export function requireBearerAuth(
 
     if (decoded.type && decoded.type !== 'access') {
       throw new UnauthorizedError('Invalid token type');
+    }
+
+    // Cross-instance revocation — see authenticate(). Bearer routes (e.g. the
+    // SSE chat stream) must honor the same tokensValidAfter cutoff.
+    if (await isAccessTokenStale(decoded.id, decoded.iat)) {
+      throw new UnauthorizedError('Session has been revoked. Please log in again.');
     }
 
     req.user = {

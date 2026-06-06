@@ -170,6 +170,13 @@ export function validateEncryptionKey(key: string | undefined): { valid: boolean
  */
 export class EncryptionService {
   private masterKey: Buffer;
+  /**
+   * Cache for derived user keys to avoid redundant PBKDF2 calculations.
+   * Key format: "saltHex:iterations"
+   */
+  private keyCache: Map<string, Buffer> = new Map();
+  /** Maximum number of derived keys to keep in memory */
+  private readonly MAX_CACHE_SIZE = 500;
 
   constructor() {
     const masterKeyHex = process.env.PHI_ENCRYPTION_KEY;
@@ -215,15 +222,47 @@ export class EncryptionService {
    * Derives a user-specific encryption key from the master key.
    * `iterations` defaults to the current target (600k); the legacy value
    * (100k) is only passed when retrying a failed decryption — see `decrypt`.
+   *
+   * Results are cached per `(salt, iterations)` in `keyCache` for the life of
+   * the service instance. PBKDF2-SHA512 at 600k iterations is intentionally
+   * expensive (tens of ms); without the cache it ran once PER FIELD, PER ROW,
+   * so a list of N rows with H history points triggered N×(2+H) synchronous
+   * derivations that block the event loop — an observed cause of a ~14s
+   * wall-clock / >5s Prisma interactive-transaction timeout on Cloud Run.
+   * Caching collapses that to one derivation per (user, iteration count).
+   * Derived keys are no more sensitive than the master key, which is already
+   * resident in memory.
    */
   private deriveUserKey(userSalt: Buffer, iterations: number = PBKDF2_ITERATIONS): Buffer {
-    return crypto.pbkdf2Sync(
+    const cacheKey = `${userSalt.toString('hex')}:${iterations}`;
+
+    const cached = this.keyCache.get(cacheKey);
+    if (cached) {
+      // Refresh recency (LRU): re-insert so hot users survive eviction.
+      this.keyCache.delete(cacheKey);
+      this.keyCache.set(cacheKey, cached);
+      return cached;
+    }
+
+    const derived = crypto.pbkdf2Sync(
       this.masterKey,
       userSalt,
       iterations,
       KEY_LENGTH,
       'sha512'
     );
+
+    // Bounded LRU eviction: Map preserves insertion order and we re-insert on
+    // every hit, so the first key is the least-recently-used. Drop it at the cap
+    // to keep a long-lived, many-user process from growing the cache unbounded.
+    if (this.keyCache.size >= this.MAX_CACHE_SIZE) {
+      const oldest = this.keyCache.keys().next().value;
+      if (oldest !== undefined) {
+        this.keyCache.delete(oldest);
+      }
+    }
+    this.keyCache.set(cacheKey, derived);
+    return derived;
   }
 
   /**
@@ -479,6 +518,7 @@ export const PHI_FIELDS = {
   AuditLog: [
     'previousValueEncrypted',
     'newValueEncrypted',
+    'metadataEncrypted',
   ],
   // Expense tracking PHI (cost optimization)
   ExpenseProjection: [

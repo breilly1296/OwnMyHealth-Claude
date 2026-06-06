@@ -341,7 +341,7 @@ describe('AuditLogService', () => {
           action: 'READ',
           resourceType: 'Biomarker',
           resourceId: undefined,
-          metadata: expect.stringContaining('LIST'),
+          metadataEncrypted: expect.stringContaining('LIST'),
         }),
       });
     });
@@ -426,7 +426,7 @@ describe('AuditLogService', () => {
       expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           actorType: 'ANONYMOUS',
-          metadata: expect.stringContaining('LOGIN_FAILED'),
+          metadataEncrypted: expect.stringContaining('LOGIN_FAILED'),
         }),
       });
     });
@@ -482,7 +482,7 @@ describe('AuditLogService', () => {
         data: expect.objectContaining({
           action: 'EXPORT',
           resourceType: 'Biomarker',
-          metadata: expect.stringContaining('CSV'),
+          metadataEncrypted: expect.stringContaining('CSV'),
         }),
       });
     });
@@ -493,7 +493,9 @@ describe('AuditLogService', () => {
       await auditService.logExport('Biomarker', manyIds, 'JSON', { userId: 'user-1' });
 
       const createCall = mockPrisma.auditLog.create.mock.calls[0][0];
-      const metadata = JSON.parse(createCall.data.metadata);
+      // metadata is now encrypted at rest; the mock encrypt() prefixes
+      // "encrypted:" onto the JSON, so strip that to parse the payload.
+      const metadata = JSON.parse(createCall.data.metadataEncrypted.replace(/^encrypted:/, ''));
       expect(metadata.resourceIds.length).toBeLessThanOrEqual(100);
     });
   });

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import crypto from 'crypto';
 import { EncryptionService, validateEncryptionKey } from './encryption.js';
 
 vi.mock('../utils/logger.js');
@@ -292,6 +293,35 @@ describe('encryption.ts', () => {
       const ct = parts[2];
       const tamperedCiphertext = parts[0] + ':' + parts[1] + ':' + (ct[0] === 'A' ? 'B' : 'A') + ct.substring(1);
       expect(() => service.decrypt(tamperedCiphertext, userSalt)).toThrow();
+    });
+
+    it('caches the derived key per salt so repeated encrypts re-derive only once', () => {
+      const pbkdf2Spy = vi.spyOn(crypto, 'pbkdf2Sync');
+      const sameSalt = service.generateUserSalt();
+
+      service.encrypt('first value', sameSalt);
+      service.encrypt('second value', sameSalt);
+
+      // Count only per-user PBKDF2-SHA512 derivations (hashForSearch uses sha256).
+      // Two encrypts with the same salt must derive the key exactly once — the
+      // second hits the cache. Also guards against the cache silently regressing
+      // to the unwired state it originally shipped in.
+      const sha512Derivations = () =>
+        pbkdf2Spy.mock.calls.filter((c) => c[4] === 'sha512').length;
+      expect(sha512Derivations()).toBe(1);
+
+      // A different salt is a different cache key → exactly one more derivation.
+      const otherSalt = service.generateUserSalt();
+      service.encrypt('third value', otherSalt);
+      expect(sha512Derivations()).toBe(2);
+
+      pbkdf2Spy.mockRestore();
+    });
+
+    it('round-trips correctly when decrypting with a cache-warmed key', () => {
+      const plaintext = 'cache-warmed PHI';
+      const encrypted = service.encrypt(plaintext, userSalt);
+      expect(service.decrypt(encrypted, userSalt)).toBe(plaintext);
     });
   });
 

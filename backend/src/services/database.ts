@@ -19,15 +19,13 @@
  * ║ module-level `prisma` client (`prisma.biomarker.findMany(...)` or        ║
  * ║ `getPrismaClient().biomarker.findMany(...)`), the query runs on a       ║
  * ║ DIFFERENT connection from the pool — one that never received the         ║
- * ║ `SET LOCAL app.current_user_id` that this wrapper issues. The RLS        ║
- * ║ policies then evaluate against NULL and the query silently returns       ║
- * ║ all rows across all users. No error, no warning — just a bypass.         ║
+ * ║ `SET LOCAL app.current_user_id` that this wrapper issues.                ║
  * ║                                                                           ║
- * ║ The `scripts/check-rls-wrappers.sh` grep-based CI guard (see             ║
- * ║ .github/workflows/ci.yml) fails the build on `prisma.` calls inside      ║
- * ║ controllers and services. Rule: inside any RLS callback, always use     ║
- * ║ `tx.*`. Outside a callback, use `getPrismaClient()` only for bare        ║
- * ║ infra (migrations, health checks). Never mix.                            ║
+ * ║ Because RLS policies are default-deny and `current_user_id()` returns     ║
+ * ║ NULL when unset, contextless queries FAIL CLOSED (returning zero rows).   ║
+ * ║ This prevents data leaks but leads to silent, hard-to-debug "empty state" ║
+ * ║ bugs. The `scripts/check-rls-wrappers.sh` grep-based CI guard helps      ║
+ * ║ catch these early. Rule: always use `tx.*` inside an RLS callback.        ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  *
  * RLS Usage:
@@ -190,7 +188,7 @@ export async function initializeDatabase(): Promise<void> {
   // C-8 PR C — RLS enforcement check. Runs after the connection is alive so
   // we can query pg_roles under the current login. In production this hard-
   // exits if BYPASSRLS=true; in non-prod it warns. See assertNoBypassRLS for
-  // the full rationale, and C8_PART3_RUNBOOK.md for the rollout/rollback.
+  // the full rationale, and docs/c-8-part-c-runbook.md for the rollout/rollback.
   await assertNoBypassRLS();
 
   isInitialized = true;
@@ -249,7 +247,7 @@ async function assertNoBypassRLS(): Promise<void> {
     logger.error(
       'FATAL: Production database role has BYPASSRLS. ' +
       'RLS policies are not enforcing. Refusing to start. ' +
-      'See C8_PART3_RUNBOOK.md.'
+      'See docs/c-8-part-c-runbook.md.'
     );
     process.exit(1);
   }

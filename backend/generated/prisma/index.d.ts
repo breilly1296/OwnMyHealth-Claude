@@ -2989,6 +2989,7 @@ export namespace Prisma {
     failedLoginAttempts: number | null
     lockedUntil: Date | null
     lastFailedLogin: Date | null
+    tokensValidAfter: Date | null
     healthProfileEncrypted: string | null
     plan: string | null
     planExpiresAt: Date | null
@@ -3021,6 +3022,7 @@ export namespace Prisma {
     failedLoginAttempts: number | null
     lockedUntil: Date | null
     lastFailedLogin: Date | null
+    tokensValidAfter: Date | null
     healthProfileEncrypted: string | null
     plan: string | null
     planExpiresAt: Date | null
@@ -3053,6 +3055,7 @@ export namespace Prisma {
     failedLoginAttempts: number
     lockedUntil: number
     lastFailedLogin: number
+    tokensValidAfter: number
     notificationPreferences: number
     healthProfileEncrypted: number
     plan: number
@@ -3096,6 +3099,7 @@ export namespace Prisma {
     failedLoginAttempts?: true
     lockedUntil?: true
     lastFailedLogin?: true
+    tokensValidAfter?: true
     healthProfileEncrypted?: true
     plan?: true
     planExpiresAt?: true
@@ -3128,6 +3132,7 @@ export namespace Prisma {
     failedLoginAttempts?: true
     lockedUntil?: true
     lastFailedLogin?: true
+    tokensValidAfter?: true
     healthProfileEncrypted?: true
     plan?: true
     planExpiresAt?: true
@@ -3160,6 +3165,7 @@ export namespace Prisma {
     failedLoginAttempts?: true
     lockedUntil?: true
     lastFailedLogin?: true
+    tokensValidAfter?: true
     notificationPreferences?: true
     healthProfileEncrypted?: true
     plan?: true
@@ -3280,6 +3286,7 @@ export namespace Prisma {
     failedLoginAttempts: number
     lockedUntil: Date | null
     lastFailedLogin: Date | null
+    tokensValidAfter: Date | null
     notificationPreferences: JsonValue
     healthProfileEncrypted: string | null
     plan: string
@@ -3332,6 +3339,7 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    tokensValidAfter?: boolean
     notificationPreferences?: boolean
     healthProfileEncrypted?: boolean
     plan?: boolean
@@ -3380,6 +3388,7 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    tokensValidAfter?: boolean
     notificationPreferences?: boolean
     healthProfileEncrypted?: boolean
     plan?: boolean
@@ -3413,6 +3422,7 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    tokensValidAfter?: boolean
     notificationPreferences?: boolean
     healthProfileEncrypted?: boolean
     plan?: boolean
@@ -3446,6 +3456,7 @@ export namespace Prisma {
     failedLoginAttempts?: boolean
     lockedUntil?: boolean
     lastFailedLogin?: boolean
+    tokensValidAfter?: boolean
     notificationPreferences?: boolean
     healthProfileEncrypted?: boolean
     plan?: boolean
@@ -3457,7 +3468,7 @@ export namespace Prisma {
     lastLoginAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "pendingEmail" | "emailChangeToken" | "emailChangeExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "pendingEmail" | "emailChangeToken" | "emailChangeExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "tokensValidAfter" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
@@ -3518,6 +3529,7 @@ export namespace Prisma {
       failedLoginAttempts: number
       lockedUntil: Date | null
       lastFailedLogin: Date | null
+      tokensValidAfter: Date | null
       notificationPreferences: Prisma.JsonValue
       healthProfileEncrypted: string | null
       plan: string
@@ -3985,6 +3997,7 @@ export namespace Prisma {
     readonly failedLoginAttempts: FieldRef<"User", 'Int'>
     readonly lockedUntil: FieldRef<"User", 'DateTime'>
     readonly lastFailedLogin: FieldRef<"User", 'DateTime'>
+    readonly tokensValidAfter: FieldRef<"User", 'DateTime'>
     readonly notificationPreferences: FieldRef<"User", 'Json'>
     readonly healthProfileEncrypted: FieldRef<"User", 'String'>
     readonly plan: FieldRef<"User", 'String'>
@@ -19750,6 +19763,7 @@ export namespace Prisma {
     previousValueEncrypted: string | null
     newValueEncrypted: string | null
     metadata: string | null
+    metadataEncrypted: string | null
     success: boolean | null
     errorMessage: string | null
     createdAt: Date | null
@@ -19768,6 +19782,7 @@ export namespace Prisma {
     previousValueEncrypted: string | null
     newValueEncrypted: string | null
     metadata: string | null
+    metadataEncrypted: string | null
     success: boolean | null
     errorMessage: string | null
     createdAt: Date | null
@@ -19786,6 +19801,7 @@ export namespace Prisma {
     previousValueEncrypted: number
     newValueEncrypted: number
     metadata: number
+    metadataEncrypted: number
     success: number
     errorMessage: number
     createdAt: number
@@ -19806,6 +19822,7 @@ export namespace Prisma {
     previousValueEncrypted?: true
     newValueEncrypted?: true
     metadata?: true
+    metadataEncrypted?: true
     success?: true
     errorMessage?: true
     createdAt?: true
@@ -19824,6 +19841,7 @@ export namespace Prisma {
     previousValueEncrypted?: true
     newValueEncrypted?: true
     metadata?: true
+    metadataEncrypted?: true
     success?: true
     errorMessage?: true
     createdAt?: true
@@ -19842,6 +19860,7 @@ export namespace Prisma {
     previousValueEncrypted?: true
     newValueEncrypted?: true
     metadata?: true
+    metadataEncrypted?: true
     success?: true
     errorMessage?: true
     createdAt?: true
@@ -19933,6 +19952,7 @@ export namespace Prisma {
     previousValueEncrypted: string | null
     newValueEncrypted: string | null
     metadata: string | null
+    metadataEncrypted: string | null
     success: boolean
     errorMessage: string | null
     createdAt: Date
@@ -19968,6 +19988,7 @@ export namespace Prisma {
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
     metadata?: boolean
+    metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
     createdAt?: boolean
@@ -19987,6 +20008,7 @@ export namespace Prisma {
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
     metadata?: boolean
+    metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
     createdAt?: boolean
@@ -20006,6 +20028,7 @@ export namespace Prisma {
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
     metadata?: boolean
+    metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
     createdAt?: boolean
@@ -20025,12 +20048,13 @@ export namespace Prisma {
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
     metadata?: boolean
+    metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
     createdAt?: boolean
   }
 
-  export type AuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "actorType" | "ipAddress" | "userAgent" | "sessionId" | "action" | "resourceType" | "resourceId" | "previousValueEncrypted" | "newValueEncrypted" | "metadata" | "success" | "errorMessage" | "createdAt", ExtArgs["result"]["auditLog"]>
+  export type AuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "actorType" | "ipAddress" | "userAgent" | "sessionId" | "action" | "resourceType" | "resourceId" | "previousValueEncrypted" | "newValueEncrypted" | "metadata" | "metadataEncrypted" | "success" | "errorMessage" | "createdAt", ExtArgs["result"]["auditLog"]>
   export type AuditLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | AuditLog$userArgs<ExtArgs>
   }
@@ -20059,6 +20083,7 @@ export namespace Prisma {
       previousValueEncrypted: string | null
       newValueEncrypted: string | null
       metadata: string | null
+      metadataEncrypted: string | null
       success: boolean
       errorMessage: string | null
       createdAt: Date
@@ -20498,6 +20523,7 @@ export namespace Prisma {
     readonly previousValueEncrypted: FieldRef<"AuditLog", 'String'>
     readonly newValueEncrypted: FieldRef<"AuditLog", 'String'>
     readonly metadata: FieldRef<"AuditLog", 'String'>
+    readonly metadataEncrypted: FieldRef<"AuditLog", 'String'>
     readonly success: FieldRef<"AuditLog", 'Boolean'>
     readonly errorMessage: FieldRef<"AuditLog", 'String'>
     readonly createdAt: FieldRef<"AuditLog", 'DateTime'>
@@ -26865,6 +26891,7 @@ export namespace Prisma {
     failedLoginAttempts: 'failedLoginAttempts',
     lockedUntil: 'lockedUntil',
     lastFailedLogin: 'lastFailedLogin',
+    tokensValidAfter: 'tokensValidAfter',
     notificationPreferences: 'notificationPreferences',
     healthProfileEncrypted: 'healthProfileEncrypted',
     plan: 'plan',
@@ -27197,6 +27224,7 @@ export namespace Prisma {
     previousValueEncrypted: 'previousValueEncrypted',
     newValueEncrypted: 'newValueEncrypted',
     metadata: 'metadata',
+    metadataEncrypted: 'metadataEncrypted',
     success: 'success',
     errorMessage: 'errorMessage',
     createdAt: 'createdAt'
@@ -27641,6 +27669,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFilter<"User"> | number
     lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
     lastFailedLogin?: DateTimeNullableFilter<"User"> | Date | string | null
+    tokensValidAfter?: DateTimeNullableFilter<"User"> | Date | string | null
     notificationPreferences?: JsonFilter<"User">
     healthProfileEncrypted?: StringNullableFilter<"User"> | string | null
     plan?: StringFilter<"User"> | string
@@ -27688,6 +27717,7 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrderInput | SortOrder
     lastFailedLogin?: SortOrderInput | SortOrder
+    tokensValidAfter?: SortOrderInput | SortOrder
     notificationPreferences?: SortOrder
     healthProfileEncrypted?: SortOrderInput | SortOrder
     plan?: SortOrder
@@ -27738,6 +27768,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFilter<"User"> | number
     lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
     lastFailedLogin?: DateTimeNullableFilter<"User"> | Date | string | null
+    tokensValidAfter?: DateTimeNullableFilter<"User"> | Date | string | null
     notificationPreferences?: JsonFilter<"User">
     healthProfileEncrypted?: StringNullableFilter<"User"> | string | null
     plan?: StringFilter<"User"> | string
@@ -27785,6 +27816,7 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrderInput | SortOrder
     lastFailedLogin?: SortOrderInput | SortOrder
+    tokensValidAfter?: SortOrderInput | SortOrder
     notificationPreferences?: SortOrder
     healthProfileEncrypted?: SortOrderInput | SortOrder
     plan?: SortOrder
@@ -27826,6 +27858,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntWithAggregatesFilter<"User"> | number
     lockedUntil?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     lastFailedLogin?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    tokensValidAfter?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     notificationPreferences?: JsonWithAggregatesFilter<"User">
     healthProfileEncrypted?: StringNullableWithAggregatesFilter<"User"> | string | null
     plan?: StringWithAggregatesFilter<"User"> | string
@@ -29421,6 +29454,7 @@ export namespace Prisma {
     previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     metadata?: StringNullableFilter<"AuditLog"> | string | null
+    metadataEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     success?: BoolFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableFilter<"AuditLog"> | string | null
     createdAt?: DateTimeFilter<"AuditLog"> | Date | string
@@ -29440,6 +29474,7 @@ export namespace Prisma {
     previousValueEncrypted?: SortOrderInput | SortOrder
     newValueEncrypted?: SortOrderInput | SortOrder
     metadata?: SortOrderInput | SortOrder
+    metadataEncrypted?: SortOrderInput | SortOrder
     success?: SortOrder
     errorMessage?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -29462,6 +29497,7 @@ export namespace Prisma {
     previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     metadata?: StringNullableFilter<"AuditLog"> | string | null
+    metadataEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     success?: BoolFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableFilter<"AuditLog"> | string | null
     createdAt?: DateTimeFilter<"AuditLog"> | Date | string
@@ -29481,6 +29517,7 @@ export namespace Prisma {
     previousValueEncrypted?: SortOrderInput | SortOrder
     newValueEncrypted?: SortOrderInput | SortOrder
     metadata?: SortOrderInput | SortOrder
+    metadataEncrypted?: SortOrderInput | SortOrder
     success?: SortOrder
     errorMessage?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -29505,6 +29542,7 @@ export namespace Prisma {
     previousValueEncrypted?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     metadata?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
+    metadataEncrypted?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     success?: BoolWithAggregatesFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"AuditLog"> | Date | string
@@ -30001,6 +30039,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -30048,6 +30087,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -30095,6 +30135,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -30142,6 +30183,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -30189,6 +30231,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -30222,6 +30265,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -30255,6 +30299,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -32197,6 +32242,7 @@ export namespace Prisma {
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
     metadata?: string | null
+    metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
@@ -32216,6 +32262,7 @@ export namespace Prisma {
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
     metadata?: string | null
+    metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
@@ -32233,6 +32280,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -32252,6 +32300,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -32270,6 +32319,7 @@ export namespace Prisma {
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
     metadata?: string | null
+    metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
@@ -32287,6 +32337,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -32305,6 +32356,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33098,6 +33150,7 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrder
     lastFailedLogin?: SortOrder
+    tokensValidAfter?: SortOrder
     notificationPreferences?: SortOrder
     healthProfileEncrypted?: SortOrder
     plan?: SortOrder
@@ -33135,6 +33188,7 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrder
     lastFailedLogin?: SortOrder
+    tokensValidAfter?: SortOrder
     healthProfileEncrypted?: SortOrder
     plan?: SortOrder
     planExpiresAt?: SortOrder
@@ -33167,6 +33221,7 @@ export namespace Prisma {
     failedLoginAttempts?: SortOrder
     lockedUntil?: SortOrder
     lastFailedLogin?: SortOrder
+    tokensValidAfter?: SortOrder
     healthProfileEncrypted?: SortOrder
     plan?: SortOrder
     planExpiresAt?: SortOrder
@@ -34788,6 +34843,7 @@ export namespace Prisma {
     previousValueEncrypted?: SortOrder
     newValueEncrypted?: SortOrder
     metadata?: SortOrder
+    metadataEncrypted?: SortOrder
     success?: SortOrder
     errorMessage?: SortOrder
     createdAt?: SortOrder
@@ -34806,6 +34862,7 @@ export namespace Prisma {
     previousValueEncrypted?: SortOrder
     newValueEncrypted?: SortOrder
     metadata?: SortOrder
+    metadataEncrypted?: SortOrder
     success?: SortOrder
     errorMessage?: SortOrder
     createdAt?: SortOrder
@@ -34824,6 +34881,7 @@ export namespace Prisma {
     previousValueEncrypted?: SortOrder
     newValueEncrypted?: SortOrder
     metadata?: SortOrder
+    metadataEncrypted?: SortOrder
     success?: SortOrder
     errorMessage?: SortOrder
     createdAt?: SortOrder
@@ -37050,6 +37108,7 @@ export namespace Prisma {
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
     metadata?: string | null
+    metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
@@ -37067,6 +37126,7 @@ export namespace Prisma {
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
     metadata?: string | null
+    metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
@@ -37868,6 +37928,7 @@ export namespace Prisma {
     previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     metadata?: StringNullableFilter<"AuditLog"> | string | null
+    metadataEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     success?: BoolFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableFilter<"AuditLog"> | string | null
     createdAt?: DateTimeFilter<"AuditLog"> | Date | string
@@ -38439,6 +38500,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38485,6 +38547,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38547,6 +38610,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -38593,6 +38657,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -38639,6 +38704,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38685,6 +38751,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38747,6 +38814,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -38793,6 +38861,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -38839,6 +38908,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38885,6 +38955,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38936,6 +39007,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -38982,6 +39054,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -39044,6 +39117,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39090,6 +39164,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39147,6 +39222,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39193,6 +39269,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39295,6 +39372,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -39341,6 +39419,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -39419,6 +39498,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39465,6 +39545,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39572,6 +39653,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -39618,6 +39700,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -39750,6 +39833,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39796,6 +39880,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -39994,6 +40079,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -40040,6 +40126,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -40257,6 +40344,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -40303,6 +40391,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -40905,6 +40994,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -40951,6 +41041,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -41013,6 +41104,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -41059,6 +41151,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -41131,6 +41224,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -41177,6 +41271,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -41267,6 +41362,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -41313,6 +41409,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -41475,6 +41572,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -41521,6 +41619,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -41583,6 +41682,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -41629,6 +41729,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -41675,6 +41776,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -41721,6 +41823,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -42082,6 +42185,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -42128,6 +42232,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -42447,6 +42552,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -42493,6 +42599,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -42839,6 +42946,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -42885,6 +42993,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -43227,6 +43336,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -43273,6 +43383,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -43586,6 +43697,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -43632,6 +43744,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -43935,6 +44048,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -43981,6 +44095,7 @@ export namespace Prisma {
     failedLoginAttempts?: number
     lockedUntil?: Date | string | null
     lastFailedLogin?: Date | string | null
+    tokensValidAfter?: Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: string | null
     plan?: string
@@ -44043,6 +44158,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -44089,6 +44205,7 @@ export namespace Prisma {
     failedLoginAttempts?: IntFieldUpdateOperationsInput | number
     lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastFailedLogin?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tokensValidAfter?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     notificationPreferences?: JsonNullValueInput | InputJsonValue
     healthProfileEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     plan?: StringFieldUpdateOperationsInput | string
@@ -44125,6 +44242,7 @@ export namespace Prisma {
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
     metadata?: string | null
+    metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
     createdAt?: Date | string
@@ -44446,6 +44564,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -44463,6 +44582,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -44480,6 +44600,7 @@ export namespace Prisma {
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     metadata?: NullableStringFieldUpdateOperationsInput | string | null
+    metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string

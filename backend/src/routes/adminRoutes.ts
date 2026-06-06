@@ -17,6 +17,7 @@ import { validate, schemas } from '../middleware/validation.js';
 import { sensitiveLimiter } from '../middleware/rateLimiter.js';
 import { getPrismaClient, withRLSContext } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
+import { invalidateTokensValidAfterCache } from '../services/authService.js';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/index.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
@@ -299,6 +300,22 @@ router.patch(
           return { found: false as const };
         }
 
+        // F-41 / M-14: a password reset, role change, or deactivation must cut
+        // the target's existing sessions so a stale or compromised credential
+        // can't outrun the change (matches DELETE /users/:id on deactivation).
+        //
+        // M-4 (admin facet, now closed): it must ALSO invalidate the target's
+        // in-flight ACCESS tokens across instances — not just refresh sessions.
+        // Fold the tokensValidAfter cutoff into the SAME user.update so
+        // authenticate() rejects any access JWT issued before now on every
+        // replica, atomically with the change.
+        const roleChanged = role !== undefined && role !== existing.role;
+        const deactivated = isActive === false && existing.isActive !== false;
+        const mustRevoke = !!password || roleChanged || deactivated;
+        if (mustRevoke) {
+          updateData.tokensValidAfter = new Date();
+        }
+
         const user = await tx.user.update({
           where: { id },
           data: updateData,
@@ -312,36 +329,13 @@ router.patch(
           },
         });
 
-        // F-41 fix: when an admin resets a user's password, every existing
-        // session for that user must be invalidated so the affected account
-        // is forced to re-authenticate with the new credential. Without
-        // this, an attacker with a compromised password (the very reason
-        // an admin reset would happen) keeps a valid refresh token and
-        // can outrun the password change. Same transaction so the rotation
-        // is atomic with the hash update.
-        //
-        // M-14 fix: a password reset is not the only event that must cut
-        // existing sessions. A role change (privilege change) or a
-        // deactivation (isActive -> false) must also wipe the target's
-        // sessions so an already-issued refresh token can't keep operating
-        // under stale privileges (or after the account was disabled). This
-        // matches what DELETE /users/:id already does on deactivation.
-        //
-        // RT-M1 (admin facet): this only revokes refresh/DB-backed sessions.
-        // Any access token already issued to the target user remains valid
-        // until it expires (up to its TTL), because revoking arbitrary
-        // users' access tokens needs the shared tokensValidAfter store
-        // (out of scope for this partition). The session wipe is the
-        // actionable mitigation here.
-        const roleChanged = role !== undefined && role !== existing.role;
-        const deactivated = isActive === false && existing.isActive !== false;
         let revokedSessionCount = 0;
-        if (password || roleChanged || deactivated) {
-          const result = await tx.session.deleteMany({ where: { userId: id } });
-          revokedSessionCount = result.count;
+        if (mustRevoke) {
+          const deleted = await tx.session.deleteMany({ where: { userId: id } });
+          revokedSessionCount = deleted.count;
         }
 
-        return { found: true as const, existing, user, revokedSessionCount };
+        return { found: true as const, existing, user, revokedSessionCount, revoked: mustRevoke };
       },
       { isAdmin: true }
     );
@@ -357,7 +351,12 @@ router.patch(
       });
       throw new NotFoundError('User not found');
     }
-    const { existing, user, revokedSessionCount } = result;
+    const { existing, user, revokedSessionCount, revoked } = result;
+    if (revoked) {
+      // M-4: drop this instance's cached cutoff for the target so its access
+      // tokens are rejected here immediately (other replicas within the TTL).
+      invalidateTokensValidAfterCache(id);
+    }
 
     // Determine if this is a role/permission change (elevated audit significance)
     const isRoleChange = role !== undefined && role !== existing.role;
@@ -456,24 +455,29 @@ router.delete(
       targetRole: existing.role,
     });
 
-    // Soft delete + session invalidation share a transaction for atomicity.
+    // Soft delete + session invalidation + access-token cutoff share a
+    // transaction for atomicity.
     //
-    // RT-M1 (admin facet): deleteMany cuts the target's refresh/DB-backed
-    // sessions immediately, but any access token already issued to this user
-    // stays valid until it expires (up to its TTL). Hard-revoking arbitrary
-    // users' access tokens needs the shared tokensValidAfter store (out of
-    // scope for this partition); the session wipe is the actionable part.
+    // M-4 (closed): deleteMany cuts the target's refresh/DB-backed sessions, and
+    // stamping tokensValidAfter (below) makes authenticate() reject any access
+    // token already issued to this user on every replica within the cutoff-cache
+    // TTL — closing the former "valid until TTL expiry" gap.
     await withRLSContext(
       null,
       async (tx) => {
         await tx.user.update({
           where: { id },
-          data: { isActive: false },
+          // M-4: stamp the cross-instance access-token cutoff alongside the
+          // deactivation so in-flight access JWTs stop authenticating on every
+          // replica, not just the refresh sessions wiped below.
+          data: { isActive: false, tokensValidAfter: new Date() },
         });
         await tx.session.deleteMany({ where: { userId: id } });
       },
       { isAdmin: true }
     );
+    // Drop the local cached cutoff so this instance enforces it immediately.
+    invalidateTokensValidAfterCache(id);
 
     const response: ApiResponse<{ message: string }> = {
       success: true,
@@ -978,7 +982,7 @@ router.get(
     const { logs, total } = await withRLSContext(
       null,
       async (tx) => {
-        const [logs, total] = await Promise.all([
+        const [rawLogs, total] = await Promise.all([
           tx.auditLog.findMany({
             where,
             orderBy: { createdAt: 'desc' },
@@ -998,6 +1002,7 @@ router.get(
               resourceType: true,
               resourceId: true,
               metadata: true,
+              metadataEncrypted: true,
               success: true,
               errorMessage: true,
               createdAt: true,
@@ -1008,6 +1013,15 @@ router.get(
           }),
           tx.auditLog.count({ where }),
         ]);
+        // metadata is encrypted at rest (it can carry PHI such as filenames).
+        // Decrypt for this authorized ADMIN view and strip the raw ciphertext
+        // column so it never crosses the wire — preserving the metadata-as-JSON-
+        // string shape the frontend AdminAuditLog interface expects.
+        const auditService = getAuditLogService(prisma);
+        const logs = rawLogs.map(({ metadataEncrypted, ...rest }) => ({
+          ...rest,
+          metadata: auditService.decryptMetadata({ metadata: rest.metadata, metadataEncrypted }),
+        }));
         return { logs, total };
       },
       { isAdmin: true }

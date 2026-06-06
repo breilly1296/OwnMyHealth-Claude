@@ -146,10 +146,21 @@ export async function attemptTokenRefresh(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      // /auth/refresh is NOT on the server's CSRF exempt list — it rotates the
+      // refresh session, so the SPA must double-submit x-csrf-token (see
+      // backend middleware/csrf.ts). apiFetch attaches this for normal
+      // mutations; this raw recovery fetch must do the same, or the generic
+      // 401-recovery (and upload-recovery) refresh 403s and force-logs-out the
+      // user instead of silently renewing the session.
+      const refreshHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        refreshHeaders['x-csrf-token'] = csrfToken;
+      }
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: refreshHeaders,
       });
 
       if (response.ok) {

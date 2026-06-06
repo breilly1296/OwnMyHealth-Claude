@@ -142,6 +142,7 @@ exports.Prisma.UserScalarFieldEnum = {
   failedLoginAttempts: 'failedLoginAttempts',
   lockedUntil: 'lockedUntil',
   lastFailedLogin: 'lastFailedLogin',
+  tokensValidAfter: 'tokensValidAfter',
   notificationPreferences: 'notificationPreferences',
   healthProfileEncrypted: 'healthProfileEncrypted',
   plan: 'plan',
@@ -438,6 +439,7 @@ exports.Prisma.AuditLogScalarFieldEnum = {
   previousValueEncrypted: 'previousValueEncrypted',
   newValueEncrypted: 'newValueEncrypted',
   metadata: 'metadata',
+  metadataEncrypted: 'metadataEncrypted',
   success: 'success',
   errorMessage: 'errorMessage',
   createdAt: 'createdAt'
