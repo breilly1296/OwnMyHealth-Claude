@@ -842,25 +842,37 @@ export async function searchBenefits(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
+  const searchTerm = query.toLowerCase();
+
+  // L-5: narrow to plans that have a matching benefit IN SQL (serviceName is a
+  // plaintext column, not encrypted), so we only load + decrypt plans that can
+  // contribute a result instead of decrypting every plan the user owns on every
+  // search. The included benefits are pre-filtered to the matching rows too.
   const plans = await withRLSTransaction(userId, async (tx) => {
     return tx.insurancePlan.findMany({
-      where: { userId },
-      include: { benefits: true },
+      where: {
+        userId,
+        benefits: { some: { serviceName: { contains: searchTerm, mode: 'insensitive' } } },
+      },
+      include: {
+        benefits: { where: { serviceName: { contains: searchTerm, mode: 'insensitive' } } },
+      },
     });
   });
 
-  const searchTerm = query.toLowerCase();
-  const decryptedPlans = plans.map((p) => toResponse(p, userSalt));
-
-  const results = decryptedPlans.flatMap((plan) =>
-    plan.benefits
+  // SQL already narrowed the rows; the JS `includes` is a belt-and-suspenders
+  // exact-substring filter (Prisma `contains` treats %/_ as LIKE metacharacters,
+  // so this preserves the original literal-match semantics).
+  const results = plans.flatMap((p) => {
+    const plan = toResponse(p, userSalt);
+    return plan.benefits
       .filter((b) => b.serviceName.toLowerCase().includes(searchTerm))
       .map((benefit) => ({
         planId: plan.id,
         planName: plan.planName,
         benefit,
-      }))
-  );
+      }));
+  });
 
   // Audit log: SEARCH access to insurance benefits.
   // SECURITY (RT-M3): audit_logs.metadata is stored in plaintext and retained
@@ -870,7 +882,9 @@ export async function searchBenefits(
   const auditService = getAuditLogService(prisma);
   await auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, {
     operation: 'SEARCH_BENEFITS',
-    plansSearched: plans.length,
+    // plansMatched = plans with at least one matching benefit (post L-5 SQL
+    // narrowing), not the user's total plan count.
+    plansMatched: plans.length,
     resultsFound: results.length,
   });
 
