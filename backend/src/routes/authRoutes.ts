@@ -23,7 +23,7 @@ import {
   changeEmailHandler,
   confirmEmailChangeHandler,
 } from '../controllers/authController.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { authLimiter, strictAuthLimiter } from '../middleware/rateLimiter.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { validate, schemas } from '../middleware/validation.js';
@@ -104,8 +104,14 @@ router.get(
 // Protected Routes (require authentication)
 // ============================================
 
-// Logout current session
-router.post('/logout', authenticate, asyncHandler(logout));
+// Logout current session. optionalAuth, NOT authenticate: the idle-logoff
+// fires at exactly the access-token expiry, so a hard auth gate would 401
+// before the controller could revoke the refresh session — leaving the
+// 7-day refresh cookie alive and the "logged out" user silently re-
+// authenticated on the next page load. CSRF (global middleware) plus
+// possession of the refresh_token cookie is the proof of session ownership;
+// the controller is idempotent for requests with no cookies at all.
+router.post('/logout', optionalAuth, asyncHandler(logout));
 
 // Logout from all devices
 router.post('/logout-all', authenticate, asyncHandler(logoutAll));

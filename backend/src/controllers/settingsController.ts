@@ -999,7 +999,8 @@ export async function deleteAccount(
 
     // M-13: record the BLOCKED account deletion as an explicit failure on the
     // User resource so the audit trail can't be mistaken for a completed
-    // delete. The success-row logDelete now runs only AFTER tx.user.delete.
+    // delete. The success row is only written inside the delete transaction
+    // below, immediately BEFORE tx.user.delete (#19).
     await auditService.logDelete(
       'User',
       userId,
@@ -1018,20 +1019,29 @@ export async function deleteAccount(
     );
   }
 
-  // Only now run the cascade delete. admin context (userId=null).
+  // Only now run the cascade delete, with the User-deleted success row written
+  // on the SAME admin transaction (M-13 + #19). The audit insert must come
+  // BEFORE tx.user.delete: audit_logs.user_id is FK → users(id) ON DELETE SET
+  // NULL, so inserting it after the delete raises 23503 — account gone, client
+  // told 500, mandated HIPAA deletion record never written. Inserting first
+  // satisfies the FK; the delete then SET NULLs user_id on the fresh row, and
+  // attribution survives in resourceId + metadata.deletedUserId. Atomicity
+  // keeps the M-13 invariant (success row persists iff the delete commits — a
+  // GCS-failure abort throws above, before this tx), and logDelete's
+  // failClosed re-throw rolls the delete back rather than completing it with
+  // no durable audit trail.
   await withRLSContext(null, async (tx) => {
+    await auditService.logDelete(
+      'User',
+      userId,
+      { email: user.email, reason: 'user_requested' },
+      { req, userId, tx },
+      { deletedUserId: userId }
+    );
     await tx.user.delete({
       where: { id: userId },
     });
   });
-
-  // Audit log: DELETE account — logged AFTER the cascade delete succeeds so a
-  // GCS-failure abort (which preserves the account) can never record a
-  // User-deleted success row (M-13). Mirrors deleteAllData's Phase 4 ordering.
-  await auditService.logDelete('User', userId, {
-    email: user.email,
-    reason: 'user_requested',
-  }, { req, userId });
 
   const response: ApiResponse = {
     success: true,

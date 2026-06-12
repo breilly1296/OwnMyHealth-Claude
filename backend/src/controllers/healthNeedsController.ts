@@ -60,7 +60,7 @@ export async function getHealthNeeds(
   res: Response
 ): Promise<void> {
   const userId = req.user!.id;
-  const { status, urgency } = req.query;
+  const { status, urgency, needType } = req.query;
 
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
@@ -70,16 +70,21 @@ export async function getHealthNeeds(
     userId: string;
     status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED';
     urgency?: 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE';
+    needType?: 'CONDITION' | 'ACTION' | 'SERVICE' | 'FOLLOW_UP';
   } = { userId };
 
   const statusFilter = parseStringParam(status);
   const urgencyFilter = parseStringParam(urgency);
+  const needTypeFilter = parseStringParam(needType);
 
   if (statusFilter) {
     where.status = statusFilter as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED';
   }
   if (urgencyFilter) {
     where.urgency = urgencyFilter as 'IMMEDIATE' | 'URGENT' | 'FOLLOW_UP' | 'ROUTINE';
+  }
+  if (needTypeFilter) {
+    where.needType = needTypeFilter as 'CONDITION' | 'ACTION' | 'SERVICE' | 'FOLLOW_UP';
   }
 
   // Pagination happens at the DB layer so a long-tail user doesn't pay
@@ -133,6 +138,7 @@ export async function getHealthNeeds(
     limit,
     status: statusFilter ?? 'all',
     urgency: urgencyFilter ?? 'all',
+    needType: needTypeFilter ?? 'all',
   });
 
   const response: ApiResponse<HealthNeedResponse[]> = {

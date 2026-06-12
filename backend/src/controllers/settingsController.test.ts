@@ -275,6 +275,51 @@ describe('deleteAccount (C-6)', () => {
       })
     );
   });
+
+  // #19: audit_logs.user_id is FK → users(id) ON DELETE SET NULL, so the
+  // User-deleted success row must be inserted on the SAME tx BEFORE
+  // tx.user.delete (a post-delete standalone insert with the deleted userId
+  // raises 23503 and 500s an already-completed deletion).
+  it('writes the success audit row inside the delete tx, before user.delete (#19)', async () => {
+    vi.mocked(storageService.deleteFiles).mockResolvedValue([
+      { storageKey: 'user-123/f1.pdf', ok: true },
+    ]);
+
+    const req = mockReq('user-123', { password: 'correct-horse' });
+    const res = mockRes();
+
+    await deleteAccount(req, res);
+
+    // Threaded onto the enclosing tx, with the deleted id preserved in
+    // metadata for attribution after the FK SET NULLs user_id at delete time.
+    expect(mockAuditService.logDelete).toHaveBeenCalledWith(
+      'User',
+      'user-123',
+      expect.objectContaining({ email: 'user@example.com', reason: 'user_requested' }),
+      expect.objectContaining({ userId: 'user-123', tx: mockTx }),
+      expect.objectContaining({ deletedUserId: 'user-123' })
+    );
+    expect(mockAuditService.logDelete.mock.invocationCallOrder[0]).toBeLessThan(
+      mockTx.user.delete.mock.invocationCallOrder[0]
+    );
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  it('does NOT delete the user when the in-tx success audit write fails (failClosed, #19)', async () => {
+    vi.mocked(storageService.deleteFiles).mockResolvedValue([
+      { storageKey: 'user-123/f1.pdf', ok: true },
+    ]);
+    mockAuditService.logDelete.mockRejectedValueOnce(new Error('audit insert failed'));
+
+    const req = mockReq('user-123', { password: 'correct-horse' });
+    const res = mockRes();
+
+    // The failClosed re-throw propagates out of the tx callback, rolling the
+    // delete back — audit-before-delete means user.delete never even runs.
+    await expect(deleteAccount(req, res)).rejects.toThrow(/audit insert failed/);
+    expect(mockTx.user.delete).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
 });
 
 // =============================================================================

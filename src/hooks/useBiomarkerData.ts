@@ -13,9 +13,48 @@ import type { Biomarker, InsurancePlan } from '../types';
 import { biomarkersApi, insuranceApi } from '../services/api';
 import { dashboardLogger } from '../utils/logger';
 import { transformPlanForDisplay } from '../utils/insurance/insuranceUtils';
+import { normalizeDateToISO } from '../utils/biomarkers/dateNormalizer';
 
 // Demo mode flag - only enabled in development when explicitly set
 const DEMO_MODE = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === 'true';
+
+// Backend clamps list `limit` to 100 (schemas.biomarker.listQuery), so a single
+// large-limit request silently truncates. Page through instead.
+const BIOMARKER_PAGE_SIZE = 100;
+const MAX_BIOMARKER_PAGES = 50;
+
+// Backend rejects batch creates over 100 items (schemas.biomarker.batchCreate),
+// so larger extractions must be split into sequential calls.
+const BIOMARKER_BATCH_LIMIT = 100;
+
+/**
+ * Fetch every page of biomarkers (page size 100, capped at MAX_BIOMARKER_PAGES).
+ * Exported for testing.
+ *
+ * @returns All fetched biomarkers, plus `truncated: true` if the page cap was
+ *          hit before totalPages was exhausted (caller should warn the user).
+ */
+export async function fetchAllBiomarkers(): Promise<{
+  biomarkers: Biomarker[];
+  truncated: boolean;
+}> {
+  const all: Biomarker[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const result = await biomarkersApi.getAll({ page, limit: BIOMARKER_PAGE_SIZE });
+    all.push(...(result.biomarkers as unknown as Biomarker[]));
+    // Older mocks/responses may omit pagination — treat as a single page
+    totalPages = result.pagination?.totalPages ?? 1;
+    page += 1;
+  } while (page <= totalPages && page <= MAX_BIOMARKER_PAGES);
+
+  return { biomarkers: all, truncated: totalPages > MAX_BIOMARKER_PAGES };
+}
+
+const TRUNCATION_WARNING =
+  'Too many biomarker records to load — displayed data may be incomplete.';
 
 interface UseBiomarkerDataOptions {
   user: { id: string; email: string; role: string } | null | undefined;
@@ -117,9 +156,12 @@ export function useBiomarkerData({
       }
 
       try {
-        const result = await biomarkersApi.getAll({ limit: 1000 });
+        const { biomarkers: fetched, truncated } = await fetchAllBiomarkers();
         if (!cancelled) {
-          setBiomarkers(result.biomarkers as unknown as Biomarker[]);
+          setBiomarkers(fetched);
+          if (truncated) {
+            onErrorRef.current(TRUNCATION_WARNING);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -207,8 +249,11 @@ export function useBiomarkerData({
 
     setIsLoading(true);
     try {
-      const result = await biomarkersApi.getAll({ limit: 1000 });
-      setBiomarkers(result.biomarkers as unknown as Biomarker[]);
+      const { biomarkers: fetched, truncated } = await fetchAllBiomarkers();
+      setBiomarkers(fetched);
+      if (truncated) {
+        onErrorRef.current(TRUNCATION_WARNING);
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to refresh biomarkers';
       dashboardLogger.error('Error refreshing biomarkers', { error: errorMsg });
@@ -256,9 +301,11 @@ export function useBiomarkerData({
         unit: newBiomarker.unit,
         date: newBiomarker.date,
         category: newBiomarker.category,
-        normalRangeMin: newBiomarker.normalRange.min,
-        normalRangeMax: newBiomarker.normalRange.max,
-        normalRangeSource: newBiomarker.normalRange.source,
+        normalRange: {
+          min: newBiomarker.normalRange.min,
+          max: newBiomarker.normalRange.max,
+          source: newBiomarker.normalRange.source,
+        },
         notes: newBiomarker.notes,
       });
       setBiomarkers(prev => [...prev, created as unknown as Biomarker]);
@@ -274,6 +321,10 @@ export function useBiomarkerData({
   const handlePDFExtract = useCallback(async (extractedBiomarkers: Partial<Biomarker>[]) => {
     const newBiomarkers = extractedBiomarkers.map(b => ({
       ...b,
+      // The lab parser normalizes report dates, but other extraction callers
+      // may still pass raw US-format dates ("01/15/2026") — the backend only
+      // accepts ISO, and ONE bad date 422s an entire batch.
+      date: normalizeDateToISO(b.date) || new Date().toISOString().split('T')[0],
       id: crypto.randomUUID(),
       history: [],
     })) as Biomarker[];
@@ -283,27 +334,43 @@ export function useBiomarkerData({
       return;
     }
 
-    try {
-      const createData = newBiomarkers.map(b => ({
-        name: b.name,
-        value: b.value,
-        unit: b.unit,
-        date: b.date,
-        category: b.category,
-        normalRangeMin: b.normalRange.min,
-        normalRangeMax: b.normalRange.max,
-        normalRangeSource: b.normalRange.source,
-        sourceFile: b.sourceFile,
-        extractionConfidence: b.extractionConfidence,
-      }));
-      const created = await biomarkersApi.createBatch(createData);
-      setBiomarkers(prev => [...prev, ...created as unknown as Biomarker[]]);
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to save extracted data';
-      dashboardLogger.error('Error saving PDF extracted data', { error: errorMsg });
-      onErrorRef.current(`${errorMsg}. Data added locally but not synced to server.`);
-      setBiomarkers(prev => [...prev, ...newBiomarkers]);
+    const createData = newBiomarkers.map(b => ({
+      name: b.name,
+      value: b.value,
+      unit: b.unit,
+      date: b.date,
+      category: b.category,
+      normalRange: {
+        min: b.normalRange.min,
+        max: b.normalRange.max,
+        source: b.normalRange.source,
+      },
+      // Without an explicit sourceType the backend defaults rows to MANUAL,
+      // losing the lab-upload provenance.
+      sourceType: 'LAB_UPLOAD' as const,
+      sourceFile: b.sourceFile,
+      extractionConfidence: b.extractionConfidence,
+    }));
+
+    // Save in ≤100-item chunks (backend batch cap) and merge the results.
+    const created: Biomarker[] = [];
+    for (let start = 0; start < createData.length; start += BIOMARKER_BATCH_LIMIT) {
+      try {
+        const chunk = await biomarkersApi.createBatch(
+          createData.slice(start, start + BIOMARKER_BATCH_LIMIT)
+        );
+        created.push(...(chunk as unknown as Biomarker[]));
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Failed to save extracted data';
+        dashboardLogger.error('Error saving PDF extracted data', { error: errorMsg });
+        onErrorRef.current(`${errorMsg}. Data added locally but not synced to server.`);
+        // Chunks before `start` are already persisted (server copies are in
+        // `created`); only the unsaved remainder falls back to local copies.
+        setBiomarkers(prev => [...prev, ...created, ...newBiomarkers.slice(start)]);
+        return;
+      }
     }
+    setBiomarkers(prev => [...prev, ...created]);
   }, []);
 
   // Handle clinical file extraction
@@ -328,8 +395,11 @@ export function useBiomarkerData({
   }[]) => {
     const refreshAfterOCR = async () => {
       try {
-        const result = await biomarkersApi.getAll({ limit: 1000 });
-        setBiomarkers(result.biomarkers as unknown as Biomarker[]);
+        const { biomarkers: fetched, truncated } = await fetchAllBiomarkers();
+        setBiomarkers(fetched);
+        if (truncated) {
+          onErrorRef.current(TRUNCATION_WARNING);
+        }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to refresh biomarkers';
         dashboardLogger.error('Error refreshing biomarkers after OCR upload', { error: errorMsg });

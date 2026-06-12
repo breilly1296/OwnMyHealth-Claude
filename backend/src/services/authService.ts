@@ -129,7 +129,8 @@ function prismaUserToUser(prismaUser: PrismaUser): User {
 // ============================================
 // In-Memory Token Blacklist (for access token revocation)
 //
-// Keyed by the raw access-token string → its `exp` (epoch ms). In-memory
+// Keyed by the raw access-token string → its eviction time (epoch ms: the
+// token's `exp`, clamped — see revokeAccessToken). In-memory
 // only: it does NOT survive a restart or span instances, so under horizontal
 // scale a revoked token can still be honored by another replica until its
 // 15-min expiry. Move to a shared store (Redis/Memorystore) when the
@@ -154,24 +155,49 @@ const revokedTokens: Map<string, number> = new Map();
 const TOKENS_VALID_AFTER_TTL_MS = 15_000;
 const tokensValidAfterCache: Map<string, { validAfterMs: number; fetchedAt: number }> = new Map();
 
+// Clock-skew allowance applied when clamping blacklist retention in
+// revokeAccessToken below — covers drift between the issuing instance's
+// clock and this one without materially extending the sweep window.
+const REVOKED_TOKEN_EXP_SKEW_MS = 60 * 1000;
+
+/**
+ * Access-token lifetime in ms, derived from the SAME config value used to
+ * sign access tokens (config.jwt.accessExpiresIn, in seconds — see
+ * generateAccessToken). Falls back to the access-token cookie maxAge when
+ * the configured value isn't a positive number (e.g. a '15m'-style string
+ * in test configs — jsonwebtoken accepts both forms).
+ */
+function accessTokenLifetimeMs(): number {
+  const seconds = Number(config.jwt.accessExpiresIn);
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+  return config.cookie.maxAge.accessToken;
+}
+
 /**
  * Add an access token to the in-memory revocation set. Called from the
  * logout / logout-all / password-change controllers so the route-auth
  * middleware (`isTokenRevoked`) rejects it immediately rather than waiting
- * for natural JWT expiry. Records the token's own `exp` so the sweep can
- * evict it once it can no longer be valid.
+ * for natural JWT expiry.
+ *
+ * SECURITY (blacklist poisoning): the stored expiry is CLAMPED to
+ * now + access-token lifetime (+ small skew). jwt.decode() does NOT verify
+ * the signature, and this function is reachable UNAUTHENTICATED via the
+ * optionalAuth logout route — a forged token claiming exp=year-9999 would
+ * otherwise pin a never-sweepable entry into the Map. A genuine token's exp
+ * can never exceed one lifetime from now (it was signed at most one
+ * lifetime ago), so the clamp loses nothing; when the decoded exp is
+ * EARLIER than the clamp it is kept, so entries are swept as soon as the
+ * token can no longer verify anyway.
  */
 export function revokeAccessToken(token: string): void {
   if (!token) return;
-  // Conservative fallback: assume a full access-token lifetime if we can't
-  // read the token's exp (e.g. malformed). decode() does not verify, which
-  // is fine — the token already passed auth to reach a revoke call site.
-  let expMs = Date.now() + 15 * 60 * 1000;
+  const maxExpMs = Date.now() + accessTokenLifetimeMs() + REVOKED_TOKEN_EXP_SKEW_MS;
+  let expMs = maxExpMs;
   try {
     const decoded = jwt.decode(token) as { exp?: number } | null;
-    if (decoded?.exp) expMs = decoded.exp * 1000;
+    if (decoded?.exp) expMs = Math.min(decoded.exp * 1000, maxExpMs);
   } catch {
-    // keep the conservative fallback
+    // Malformed/undecodable token — keep the clamped fallback.
   }
   revokedTokens.set(token, expMs);
 }

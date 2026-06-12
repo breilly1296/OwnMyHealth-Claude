@@ -1,8 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { createWorker } from 'tesseract.js';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import '../pdf/pdfWorker';
 
 // Enhanced document types
 export interface DocumentParsingResult {

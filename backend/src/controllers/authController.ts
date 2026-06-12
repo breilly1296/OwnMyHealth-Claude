@@ -29,6 +29,7 @@ import {
   revokeAllUserTokens,
   revokeAccessToken,
   refreshTokens,
+  verifyRefreshToken,
   verifyEmail as verifyEmailService,
   resendVerificationEmail as resendVerificationService,
   forgotPassword as forgotPasswordService,
@@ -416,9 +417,21 @@ export async function logout(
 ): Promise<void> {
   const authReq = req as Request & { user?: { id: string; email: string } };
 
-  // Revoke refresh token if present
+  // Revoke refresh token if present. The route uses optionalAuth, so the
+  // HIPAA idle-logoff (which fires at exactly the access-token expiry) still
+  // reaches this revocation with an expired access token. When req.user is
+  // absent, resolve the audit identity from the live session row BEFORE
+  // revoking it — verifyRefreshToken checks the signature, so a forged
+  // cookie can't pollute the audit trail with arbitrary user IDs.
   const refreshTokenValue = req.cookies?.refresh_token;
+  let sessionUser: { id: string; email: string } | undefined;
   if (refreshTokenValue) {
+    if (!authReq.user) {
+      const payload = await verifyRefreshToken(refreshTokenValue);
+      if (payload) {
+        sessionUser = { id: payload.id, email: payload.email };
+      }
+    }
     await revokeRefreshToken(refreshTokenValue);
   }
 
@@ -434,13 +447,16 @@ export async function logout(
     revokeAccessToken(accessTokenValue);
   }
 
-  // Clear cookies
+  // Clear cookies — always, even when no session resolved, so logout is
+  // idempotent and a stale/unknown cookie set never survives a logout.
   clearAuthCookies(res);
 
-  // Audit log: logout
+  // Audit log: logout. Attributed via the access token when present, else
+  // via the refresh-session lookup; unattributed when neither resolves.
+  const auditUser = authReq.user ?? sessionUser;
   const auditService = getAuditService();
-  await auditService.logAuth('LOGOUT', { req, userId: authReq.user?.id }, {
-    email: authReq.user?.email,
+  await auditService.logAuth('LOGOUT', { req, userId: auditUser?.id }, {
+    email: auditUser?.email,
   });
 
   const response: ApiResponse = {

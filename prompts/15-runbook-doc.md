@@ -43,7 +43,7 @@ Produce `New Project Documents/RUNBOOK.md` — the **operator's reference**. Dep
 | `backend/src/schedulers/emailScheduler.ts` | Engagement email scheduler (`startEmailScheduler`, hourly tick: Monday 08:00 UTC weekly summary, daily goal-reminder + plan-expiry sweeps). |
 | `backend/src/routes/internalRoutes.ts` | Cloud Scheduler endpoint `POST /api/v1/internal/audit-cleanup` (shared-secret `X-Cleanup-Token`, 404 when token unset). |
 | `backend/prisma/migrations/` | Migration history (22 dirs) — applied via `prisma migrate deploy` (Dockerfile CMD + railway.toml startCommand). |
-| `scripts/*` | Operator scripts at repo root (NOT `backend/scripts/`): `provider-stats.mjs`, `check-rls-wrappers.sh`, `check-column-sizes.mjs`, `check-enums.mjs`, `check-providers-table.mjs`. |
+| `scripts/*` | Operator scripts at repo root (NOT `backend/scripts/`): `check-rls-wrappers.sh` (the only script there — the old NPI-helper `.mjs` files were deleted). |
 | `docs/INFRA_REDIS_AND_SCHEDULER.md` | Provisioning runbook for Memorystore (REDIS_URL) + Cloud Scheduler audit retention — reuse its real gcloud commands. |
 | `docs/STAGING.md`, `docs/c-8-part-c-runbook.md` | Staging setup + the C-8 NOBYPASSRLS role-cutover runbook (audit-salt migration). |
 | Any recent incident / postmortem notes in repo / memory | Reuse real remediation steps. |

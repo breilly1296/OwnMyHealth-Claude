@@ -256,13 +256,16 @@ export async function apiFetch<T>(
   // Auth-management endpoints must bypass the generic 401 retry path. When
   // /auth/refresh returns 401 the refresh token is terminally invalid —
   // calling attemptTokenRefresh() would hit the same endpoint recursively.
-  // When /auth/logout (or /auth/logout-all) returns 401 the onAuthFailureCallback
-  // calls logout() which re-enters this code path. /auth/logout-all also revokes
-  // every session, so a post-refresh retry would be a no-op against already-
-  // dead sessions. Both loops produced 10,000+ 401s in dev and prevented login
-  // from settling. They are also exempt from the 429 retry so a rate-limited
-  // logout doesn't loop. /auth/login is intentionally NOT exempted — its 401
-  // means wrong credentials, which the UI surfaces.
+  // /auth/logout no longer 401s on an expired access token (it mounts
+  // optionalAuth server-side so the idle-logoff revocation succeeds), but it
+  // stays exempt: any unexpected 401 would trigger onAuthFailureCallback →
+  // logout(), which re-enters this code path. /auth/logout-all is still
+  // authenticate-gated (CAN 401) and revokes every session, so a post-refresh
+  // retry would be a no-op against already-dead sessions. These loops produced
+  // 10,000+ 401s in dev and prevented login from settling. Both are also
+  // exempt from the 429 retry so a rate-limited logout doesn't loop.
+  // /auth/login is intentionally NOT exempted — its 401 means wrong
+  // credentials, which the UI surfaces.
   const isAuthMgmtEndpoint =
     endpoint === '/auth/refresh' ||
     endpoint === '/auth/logout' ||

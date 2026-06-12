@@ -158,6 +158,7 @@ describe('authService', () => {
     };
     vi.mocked(config).cookie = {
         maxAge: {
+            accessToken: 15 * 60 * 1000, // 15 minutes
             refreshToken: 7 * 24 * 60 * 60 * 1000, // 7 days
         }
     };
@@ -541,6 +542,57 @@ describe('authService', () => {
         vi.mocked(jwt.verify).mockImplementationOnce(() => { throw new Error('Invalid token'); }); // Simulate invalid token
         const result = await authService.refreshTokens('invalid-refresh-token');
         expect(result).toBeNull();
+    });
+  });
+
+  // ============================================
+  // Access-Token Revocation Blacklist Tests
+  // ============================================
+  describe('revokeAccessToken blacklist (unauthenticated poisoning clamp)', () => {
+    // Mirrors the mocked config: accessExpiresIn is the '15m'-style string in
+    // this suite, so accessTokenLifetimeMs falls back to
+    // config.cookie.maxAge.accessToken (15 min). Skew allowance is 60s.
+    const LIFETIME_MS = 15 * 60 * 1000;
+    const SKEW_ALLOWANCE_MS = 60 * 1000;
+
+    it('clamps a far-future decoded exp to one access-token lifetime (entry stays sweepable)', () => {
+      // revokeAccessToken is reachable UNAUTHENTICATED via the optionalAuth
+      // logout route, and jwt.decode() does not verify — a forged token
+      // claiming exp=year-9999 must not pin a permanent entry into the Map.
+      const farFutureExp = Math.floor(new Date('9999-01-01T00:00:00Z').getTime() / 1000);
+      vi.mocked(jwt.decode).mockReturnValueOnce({ exp: farFutureExp });
+
+      authService.revokeAccessToken('poisoned-far-future-token');
+      expect(authService.isTokenRevoked('poisoned-far-future-token')).toBe(true);
+
+      // Once a full lifetime (+ skew) has elapsed the sweep MUST evict it.
+      vi.advanceTimersByTime(LIFETIME_MS + SKEW_ALLOWANCE_MS + 1000);
+      authService.sweepRevokedTokens();
+      expect(authService.isTokenRevoked('poisoned-far-future-token')).toBe(false);
+    });
+
+    it('keeps a genuine earlier exp so the entry sweeps as soon as the token dies', () => {
+      const fiveMinExp = Math.floor((Date.now() + 5 * 60 * 1000) / 1000);
+      vi.mocked(jwt.decode).mockReturnValueOnce({ exp: fiveMinExp });
+
+      authService.revokeAccessToken('short-lived-token');
+      expect(authService.isTokenRevoked('short-lived-token')).toBe(true);
+
+      // Swept at the token's own exp — well before the clamp window.
+      vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
+      authService.sweepRevokedTokens();
+      expect(authService.isTokenRevoked('short-lived-token')).toBe(false);
+    });
+
+    it('falls back to the clamped lifetime for an undecodable token', () => {
+      vi.mocked(jwt.decode).mockReturnValueOnce(null);
+
+      authService.revokeAccessToken('garbage-token');
+      expect(authService.isTokenRevoked('garbage-token')).toBe(true);
+
+      vi.advanceTimersByTime(LIFETIME_MS + SKEW_ALLOWANCE_MS + 1000);
+      authService.sweepRevokedTokens();
+      expect(authService.isTokenRevoked('garbage-token')).toBe(false);
     });
   });
 

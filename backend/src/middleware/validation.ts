@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodIssue } from 'zod';
 import { ValidationError, BadRequestError } from './errorHandler.js';
-import { ProviderPatientStatus } from '../../generated/prisma/index.js';
+import { HealthNeedType, ProviderPatientStatus } from '../../generated/prisma/index.js';
 
 /**
  * Validation error detail structure
@@ -395,6 +395,11 @@ export const schemas = {
         }),
         notes: optionalSanitizedString(1000),
         sourceType: z.enum(['MANUAL', 'LAB_UPLOAD', 'EHR_IMPORT', 'DEVICE_SYNC', 'API_IMPORT']).optional(),
+        // Provenance fields — must mirror `create` above. validate() replaces
+        // req.body with the Zod output, so omitting these silently strips them
+        // before bulkCreateBiomarkers can persist them.
+        sourceFile: optionalSanitizedString(255),
+        extractionConfidence: z.number().min(0).max(1).optional(),
         labName: optionalSanitizedString(200),
       })).min(1, 'At least one biomarker is required').max(100, 'Maximum 100 biomarkers per batch'),
     }),
@@ -509,7 +514,9 @@ export const schemas = {
   // ============================================
   healthNeed: {
     create: z.object({
-      needType: z.enum(['CONDITION', 'ACTION', 'SERVICE', 'MEDICATION', 'LIFESTYLE']),
+      // Derive from the Prisma enum so Zod can never drift from the DB
+      // (a literal list here once accepted values Prisma rejected as 500s).
+      needType: z.nativeEnum(HealthNeedType),
       name: sanitizedString(1, 200),
       description: sanitizedString(1, 2000),
       urgency: z.enum(['IMMEDIATE', 'URGENT', 'FOLLOW_UP', 'ROUTINE']),
@@ -531,7 +538,7 @@ export const schemas = {
     listQuery: z.object({
       status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'DISMISSED']).optional(),
       urgency: z.enum(['IMMEDIATE', 'URGENT', 'FOLLOW_UP', 'ROUTINE']).optional(),
-      needType: z.enum(['CONDITION', 'ACTION', 'SERVICE', 'MEDICATION', 'LIFESTYLE']).optional(),
+      needType: z.nativeEnum(HealthNeedType).optional(),
       // Pagination — see healthGoal.listQuery for the rationale.
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
       limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),

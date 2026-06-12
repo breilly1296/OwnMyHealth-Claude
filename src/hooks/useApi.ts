@@ -104,8 +104,10 @@ function useApiFetch<T>(
 
 export function useBiomarkers(category?: string) {
   const fetcher = useCallback(async () => {
-    // High limit to fetch all biomarkers, avoiding pagination issues
-    const result = await biomarkersApi.getAll({ category, limit: 1000 });
+    // Fetches only the FIRST 100 biomarkers — the server clamps `limit` to 100
+    // (schemas.biomarker.listQuery), so this does NOT return everything. For
+    // the complete set, use the paginating fetchAllBiomarkers in useBiomarkerData.
+    const result = await biomarkersApi.getAll({ category, limit: 100 });
     return result.biomarkers;
   }, [category]);
 

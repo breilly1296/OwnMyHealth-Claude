@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../../contexts/AuthContext';
+import { AuthProvider, useAuth, idleNavigation } from '../../contexts/AuthContext';
 
 // Mock the api module
 vi.mock('../../services/api', () => ({
@@ -433,6 +433,279 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(screen.getByTestId('is-authenticated').textContent).toBe('false');
       });
+    });
+  });
+
+  describe('Session Expired Flag (teardown #5 — HIPAA idle logoff)', () => {
+    afterEach(() => {
+      // Restore a clean URL for the other tests.
+      window.history.replaceState(null, '', '/');
+    });
+
+    it('does NOT attempt the silent refresh when ?sessionExpired=true is present', async () => {
+      // The idle logoff redirects to /?sessionExpired=true after revoking the
+      // session server-side. checkAuth must NOT call refreshToken here — a
+      // successful refresh would silently log the user back in and turn the
+      // HIPAA automatic logoff into a page reload.
+      window.history.replaceState(null, '', '/?sessionExpired=true');
+      vi.mocked(authApi.refreshToken).mockResolvedValue({ token: 'mock-token' });
+      vi.mocked(authApi.getCurrentUser).mockResolvedValue({
+        id: '1',
+        email: 'existing@example.com',
+        role: 'user',
+      });
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-loading').textContent).toBe('false');
+      });
+
+      expect(authApi.refreshToken).not.toHaveBeenCalled();
+      expect(authApi.getCurrentUser).not.toHaveBeenCalled();
+      expect(screen.getByTestId('is-authenticated').textContent).toBe('false');
+      // The login page surfaces the reason via the context error.
+      expect(screen.getByTestId('error').textContent).toContain('session ended due to inactivity');
+    });
+
+    it('strips sessionExpired from the URL so a post-login reload is unaffected', async () => {
+      window.history.replaceState(null, '', '/?sessionExpired=true');
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-loading').textContent).toBe('false');
+      });
+
+      expect(window.location.search).toBe('');
+    });
+  });
+
+  describe('Multi-tab idle sync + idle-fire redirect (BroadcastChannel)', () => {
+    // Minimal synchronous BroadcastChannel stub: jsdom doesn't implement the
+    // API, and Node's real implementation delivers messages asynchronously,
+    // which fake timers can't advance deterministically.
+    class MockBroadcastChannel {
+      static instances = new Map<string, Set<MockBroadcastChannel>>();
+      static reset(): void {
+        MockBroadcastChannel.instances.clear();
+      }
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      private closed = false;
+      constructor(public readonly name: string) {
+        let peers = MockBroadcastChannel.instances.get(name);
+        if (!peers) {
+          peers = new Set();
+          MockBroadcastChannel.instances.set(name, peers);
+        }
+        peers.add(this);
+      }
+      postMessage(data: unknown): void {
+        if (this.closed) throw new Error('Channel is closed');
+        for (const peer of MockBroadcastChannel.instances.get(this.name) ?? []) {
+          if (peer !== this && !peer.closed) {
+            peer.onmessage?.({ data } as MessageEvent);
+          }
+        }
+      }
+      close(): void {
+        this.closed = true;
+        MockBroadcastChannel.instances.get(this.name)?.delete(this);
+      }
+    }
+
+    const FIFTEEN_MIN = 15 * 60 * 1000;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.stubGlobal('BroadcastChannel', MockBroadcastChannel);
+      // jsdom's Location is [LegacyUnforgeable] — window.location can't be
+      // redefined via Object.defineProperty — so the idle redirect goes
+      // through this spy-able seam instead.
+      vi.spyOn(idleNavigation, 'redirectToSessionExpired').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      MockBroadcastChannel.reset();
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    // Drains the promise chains (session restore, logout retries) that fake
+    // timers don't advance. Each await yields one microtask turn; ten turns
+    // comfortably covers the deepest chain under test.
+    async function flushAsync(): Promise<void> {
+      await act(async () => {
+        for (let i = 0; i < 10; i++) {
+          await Promise.resolve();
+        }
+      });
+    }
+
+    async function renderAuthenticated(): Promise<void> {
+      vi.mocked(authApi.refreshToken).mockResolvedValue({ token: 'mock-token' });
+      vi.mocked(authApi.getCurrentUser).mockResolvedValue({
+        id: '1',
+        email: 'tabs@example.com',
+        role: 'user',
+      });
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+      await flushAsync();
+      expect(screen.getByTestId('is-authenticated').textContent).toBe('true');
+    }
+
+    it("an incoming cross-tab 'activity' message defers the idle fire", async () => {
+      vi.mocked(authApi.logout).mockResolvedValue(undefined);
+      await renderAuthenticated();
+      const siblingTab = new MockBroadcastChannel('omh-session-activity');
+
+      // 14 minutes idle locally — one minute from the logout fire.
+      act(() => {
+        vi.advanceTimersByTime(14 * 60 * 1000);
+      });
+
+      // The user types in ANOTHER tab; that tab broadcasts an activity ping.
+      act(() => {
+        siblingTab.postMessage({ type: 'activity' });
+      });
+
+      // 14 more minutes: without the ping this tab would have fired 13
+      // minutes ago; with it only 14 minutes have passed since activity.
+      act(() => {
+        vi.advanceTimersByTime(14 * 60 * 1000);
+      });
+      await flushAsync();
+      expect(authApi.logout).not.toHaveBeenCalled();
+      expect(idleNavigation.redirectToSessionExpired).not.toHaveBeenCalled();
+
+      // Cross the full 15-minute window with no further activity → fires.
+      act(() => {
+        vi.advanceTimersByTime(60 * 1000 + 1000);
+      });
+      await flushAsync();
+      expect(authApi.logout).toHaveBeenCalled();
+      expect(idleNavigation.redirectToSessionExpired).toHaveBeenCalled();
+    });
+
+    it("an incoming 'logged-out' message redirects to the sessionExpired path without re-revoking", async () => {
+      await renderAuthenticated();
+      const siblingTab = new MockBroadcastChannel('omh-session-activity');
+
+      act(() => {
+        siblingTab.postMessage({ type: 'logged-out' });
+      });
+
+      expect(idleNavigation.redirectToSessionExpired).toHaveBeenCalledTimes(1);
+      // The initiating tab already revoked the shared session; this tab must
+      // not fire a duplicate logout call.
+      expect(authApi.logout).not.toHaveBeenCalled();
+    });
+
+    it("the idle-firing tab broadcasts 'logged-out' to sibling tabs", async () => {
+      vi.mocked(authApi.logout).mockResolvedValue(undefined);
+      await renderAuthenticated();
+      const received: Array<{ type?: string }> = [];
+      const siblingTab = new MockBroadcastChannel('omh-session-activity');
+      siblingTab.onmessage = (event) => received.push(event.data as { type?: string });
+
+      act(() => {
+        vi.advanceTimersByTime(FIFTEEN_MIN + 1000);
+      });
+      await flushAsync();
+
+      expect(received).toContainEqual({ type: 'logged-out' });
+    });
+
+    it('throttles local activity broadcasts to one ping per 30s window', async () => {
+      await renderAuthenticated();
+      const received: Array<{ type?: string }> = [];
+      const siblingTab = new MockBroadcastChannel('omh-session-activity');
+      siblingTab.onmessage = (event) => received.push(event.data as { type?: string });
+
+      act(() => {
+        window.dispatchEvent(new Event('keydown'));
+        window.dispatchEvent(new Event('keydown'));
+        window.dispatchEvent(new Event('mousedown'));
+      });
+      // Burst of local activity → exactly one ping (no message flood).
+      expect(received.filter((m) => m.type === 'activity')).toHaveLength(1);
+
+      act(() => {
+        vi.advanceTimersByTime(30 * 1000);
+        window.dispatchEvent(new Event('keydown'));
+      });
+      expect(received.filter((m) => m.type === 'activity')).toHaveLength(2);
+    });
+
+    it('idle fire awaits logout() before navigating and retries exactly once on failure', async () => {
+      let rejectFirst!: (error: Error) => void;
+      let resolveSecond!: () => void;
+      vi.mocked(authApi.logout)
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((_resolve, reject) => {
+              rejectFirst = reject;
+            })
+        )
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              resolveSecond = resolve;
+            })
+        );
+      await renderAuthenticated();
+
+      // Idle fires — logout attempt #1 is in flight; navigation must wait
+      // until the server-side revocation (the HIPAA-relevant part) settles.
+      act(() => {
+        vi.advanceTimersByTime(FIFTEEN_MIN + 1000);
+      });
+      await flushAsync();
+      expect(authApi.logout).toHaveBeenCalledTimes(1);
+      expect(idleNavigation.redirectToSessionExpired).not.toHaveBeenCalled();
+
+      // Attempt #1 fails → exactly one retry, still no navigation.
+      await act(async () => {
+        rejectFirst(new Error('network blip'));
+      });
+      await flushAsync();
+      expect(authApi.logout).toHaveBeenCalledTimes(2);
+      expect(idleNavigation.redirectToSessionExpired).not.toHaveBeenCalled();
+
+      // Retry settles → the redirect finally happens.
+      await act(async () => {
+        resolveSecond();
+      });
+      await flushAsync();
+      expect(idleNavigation.redirectToSessionExpired).toHaveBeenCalledTimes(1);
+    });
+
+    it('still navigates (after exactly two logout attempts) when logout keeps failing', async () => {
+      vi.mocked(authApi.logout).mockRejectedValue(new Error('server down'));
+      await renderAuthenticated();
+
+      act(() => {
+        vi.advanceTimersByTime(FIFTEEN_MIN + 1000);
+      });
+      await flushAsync();
+
+      // One retry only — never a third attempt — and the redirect still
+      // happens (the ?sessionExpired flag suppresses silent re-auth).
+      expect(authApi.logout).toHaveBeenCalledTimes(2);
+      expect(idleNavigation.redirectToSessionExpired).toHaveBeenCalled();
     });
   });
 

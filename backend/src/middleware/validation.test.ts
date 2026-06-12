@@ -481,6 +481,107 @@ describe('validation middleware', () => {
     });
   });
 
+  // ============================================
+  // Frontend contract tests (teardown finding #1)
+  // ============================================
+  // Payloads below are shaped EXACTLY like the client sends them
+  // (src/services/api/biomarkers.ts CreateBiomarkerData via
+  // src/hooks/useBiomarkerData.ts). The client historically sent FLAT
+  // normalRangeMin/Max/Source keys, which these schemas reject — so every
+  // manual-entry and PDF-extract write 422'd. These tests pin the nested
+  // contract so client/server can never silently drift again.
+  describe('Biomarker Client Payload Contract', () => {
+    it('should accept the create payload shape sent by handleAddMeasurement', () => {
+      const result = schemas.biomarker.create.safeParse({
+        name: 'Glucose',
+        value: 95,
+        unit: 'mg/dL',
+        date: '2026-01-15',
+        category: 'Blood',
+        normalRange: { min: 70, max: 100, source: 'Standard Reference' },
+        notes: 'Fasting sample',
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.normalRange).toEqual({
+          min: 70,
+          max: 100,
+          source: 'Standard Reference',
+        });
+      }
+    });
+
+    it('should accept the batch payload shape sent by handlePDFExtract', () => {
+      // sourceFile/extractionConfidence are provenance fields the client sends
+      // and bulkCreateBiomarkers persists. The batch item schema historically
+      // omitted them, so Zod stripped them (validate() replaces req.body with
+      // the Zod output) and they always arrived undefined — assert they
+      // survive parsing so the schema can't silently drop them again.
+      const result = schemas.biomarker.batchCreate.safeParse({
+        biomarkers: [
+          {
+            name: 'Hemoglobin A1c',
+            value: 5.4,
+            unit: '%',
+            date: '2026-01-15',
+            category: 'Blood',
+            normalRange: { min: 4, max: 5.6, source: 'Standard Reference' },
+            sourceType: 'LAB_UPLOAD',
+            sourceFile: 'lab-report.pdf',
+            extractionConfidence: 0.92,
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.biomarkers[0].normalRange).toEqual({
+          min: 4,
+          max: 5.6,
+          source: 'Standard Reference',
+        });
+        expect(result.data.biomarkers[0].sourceType).toBe('LAB_UPLOAD');
+        expect(result.data.biomarkers[0].sourceFile).toBe('lab-report.pdf');
+        expect(result.data.biomarkers[0].extractionConfidence).toBe(0.92);
+      }
+    });
+
+    it('should accept an update payload editing only the normal range', () => {
+      const result = schemas.biomarker.update.safeParse({
+        normalRange: { min: 65, max: 99, source: 'Lab Specific' },
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        // Guard against the range edit being silently stripped to a no-op
+        expect(result.data.normalRange).toEqual({
+          min: 65,
+          max: 99,
+          source: 'Lab Specific',
+        });
+      }
+    });
+
+    it('should reject the legacy FLAT normalRange* create shape (regression)', () => {
+      const result = schemas.biomarker.create.safeParse({
+        name: 'Glucose',
+        value: 95,
+        unit: 'mg/dL',
+        date: '2026-01-15',
+        category: 'Blood',
+        normalRangeMin: 70,
+        normalRangeMax: 100,
+        normalRangeSource: 'Standard Reference',
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some(i => i.path[0] === 'normalRange')).toBe(true);
+      }
+    });
+  });
+
   describe('Date Validation', () => {
     it('should accept ISO date format', () => {
       const req = createMockRequest({

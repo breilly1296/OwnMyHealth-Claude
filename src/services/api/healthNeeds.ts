@@ -52,7 +52,9 @@ export const healthNeedsApi = {
   },
 
   async updateStatus(id: string, status: string): Promise<HealthNeedData> {
-    const response = await apiFetch<HealthNeedData>(`/health-needs/${id}/status`, {
+    // Backend mounts PATCH /health-needs/:id (no /status suffix) — the
+    // update schema accepts a partial body, so { status } alone is valid.
+    const response = await apiFetch<HealthNeedData>(`/health-needs/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });

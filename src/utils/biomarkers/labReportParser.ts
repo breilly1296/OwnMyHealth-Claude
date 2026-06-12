@@ -9,8 +9,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { createWorker, Worker } from 'tesseract.js';
 import type { Biomarker, NormalRange } from '../../types';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import { normalizeDateToISO } from './dateNormalizer';
+import '../pdf/pdfWorker';
 
 // ============================================
 // Types
@@ -663,46 +663,69 @@ async function performOCR(
 }
 
 /**
+ * Lazily create the tesseract OCR worker — ONLY for the OCR fallback paths.
+ *
+ * Tesseract 5.x spawns a blob: worker that importScripts its engine from
+ * cdn.jsdelivr.net, which the CSP (`script-src 'self'`) blocks. Creating the
+ * worker eagerly used to take down even the pdf.js text-extraction path for
+ * regular text PDFs; failure here must only affect scanned documents.
+ */
+async function createOCRWorker(): Promise<Worker> {
+  try {
+    return await createWorker('eng');
+  } catch {
+    // Sanitized — the underlying CSP/network error is not useful to users.
+    throw new Error(
+      'Scanned-document OCR is not available in the browser. Please use the server-side lab report upload instead.'
+    );
+  }
+}
+
+/**
  * Extract text from document (PDF or image)
  */
 export async function extractTextFromLabReport(
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  const worker = await createWorker('eng');
+  if (file.type === 'application/pdf') {
+    // First try direct text extraction from PDF — no OCR worker involved, so
+    // text PDFs work even where tesseract cannot start (see createOCRWorker).
+    const directText = await extractTextFromPDF(file);
 
-  try {
-    let fullText = '';
-
-    if (file.type === 'application/pdf') {
-      // First try direct text extraction from PDF
-      const directText = await extractTextFromPDF(file);
-
-      // Check if we got meaningful text
-      if (directText.trim().length > 100) {
-        fullText = directText;
-        onProgress?.(100);
-      } else {
-        // Fall back to OCR for scanned PDFs
-        const images = await pdfToImages(file);
-        const totalPages = images.length;
-
-        for (let i = 0; i < images.length; i++) {
-          const pageText = await performOCR(images[i], worker);
-          fullText += pageText + '\n';
-          onProgress?.(Math.round(((i + 1) / totalPages) * 100));
-        }
-      }
-    } else if (file.type.startsWith('image/')) {
-      // Direct OCR for images
-      fullText = await performOCR(file, worker, onProgress);
-    } else {
-      throw new Error('Unsupported file type. Please upload a PDF or image file.');
+    // Check if we got meaningful text
+    if (directText.trim().length > 100) {
+      onProgress?.(100);
+      return directText;
     }
 
-    return fullText;
-  } finally {
-    await worker.terminate();
+    // Fall back to OCR for scanned PDFs
+    const worker = await createOCRWorker();
+    try {
+      const images = await pdfToImages(file);
+      const totalPages = images.length;
+      let fullText = '';
+
+      for (let i = 0; i < images.length; i++) {
+        const pageText = await performOCR(images[i], worker);
+        fullText += pageText + '\n';
+        onProgress?.(Math.round(((i + 1) / totalPages) * 100));
+      }
+
+      return fullText;
+    } finally {
+      await worker.terminate();
+    }
+  } else if (file.type.startsWith('image/')) {
+    // Direct OCR for images
+    const worker = await createOCRWorker();
+    try {
+      return await performOCR(file, worker, onProgress);
+    } finally {
+      await worker.terminate();
+    }
+  } else {
+    throw new Error('Unsupported file type. Please upload a PDF or image file.');
   }
 }
 
@@ -926,6 +949,12 @@ function convertToBiomarkers(
   reportDate?: string,
   sourceFile?: string
 ): Partial<Biomarker>[] {
+  // Lab headers capture US-format dates ("01/15/2026", "1-15-26") but the
+  // backend dateString validator only accepts ISO — one raw date would 422
+  // the ENTIRE batch save. Normalize once; unparseable dates fall back to
+  // today (matching the existing "Report date could not be determined" path).
+  const isoDate = normalizeDateToISO(reportDate) || new Date().toISOString().split('T')[0];
+
   return extracted.map(data => {
     const mapping = findBiomarkerMapping(data.name);
 
@@ -934,7 +963,7 @@ function convertToBiomarkers(
         name: data.name,
         value: data.value,
         unit: data.unit,
-        date: reportDate || new Date().toISOString().split('T')[0],
+        date: isoDate,
         category: 'Other' as BiomarkerCategory,
         normalRange: data.referenceRange
           ? { ...data.referenceRange, source: 'Lab Report' }
@@ -948,7 +977,7 @@ function convertToBiomarkers(
       name: mapping.standardName,
       value: data.value,
       unit: mapping.unit,
-      date: reportDate || new Date().toISOString().split('T')[0],
+      date: isoDate,
       category: mapping.category,
       normalRange: data.referenceRange
         ? { ...data.referenceRange, source: 'Lab Report' }

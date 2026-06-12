@@ -1,8 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { InsurancePlan, InsuranceBenefit, InsuranceCost, SBCProcessingResult, CoverageDetails } from '../../types';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import '../pdf/pdfWorker';
 
 // SBC parsing patterns for different insurance elements
 const SBC_PATTERNS = {

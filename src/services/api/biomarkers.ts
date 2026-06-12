@@ -29,16 +29,23 @@ export interface BiomarkerHistory {
   notes?: string;
 }
 
+// Shape must match backend schemas.biomarker.create/batchCreate/update
+// (backend/src/middleware/validation.ts) — the backend requires a NESTED
+// normalRange object; flat normalRangeMin/Max keys are rejected with 422.
 export interface CreateBiomarkerData {
   name: string;
   value: number;
   unit: string;
   date: string;
   category: string;
-  normalRangeMin: number;
-  normalRangeMax: number;
-  normalRangeSource?: string;
+  normalRange: {
+    min: number;
+    max: number;
+    source?: string;
+  };
   notes?: string;
+  // Must mirror the backend enum (schemas.biomarker.create/batchCreate)
+  sourceType?: 'MANUAL' | 'LAB_UPLOAD' | 'EHR_IMPORT' | 'DEVICE_SYNC' | 'API_IMPORT';
   sourceFile?: string;
   extractionConfidence?: number;
 }

@@ -41,6 +41,32 @@ const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 const INACTIVITY_WARNING_MS = 13 * 60 * 1000; // 2 minutes before logout
 const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const;
 
+// Cross-tab session-activity channel. The idle fire genuinely revokes the
+// SHARED refresh session, so a tab left idle in the background must not
+// force-logout a sibling tab the user is actively typing in (the warning
+// dialog only renders in the idle tab). Tabs broadcast plain
+// { type: 'activity' } pings — throttled below — so every tab's idle timers
+// track the user's LAST activity anywhere, and the tab that does idle-fire
+// broadcasts { type: 'logged-out' } so siblings follow the same
+// sessionExpired redirect immediately instead of dying on their next 401.
+// Payloads are bare type strings only — no PHI ever crosses the channel.
+const SESSION_ACTIVITY_CHANNEL = 'omh-session-activity';
+// One ping per 30s is enough: the idle window is 15 minutes, so up to 30s of
+// cross-tab drift is immaterial, and the throttle keeps high-frequency
+// events (scroll) from becoming a message flood.
+const ACTIVITY_BROADCAST_MIN_INTERVAL_MS = 30 * 1000;
+
+// Hard navigation used by the idle logoff. Routed through an object property
+// rather than an inline `window.location.href = ...` so tests can spy on the
+// redirect: jsdom implements Location as [LegacyUnforgeable], which makes
+// window.location impossible to stub via Object.defineProperty.
+// eslint-disable-next-line react-refresh/only-export-components
+export const idleNavigation = {
+  redirectToSessionExpired(): void {
+    window.location.href = '/?sessionExpired=true';
+  },
+};
+
 /**
  * User object stored in auth context
  * Contains only non-PHI identification data
@@ -88,10 +114,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Each activity-event firing resets both timers; we want cheap mutation.
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Last time this tab broadcast an activity ping to siblings (epoch ms).
+  const lastActivityBroadcastRef = useRef(0);
 
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
+      // HIPAA automatic logoff lands here with ?sessionExpired=true after the
+      // server-side session was revoked. Do NOT attempt the silent refresh —
+      // if revocation raced or failed it would resurrect the session and turn
+      // the "logoff" into a page reload. Leave the user signed out and tell
+      // them why on the login page.
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('sessionExpired') === 'true') {
+        // Strip the flag so a post-login reload doesn't bounce the user out.
+        params.delete('sessionExpired');
+        const rest = params.toString();
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + (rest ? `?${rest}` : '') + window.location.hash
+        );
+        setUser(null);
+        setError('Your session ended due to inactivity. Please sign in again.');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // CRITICAL FIX: Call refreshToken FIRST to get a fresh access token.
         // The access token cookie expires after 15 min, but refresh token lasts 7 days.
@@ -186,6 +235,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // End the session, then force-reload to login so any in-memory PHI in
+  // other open tabs/pages is discarded; a plain SPA route change would keep
+  // the React tree. The logout call MUST settle before the redirect: the
+  // server-side refresh-session revoke is the HIPAA-relevant part, and the
+  // reload triggers checkAuth which must find the session already dead.
+  // One retry covers a transient network blip before we give up and rely on
+  // the ?sessionExpired flag to suppress the silent re-auth on reload.
+  const forceLogoutAndRedirect = useCallback(async () => {
+    try {
+      await logout();
+    } catch {
+      try {
+        await logout();
+      } catch {
+        // Local state is already cleared by logout()'s finally; the flag in
+        // the redirect URL keeps checkAuth from resurrecting the session.
+      }
+    }
+    // Tell sibling tabs the SHARED refresh session is gone so they redirect
+    // to the sessionExpired login path now instead of dying on their next
+    // 401. A fresh channel is used because logout() clearing `user` above
+    // tears down the watchdog effect (and its channel) before we get here.
+    // Payload is a bare type string — no PHI crosses the channel.
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const channel = new BroadcastChannel(SESSION_ACTIVITY_CHANNEL);
+        channel.postMessage({ type: 'logged-out' });
+        channel.close();
+      } catch {
+        // Best-effort: siblings fall back to their own 401 handling.
+      }
+    }
+    idleNavigation.redirectToSessionExpired();
+  }, [logout]);
+
   // Reset both idle timers — called on user activity and when the user
   // clicks "Stay signed in" on the warning dialog. Memoized so the effect
   // below doesn't re-subscribe event listeners on every render.
@@ -195,13 +279,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIdleWarningVisible(false);
     warnTimerRef.current = setTimeout(() => setIdleWarningVisible(true), INACTIVITY_WARNING_MS);
     logoutTimerRef.current = setTimeout(() => {
-      // Force-reload to login so any in-memory PHI in other open tabs/pages
-      // is discarded; a plain SPA route change would keep the React tree.
-      void logout().finally(() => {
-        window.location.href = '/?sessionExpired=true';
-      });
+      void forceLogoutAndRedirect();
     }, INACTIVITY_TIMEOUT_MS);
-  }, [logout]);
+  }, [forceLogoutAndRedirect]);
 
   // Inactivity watchdog — only runs while authenticated. Activity events
   // are the standard HIPAA-scope set: typing, clicking, touching, scrolling.
@@ -215,7 +295,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const handleActivity = () => resetIdleTimers();
+    // Cross-tab activity sync (guarded — older WebViews/jsdom lack the API;
+    // those environments just keep per-tab idle behavior).
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      channel = new BroadcastChannel(SESSION_ACTIVITY_CHANNEL);
+      channel.onmessage = (event: MessageEvent) => {
+        const type = (event.data as { type?: string } | null)?.type;
+        if (type === 'activity') {
+          // A sibling tab saw real user activity — defer our idle fire
+          // exactly like local activity, but WITHOUT re-broadcasting so two
+          // tabs can't ping-pong each other's sessions alive forever.
+          resetIdleTimers();
+        } else if (type === 'logged-out') {
+          // A sibling tab idle-fired and revoked the shared refresh session.
+          // Follow it to the sessionExpired login path immediately.
+          idleNavigation.redirectToSessionExpired();
+        }
+      };
+    }
+
+    const handleActivity = () => {
+      resetIdleTimers();
+      if (channel) {
+        const now = Date.now();
+        if (now - lastActivityBroadcastRef.current >= ACTIVITY_BROADCAST_MIN_INTERVAL_MS) {
+          lastActivityBroadcastRef.current = now;
+          try {
+            channel.postMessage({ type: 'activity' });
+          } catch {
+            // Channel raced a close on unmount — local timers still reset.
+          }
+        }
+      }
+    };
     for (const evt of ACTIVITY_EVENTS) {
       window.addEventListener(evt, handleActivity, { passive: true });
     }
@@ -227,6 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      if (channel) channel.close();
     };
   }, [user, resetIdleTimers]);
 
@@ -280,9 +394,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => {
-                  void logout().finally(() => {
-                    window.location.href = '/?sessionExpired=true';
-                  });
+                  void forceLogoutAndRedirect();
                 }}
                 className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
               >

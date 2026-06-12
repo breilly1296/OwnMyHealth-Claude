@@ -467,7 +467,7 @@ This is the script that validates every controller wraps Prisma in `withRLSConte
 bash scripts/check-rls-wrappers.sh   # prints "RLS wrapper check passed." or fails CI
 ```
 
-Other operator scripts at repo root: `provider-stats.mjs`, `check-column-sizes.mjs`, `check-enums.mjs`, `check-providers-table.mjs`, `delete-test-providers.mjs`, `import-fl-providers.mjs`.
+It is the only operator script in the repo-root `scripts/` directory.
 
 ---
 
@@ -780,5 +780,3 @@ Re-verify the [Acceptance questions](#acceptance-questions) quarterly per `_doc-
 - **Migration count:** the spec (`15-runbook-doc.md:45`) says "22 dirs"; the live `backend/prisma/migrations/` directory holds **22 migration dirs + `migration_lock.toml`** (confirmed: `00000000000000_initial_schema` … `20260601_add_email_change`). Count matches.
 - **Prod DB name conflict:** `docs/STAGING.md:16` lists the prod DB as `ownmyhealth`, while CLAUDE.md/project memory records `verifymyprovider`, and the spec's environments table (`15-runbook-doc.md:120`) repeats `verifymyprovider`. These three disagree; the authoritative value is the live Cloud Run `DATABASE_URL` secret. Documented as a reconcile-in-GCP TBD in [§2](#2-environments).
 - **`docs/c-8-part-c-runbook.md` RLS table is stale on DNA/genetics:** it lists `dna_data`, `dna_variants`, `genetic_traits` as RLS-enabled tables (`:47,153`), but those models were dropped in migration `20260423_drop_dna_genetics` (per `_phi-inventory.md:72-73`). The C-8 runbook predates the drop; its 16-table grant verification query is correspondingly stale. Flag for the prompt author to refresh the C-8 runbook.
-- **`scripts/` has more than the spec lists:** spec (`15-runbook-doc.md:46`) names 5 scripts; the repo root `scripts/` also contains `delete-test-providers.mjs` and `import-fl-providers.mjs` (NPI-import helpers, not OwnMyHealth-runtime). Noted in [§10](#check-rls-wrapperssh).
-- **`provider-stats.mjs` is referenced by the spec but is an NPI/provider-DB helper**, not an OwnMyHealth operator script in the deploy sense — kept in the script list for completeness but not load-bearing for this runbook.

@@ -3,7 +3,7 @@
  *
  * Scope: CRUD basics, status transitions, and biomarker analysis behavior.
  *   - getHealthNeeds: urgency ordering (IMMEDIATE → URGENT → FOLLOW_UP →
- *     ROUTINE, then createdAt desc) and status/urgency filter pass-through.
+ *     ROUTINE, then createdAt desc) and status/urgency/needType filter pass-through.
  *   - createHealthNeed: encrypts description via `descriptionEncrypted`.
  *   - updateHealthNeedStatus: sets `resolvedAt` only when the new status
  *     is COMPLETED; other transitions (IN_PROGRESS, DISMISSED) leave it alone.
@@ -159,6 +159,27 @@ describe('getHealthNeeds', () => {
           userId: 'user-123',
           status: 'IN_PROGRESS',
           urgency: 'IMMEDIATE',
+        },
+      })
+    );
+  });
+
+  it('passes the needType filter through to the findMany where clause', async () => {
+    mockTx.healthNeed.findMany.mockResolvedValue([]);
+
+    const req = createMockRequest({
+      user: { id: 'user-123', email: 't@e.co', role: 'PATIENT' },
+      query: { needType: 'CONDITION' },
+    });
+    const res = createMockResponse();
+
+    await getHealthNeeds(req, res);
+
+    expect(mockTx.healthNeed.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'user-123',
+          needType: 'CONDITION',
         },
       })
     );
