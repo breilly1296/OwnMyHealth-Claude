@@ -538,6 +538,49 @@ describe('authService', () => {
         );
     });
 
+    it('refreshTokens revokes the whole token family on reuse outside the grace window (M-1)', async () => {
+        // A signature-valid refresh token whose JTI was never rotated by THIS
+        // instance (e.g. a stolen token the attacker rotated, presented later).
+        vi.mocked(jwt.verify).mockReturnValue({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'stolen-jti-never-rotated' } as MockJwtPayload);
+        // No locked session row → token already consumed → reuse path.
+        mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+        mockPrisma.session.deleteMany.mockResolvedValueOnce({ count: 3 });
+        mockPrisma.user.update.mockResolvedValueOnce({ ...MOCK_USER, tokensValidAfter: new Date() });
+
+        const result = await authService.refreshTokens('stolen-but-rotated-token');
+
+        expect(result).toBeNull();
+        // Family revoked: all sessions wiped + tokensValidAfter stamped so
+        // in-flight access tokens die cross-instance too.
+        expect(mockPrisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: MOCK_USER_ID } });
+        expect(mockPrisma.user.update).toHaveBeenCalledWith(
+            expect.objectContaining({ data: expect.objectContaining({ tokensValidAfter: expect.any(Date) }) })
+        );
+    });
+
+    it('refreshTokens does NOT revoke the family for a double-tab race within the grace window (M-1)', async () => {
+        // Tab A wins: a successful rotation marks jti 'race-jti' as just-rotated.
+        vi.mocked(jwt.verify).mockReturnValue({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'race-jti' } as MockJwtPayload);
+        mockPrisma.$queryRaw.mockResolvedValueOnce([
+            { id: 'race-jti', userId: MOCK_USER_ID, expiresAt: new Date(Date.now() + 10000) },
+        ]);
+        mockPrisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
+        mockPrisma.session.delete.mockResolvedValueOnce({});
+        vi.mocked(uuidv4).mockReturnValueOnce('race-new-jti');
+        await authService.refreshTokens('winner-token');
+
+        // Tab B loses: replays the SAME token a moment later. Row is gone → reuse
+        // path, but within the grace window → benign race → family left intact.
+        vi.mocked(jwt.verify).mockReturnValue({ id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', type: 'refresh', jti: 'race-jti' } as MockJwtPayload);
+        mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+        mockPrisma.session.deleteMany.mockClear();
+
+        const result = await authService.refreshTokens('loser-token');
+
+        expect(result).toBeNull();
+        expect(mockPrisma.session.deleteMany).not.toHaveBeenCalled();
+    });
+
     it('refreshTokens should return null for an invalid refresh token', async () => {
         vi.mocked(jwt.verify).mockImplementationOnce(() => { throw new Error('Invalid token'); }); // Simulate invalid token
         const result = await authService.refreshTokens('invalid-refresh-token');
@@ -865,6 +908,21 @@ describe('authService', () => {
         expect(result.success).toBe(false);
         expect(result.error).toContain('Email not verified');
         expect(result.emailNotVerified).toBe(true);
+    });
+
+    it('does NOT leak verification status on a WRONG password for an unverified account (L-1)', async () => {
+        // Enumeration oracle fix: a wrong password against a registered-but-
+        // unverified account must look identical to an unknown email (generic
+        // "invalid email or password"), NOT return EMAIL_NOT_VERIFIED.
+        mockPrisma.user.findUnique.mockResolvedValueOnce({ ...MOCK_USER, emailVerified: false });
+        vi.mocked(bcrypt.compare).mockResolvedValueOnce(false); // wrong password
+        mockPrisma.user.update.mockResolvedValueOnce({ ...MOCK_USER, emailVerified: false, failedLoginAttempts: 1 });
+
+        const result = await authService.attemptLogin(MOCK_EMAIL, 'wrong-password');
+
+        expect(result.success).toBe(false);
+        expect(result.emailNotVerified).toBeUndefined();
+        expect(result.error).toContain('Invalid email or password');
     });
 
     it('should return error if account is inactive for regular user', async () => {
