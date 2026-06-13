@@ -85,10 +85,9 @@ vi.mock('../services/userEncryption.js', () => ({
 
 vi.mock('../services/aiCostTracker.js', () => ({
   trackAIUsage: vi.fn(),
-  // aiSpendGuard middleware (now on the guidance route) reads this.
-  isAISpendExceeded: vi.fn(() => ({ exceeded: false, scope: null })),
-  // L-3: the guard reserves an in-flight estimate and gets back a settle fn.
-  reserveAISpend: vi.fn(() => vi.fn()),
+  // The controller only uses trackAIUsage; admitAISpend is mocked too so the
+  // module stub stays complete if the guard is ever exercised here.
+  admitAISpend: vi.fn(async () => ({ admitted: true, scope: null, settle: vi.fn() })),
 }));
 
 // Post-F-29: route now uses the shared anthropicClient SDK. Stub

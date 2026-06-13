@@ -534,8 +534,8 @@ Eight named rate limiters live in `rateLimiter.ts` (`standardLimiter:17`, `authL
 **Setting `REDIS_URL`** switches all limiters to a **shared Memorystore Redis store** so counters are consistent across instances (`config/index.ts:121-127`, `rateLimitStore.ts:32-64`):
 
 ```ts
-// Source: backend/src/middleware/rateLimitStore.ts:32-53 (intervening lines elided)
-function getClient(): RedisLike | null {
+// Source: backend/src/middleware/rateLimitStore.ts (intervening lines elided)
+export function getRedisClient(): RedisLike | null {
   if (!config.redis.url) return null;          // unset → undefined store → MemoryStore
   if (initialized) return client;
   initialized = true;
@@ -564,7 +564,9 @@ gcloud run services update-traffic ownmyhealth-backend --project=ownmyhealth-pro
   --region=us-central1 --to-latest   # pinning gotcha
 ```
 
-Confirm boot log `✓ Rate limiters using shared Redis store` (`rateLimitStore.ts:53`). To roll back, unset `REDIS_URL` (+ `--to-latest`) → limiters fall back to MemoryStore (`docs/INFRA_REDIS_AND_SCHEDULER.md:118-124`).
+Confirm boot log `✓ Rate limiters using shared Redis store` (`rateLimitStore.ts`). To roll back, unset `REDIS_URL` (+ `--to-latest`) → limiters fall back to MemoryStore (`docs/INFRA_REDIS_AND_SCHEDULER.md:118-124`).
+
+**Same switch also backs the AI spend cap (M11/L33).** `aiCostTracker` reuses this one `getRedisClient()` connection: with `REDIS_URL` set it stores the rolling daily spend in shared Redis (atomic `INCRBYFLOAT` gate) so the dollar cap is consistent across instances instead of N×budget; unset → per-instance memory (current behavior). Second boot log to confirm: `✓ AI spend cap using shared Redis store`. So provisioning Memorystore once closes BOTH the rate-limiter dilution (#37/M11) and the spend-cap dilution (L33). Note the postures differ on a runtime Redis error: rate limiters fail **open** (a blip must not 503 everyone; the DB account-lockout still guards login), the spend cap fails **closed** (a billing breaker must not uncap spend). Interim, before Memorystore exists: divide the budgets by `--max-instances` (`AI_DAILY_BUDGET_USD=17`, `AI_USER_DAILY_BUDGET_USD=2`) to approximate the intended $50/$5 aggregate across 3 instances.
 
 ---
 
@@ -621,7 +623,7 @@ Confirm boot log `✓ Rate limiters using shared Redis store` (`rateLimitStore.t
 
 **Symptoms**: AI endpoints return **503 SERVICE_UNAVAILABLE** with "daily budget reached" / "today's AI usage limit"; logs show `AI request refused — daily spend budget reached` (`aiSpendGuard.ts:36-47`).
 
-**Cause**: the rolling per-UTC-day spend accumulator crossed `AI_DAILY_BUDGET_USD` (global, default 50) or `AI_USER_DAILY_BUDGET_USD` (per-user, default 5) (`config/index.ts:195-198`, gate at `aiSpendGuard.ts:30`). The accumulator is **in-memory/per-instance**, so the effective ceiling is N×budget under autoscale (`config/index.ts:190-193`).
+**Cause**: the rolling per-UTC-day spend accumulator crossed `AI_DAILY_BUDGET_USD` (global, default 50) or `AI_USER_DAILY_BUDGET_USD` (per-user, default 5) (`config/index.ts`, gate at `aiSpendGuard.ts`). The accumulator is **in-memory/per-instance by default**, so the effective ceiling is N×budget under autoscale — UNLESS `REDIS_URL` is set, in which case `aiCostTracker` uses the SHARED Redis store and the cap is consistent across instances (same switch as the rate limiters, see §12). On a Redis outage the gate fails **closed** (503), so AI features pause while core CRUD keeps working.
 
 **Diagnosis (derived)**:
 1. Grep logs: `jsonPayload.message:"daily spend budget reached"` — `scope:"global"` vs per-user tells you which cap tripped.

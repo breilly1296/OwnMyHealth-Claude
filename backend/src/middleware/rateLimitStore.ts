@@ -21,7 +21,7 @@ import { logger } from '../utils/logger.js';
 // Lazily-created singleton client, shared by every limiter's store. Typed
 // loosely (the ioredis import is dynamic) so this module has no hard dependency
 // at load time when Redis is disabled.
-interface RedisLike {
+export interface RedisLike {
   call(command: string, ...args: (string | number)[]): Promise<unknown>;
   on(event: string, listener: (...args: unknown[]) => void): void;
 }
@@ -29,7 +29,15 @@ interface RedisLike {
 let client: RedisLike | null = null;
 let initialized = false;
 
-function getClient(): RedisLike | null {
+/**
+ * The shared ioredis client, or null when Redis is disabled (`REDIS_URL` unset)
+ * or could not be constructed. Exported so OTHER cross-instance controls (e.g.
+ * the AI spend cap in aiCostTracker) reuse this ONE connection rather than
+ * opening a second. Same fail-fast tuning (maxRetriesPerRequest / no offline
+ * queue) applies — callers decide their own fail-open vs fail-closed posture on
+ * a command error.
+ */
+export function getRedisClient(): RedisLike | null {
   if (!config.redis.url) return null;
   if (initialized) return client;
   initialized = true;
@@ -69,7 +77,7 @@ function getClient(): RedisLike | null {
  * when Redis is disabled (→ express-rate-limit's default MemoryStore).
  */
 export function createRateLimitStore(prefix: string): Store | undefined {
-  const c = getClient();
+  const c = getRedisClient();
   if (!c) return undefined;
 
   // Imported here (not top-level) so the dependency only loads when Redis is on.
