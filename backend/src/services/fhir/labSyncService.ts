@@ -286,6 +286,8 @@ export async function syncLabResults(
 
     let imported = 0;
     let skipped = 0;
+    // M17: names of newly-imported biomarkers, for the batch CREATE audit below.
+    const importedNames: string[] = [];
 
     for (const obs of observations) {
       try {
@@ -330,10 +332,30 @@ export async function syncLabResults(
         });
         existingKeys.add(key);
         imported++;
+        importedNames.push(row.name);
       } catch (err) {
         errors.push(err instanceof Error ? err.message.slice(0, 200) : 'unknown');
         skipped++;
       }
+    }
+
+    // M17: FHIR lab imports are PHI WRITES and must be audited as such. The SYNC
+    // summary below is action=READ (best-effort); this is the fail-closed CREATE
+    // record for the biomarkers actually written this sync. Batched (one row per
+    // sync) to mirror bulkCreateBiomarkers rather than N per-record rows.
+    if (imported > 0) {
+      await auditService.logCreate(
+        'Biomarker',
+        'BATCH',
+        {
+          count: imported,
+          provider,
+          sourceType: 'API_IMPORT',
+          source: `fhir:${provider}`,
+          names: importedNames.slice(0, 50),
+        },
+        { userId }
+      );
     }
 
     await withRLSContext(userId, async (tx) => {
