@@ -24,6 +24,7 @@ import {
   type LabResultOCRResponse,
   validateUploadFile,
   createBiomarkersFromOCRResult,
+  withGcsOrphanCleanup,
   LAB_REPORT_RESOURCE,
   LAB_OCR_RESOURCE,
 } from './shared.js';
@@ -82,61 +83,62 @@ export async function uploadLabReport(
     });
   }
 
-  // Create UserFile + biomarkers inside one RLS transaction
-  const { createdBiomarkers, userFile } = await withRLSTransaction(userId, async (tx) => {
-    let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
-    if (storageKey) {
-      try {
-        const createdFile = await tx.userFile.create({
-          data: {
-            id: fileId,
-            userId,
-            filename: labName
-              ? `${labName} - ${reportDate.toLocaleDateString()}`
-              : file.originalname,
-            originalFilename: file.originalname,
-            fileType: file.mimetype,
-            fileSize: file.size,
-            storageKey,
-            labName: labName || null,
-            labDate: reportDate,
-            biomarkersExtracted: ocrResult.biomarkers.length,
-            extractionConfidence: ocrResult.confidence,
-          },
-        });
-        fileRecord = {
-          id: createdFile.id,
-          filename: createdFile.filename,
-          storageKey: createdFile.storageKey,
-        };
-      } catch (error) {
-        logger.error('Failed to create UserFile record for lab report', {
-          data: {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            fileId,
-            userId,
-          },
-        });
-      }
-    }
+  // Create UserFile + biomarkers inside one RLS transaction. If the tx rolls
+  // back, withGcsOrphanCleanup deletes the object we uploaded above so PHI can't
+  // be orphaned in the bucket with no DB pointer (M8/M25).
+  const { createdBiomarkers, userFile } = await withGcsOrphanCleanup(
+    storageKey,
+    { fileId, userId },
+    () =>
+      withRLSTransaction(userId, async (tx) => {
+        let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
+        if (storageKey) {
+          // A userFile.create failure poisons the interactive tx (so the
+          // biomarker inserts below would abort anyway). Let it propagate: the
+          // whole upload fails and the GCS object is cleaned up, rather than
+          // pretending the file record is optional after a doomed tx.
+          const createdFile = await tx.userFile.create({
+            data: {
+              id: fileId,
+              userId,
+              filename: labName
+                ? `${labName} - ${reportDate.toLocaleDateString()}`
+                : file.originalname,
+              originalFilename: file.originalname,
+              fileType: file.mimetype,
+              fileSize: file.size,
+              storageKey,
+              labName: labName || null,
+              labDate: reportDate,
+              biomarkersExtracted: ocrResult.biomarkers.length,
+              extractionConfidence: ocrResult.confidence,
+            },
+          });
+          fileRecord = {
+            id: createdFile.id,
+            filename: createdFile.filename,
+            storageKey: createdFile.storageKey,
+          };
+        }
 
-    const createdBiomarkers = await createBiomarkersFromOCRResult(
-      tx,
-      encryptionService,
-      userSalt,
-      {
-        userId,
-        biomarkers: ocrResult.biomarkers,
-        reportDate,
-        labName: labName || undefined,
-        notesPrefix: 'Extracted from lab report',
-        normalRangeSource: 'Lab Report',
-        userFileId: fileRecord?.id,
-      }
-    );
+        const createdBiomarkers = await createBiomarkersFromOCRResult(
+          tx,
+          encryptionService,
+          userSalt,
+          {
+            userId,
+            biomarkers: ocrResult.biomarkers,
+            reportDate,
+            labName: labName || undefined,
+            notesPrefix: 'Extracted from lab report',
+            normalRangeSource: 'Lab Report',
+            userFileId: fileRecord?.id,
+          }
+        );
 
-    return { createdBiomarkers, userFile: fileRecord };
-  });
+        return { createdBiomarkers, userFile: fileRecord };
+      })
+  );
 
   await auditService.logCreate(LAB_REPORT_RESOURCE, 'BATCH', {
     filename: file.originalname,
@@ -246,61 +248,58 @@ export async function uploadLabResultOCR(
     });
   }
 
-  const { createdBiomarkers, userFile } = await withRLSTransaction(userId, async (tx) => {
-    let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
-    if (storageKey) {
-      try {
-        const createdFile = await tx.userFile.create({
-          data: {
-            id: fileId,
-            userId,
-            filename: labName
-              ? `${labName} - ${reportDate.toLocaleDateString()}`
-              : file.originalname,
-            originalFilename: file.originalname,
-            fileType: file.mimetype,
-            fileSize: file.size,
-            storageKey,
-            labName: labName || null,
-            labDate: reportDate,
-            biomarkersExtracted: ocrResult.biomarkers.length,
-            extractionConfidence: avgConfidence,
-          },
-        });
-        fileRecord = {
-          id: createdFile.id,
-          filename: createdFile.filename,
-          storageKey: createdFile.storageKey,
-        };
-        logger.info('UserFile record created', { data: { fileId: createdFile.id, userId } });
-      } catch (error) {
-        logger.error('Failed to create UserFile record', {
-          data: {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            fileId,
-            userId,
-          },
-        });
-      }
-    }
+  const { createdBiomarkers, userFile } = await withGcsOrphanCleanup(
+    storageKey,
+    { fileId, userId },
+    () =>
+      withRLSTransaction(userId, async (tx) => {
+        let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
+        if (storageKey) {
+          // See uploadLabReport: a failed userFile.create dooms the tx, so let
+          // it propagate and clean up the GCS object rather than swallow it.
+          const createdFile = await tx.userFile.create({
+            data: {
+              id: fileId,
+              userId,
+              filename: labName
+                ? `${labName} - ${reportDate.toLocaleDateString()}`
+                : file.originalname,
+              originalFilename: file.originalname,
+              fileType: file.mimetype,
+              fileSize: file.size,
+              storageKey,
+              labName: labName || null,
+              labDate: reportDate,
+              biomarkersExtracted: ocrResult.biomarkers.length,
+              extractionConfidence: avgConfidence,
+            },
+          });
+          fileRecord = {
+            id: createdFile.id,
+            filename: createdFile.filename,
+            storageKey: createdFile.storageKey,
+          };
+          logger.info('UserFile record created', { data: { fileId: createdFile.id, userId } });
+        }
 
-    const createdBiomarkers = await createBiomarkersFromOCRResult(
-      tx,
-      encryptionService,
-      userSalt,
-      {
-        userId,
-        biomarkers: ocrResult.biomarkers,
-        reportDate,
-        labName: labName || undefined,
-        notesPrefix: 'OCR extracted from',
-        normalRangeSource: 'OCR Extraction',
-        userFileId: fileRecord?.id,
-      }
-    );
+        const createdBiomarkers = await createBiomarkersFromOCRResult(
+          tx,
+          encryptionService,
+          userSalt,
+          {
+            userId,
+            biomarkers: ocrResult.biomarkers,
+            reportDate,
+            labName: labName || undefined,
+            notesPrefix: 'OCR extracted from',
+            normalRangeSource: 'OCR Extraction',
+            userFileId: fileRecord?.id,
+          }
+        );
 
-    return { createdBiomarkers, userFile: fileRecord };
-  });
+        return { createdBiomarkers, userFile: fileRecord };
+      })
+  );
 
   await auditService.logCreate(
     LAB_OCR_RESOURCE,

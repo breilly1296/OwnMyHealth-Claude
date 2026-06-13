@@ -21,6 +21,7 @@ import {
   extractSBCData,
   mapExtractedDataToPlanFields,
   mapExtractedBenefits,
+  withGcsOrphanCleanup,
   SBC_RESOURCE,
 } from './shared.js';
 
@@ -86,81 +87,82 @@ export async function uploadSBC(
     });
   }
 
-  const { createdPlan, userFile } = await withRLSTransaction(userId, async (tx) => {
-    let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
-    if (storageKey) {
-      try {
-        const createdFile = await tx.userFile.create({
+  // Create the UserFile + insurance plan inside one RLS transaction. If the tx
+  // rolls back, withGcsOrphanCleanup deletes the object we uploaded above so PHI
+  // can't be orphaned in the bucket with no DB pointer (M8/M25).
+  const { createdPlan, userFile } = await withGcsOrphanCleanup(
+    storageKey,
+    { fileId, userId },
+    () =>
+      withRLSTransaction(userId, async (tx) => {
+        let fileRecord: { id: string; filename: string; storageKey: string } | null = null;
+        if (storageKey) {
+          // A failed userFile.create poisons the tx (the plan insert below would
+          // abort anyway), so let it propagate — the upload fails and the GCS
+          // object is cleaned up rather than orphaned (M8/M25).
+          const createdFile = await tx.userFile.create({
+            data: {
+              id: fileId,
+              userId,
+              filename: `${insurerName} SBC - ${effectiveDate.toLocaleDateString()}`,
+              originalFilename: file.originalname,
+              fileType: file.mimetype,
+              fileSize: file.size,
+              storageKey,
+              labName: insurerName,
+              labDate: effectiveDate,
+              biomarkersExtracted: 0,
+              extractionConfidence: extractedData.extractionConfidence,
+            },
+          });
+          fileRecord = {
+            id: createdFile.id,
+            filename: createdFile.filename,
+            storageKey: createdFile.storageKey,
+          };
+        }
+
+        const plan = await tx.insurancePlan.create({
           data: {
-            id: fileId,
             userId,
-            filename: `${insurerName} SBC - ${effectiveDate.toLocaleDateString()}`,
-            originalFilename: file.originalname,
-            fileType: file.mimetype,
-            fileSize: file.size,
-            storageKey,
-            labName: insurerName,
-            labDate: effectiveDate,
-            biomarkersExtracted: 0,
-            extractionConfidence: extractedData.extractionConfidence,
+            planName,
+            insurerName,
+            planType: extractedData.planType || 'PPO',
+            planIdNumber: extractedData.planIdNumber || null,
+            memberIdEncrypted: null,
+            groupIdEncrypted: null,
+            effectiveDate,
+            terminationDate: null,
+            premiumMonthly: extractedData.premiumMonthly ?? null,
+            deductibleIndividual: extractedData.deductibleIndividual ?? 0,
+            deductibleFamily:
+              extractedData.deductibleFamily ??
+              (extractedData.deductibleIndividual ? extractedData.deductibleIndividual * 2 : 0),
+            oopMaxIndividual: extractedData.oopMaxIndividual ?? 0,
+            oopMaxFamily:
+              extractedData.oopMaxFamily ??
+              (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : 0),
+
+            // Tracking fields start at 0
+            deductibleMetIndividual: 0,
+            deductibleMetFamily: 0,
+            oopMetIndividual: 0,
+            oopMetFamily: 0,
+            isActive: true,
+            isPrimary: false,
+
+            ...mapExtractedDataToPlanFields(extractedData),
+
+            benefits: {
+              create: mapExtractedBenefits(extractedData.benefits),
+            },
           },
+          include: { benefits: true },
         });
-        fileRecord = {
-          id: createdFile.id,
-          filename: createdFile.filename,
-          storageKey: createdFile.storageKey,
-        };
-      } catch (error) {
-        logger.error('Failed to create UserFile record for SBC', {
-          data: {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            fileId,
-            userId,
-          },
-        });
-      }
-    }
 
-    const plan = await tx.insurancePlan.create({
-      data: {
-        userId,
-        planName,
-        insurerName,
-        planType: extractedData.planType || 'PPO',
-        planIdNumber: extractedData.planIdNumber || null,
-        memberIdEncrypted: null,
-        groupIdEncrypted: null,
-        effectiveDate,
-        terminationDate: null,
-        premiumMonthly: extractedData.premiumMonthly ?? null,
-        deductibleIndividual: extractedData.deductibleIndividual ?? 0,
-        deductibleFamily:
-          extractedData.deductibleFamily ??
-          (extractedData.deductibleIndividual ? extractedData.deductibleIndividual * 2 : 0),
-        oopMaxIndividual: extractedData.oopMaxIndividual ?? 0,
-        oopMaxFamily:
-          extractedData.oopMaxFamily ??
-          (extractedData.oopMaxIndividual ? extractedData.oopMaxIndividual * 2 : 0),
-
-        // Tracking fields start at 0
-        deductibleMetIndividual: 0,
-        deductibleMetFamily: 0,
-        oopMetIndividual: 0,
-        oopMetFamily: 0,
-        isActive: true,
-        isPrimary: false,
-
-        ...mapExtractedDataToPlanFields(extractedData),
-
-        benefits: {
-          create: mapExtractedBenefits(extractedData.benefits),
-        },
-      },
-      include: { benefits: true },
-    });
-
-    return { createdPlan: plan, userFile: fileRecord };
-  });
+        return { createdPlan: plan, userFile: fileRecord };
+      })
+  );
 
   await auditService.logCreate(
     SBC_RESOURCE,

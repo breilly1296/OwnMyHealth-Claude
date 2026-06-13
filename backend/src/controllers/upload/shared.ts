@@ -26,6 +26,7 @@ import {
   type ExtractedHospiceCoverage,
 } from '../../services/sbcExtraction.js';
 import { logger } from '../../utils/logger.js';
+import { deleteFile } from '../../services/storageService.js';
 
 // ============================================
 // Request type
@@ -698,6 +699,52 @@ export interface LabResultOCRResponse {
     filename: string;
     storageKey: string;
   };
+}
+
+// ============================================
+// GCS-orphan cleanup (M8/M25)
+// ============================================
+
+/**
+ * Run the post-upload DB transaction and, if it throws, delete the GCS object
+ * that was already uploaded before the transaction so a rolled-back DB write
+ * can't orphan PHI in the bucket with no DB pointer.
+ *
+ * Upload handlers PUT the source file to GCS *before* opening the RLS
+ * transaction that creates the `UserFile` row. If that transaction rolls back
+ * (a poisoned `userFile.create`, a biomarker/plan insert failure, an
+ * interactive-tx timeout, etc.), no row references the object — and because the
+ * `UserFile` row is the only pointer the app's export / right-to-erasure flows
+ * enumerate, the object would survive account deletion indefinitely. This is
+ * the inverse of the F-22 delete-first invariant the bulk-delete path enforces.
+ *
+ * `storageKey` may be null (the GCS upload itself failed or was skipped) — then
+ * there is nothing to clean up and `run()` simply propagates. Cleanup is
+ * best-effort: a cleanup failure is logged, but the ORIGINAL transaction error
+ * is what propagates to the caller.
+ */
+export async function withGcsOrphanCleanup<T>(
+  storageKey: string | null,
+  context: { fileId: string; userId: string },
+  run: () => Promise<T>
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (storageKey) {
+      await deleteFile(storageKey).catch((cleanupError) => {
+        logger.error('Failed to delete orphaned GCS object after upload tx rollback', {
+          data: {
+            storageKey,
+            fileId: context.fileId,
+            userId: context.userId,
+            error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+          },
+        });
+      });
+    }
+    throw error;
+  }
 }
 
 // ============================================
