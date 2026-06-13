@@ -23,32 +23,49 @@ const DEMO_MODE = import.meta.env.DEV && import.meta.env.VITE_DEMO_MODE === 'tru
 const BIOMARKER_PAGE_SIZE = 100;
 const MAX_BIOMARKER_PAGES = 50;
 
+// Pages 2+ are fetched in parallel, but bounded: the backend is a 1-vCPU
+// Cloud Run instance doing per-row AES decryption, and the API rate-limits
+// per IP, so an unbounded ~49-request burst is self-defeating.
+const BIOMARKER_FETCH_CONCURRENCY = 5;
+
 // Backend rejects batch creates over 100 items (schemas.biomarker.batchCreate),
 // so larger extractions must be split into sequential calls.
 const BIOMARKER_BATCH_LIMIT = 100;
 
 /**
  * Fetch every page of biomarkers (page size 100, capped at MAX_BIOMARKER_PAGES).
+ * Page 1 goes first (it reveals totalPages); remaining pages are fetched in
+ * parallel batches of BIOMARKER_FETCH_CONCURRENCY, so a many-page record costs
+ * roughly ceil(pages / concurrency) round-trips of wall-clock, not pages.
  * Exported for testing.
  *
- * @returns All fetched biomarkers, plus `truncated: true` if the page cap was
- *          hit before totalPages was exhausted (caller should warn the user).
+ * @returns All fetched biomarkers in page order, plus `truncated: true` if the
+ *          page cap was hit before totalPages was exhausted (caller should
+ *          warn the user).
  */
 export async function fetchAllBiomarkers(): Promise<{
   biomarkers: Biomarker[];
   truncated: boolean;
 }> {
-  const all: Biomarker[] = [];
-  let page = 1;
-  let totalPages = 1;
+  const first = await biomarkersApi.getAll({ page: 1, limit: BIOMARKER_PAGE_SIZE });
+  const all: Biomarker[] = [...(first.biomarkers as unknown as Biomarker[])];
+  // Older mocks/responses may omit pagination — treat as a single page
+  const totalPages = first.pagination?.totalPages ?? 1;
+  const lastPage = Math.min(totalPages, MAX_BIOMARKER_PAGES);
 
-  do {
-    const result = await biomarkersApi.getAll({ page, limit: BIOMARKER_PAGE_SIZE });
-    all.push(...(result.biomarkers as unknown as Biomarker[]));
-    // Older mocks/responses may omit pagination — treat as a single page
-    totalPages = result.pagination?.totalPages ?? 1;
-    page += 1;
-  } while (page <= totalPages && page <= MAX_BIOMARKER_PAGES);
+  // Promise.all preserves input (page) order regardless of completion order,
+  // and rejects on any page failure — matching the old sequential semantics.
+  for (let start = 2; start <= lastPage; start += BIOMARKER_FETCH_CONCURRENCY) {
+    const end = Math.min(start + BIOMARKER_FETCH_CONCURRENCY - 1, lastPage);
+    const results = await Promise.all(
+      Array.from({ length: end - start + 1 }, (_, i) =>
+        biomarkersApi.getAll({ page: start + i, limit: BIOMARKER_PAGE_SIZE })
+      )
+    );
+    for (const result of results) {
+      all.push(...(result.biomarkers as unknown as Biomarker[]));
+    }
+  }
 
   return { biomarkers: all, truncated: totalPages > MAX_BIOMARKER_PAGES };
 }

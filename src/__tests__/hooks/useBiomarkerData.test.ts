@@ -4,6 +4,9 @@
  * Covers fetchAllBiomarkers, the paginated fetch helper (teardown finding #4):
  * the backend clamps list `limit` to 100, so the helper must walk
  * pagination.totalPages instead of relying on a single large-limit request.
+ * Pages 2+ are fetched in PARALLEL batches of 5 (bounded for the 1-vCPU
+ * backend + per-IP rate limit), and results must concatenate in page order
+ * regardless of completion order — both properties are pinned below.
  *
  * Also pins the EXACT create/createBatch payload contracts (nested
  * normalRange, ISO dates, LAB_UPLOAD sourceType, provenance fields) and the
@@ -39,6 +42,21 @@ function makePage(page: number, count: number, totalPages: number) {
     pagination: { total: totalPages * 100, page, limit: 100, totalPages },
   };
 }
+
+// Externally controllable promise, for forcing out-of-order page completion.
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+// Drain the microtask queue (lets awaited mock promises settle and the
+// implementation issue its next round of requests).
+const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 describe('fetchAllBiomarkers', () => {
   beforeEach(() => {
@@ -111,6 +129,88 @@ describe('fetchAllBiomarkers', () => {
     vi.mocked(biomarkersApi.getAll).mockRejectedValue(new Error('API error'));
 
     await expect(fetchAllBiomarkers()).rejects.toThrow('API error');
+  });
+
+  it('rejects the whole fetch when one parallel page fails', async () => {
+    vi.mocked(biomarkersApi.getAll).mockImplementation(async (params) => {
+      const page = params?.page ?? 1;
+      if (page === 2) throw new Error('page 2 failed');
+      return makePage(page, 1, 3) as never;
+    });
+
+    await expect(fetchAllBiomarkers()).rejects.toThrow('page 2 failed');
+  });
+
+  it('preserves page order even when later pages resolve before earlier ones', async () => {
+    const page2 = deferred<ReturnType<typeof makePage>>();
+    const page3 = deferred<ReturnType<typeof makePage>>();
+    vi.mocked(biomarkersApi.getAll).mockImplementation(async (params) => {
+      const page = params?.page ?? 1;
+      if (page === 2) return page2.promise as never;
+      if (page === 3) return page3.promise as never;
+      return makePage(1, 2, 3) as never;
+    });
+
+    const resultPromise = fetchAllBiomarkers();
+    await flushMicrotasks();
+
+    // Pages 2 and 3 must BOTH be requested once page 1 reveals totalPages —
+    // a sequential-await-in-loop revert would only have issued page 2 here.
+    expect(biomarkersApi.getAll).toHaveBeenCalledTimes(3);
+
+    // Resolve page 3 BEFORE page 2: an order-by-completion concat would put
+    // page 3's rows ahead of page 2's.
+    page3.resolve(makePage(3, 2, 3));
+    await flushMicrotasks();
+    page2.resolve(makePage(2, 2, 3));
+
+    const result = await resultPromise;
+    expect(result.biomarkers.map(b => b.id)).toEqual([
+      'bm-1-0', 'bm-1-1', 'bm-2-0', 'bm-2-1', 'bm-3-0', 'bm-3-1',
+    ]);
+    expect(result.truncated).toBe(false);
+  });
+
+  it('bounds parallel page fetches to 5 in flight at a time', async () => {
+    const TOTAL_PAGES = 13; // pages 2..13 → batches of 5, 5, 2
+    let inFlight = 0;
+    let peakInFlight = 0;
+    const pending: Array<() => void> = [];
+
+    vi.mocked(biomarkersApi.getAll).mockImplementation((params) => {
+      const page = params?.page ?? 1;
+      inFlight += 1;
+      peakInFlight = Math.max(peakInFlight, inFlight);
+      return new Promise((resolve) => {
+        pending.push(() => {
+          inFlight -= 1;
+          resolve(makePage(page, 1, TOTAL_PAGES));
+        });
+      }) as never;
+    });
+
+    const resultPromise = fetchAllBiomarkers();
+
+    // Drain rounds of pending requests, asserting the bound at every peak.
+    let served = 0;
+    for (let round = 0; served < TOTAL_PAGES && round < 100; round++) {
+      await flushMicrotasks();
+      const batch = pending.splice(0);
+      expect(batch.length).toBeLessThanOrEqual(5);
+      for (const resolvePage of batch) {
+        resolvePage();
+        served += 1;
+      }
+    }
+    expect(served).toBe(TOTAL_PAGES);
+
+    const result = await resultPromise;
+    // Exactly 5 at peak: bounded (≤5) AND actually parallel (not sequential).
+    expect(peakInFlight).toBe(5);
+    expect(result.biomarkers.map(b => b.id)).toEqual(
+      Array.from({ length: TOTAL_PAGES }, (_, i) => `bm-${i + 1}-0`)
+    );
+    expect(result.truncated).toBe(false);
   });
 });
 
