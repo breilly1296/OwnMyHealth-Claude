@@ -41,6 +41,10 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
   const providerRevoked = { id: randomUUID(), email: `rls-prov-rev-${Date.now()}@test.local` };
   const providerSuspended = { id: randomUUID(), email: `rls-prov-susp-${Date.now()}@test.local` };
   const needName = '__RLS_TEST_NEED_A__';
+  // M1: revoked-access-token rows, one per tenant, to exercise the
+  // revoked_access_tokens RLS policies (mirror of sessions).
+  const revokedJtiA = randomUUID();
+  const revokedJtiB = randomUUID();
 
   beforeAll(async () => {
     // Lazy-init Prisma only. initializeDatabase() would also kick off
@@ -164,6 +168,14 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
           canViewHealthNeeds: true,
         },
       });
+
+      // M1: one revoked-access-token row per tenant.
+      await tx.revokedAccessToken.create({
+        data: { jti: revokedJtiA, userId: userA.id, expiresAt: new Date(Date.now() + 60_000) },
+      });
+      await tx.revokedAccessToken.create({
+        data: { jti: revokedJtiB, userId: userB.id, expiresAt: new Date(Date.now() + 60_000) },
+      });
     });
   });
 
@@ -178,6 +190,7 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       ];
       await tx.providerPatient.deleteMany({ where: { providerId: { in: providerIds } } });
       await tx.healthNeed.deleteMany({ where: { name: needName } });
+      await tx.revokedAccessToken.deleteMany({ where: { jti: { in: [revokedJtiA, revokedJtiB] } } });
       await tx.biomarker.deleteMany({ where: { name: { in: markerNames } } });
       await tx.user.deleteMany({
         where: { id: { in: [userA.id, userB.id, ...providerIds] } },
@@ -220,6 +233,32 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
     );
     expect(aRows.map((r) => r.userId)).toEqual([userA.id]);
     expect(bRows.map((r) => r.userId)).toEqual([userB.id]);
+  });
+
+  // M1: revoked_access_tokens carries (jti, user_id) and backs cross-instance
+  // single-device logout. Its RLS policies mirror sessions — a tenant must see
+  // only their own revocation rows, admin sees all.
+  describe('revoked_access_tokens isolation', () => {
+    it('user A sees only their own revoked-token rows', async () => {
+      const rows = await withRLSContext(userA.id, async (tx) =>
+        tx.revokedAccessToken.findMany({ where: { jti: { in: [revokedJtiA, revokedJtiB] } } })
+      );
+      expect(rows.map((r) => r.jti)).toEqual([revokedJtiA]);
+    });
+
+    it('user B cannot see user A revoked-token row', async () => {
+      const rows = await withRLSContext(userB.id, async (tx) =>
+        tx.revokedAccessToken.findMany({ where: { jti: revokedJtiA } })
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('admin context sees both tenants revoked-token rows', async () => {
+      const rows = await withRLSContext(null, async (tx) =>
+        tx.revokedAccessToken.findMany({ where: { jti: { in: [revokedJtiA, revokedJtiB] } } })
+      );
+      expect(rows).toHaveLength(2);
+    });
   });
 
   // Consent-scoped cross-tenant access through the has_provider_access() policy

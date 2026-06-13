@@ -51,6 +51,7 @@ model User {
   patientRelationships     ProviderPatient[]   @relation("PatientUser")
   providerRelationships    ProviderPatient[]   @relation("ProviderUser")
   sessions                 Session[]
+  revokedAccessTokens      RevokedAccessToken[]
   encryptionKeys           UserEncryptionKey[]
   files                    UserFile[]
   expenseProjections       ExpenseProjection[]
@@ -77,6 +78,25 @@ model Session {
   @@index([token])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+// M1: cross-instance single-device access-token revocation. Single-device
+// logout must NOT stamp the per-user `tokensValidAfter` cutoff (that logs out
+// the user's OTHER devices), but the in-memory blacklist only stops the token
+// on the current Cloud Run instance. This table records the revoked access
+// token's `jti` so authenticate() rejects it on EVERY replica (folded into the
+// same cached per-user lookup that reads tokensValidAfter). Rows are swept once
+// past `expiresAt` (the token can no longer verify anyway).
+model RevokedAccessToken {
+  jti       String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("revoked_access_tokens")
 }
 
 model UserEncryptionKey {
