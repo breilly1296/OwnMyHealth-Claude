@@ -14,7 +14,8 @@
     "test:ci": "vitest run --config vitest.config.ci.ts",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration",
-    "test:rls": "vitest run src/services/rls.test.ts"
+    "test:rls": "vitest run src/services/rls.test.ts",
+    "backfill:goal-values": "tsx scripts/backfill-goal-value-encryption.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
