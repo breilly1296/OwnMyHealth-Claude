@@ -390,15 +390,55 @@ export function useBiomarkerData({
     setBiomarkers(prev => [...prev, ...created]);
   }, []);
 
-  // Handle clinical file extraction
-  const handleClinicalFileExtract = useCallback((extractedBiomarkers: Partial<Biomarker>[]) => {
+  // Handle clinical file extraction (DEXA / EKG / lab). Persists to the server
+  // via batch create — previously this wrote to LOCAL STATE ONLY, so every
+  // extracted measurement vanished on refresh (L24). Mirrors handlePDFExtract.
+  const handleClinicalFileExtract = useCallback(async (extractedBiomarkers: Partial<Biomarker>[]) => {
     const newBiomarkers = extractedBiomarkers.map(b => ({
       ...b,
+      date: normalizeDateToISO(b.date) || new Date().toISOString().split('T')[0],
       id: crypto.randomUUID(),
       history: [],
     })) as Biomarker[];
 
-    setBiomarkers(prev => [...prev, ...newBiomarkers]);
+    if (DEMO_MODE) {
+      setBiomarkers(prev => [...prev, ...newBiomarkers]);
+      return;
+    }
+
+    const createData = newBiomarkers.map(b => ({
+      name: b.name,
+      value: b.value,
+      unit: b.unit,
+      date: b.date,
+      category: b.category,
+      normalRange: {
+        min: b.normalRange.min,
+        max: b.normalRange.max,
+        source: b.normalRange.source,
+      },
+      sourceType: 'LAB_UPLOAD' as const,
+      sourceFile: b.sourceFile,
+      extractionConfidence: b.extractionConfidence,
+    }));
+
+    const created: Biomarker[] = [];
+    for (let start = 0; start < createData.length; start += BIOMARKER_BATCH_LIMIT) {
+      try {
+        const chunk = await biomarkersApi.createBatch(
+          createData.slice(start, start + BIOMARKER_BATCH_LIMIT)
+        );
+        created.push(...(chunk as unknown as Biomarker[]));
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Failed to save extracted data';
+        dashboardLogger.error('Error saving clinical file extracted data', { error: errorMsg });
+        onErrorRef.current(`${errorMsg}. Data added locally but not synced to server.`);
+        // Chunks before `start` are persisted; only the unsaved remainder falls back to local.
+        setBiomarkers(prev => [...prev, ...created, ...newBiomarkers.slice(start)]);
+        return;
+      }
+    }
+    setBiomarkers(prev => [...prev, ...created]);
   }, []);
 
   // Handle server-side OCR upload success (Google Document AI)

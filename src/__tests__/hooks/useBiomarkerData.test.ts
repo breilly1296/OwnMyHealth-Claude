@@ -345,6 +345,29 @@ describe('useBiomarkerData create payload contracts', () => {
     ]);
   });
 
+  it('handleClinicalFileExtract persists via createBatch (was local-only — L24)', async () => {
+    const { result } = renderBiomarkerHook();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleClinicalFileExtract([
+        makeExtractedItem({ name: 'T-Score', value: -1.2, unit: 'SD', category: 'Body Composition' }),
+      ]);
+    });
+
+    // Previously this wrote to local state only; it must now hit the server.
+    expect(biomarkersApi.createBatch).toHaveBeenCalledTimes(1);
+    expect(biomarkersApi.createBatch).toHaveBeenCalledWith([
+      expect.objectContaining({
+        name: 'T-Score',
+        value: -1.2,
+        unit: 'SD',
+        category: 'Body Composition',
+        sourceType: 'LAB_UPLOAD',
+      }),
+    ]);
+  });
+
   it('handlePDFExtract chunks >100-item extractions into sequential ≤100 batches', async () => {
     const { result } = renderBiomarkerHook();
     await waitFor(() => expect(result.current.isLoading).toBe(false));
