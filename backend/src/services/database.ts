@@ -466,9 +466,18 @@ export async function withRLSContext<T>(
 export async function withRLSTransaction<T>(
   userId: string | null,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { isAdmin?: boolean } = {}
+  options: { isAdmin?: boolean; timeout?: number; maxWait?: number } = {}
 ): Promise<T> {
-  return runWithRLS(userId, fn, options, undefined);
+  // Default: pass no txOptions so Prisma's own interactive-transaction default
+  // (5s) applies — unchanged for existing callers. A caller that runs many
+  // sequential statements in one transaction (e.g. the bulk biomarker series
+  // merge, up to ~100 readings) can opt into a longer window so it doesn't hit
+  // P2028 on a slow/cold Cloud SQL connection.
+  const txOptions =
+    options.timeout !== undefined || options.maxWait !== undefined
+      ? { maxWait: options.maxWait ?? 10_000, timeout: options.timeout ?? 30_000 }
+      : undefined;
+  return runWithRLS(userId, fn, options, txOptions);
 }
 
 // Export prisma getter for lazy initialization
