@@ -5,11 +5,12 @@
  * (Google Document AI) and then renders ExtractionReviewStep so the user
  * can review the extraction before the dashboard refresh is triggered.
  *
- * Note: the OCR endpoint persists biomarkers server-side during upload —
- * the review step is effectively a verification surface. Deselects and
- * edits here are not sent to a separate update endpoint (out of scope for
- * this prompt); on confirm, the parent refresh pulls authoritative data
- * from the server.
+ * The OCR endpoint persists every extracted biomarker server-side during
+ * upload, so on confirm we reconcile that auto-saved set against the user's
+ * review (M21): rows they deselected are deleted and rows they edited are
+ * updated via the biomarkers API, then the parent refresh pulls authoritative
+ * data from the server. (Previously the review was a placebo — deselects and
+ * edits were silently discarded.)
  *
  * @module components/upload/LabUploadModal
  */
@@ -17,6 +18,8 @@
 import React, { useState, useCallback } from 'react';
 import { X, Loader2, AlertTriangle, FileText, Image, Building2, Calendar, CheckCircle } from 'lucide-react';
 import { uploadFile } from '../../services/uploadUtils';
+import { biomarkersApi } from '../../services/api';
+import { planExtractionReview } from '../../utils/extractionReview';
 import ExtractionReviewStep, {
   type ExtractedBiomarkerPreview,
 } from './ExtractionReviewStep';
@@ -167,15 +170,40 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     }
   }, []);
 
-  const handleConfirmImport = useCallback((selected: ExtractedBiomarkerPreview[]) => {
+  const handleConfirmImport = useCallback(async (selected: ExtractedBiomarkerPreview[]) => {
     setIsImporting(true);
+    setError(null);
     try {
-      onSuccess(selected.map(previewToBiomarker));
+      // The OCR endpoint already auto-saved every extracted biomarker. Reconcile
+      // that set with the user's review: delete the rows they deselected and
+      // update the ones they edited (M21 — previously these were silently lost).
+      if (result) {
+        const plan = planExtractionReview(result.biomarkers, selected);
+        const ops = [
+          ...plan.deselectedIds.map((id) => biomarkersApi.delete(id)),
+          ...plan.edits.map((e) => biomarkersApi.update(e.id, e.data)),
+        ];
+        const settled = await Promise.allSettled(ops);
+        const failures = settled.filter((r) => r.status === 'rejected').length;
+        // Refresh authoritative data from the server either way.
+        onSuccess(selected.map(previewToBiomarker));
+        if (failures > 0) {
+          setError(
+            `${failures} of your change${failures === 1 ? '' : 's'} could not be applied. ` +
+              'Your imported data has been refreshed from the server.'
+          );
+          return;
+        }
+      } else {
+        onSuccess(selected.map(previewToBiomarker));
+      }
       handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to apply your review. Please try again.');
     } finally {
       setIsImporting(false);
     }
-  }, [onSuccess, handleClose]);
+  }, [result, onSuccess, handleClose]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
