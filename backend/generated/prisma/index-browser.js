@@ -401,7 +401,9 @@ exports.Prisma.HealthGoalScalarFieldEnum = {
   targetValue: 'targetValue',
   targetValueEncrypted: 'targetValueEncrypted',
   currentValue: 'currentValue',
+  currentValueEncrypted: 'currentValueEncrypted',
   startValue: 'startValue',
+  startValueEncrypted: 'startValueEncrypted',
   unit: 'unit',
   direction: 'direction',
   relatedBiomarkerId: 'relatedBiomarkerId',
@@ -421,6 +423,7 @@ exports.Prisma.GoalProgressHistoryScalarFieldEnum = {
   id: 'id',
   goalId: 'goalId',
   value: 'value',
+  valueEncrypted: 'valueEncrypted',
   progress: 'progress',
   noteEncrypted: 'noteEncrypted',
   recordedAt: 'recordedAt'

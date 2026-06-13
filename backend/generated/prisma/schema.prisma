@@ -407,39 +407,46 @@ model HealthNeed {
 }
 
 model HealthGoal {
-  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId               String                @map("user_id") @db.Uuid
-  name                 String                @db.VarChar(200)
-  descriptionEncrypted String?               @map("description_encrypted")
-  category             String                @db.VarChar(100)
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String                @map("user_id") @db.Uuid
+  name                  String                @db.VarChar(200)
+  descriptionEncrypted  String?               @map("description_encrypted")
+  category              String                @db.VarChar(100)
   // Nullable so rows that already have `targetValueEncrypted` can have the
   // plaintext twin nulled out to stop leaking PHI (see migration
   // 20260601_null_plaintext_health_goal_target). Legacy rows without an
   // encrypted value retain the plaintext until a backfill script re-encrypts.
-  targetValue          Decimal?              @map("target_value") @db.Decimal(10, 4)
+  targetValue           Decimal?              @map("target_value") @db.Decimal(10, 4)
   // Encrypted PHI replacement for targetValue. Numeric goals (target
   // cholesterol, weight, A1c) reveal sensitive health conditions on their
   // own; the Decimal column stays for backward-compat reads until a
   // migration re-encrypts and nulls it. Written by the controller; read
   // path prefers this and falls back to `targetValue` when null.
-  targetValueEncrypted String?               @map("target_value_encrypted")
-  currentValue         Decimal?              @map("current_value") @db.Decimal(10, 4)
-  startValue           Decimal?              @map("start_value") @db.Decimal(10, 4)
-  unit                 String                @db.VarChar(50)
-  direction            GoalDirection         @default(DECREASE)
-  relatedBiomarkerId   String?               @map("related_biomarker_id") @db.Uuid
-  startDate            DateTime              @map("start_date") @db.Date
-  targetDate           DateTime              @map("target_date") @db.Date
-  status               GoalStatus            @default(ACTIVE)
-  progress             Decimal               @default(0) @db.Decimal(5, 2)
-  milestones           String?
-  reminderFrequency    ReminderFrequency?    @map("reminder_frequency")
-  lastReminderSent     DateTime?             @map("last_reminder_sent") @db.Timestamptz(6)
-  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  completedAt          DateTime?             @map("completed_at") @db.Timestamptz(6)
-  progressHistory      GoalProgressHistory[]
-  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetValueEncrypted  String?               @map("target_value_encrypted")
+  currentValue          Decimal?              @map("current_value") @db.Decimal(10, 4)
+  // Encrypted PHI replacement for currentValue (M4). The latest measured value
+  // (current weight, A1c, blood pressure) reveals the user's condition on its
+  // own. New rows write this and null the plaintext twin; legacy rows keep
+  // plaintext until the backfill re-encrypts. Read path prefers this column.
+  currentValueEncrypted String?               @map("current_value_encrypted")
+  startValue            Decimal?              @map("start_value") @db.Decimal(10, 4)
+  // Encrypted PHI replacement for startValue (M4). Same rationale as currentValue.
+  startValueEncrypted   String?               @map("start_value_encrypted")
+  unit                  String                @db.VarChar(50)
+  direction             GoalDirection         @default(DECREASE)
+  relatedBiomarkerId    String?               @map("related_biomarker_id") @db.Uuid
+  startDate             DateTime              @map("start_date") @db.Date
+  targetDate            DateTime              @map("target_date") @db.Date
+  status                GoalStatus            @default(ACTIVE)
+  progress              Decimal               @default(0) @db.Decimal(5, 2)
+  milestones            String?
+  reminderFrequency     ReminderFrequency?    @map("reminder_frequency")
+  lastReminderSent      DateTime?             @map("last_reminder_sent") @db.Timestamptz(6)
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt           DateTime?             @map("completed_at") @db.Timestamptz(6)
+  progressHistory       GoalProgressHistory[]
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -451,13 +458,18 @@ model HealthGoal {
 }
 
 model GoalProgressHistory {
-  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  goalId        String     @map("goal_id") @db.Uuid
-  value         Decimal    @db.Decimal(10, 4)
-  progress      Decimal    @db.Decimal(5, 2)
-  noteEncrypted String?    @map("note_encrypted")
-  recordedAt    DateTime   @default(now()) @map("recorded_at") @db.Timestamptz(6)
-  goal          HealthGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goalId         String     @map("goal_id") @db.Uuid
+  // Nullable + encrypted twin (M4): each progress entry is a measured health
+  // value over time. New rows write `valueEncrypted` and null `value`; legacy
+  // rows keep plaintext until the backfill re-encrypts. Read path prefers the
+  // encrypted column.
+  value          Decimal?   @db.Decimal(10, 4)
+  valueEncrypted String?    @map("value_encrypted")
+  progress       Decimal    @db.Decimal(5, 2)
+  noteEncrypted  String?    @map("note_encrypted")
+  recordedAt     DateTime   @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  goal           HealthGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@index([goalId])
   @@index([recordedAt])

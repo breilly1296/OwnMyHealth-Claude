@@ -510,9 +510,12 @@ export const PHI_FIELDS = {
   HealthGoal: [
     'descriptionEncrypted',
     'targetValueEncrypted',
+    'currentValueEncrypted',
+    'startValueEncrypted',
   ],
   GoalProgressHistory: [
     'noteEncrypted',
+    'valueEncrypted',
   ],
   // Audit log PHI (for change tracking)
   AuditLog: [

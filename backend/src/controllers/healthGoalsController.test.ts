@@ -204,6 +204,69 @@ describe('createHealthGoal', () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
+  it('encrypts target/current/start values and nulls the plaintext twins (M4)', async () => {
+    mockTx.healthGoal.create.mockResolvedValue(goalFixture());
+    mockTx.goalProgressHistory.create.mockResolvedValue({});
+
+    const req = createMockRequest({
+      user: { id: USER_ID, email: 'test@example.com', role: 'PATIENT' },
+      body: {
+        name: 'Lower LDL',
+        category: 'Cardiovascular',
+        targetValue: 100,
+        currentValue: 150, // startValue defaults to currentValue
+        unit: 'mg/dL',
+        direction: 'DECREASE',
+        startDate: '2026-01-01',
+        targetDate: '2026-12-31',
+      },
+    });
+    const res = createMockResponse();
+
+    await createHealthGoal(req, res);
+
+    const data = mockTx.healthGoal.create.mock.calls[0][0].data;
+    // Every numeric health value is written encrypted...
+    expect(data.targetValueEncrypted).toBe('enc:100');
+    expect(data.currentValueEncrypted).toBe('enc:150');
+    expect(data.startValueEncrypted).toBe('enc:150');
+    // ...and NO raw numeric value is persisted in a plaintext column.
+    expect(data.currentValue).toBeNull();
+    expect(data.startValue).toBeNull();
+    expect(data.targetValue).toBeUndefined();
+  });
+
+  it('decrypts the encrypted current/start values in the response (M4)', async () => {
+    mockTx.healthGoal.create.mockResolvedValue(
+      goalFixture({
+        currentValue: null,
+        startValue: null,
+        currentValueEncrypted: 'enc:142',
+        startValueEncrypted: 'enc:170',
+      })
+    );
+
+    const req = createMockRequest({
+      user: { id: USER_ID, email: 'test@example.com', role: 'PATIENT' },
+      body: {
+        name: 'Lower LDL',
+        category: 'Cardiovascular',
+        targetValue: 100,
+        unit: 'mg/dL',
+        direction: 'DECREASE',
+        startDate: '2026-01-01',
+        targetDate: '2026-12-31',
+      },
+    });
+    const res = createMockResponse();
+
+    await createHealthGoal(req, res);
+
+    const payload = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(payload.data.currentValue).toBe(142);
+    expect(payload.data.startValue).toBe(170);
+  });
+
   it('sets initial progress to 0 when no currentValue is supplied', async () => {
     mockTx.healthGoal.create.mockResolvedValue(goalFixture({ progress: 0, currentValue: null }));
 
@@ -255,7 +318,9 @@ describe('createHealthGoal', () => {
 
     expect(mockTx.goalProgressHistory.create).toHaveBeenCalledTimes(1);
     const historyData = mockTx.goalProgressHistory.create.mock.calls[0][0].data;
-    expect(historyData.value).toBe(150);
+    // Value is encrypted at rest; the plaintext twin is nulled (M4).
+    expect(historyData.valueEncrypted).toBe('enc:150');
+    expect(historyData.value).toBeNull();
     // startValue defaults to currentValue when no prior start is known, so
     // DECREASE progress at create-time is 0 for (start=150, target=100, current=150).
     expect(historyData.progress).toBe(0);
@@ -300,7 +365,9 @@ describe('updateGoalProgress', () => {
 
     expect(mockTx.healthGoal.update).toHaveBeenCalledTimes(1);
     const data = mockTx.healthGoal.update.mock.calls[0][0].data;
-    expect(data.currentValue).toBe(150);
+    // Current value is encrypted at rest; the plaintext twin is nulled (M4).
+    expect(data.currentValueEncrypted).toBe('enc:150');
+    expect(data.currentValue).toBeNull();
     expect(data.progress).toBeCloseTo(50, 5);
     expect(data.status).toBe('ACTIVE'); // preserved, not ACHIEVED
     expect(data.completedAt).toBeNull();
@@ -436,7 +503,9 @@ describe('updateGoalProgress', () => {
     expect(mockTx.goalProgressHistory.create).toHaveBeenCalledTimes(1);
     const historyData = mockTx.goalProgressHistory.create.mock.calls[0][0].data;
     expect(historyData.goalId).toBe('goal-1');
-    expect(historyData.value).toBe(150);
+    // Value is encrypted at rest; the plaintext twin is nulled (M4).
+    expect(historyData.valueEncrypted).toBe('enc:150');
+    expect(historyData.value).toBeNull();
     expect(historyData.progress).toBeCloseTo(50, 5);
     // Note was encrypted
     expect(historyData.noteEncrypted).toBe('enc:feeling good');

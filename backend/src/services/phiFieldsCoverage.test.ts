@@ -68,6 +68,47 @@ function encryptedFieldsBySchemaModel(): Record<string, Set<string>> {
   return result;
 }
 
+/** Parse EVERY scalar field name per model (not just *Encrypted ones). */
+function allFieldsBySchemaModel(): Record<string, Set<string>> {
+  const schema = readFileSync(SCHEMA_PATH, 'utf8');
+  const result: Record<string, Set<string>> = {};
+  let currentModel: string | null = null;
+
+  for (const rawLine of schema.split('\n')) {
+    const line = rawLine.trim();
+    if (currentModel === null) {
+      const modelStart = line.match(/^model\s+(\w+)\s*\{/);
+      if (modelStart) currentModel = modelStart[1];
+      continue;
+    }
+    if (line === '}') {
+      currentModel = null;
+      continue;
+    }
+    // A field line is `<name> <Type>...`. Skip block attributes (@@index) and
+    // comments (//); relation/scalar fields both start with a word + a type.
+    const fieldMatch = line.match(/^(\w+)\s+\w/);
+    if (fieldMatch) {
+      (result[currentModel] ??= new Set<string>()).add(fieldMatch[1]);
+    }
+  }
+  return result;
+}
+
+/**
+ * M5: value-bearing PHI columns that MUST be encrypted at rest. The
+ * `*Encrypted`-only scan above is blind to PHI stored in a PLAINTEXT column
+ * with no encrypted twin — exactly the gap that left HealthGoal.current_value /
+ * start_value and GoalProgressHistory.value in the clear next to an encrypted
+ * goal description. This explicit registry (the security control: adding a new
+ * PHI value column forces an entry here) is asserted to have a `<col>Encrypted`
+ * sibling, so re-introducing a plaintext-only PHI value fails the build.
+ */
+const PLAINTEXT_PHI_REQUIRING_TWIN: Record<string, string[]> = {
+  HealthGoal: ['targetValue', 'currentValue', 'startValue'],
+  GoalProgressHistory: ['value'],
+};
+
 describe('PHI_FIELDS coverage vs schema.prisma', () => {
   const schemaModels = encryptedFieldsBySchemaModel();
   const phiFields = PHI_FIELDS as Record<string, readonly string[]>;
@@ -107,6 +148,25 @@ describe('PHI_FIELDS coverage vs schema.prisma', () => {
       stale,
       `PHI_FIELDS entr(ies) with no matching schema column (stale — fix ` +
         `encryption.ts or the schema): ${stale.join(', ')}`
+    ).toEqual([]);
+  });
+
+  it('every value-bearing PHI column has an encrypted twin (M5 — plaintext-PHI guard)', () => {
+    const allFields = allFieldsBySchemaModel();
+    const missing: string[] = [];
+    for (const [model, cols] of Object.entries(PLAINTEXT_PHI_REQUIRING_TWIN)) {
+      const fields = allFields[model] ?? new Set<string>();
+      for (const col of cols) {
+        if (!fields.has(`${col}Encrypted`)) {
+          missing.push(`${model}.${col} (no ${col}Encrypted column)`);
+        }
+      }
+    }
+    expect(
+      missing,
+      `PHI value column(s) stored in plaintext with no encrypted twin — add a ` +
+        `<col>Encrypted column + encrypt at the write site, or this is a PHI leak: ` +
+        `${missing.join(', ')}`
     ).toEqual([]);
   });
 });
