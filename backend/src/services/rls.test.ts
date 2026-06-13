@@ -41,6 +41,9 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
   const providerRevoked = { id: randomUUID(), email: `rls-prov-rev-${Date.now()}@test.local` };
   const providerSuspended = { id: randomUUID(), email: `rls-prov-susp-${Date.now()}@test.local` };
   const needName = '__RLS_TEST_NEED_A__';
+  // M19 audit-retention fixtures: one row well past the 7-year window, one recent.
+  const auditOldId = randomUUID();
+  const auditRecentId = randomUUID();
 
   beforeAll(async () => {
     // Lazy-init Prisma only. initializeDatabase() would also kick off
@@ -164,6 +167,26 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
           canViewHealthNeeds: true,
         },
       });
+
+      // M19: two audit rows for the retention-delete policy test — one aged past
+      // the 7-year window, one recent.
+      await tx.auditLog.create({
+        data: {
+          id: auditOldId,
+          actorType: 'SYSTEM',
+          action: 'READ',
+          resourceType: '__RLS_TEST_AUDIT__',
+          createdAt: new Date('2010-01-01T00:00:00.000Z'),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          id: auditRecentId,
+          actorType: 'SYSTEM',
+          action: 'READ',
+          resourceType: '__RLS_TEST_AUDIT__',
+        },
+      });
     });
   });
 
@@ -179,6 +202,9 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       await tx.providerPatient.deleteMany({ where: { providerId: { in: providerIds } } });
       await tx.healthNeed.deleteMany({ where: { name: needName } });
       await tx.biomarker.deleteMany({ where: { name: { in: markerNames } } });
+      // Aged test audit row is deletable; the recent one is policy-blocked and
+      // survives (the CI Postgres is ephemeral, so the leftover is harmless).
+      await tx.auditLog.deleteMany({ where: { resourceType: '__RLS_TEST_AUDIT__' } });
       await tx.user.deleteMany({
         where: { id: { in: [userA.id, userB.id, ...providerIds] } },
       });
@@ -320,6 +346,45 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       });
       const rows = await readUserAMarker(providerOk.id);
       expect(rows).toHaveLength(0);
+    });
+  });
+
+  // M2 / M19 — RLS hardening: FORCE on every table + DB-enforced audit retention.
+  describe('RLS hardening (M2 FORCE + M19 audit retention)', () => {
+    it('every RLS-enabled public table is also FORCE-protected (M2)', async () => {
+      const prisma = getPrismaClient();
+      const unforced = await prisma.$queryRaw<Array<{ relname: string }>>`
+        SELECT c.relname
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind = 'r'
+          AND c.relrowsecurity = true
+          AND c.relforcerowsecurity = false
+        ORDER BY c.relname
+      `;
+      // Migration 20260613 forces every RLS table; a non-empty list means a
+      // table enabled RLS without FORCE — an owner-bypass tenant-isolation gap.
+      expect(unforced.map((r) => r.relname)).toEqual([]);
+    });
+
+    it('admin context CANNOT delete a recent audit row (within the 7-year window)', async () => {
+      const res = await withRLSContext(null, async (tx) =>
+        tx.auditLog.deleteMany({ where: { id: auditRecentId } })
+      );
+      expect(res.count).toBe(0);
+      // ...and the row is still present.
+      const still = await withRLSContext(null, async (tx) =>
+        tx.auditLog.findUnique({ where: { id: auditRecentId } })
+      );
+      expect(still).not.toBeNull();
+    });
+
+    it('admin context CAN delete an audit row past the 7-year window', async () => {
+      const res = await withRLSContext(null, async (tx) =>
+        tx.auditLog.deleteMany({ where: { id: auditOldId } })
+      );
+      expect(res.count).toBe(1);
     });
   });
 });
