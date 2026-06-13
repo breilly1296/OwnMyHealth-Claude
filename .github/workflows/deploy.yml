@@ -25,6 +25,15 @@ on:
 permissions:
   contents: read
 
+# Serialize deploys. The migration job (ownmyhealth-migrate) is a single shared
+# Cloud Run resource that `jobs deploy` mutates (image SHA) then executes; two
+# overlapping pushes could otherwise interleave so one run executes the other
+# run's image. cancel-in-progress:false lets an in-flight deploy (possibly
+# mid-migration) finish rather than being killed partway.
+concurrency:
+  group: deploy-cloudrun-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   PROJECT_ID: ownmyhealth-prod
   REGION: us-central1
@@ -105,6 +114,25 @@ jobs:
         run: |
           IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
 
+          # Run the migration job as the SAME runtime service account as the
+          # service, so it inherits the service's already-working access to the
+          # DATABASE_URL secret and the Cloud SQL instance. Without an explicit
+          # --service-account the job runs as the default compute SA, which will
+          # likely PERMISSION_DENIED on the secret on first run (and is a
+          # least-privilege violation if it happens to work). Resolved
+          # dynamically so there's nothing to keep in sync; if the service uses
+          # the default compute SA (empty value) the job matches it implicitly.
+          RUNTIME_SA=$(gcloud run services describe "${{ env.SERVICE }}" \
+            --region "${{ env.REGION }}" --project "${{ env.PROJECT_ID }}" \
+            --format='value(spec.template.spec.serviceAccountName)')
+          SA_FLAG=()
+          if [ -n "$RUNTIME_SA" ]; then
+            SA_FLAG=(--service-account "$RUNTIME_SA")
+            echo "Migration job will run as the service runtime SA: $RUNTIME_SA"
+          else
+            echo "Service uses the default compute SA; migration job will match it."
+          fi
+
           # `jobs deploy` creates the job on first run and updates it (new
           # image SHA) on every run after. --max-retries 0: a migration is not
           # safely retryable by a dumb re-run; a human looks at failures.
@@ -114,6 +142,7 @@ jobs:
             --project "${{ env.PROJECT_ID }}" \
             --set-cloudsql-instances "${{ env.CLOUDSQL_INSTANCE }}" \
             --set-secrets "DATABASE_URL=DATABASE_URL:latest" \
+            "${SA_FLAG[@]}" \
             --command npx \
             --args prisma,migrate,deploy \
             --max-retries 0 \
