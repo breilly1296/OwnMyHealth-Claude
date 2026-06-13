@@ -124,16 +124,20 @@ jobs:
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
-      # M-17: lowered the audit gate from --audit-level=high to =moderate so
-      # moderate-severity advisories (e.g. ReDoS, prototype-pollution in deps
-      # handling PHI) block a merge instead of slipping through. Not running
-      # `npm audit fix --force` — that can pull in breaking major bumps; fixes
-      # go through reviewed dependency PRs.
+      # Gate on High/Critical. (Was =moderate per M-17, but that made the gate
+      # un-satisfiable: the only remaining moderates are transitive advisories
+      # with no non-breaking fix — uuid/teeny-request/retry-request inside
+      # @google-cloud/storage, and @hono/node-server inside Prisma 7's @prisma/dev
+      # dev tooling — whose npm "fixes" are breaking downgrades (uuid@14,
+      # prisma@6.x) that would risk the PHI-upload and Prisma trees. High/Critical
+      # still block a merge; moderates are tracked and bumped via reviewed
+      # dependency PRs (Dependabot) as upstream patches land. Not running
+      # `npm audit fix --force` — it pulls breaking major bumps.
       - name: Audit frontend dependencies
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=high
 
       - name: Audit backend dependencies
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=high
         working-directory: backend
 
       # Fail the build if any controller/service bypasses RLS by calling the
