@@ -112,6 +112,36 @@ describe('fetchAllBiomarkers', () => {
     expect(result.truncated).toBe(false);
   });
 
+  it('fetches the second page when totalPages is exactly 2 (loop-bound boundary)', async () => {
+    // Guards the `start <= lastPage` bound: a `<` mutation would skip page 2
+    // entirely for a 2-page record.
+    vi.mocked(biomarkersApi.getAll).mockImplementation(
+      async (params) => makePage(params?.page ?? 1, 2, 2) as never
+    );
+
+    const result = await fetchAllBiomarkers();
+
+    expect(biomarkersApi.getAll).toHaveBeenCalledTimes(2);
+    expect(biomarkersApi.getAll).toHaveBeenNthCalledWith(2, { page: 2, limit: 100 });
+    expect(result.biomarkers.map(b => b.id)).toEqual(['bm-1-0', 'bm-1-1', 'bm-2-0', 'bm-2-1']);
+    expect(result.truncated).toBe(false);
+  });
+
+  it('does NOT report truncation when totalPages equals the cap exactly (50)', async () => {
+    // Guards `truncated: totalPages > MAX_BIOMARKER_PAGES`: a `>=` mutation
+    // would falsely flag a complete 50-page fetch as truncated.
+    vi.mocked(biomarkersApi.getAll).mockImplementation(
+      async (params) => makePage(params?.page ?? 1, 1, 50) as never
+    );
+
+    const result = await fetchAllBiomarkers();
+
+    expect(biomarkersApi.getAll).toHaveBeenCalledTimes(50);
+    expect(biomarkersApi.getAll).toHaveBeenLastCalledWith({ page: 50, limit: 100 });
+    expect(result.biomarkers).toHaveLength(50);
+    expect(result.truncated).toBe(false);
+  });
+
   it('stops at the 50-page safety cap and reports truncation', async () => {
     vi.mocked(biomarkersApi.getAll).mockImplementation(
       async (params) => makePage(params?.page ?? 1, 1, 60) as never
