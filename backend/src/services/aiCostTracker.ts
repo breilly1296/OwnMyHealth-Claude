@@ -77,6 +77,42 @@ export function isAISpendExceeded(userId: string): { exceeded: boolean; scope: '
   return { exceeded: false, scope: null };
 }
 
+/**
+ * L-3: conservative per-request reservation. Because the real cost of a Claude
+ * call isn't known until it returns, isAISpendExceeded() alone lets N concurrent
+ * requests all observe "under budget" and proceed before any of them records a
+ * cost, overshooting the cap by up to (N-1) calls. reserveAISpend() optimistically
+ * charges a fixed estimate to the accumulator for the duration of the in-flight
+ * call so concurrent requests see the budget as partially consumed. The returned
+ * settle() backs the estimate out again (the real cost is added independently by
+ * trackAIUsage). settle() is idempotent and a no-op once the UTC day has rolled
+ * over (the accumulator is cleared then), so it can never drive a balance negative
+ * or wrongly lock a user out. Sized to a typical single Claude call.
+ */
+const RESERVATION_USD = 0.05;
+
+export function reserveAISpend(
+  userId: string,
+  estimatedUsd: number = RESERVATION_USD
+): () => void {
+  rollIfNewDay();
+  const dayAtReserve = spendDayKey;
+  recordSpend(userId, estimatedUsd);
+
+  let settled = false;
+  return function settle(): void {
+    if (settled) return;
+    settled = true;
+    rollIfNewDay();
+    // If the day rolled over since the reservation, the accumulator was reset —
+    // there's nothing to back out.
+    if (spendDayKey !== dayAtReserve) return;
+    globalSpentUsd = Math.max(0, globalSpentUsd - estimatedUsd);
+    const current = userSpentUsd.get(userId) ?? 0;
+    userSpentUsd.set(userId, Math.max(0, current - estimatedUsd));
+  };
+}
+
 /** Test-only: reset the in-memory accumulator. */
 export function __resetAISpendForTests(): void {
   spendDayKey = '';

@@ -121,6 +121,14 @@ export async function createProjection(req: AuthenticatedRequest, res: Response)
   const encryption = getEncryptionService();
 
   const projection = await withRLSTransaction(userId, async (tx) => {
+    // L-4: ensure the referenced plan belongs to the caller before linking a
+    // projection to it. The FK constraint to insurance_plans is validated as the
+    // table owner and bypasses RLS, so without this an insert referencing
+    // another user's plan UUID would succeed and create an orphan reference.
+    const plan = await tx.insurancePlan.findFirst({ where: { id: planId, userId }, select: { id: true } });
+    if (!plan) {
+      throw new NotFoundError('Insurance plan not found');
+    }
     return tx.expenseProjection.create({
       data: {
         userId,
@@ -420,6 +428,13 @@ export async function createActual(req: AuthenticatedRequest, res: Response): Pr
     v === undefined || v === null ? null : encryption.encrypt(v.toString(), userSalt);
 
   const actual = await withRLSTransaction(userId, async (tx) => {
+    // L-4: ensure the referenced plan belongs to the caller (see createProjection).
+    // recomputePlanSpending below already no-ops on a foreign plan, but the
+    // expenseActual row would still be inserted with a non-owned planId.
+    const plan = await tx.insurancePlan.findFirst({ where: { id: planId, userId }, select: { id: true } });
+    if (!plan) {
+      throw new NotFoundError('Insurance plan not found');
+    }
     const created = await tx.expenseActual.create({
       data: {
         userId,

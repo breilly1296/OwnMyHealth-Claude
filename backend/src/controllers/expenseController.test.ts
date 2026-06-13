@@ -71,7 +71,7 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 // -- Imports AFTER mocks -------------------------------------------------
-import { analyzeCosts } from './expenseController.js';
+import { analyzeCosts, createProjection, createActual } from './expenseController.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 function mockReq(userId: string, body: Record<string, unknown> = {}) {
@@ -214,5 +214,57 @@ describe('analyzeCosts (C-7)', () => {
       expect(promptText).toContain('PPO');
       expect(promptText).toContain('2,000');
     });
+  });
+});
+
+// L-4: a user must not be able to attach a projection/actual to a plan they
+// don't own (the FK check bypasses RLS, so without an explicit ownership lookup
+// the orphan-referencing insert would succeed).
+describe('expense create plan-ownership guard (L-4)', () => {
+  beforeEach(() => {
+    mocks.withRLSTransaction.mockReset();
+    mocks.logCreate.mockReset();
+  });
+
+  // Run the handler's tx callback against a tx whose insurancePlan.findFirst
+  // returns `found` (null = not owned by the caller).
+  function txReturning(found: unknown, create = vi.fn()) {
+    return (_uid: string, fn: (tx: unknown) => unknown) =>
+      fn({
+        insurancePlan: { findFirst: vi.fn().mockResolvedValue(found) },
+        expenseProjection: { create },
+        expenseActual: { create },
+      });
+  }
+
+  const projBody = { planId: 'someone-elses-plan', serviceType: 'MRI', estimatedCost: 500, frequencyPerYear: 1 };
+  const actualBody = { planId: 'someone-elses-plan', serviceType: 'MRI', billedAmount: 500 };
+
+  it('createProjection rejects a non-owned planId with NotFoundError', async () => {
+    const create = vi.fn();
+    mocks.withRLSTransaction.mockImplementation(txReturning(null, create));
+    await expect(createProjection(mockReq('user-1', projBody), mockRes())).rejects.toThrow('Insurance plan not found');
+    expect(create).not.toHaveBeenCalled(); // never inserted the orphan row
+  });
+
+  it('createActual rejects a non-owned planId with NotFoundError', async () => {
+    const create = vi.fn();
+    mocks.withRLSTransaction.mockImplementation(txReturning(null, create));
+    await expect(createActual(mockReq('user-1', actualBody), mockRes())).rejects.toThrow('Insurance plan not found');
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('createProjection still succeeds when the plan IS owned', async () => {
+    const create = vi.fn().mockResolvedValue({
+      id: 'proj-1',
+      serviceTypeEncrypted: 'enc(MRI)',
+      estimatedCostEncrypted: 'enc(500)',
+      notesEncrypted: null,
+    });
+    mocks.withRLSTransaction.mockImplementation(txReturning({ id: 'someone-elses-plan' }, create));
+    const res = mockRes();
+    await createProjection(mockReq('user-1', projBody), res);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 });

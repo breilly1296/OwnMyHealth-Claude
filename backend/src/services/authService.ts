@@ -547,6 +547,39 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
   invalidateTokensValidAfterCache(userId);
 }
 
+// M-1: short-lived record of refresh-token JTIs that were JUST rotated, used to
+// tell a benign double-tab refresh race apart from a genuine stolen-token replay
+// in the reuse branch of refreshTokens(). When a token is rotated we mark its
+// JTI here; if the SAME JTI shows up again within the grace window it's almost
+// certainly the loser of a client-side race (two tabs refreshed at once), so we
+// do NOT revoke the family. A replay that arrives later than the window is
+// treated as a compromise signal and triggers full family revocation.
+//
+// In-memory / per-instance is sufficient: a single client's own race resolves on
+// the same instance within milliseconds, and a cross-instance miss only costs a
+// spurious (but safe) family revoke. The map self-prunes; entries are tiny.
+const REFRESH_REUSE_GRACE_MS = 10_000;
+const recentlyRotatedJtis = new Map<string, number>();
+
+function markRecentRotation(jti: string): void {
+  const now = Date.now();
+  recentlyRotatedJtis.set(jti, now);
+  // Opportunistic prune so the map can't grow unbounded under sustained load.
+  if (recentlyRotatedJtis.size > 1) {
+    for (const [k, ts] of recentlyRotatedJtis) {
+      if (now - ts > REFRESH_REUSE_GRACE_MS) recentlyRotatedJtis.delete(k);
+    }
+  }
+}
+
+// Peek (no delete) at a JTI's rotation timestamp. Not single-use on purpose: a
+// 3+-tab race would otherwise see the 2nd loser consume the mark and the 3rd
+// trigger a spurious family revoke. The grace window naturally expires the entry.
+function getRecentRotation(jti: string): number | null {
+  const ts = recentlyRotatedJtis.get(jti);
+  return ts === undefined ? null : ts;
+}
+
 /**
  * Refresh tokens — issue a new access/refresh pair using the incoming
  * refresh token. Atomic: the old session row is locked with
@@ -579,7 +612,7 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
   // refresh-reuse).
   const result = await withRLSTransaction(
     null,
-    async (tx): Promise<{ user: User } | { reason: 'reuse' | 'inactive' }> => {
+    async (tx): Promise<{ user: User } | { reason: 'reuse' | 'expired' | 'inactive' }> => {
       // Lock the session row for the duration of this transaction. A parallel
       // refresh attempt for the same JTI will block on this until we commit
       // or roll back; by the time it unblocks the row is gone and the lookup
@@ -595,14 +628,21 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
       `;
 
       const session = locked[0];
-      if (!session || session.expiresAt < new Date()) {
-        // Either the row was already consumed by a racing/prior refresh
-        // (rotation already happened — this is token REUSE), or it expired
-        // between JWT verification and the lock. Either way: no new tokens.
-        if (session) {
-          await tx.session.delete({ where: { id: payload!.jti } });
-        }
+      if (!session) {
+        // The row is already gone — a prior/racing refresh consumed it
+        // (rotation already happened). Presenting this token again is token
+        // REUSE: either a benign double-tab race or a stolen-then-rotated
+        // replay. The caller decides (grace window) whether to revoke the
+        // whole family. No new tokens either way.
         return { reason: 'reuse' };
+      }
+      if (session.expiresAt < new Date()) {
+        // Row present but past its expiry — normal session housekeeping, NOT a
+        // compromise signal. Delete it and report 'expired' so the caller
+        // returns 401 WITHOUT revoking the family (an expired token is not a
+        // stolen one).
+        await tx.session.delete({ where: { id: payload!.jti } });
+        return { reason: 'expired' };
       }
 
       const prismaUser = await tx.user.findUnique({ where: { id: session.userId } });
@@ -615,32 +655,56 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
       // session row for the new refresh token, all inside this tx.
       await tx.session.delete({ where: { id: payload!.jti } });
 
+      // M-1: mark this JTI as just-rotated. Recorded INSIDE the tx, before the
+      // SELECT ... FOR UPDATE row lock is released on commit, so a racing
+      // refresh of the same token (which only unblocks after this commits and
+      // then lands in the reuse branch) is guaranteed to see the mark and be
+      // classified as a benign race rather than a compromise.
+      markRecentRotation(payload!.jti);
+
       return { user: prismaUserToUser(prismaUser) };
     }
   );
 
   if ('reason' in result) {
     if (result.reason === 'reuse') {
-      // RT (refresh-reuse): a signature-valid refresh token was presented whose
-      // JTI is no longer the live session — i.e. it was already rotated/consumed
-      // (replay), or it expired. Record a FAILURE audit row so this surfaces in
-      // the HIPAA trail instead of failing silently. Best-effort: never block the
-      // 401 the caller returns on an audit hiccup.
+      // RT / M-1 (refresh-reuse): a signature-valid refresh token was presented
+      // whose JTI is no longer the live session — it was already rotated/consumed.
+      // This is either a benign client race (two tabs refreshed the same token
+      // within milliseconds) or a genuine replay of a stolen-then-rotated token.
       //
-      // TODO (follow-up): treat replay of an already-rotated token as a strong
-      // compromise signal and REVOKE THE ENTIRE TOKEN FAMILY for this user
-      // (revokeAllUserTokens(payload.id)) so a stolen-then-rotated token can't be
-      // used to mint a parallel session. Left out here to keep the change minimal
-      // and avoid logging-out a user whose own race (double-tab refresh) tripped
-      // the path; gate family-revocation on a reuse-after-success detector.
+      // M-1 fix: a stolen token whose attacker rotated it FIRST would otherwise
+      // mint a session that survives the legitimate user's forced re-login. We
+      // now treat a replay OUTSIDE the rotation grace window as a compromise
+      // signal and revoke the ENTIRE token family (all sessions + a
+      // tokensValidAfter cutoff that kills in-flight access tokens cross-instance
+      // too). A replay INSIDE the window is the loser of a double-tab race, so we
+      // leave the freshly-minted session alone — preserving the UX the original
+      // deferral was protecting.
+      const rotatedAt = getRecentRotation(payload!.jti);
+      const benignRace =
+        rotatedAt !== null && Date.now() - rotatedAt < REFRESH_REUSE_GRACE_MS;
+
+      if (!benignRace) {
+        try {
+          await revokeAllUserTokens(payload!.id);
+        } catch (error) {
+          // A revoke failure must not change the 401 the caller already gets;
+          // log loudly so the missed family-revoke is visible.
+          logger.error('Failed to revoke token family on refresh-token reuse', {
+            prefix: 'Auth',
+            data: { error: error instanceof Error ? error.message : String(error) },
+          });
+        }
+      }
+
+      // Record a FAILURE audit row so reuse surfaces in the HIPAA trail instead
+      // of failing silently. Best-effort: never block the 401 on an audit hiccup.
       try {
         const auditService = getAuditLogService(getPrismaClient());
         // AuditContext only carries req/userId/sessionId/tx — IP and user-agent
-        // are derived from a `req`, which this pre-auth flow doesn't have. Carry
-        // the session metadata in the audit metadata instead.
-        // AUDIT SUCCESS contract: a FAILURE path passes success:false +
-        // errorMessage (logAuth threads metadata, not the top-level fields, so
-        // we carry them in metadata alongside the existing shape).
+        // are derived from a `req`, which this pre-auth flow doesn't have, so we
+        // carry the session metadata in the audit metadata instead.
         await auditService.logAuth(
           'LOGIN_FAILED',
           { userId: payload!.id },
@@ -648,7 +712,10 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
             reason: 'REFRESH_TOKEN_REUSE',
             authAction: 'REFRESH',
             success: false,
-            errorMessage: 'Refresh token reuse/rotation conflict — token no longer the live session',
+            errorMessage: benignRace
+              ? 'Refresh token rotation race — token no longer the live session (within grace window; family NOT revoked)'
+              : 'Refresh token reuse detected — token family revoked (possible stolen token)',
+            familyRevoked: !benignRace,
             jti: payload!.jti,
             ipAddress: metadata?.ipAddress,
             userAgent: metadata?.userAgent,
@@ -661,6 +728,8 @@ export async function refreshTokens(refreshToken: string, metadata?: SessionMeta
         });
       }
     }
+    // 'expired' (normal housekeeping) and 'inactive' fall through to a plain
+    // 401 with no family action.
     return null;
   }
 
@@ -963,15 +1032,6 @@ export async function attemptLogin(
     };
   }
 
-  // Check if email is verified
-  if (!user.emailVerified) {
-    return {
-      success: false,
-      error: 'Email not verified. Please check your email for the verification link.',
-      emailNotVerified: true,
-    };
-  }
-
   // Check if account is locked
   if (isAccountLocked(user)) {
     const remainingTime = getLockoutRemainingTime(user);
@@ -1000,6 +1060,21 @@ export async function attemptLogin(
       success: false,
       remainingAttempts: lockoutResult.remainingAttempts,
       error: `Invalid email or password. ${lockoutResult.remainingAttempts} attempts remaining`,
+    };
+  }
+
+  // L-1: only reveal email-verification status AFTER the password is verified.
+  // Checking this earlier let an unauthenticated attacker use the
+  // EMAIL_NOT_VERIFIED (403) response as an account-existence oracle: a wrong
+  // password against a registered-but-unverified account returned 403, while an
+  // unknown email returned 401. With the check here, a wrong password is
+  // indistinguishable from an unknown email (both 401), and only the legitimate
+  // credential-holder is told their email needs verifying.
+  if (!user.emailVerified) {
+    return {
+      success: false,
+      error: 'Email not verified. Please check your email for the verification link.',
+      emailNotVerified: true,
     };
   }
 

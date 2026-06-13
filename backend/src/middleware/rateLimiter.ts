@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request, Response, NextFunction } from 'express';
 import type { Options } from 'express-rate-limit';
 import crypto from 'crypto';
@@ -10,6 +10,15 @@ import { createRateLimitStore } from './rateLimitStore.js';
 // Best-effort client IP, mirroring the keyGenerator fallbacks below.
 const clientIp = (req: Request): string =>
   req.ip || req.socket.remoteAddress || 'unknown';
+
+// L-2: normalize an IP into a rate-limit key. Wraps express-rate-limit's
+// `ipKeyGenerator` so an IPv6 client collapses to its /64 subnet instead of
+// being counted per-address — otherwise a single IPv6 host could rotate through
+// its (effectively unlimited) addresses to evade an IP-keyed limit. Using this
+// in our custom keyGenerators also resolves the ERR_ERL_KEY_GEN_IPV6 validation
+// error the library raises for raw-IP keys. IPv4 and non-IP fallbacks
+// ("unknown") pass through unchanged.
+const ipKey = (req: Request): string => ipKeyGenerator(clientIp(req));
 
 // Hash a rate-limit key before it is logged so the audit trail never carries a
 // raw email or IP. SHA-256 truncated to 16 hex chars is enough to correlate
@@ -68,8 +77,9 @@ export const standardLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // Use forwarded IP if behind proxy, otherwise use connection IP
-    return req.ip || req.socket.remoteAddress || 'unknown';
+    // Use forwarded IP if behind proxy, otherwise connection IP — normalized so
+    // IPv6 clients are keyed by /64 subnet (L-2).
+    return ipKey(req);
   },
   handler: makeRateLimitHandler('standard', clientIp),
 });
@@ -111,7 +121,7 @@ export const strictAuthLimiter = rateLimit({
     // accounts. Normalize the (attacker-controlled) email so case/whitespace
     // variants collapse to one bucket and cannot multiply the budget (L-1).
     const email = normalizeEmail(req.body?.email);
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const ip = ipKey(req); // /64-normalized for IPv6 (L-2)
     return `${email}:${ip}`;
   },
   // Log a HASHED email only — never the raw `email:IP` key (M-5).
@@ -153,9 +163,9 @@ export const sensitiveLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     // Key by authenticated user ID so per-account export/delete caps survive a
-    // shared NAT (M-12). Falls back to IP for any unauthenticated path,
-    // mirroring aiLimiter.
-    return (req as Request & { user?: { id: string } }).user?.id || clientIp(req);
+    // shared NAT (M-12). Falls back to /64-normalized IP for any unauthenticated
+    // path (L-2), mirroring aiLimiter.
+    return (req as Request & { user?: { id: string } }).user?.id || ipKey(req);
   },
   handler: makeRateLimitHandler(
     'sensitive',
@@ -178,8 +188,9 @@ export const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // Key by authenticated user ID for per-user cost protection, fallback to IP
-    return (req as Request & { user?: { id: string } }).user?.id || req.ip || req.socket.remoteAddress || 'unknown';
+    // Key by authenticated user ID for per-user cost protection, fallback to
+    // /64-normalized IP (L-2).
+    return (req as Request & { user?: { id: string } }).user?.id || ipKey(req);
   },
   handler: makeRateLimitHandler(
     'ai',
@@ -211,12 +222,9 @@ export const providerAccessRequestLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    return (
-      (req as Request & { user?: { id: string } }).user?.id ||
-      req.ip ||
-      req.socket.remoteAddress ||
-      'unknown'
-    );
+    // User-keyed, falling back to /64-normalized IP for any unauthenticated
+    // path (L-2).
+    return (req as Request & { user?: { id: string } }).user?.id || ipKey(req);
   },
   handler: makeRateLimitHandler(
     'provider-access-request',

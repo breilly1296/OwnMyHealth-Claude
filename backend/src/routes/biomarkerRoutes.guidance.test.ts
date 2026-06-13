@@ -70,6 +70,8 @@ vi.mock('../services/aiCostTracker.js', () => ({
   trackAIUsage: vi.fn(),
   // aiSpendGuard middleware (now on the guidance route) reads this.
   isAISpendExceeded: vi.fn(() => ({ exceeded: false, scope: null })),
+  // L-3: the guard reserves an in-flight estimate and gets back a settle fn.
+  reserveAISpend: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../utils/logger.js', () => ({
