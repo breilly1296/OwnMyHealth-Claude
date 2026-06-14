@@ -130,13 +130,16 @@ export const LOINC_MAP: Record<string, LOINCMapping> = {
   '30934-4': { loincCode: '30934-4', loincDisplay: 'NT-proBNP', biomarkerName: 'NT-proBNP', category: 'Cardiac', defaultUnit: 'pg/mL' },
   '33762-6': { loincCode: '33762-6', loincDisplay: 'BNP', biomarkerName: 'BNP', category: 'Cardiac', defaultUnit: 'pg/mL' },
 
-  // ===== Vital signs (sometimes come as Observations) =====
-  '8480-6': { loincCode: '8480-6', loincDisplay: 'Systolic Blood Pressure', biomarkerName: 'Blood Pressure (Systolic)', category: 'Vital Signs', defaultUnit: 'mmHg' },
-  '8462-4': { loincCode: '8462-4', loincDisplay: 'Diastolic Blood Pressure', biomarkerName: 'Blood Pressure (Diastolic)', category: 'Vital Signs', defaultUnit: 'mmHg' },
-  '8867-4': { loincCode: '8867-4', loincDisplay: 'Heart Rate', biomarkerName: 'Heart Rate', category: 'Vital Signs', defaultUnit: 'bpm' },
-  '29463-7': { loincCode: '29463-7', loincDisplay: 'Body Weight', biomarkerName: 'Weight', category: 'Vital Signs', defaultUnit: 'kg' },
-  '8302-2': { loincCode: '8302-2', loincDisplay: 'Body Height', biomarkerName: 'Height', category: 'Vital Signs', defaultUnit: 'cm' },
-  '39156-5': { loincCode: '39156-5', loincDisplay: 'BMI', biomarkerName: 'BMI', category: 'Vital Signs', defaultUnit: 'kg/m2' },
+  // Vital signs (BP / heart rate / weight / height / BMI — LOINC 8480-6,
+  // 8462-4, 8867-4, 29463-7, 8302-2, 39156-5) are INTENTIONALLY NOT MAPPED.
+  // They were dead config: the sync only requests Observations with
+  // category=laboratory (fhirClient.buildQuery), so vital-signs-category
+  // Observations are never fetched and these entries were never reachable.
+  // They also don't fit the lab-shaped Biomarker model — measurementDate is
+  // @db.Date (day-granular, can't hold intraday HR/BP) and blood pressure
+  // arrives as component[] pairs, not a single valueQuantity. Importing vitals
+  // is a feature (separate fetch + model), not a mapping entry; don't re-add a
+  // live-looking mapping here. Removed in the L-26-adjacent FHIR cleanup (2026-06-14).
 };
 
 /**
