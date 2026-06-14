@@ -272,11 +272,20 @@ export async function syncLabResults(
           name: true,
           measurementDate: true,
           valueEncrypted: true,
+          sourceFile: true,
         },
       });
     });
     const existingKeys = new Set<string>();
+    // FHIR observation identities already imported, keyed on the STABLE external
+    // id (stored in sourceFile as `fhir:{provider}:{obs.id}`). This — not the
+    // mutable value — is the idempotency key: a re-sync of an already-imported
+    // observation is a true no-op, so it can't clobber the user's later edit of
+    // that reading via upsertBiomarkerReading's same-date "corrected" branch.
+    // sourceFile is not encrypted, so seeding this set needs no decryption.
+    const existingSourceFiles = new Set<string>();
     for (const b of existing) {
+      if (b.sourceFile) existingSourceFiles.add(b.sourceFile);
       try {
         const v = encryption.decrypt(b.valueEncrypted, salt);
         existingKeys.add(dedupeKey(b.name, b.measurementDate, v));
@@ -298,6 +307,19 @@ export async function syncLabResults(
           skipped++;
           continue;
         }
+
+        // Idempotency by stable FHIR Observation.id: skip an observation we've
+        // already imported so a re-sync can't reprocess it and overwrite a value
+        // the user has since edited. An amended/corrected result reuses the same
+        // id with a NEW value, so let those through to update (the value-based
+        // check below then no-ops an amendment whose value didn't actually change).
+        const obsIdentity = `fhir:${provider}:${obs.id}`;
+        const isAmendment = obs.status === 'amended' || obs.status === 'corrected';
+        if (existingSourceFiles.has(obsIdentity) && !isAmendment) {
+          skipped++;
+          continue;
+        }
+
         if (row.unmapped && !unmappedCodes.includes(row.loincCode)) {
           unmappedCodes.push(row.loincCode);
         }
@@ -331,6 +353,7 @@ export async function syncLabResults(
           });
         });
         existingKeys.add(key);
+        existingSourceFiles.add(obsIdentity);
         imported++;
         importedNames.push(row.name);
       } catch (err) {
