@@ -1014,8 +1014,16 @@ export function extractProjectedOOP(
   plan: PlanForAnalysis
 ): number | null {
   try {
-    const deductibleRemaining = Math.max(0, Number(plan.deductibleIndividual) - Number(plan.deductibleMetIndividual));
-    let totalOOP = Number(plan.oopMetIndividual);
+    // M9 defensive guard: protect the projection from poisoned/legacy plan rows
+    // (the SBC write path now sanitizes these, but already-persisted rows aren't
+    // re-validated). Coinsurance is a percent that must be 0–100; a non-positive
+    // oopMax means "no cap recorded", NOT "cap to $0"; floor NaN/negative inputs.
+    const coinsuranceFraction = Math.min(100, Math.max(0, Number(plan.coinsuranceRate) || 0)) / 100;
+    const deductibleRemaining = Math.max(
+      0,
+      (Number(plan.deductibleIndividual) || 0) - (Number(plan.deductibleMetIndividual) || 0)
+    );
+    let totalOOP = Math.max(0, Number(plan.oopMetIndividual) || 0);
     let remainingDeductible = deductibleRemaining;
 
     for (const proj of projections) {
@@ -1029,13 +1037,14 @@ export function extractProjectedOOP(
         totalOOP += toDeductible;
         remainingDeductible -= toDeductible;
         const afterDeductible = annualCost - toDeductible;
-        totalOOP += afterDeductible * (Number(plan.coinsuranceRate) / 100);
+        totalOOP += afterDeductible * coinsuranceFraction;
       } else {
-        totalOOP += annualCost * (Number(plan.coinsuranceRate) / 100);
+        totalOOP += annualCost * coinsuranceFraction;
       }
     }
 
-    return Math.min(totalOOP, Number(plan.oopMaxIndividual));
+    const oopMax = Number(plan.oopMaxIndividual);
+    return oopMax > 0 ? Math.min(totalOOP, oopMax) : totalOOP;
   } catch {
     return null;
   }
