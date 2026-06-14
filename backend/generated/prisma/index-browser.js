@@ -164,6 +164,13 @@ exports.Prisma.SessionScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.RevokedAccessTokenScalarFieldEnum = {
+  jti: 'jti',
+  userId: 'userId',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.UserEncryptionKeyScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -659,6 +666,7 @@ exports.AuditAction = exports.$Enums.AuditAction = {
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
+  RevokedAccessToken: 'RevokedAccessToken',
   UserEncryptionKey: 'UserEncryptionKey',
   ProviderPatient: 'ProviderPatient',
   UserFile: 'UserFile',

@@ -14,10 +14,15 @@ import { getPrismaClient, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
+import {
+  upsertBiomarkerReading,
+  type BiomarkerReadingInput,
+  type BiomarkerWithHistory,
+} from '../services/biomarkerSeries.js';
 import { parsePagination, parseStringParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { toNumber } from '../utils/numberConversion.js';
 import { logger } from '../utils/logger.js';
-import type { Biomarker as PrismaBiomarker, DataSourceType, Prisma } from '../../generated/prisma/index.js';
+import type { Biomarker as PrismaBiomarker, DataSourceType } from '../../generated/prisma/index.js';
 
 const RESOURCE_TYPE = 'Biomarker';
 
@@ -165,7 +170,8 @@ export async function getBiomarkers(
     const total = await tx.biomarker.count({ where });
     const biomarkers = await tx.biomarker.findMany({
       where,
-      include: { history: true },
+      // Oldest-first so trend math (history[0] = oldest) is order-independent.
+      include: { history: { orderBy: { measurementDate: 'asc' } } },
       skip: pagination.skip,
       take: pagination.take,
       orderBy: { measurementDate: 'desc' },
@@ -229,7 +235,8 @@ export async function getBiomarker(
   const biomarker = await withRLSTransaction(userId, async (tx) => {
     return tx.biomarker.findFirst({
       where: { id, userId },
-      include: { history: true },
+      // Oldest-first so trend math (history[0] = oldest) is order-independent.
+      include: { history: { orderBy: { measurementDate: 'asc' } } },
     });
   });
 
@@ -271,36 +278,35 @@ export async function createBiomarker(
   const isOutOfRange =
     input.value < input.normalRange.min || input.value > input.normalRange.max;
 
-  const biomarker = await withRLSTransaction(userId, async (tx) => {
-    return tx.biomarker.create({
-      data: {
-        userId,
-        category: input.category,
-        name: input.name,
-        unit: input.unit,
-        valueEncrypted,
-        notesEncrypted,
-        normalRangeMin: input.normalRange.min,
-        normalRangeMax: input.normalRange.max,
-        normalRangeSource: input.normalRange.source,
-        measurementDate: new Date(input.date),
-        sourceType: input.sourceType || 'MANUAL',
-        sourceFile: input.sourceFile,
-        extractionConfidence: input.extractionConfidence,
-        labName: input.labName,
-        isOutOfRange,
-        isAcknowledged: false,
-      },
-      include: { history: true },
+  // Append to the existing series for (name, unit) instead of inserting a
+  // disconnected row, so trends accrue over time. See services/biomarkerSeries.
+  const { biomarker, outcome } = await withRLSTransaction(userId, async (tx) => {
+    return upsertBiomarkerReading(tx, userId, {
+      category: input.category,
+      name: input.name,
+      unit: input.unit,
+      valueEncrypted,
+      notesEncrypted,
+      normalRangeMin: input.normalRange.min,
+      normalRangeMax: input.normalRange.max,
+      normalRangeSource: input.normalRange.source,
+      measurementDate: new Date(input.date),
+      sourceType: input.sourceType || 'MANUAL',
+      sourceFile: input.sourceFile,
+      extractionConfidence: input.extractionConfidence,
+      labName: input.labName,
+      isOutOfRange,
     });
   });
 
-  // Audit log: CREATE biomarker
+  // Audit log: CREATE biomarker (a new reading is a PHI write regardless of
+  // whether it created a new series or appended to an existing one).
   const auditService = getAuditLogService(prisma);
   await auditService.logCreate(RESOURCE_TYPE, biomarker.id, {
     name: input.name,
     category: input.category,
     value: input.value,
+    seriesOutcome: outcome,
   }, { req, userId });
 
   const response: ApiResponse<BiomarkerResponse> = {
@@ -308,7 +314,9 @@ export async function createBiomarker(
     data: await toResponse(biomarker, userSalt),
   };
 
-  res.status(201).json(response);
+  // 201 when a new series was created; 200 when the reading merged into an
+  // existing series (no new resource URI minted).
+  res.status(outcome === 'created' ? 201 : 200).json(response);
 }
 
 // Update biomarker
@@ -496,7 +504,7 @@ export async function bulkCreateBiomarkers(
 
   // Track succeeded and failed items
   const failedItems: { index: number; name: string; error: string }[] = [];
-  const validBiomarkerData: Prisma.BiomarkerCreateManyInput[] = [];
+  const validReadings: BiomarkerReadingInput[] = [];
 
   // Prepare and validate each biomarker
   inputs.forEach((input, index) => {
@@ -523,8 +531,7 @@ export async function bulkCreateBiomarkers(
         ? (input.sourceType as DataSourceType)
         : 'MANUAL';
 
-      validBiomarkerData.push({
-        userId,
+      validReadings.push({
         category: input.category,
         name: input.name,
         unit: input.unit,
@@ -539,7 +546,6 @@ export async function bulkCreateBiomarkers(
         extractionConfidence: input.extractionConfidence,
         labName: input.labName,
         isOutOfRange: input.value < input.normalRange.min || input.value > input.normalRange.max,
-        isAcknowledged: false,
       });
     } catch (error) {
       failedItems.push({
@@ -554,7 +560,7 @@ export async function bulkCreateBiomarkers(
   // NOTE: `error.details` is reserved by the ApiResponse contract for
   // ValidationError field errors. These per-item failures are app-level
   // exception strings, not field errors, so they go in `meta.failedItems`.
-  if (validBiomarkerData.length === 0) {
+  if (validReadings.length === 0) {
     res.status(400).json({
       success: false,
       error: {
@@ -571,34 +577,35 @@ export async function bulkCreateBiomarkers(
     return;
   }
 
-  // Use createMany for efficient batch insert, then fetch created records via RLS transaction
-  let createdRecords;
+  // Merge each reading into its series within a single RLS transaction. A later
+  // reading sees rows written by an earlier one, so multiple points of the same
+  // metric in one batch collapse into one growing series regardless of order.
+  // This trades the old O(1) createMany for up to ~100 sequential upserts (the
+  // batch cap) — acceptable for an infrequent upload and required for correct
+  // series accrual (the createMany path produced disconnected single-point rows).
+  let affected: Map<string, BiomarkerWithHistory>;
   try {
-    createdRecords = await withRLSTransaction(userId, async (tx) => {
-      await tx.biomarker.createMany({
-        data: validBiomarkerData,
-      });
-
-      // Fetch the created biomarkers to return with IDs
-      const recentDate = new Date(Date.now() - 60000); // Last minute
-      return tx.biomarker.findMany({
-        where: {
-          userId,
-          createdAt: { gte: recentDate },
-          name: { in: validBiomarkerData.map(i => i.name) },
-        },
-        include: { history: true },
-        orderBy: { createdAt: 'desc' },
-        take: validBiomarkerData.length,
-      });
-    });
+    affected = await withRLSTransaction(
+      userId,
+      async (tx) => {
+        const byId = new Map<string, BiomarkerWithHistory>();
+        for (const reading of validReadings) {
+          const { biomarker } = await upsertBiomarkerReading(tx, userId, reading);
+          // The last upsert touching a given series returns its final state.
+          byId.set(biomarker.id, biomarker);
+        }
+        return byId;
+      },
+      // Up to ~100 sequential upserts in one tx — extend past Prisma's 5s default.
+      { timeout: 30_000, maxWait: 10_000 }
+    );
   } catch (dbError) {
     // SECURITY: Log actual error server-side but don't expose to user
     // Raw DB errors can reveal table names, constraints, and schema details
     logger.error('Batch biomarker creation failed', {
       data: {
         userId,
-        count: validBiomarkerData.length,
+        count: validReadings.length,
         error: dbError instanceof Error ? dbError.message : 'Unknown database error',
       },
     });
@@ -616,9 +623,9 @@ export async function bulkCreateBiomarkers(
         total: inputs.length,
         succeeded: 0,
         failed: inputs.length,
-        failedItems: validBiomarkerData.map((_, i) => ({
+        failedItems: validReadings.map((r, i) => ({
           index: i,
-          name: validBiomarkerData[i].name,
+          name: r.name,
           error: 'Database operation failed',
         })),
       },
@@ -626,15 +633,17 @@ export async function bulkCreateBiomarkers(
     return;
   }
 
+  // One row per affected series (several readings may merge into one series).
   const createdBiomarkers = await Promise.all(
-    createdRecords.map(b => toResponse(b, userSalt))
+    Array.from(affected.values()).map(b => toResponse(b, userSalt))
   );
 
   // Batch audit log: CREATE for bulk biomarkers
   await auditService.logCreate(RESOURCE_TYPE, 'BULK', {
-    count: createdBiomarkers.length,
-    categories: [...new Set(validBiomarkerData.map(i => i.category))],
-    names: validBiomarkerData.map(i => i.name),
+    count: validReadings.length,
+    seriesAffected: affected.size,
+    categories: [...new Set(validReadings.map(r => r.category))],
+    names: validReadings.map(r => r.name),
     failedCount: failedItems.length,
   }, { req, userId });
 
@@ -643,10 +652,13 @@ export async function bulkCreateBiomarkers(
 
   const response: ApiResponse<BiomarkerResponse[]> = {
     success: failedItems.length === 0,
+    // `succeeded` counts readings persisted; `data` may have fewer rows because
+    // readings of the same metric merge into a single series.
     data: createdBiomarkers,
     meta: {
       total: inputs.length,
-      succeeded: createdBiomarkers.length,
+      succeeded: validReadings.length,
+      seriesAffected: affected.size,
       failed: failedItems.length,
       ...(failedItems.length > 0 && { failedItems }),
     },

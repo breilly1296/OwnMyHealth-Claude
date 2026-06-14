@@ -116,6 +116,7 @@ export function DashboardContent({
   onOpenAddMeasurement,
   onOpenPDFUpload,
   onOpenLabUpload,
+  onOpenClinicalUpload,
   lastLabUploadAt,
 }: DashboardContentProps) {
   const { user } = useAuth();
@@ -248,7 +249,7 @@ export function DashboardContent({
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-3 gap-2 md:gap-3 max-w-xl">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-2xl">
           <button
             onClick={onOpenAddMeasurement}
             className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-wellness-300 dark:hover:border-wellness-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
@@ -278,6 +279,16 @@ export function DashboardContent({
             </div>
             <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Upload PDF</p>
             <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">Local parsing</p>
+          </button>
+          <button
+            onClick={onOpenClinicalUpload}
+            className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border border-slate-200/60 dark:border-slate-700 p-3 md:p-4 hover:border-purple-300 dark:hover:border-purple-500 hover:shadow-sm transition-all group text-left min-h-[88px]"
+          >
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center mb-2 md:mb-3 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
+              <Activity className="w-4 h-4 text-purple-600 dark:text-slate-300" />
+            </div>
+            <p className="text-xs md:text-sm font-medium text-slate-900 dark:text-white">Clinical Files</p>
+            <p className="text-xs text-slate-400 dark:text-slate-400 mt-0.5 hidden sm:block">DEXA · EKG</p>
           </button>
         </div>
       </div>
