@@ -43,18 +43,22 @@ the in-scope failures here.
 - `backend/src/routes/expenseRoutes.ts` (`POST /analyze` — full stack incl. `aiSpendGuard`, lines 111-120)
 - `backend/src/routes/insuranceRoutes.ts` (`upload-sbc` line 131 and `plans/:id/reanalyze` line 117 — both carry `aiSpendGuard`)
 - `backend/src/routes/biomarkerRoutes.ts` (`POST /:id/guidance` — full stack incl. `aiSpendGuard`, lines 120-126)
-- `backend/src/routes/uploadRoutes.ts` (`lab-report` line 77, `insurance-sbc` line 94, `lab-results-ocr` line 124 — `aiLimiter` + `requirePlanLimit('pdfUploadsPerMonth')` but **no** `aiSpendGuard`)
+- `backend/src/routes/uploadRoutes.ts` (`lab-report` line 82, `insurance-sbc` line 100, `lab-results-ocr` line 131 — `aiLimiter` + `aiSpendGuard` + `requirePlanLimit('pdfUploadsPerMonth')`; the earlier `no aiSpendGuard` gap on these three was closed, so **all eight** Claude-spending routes now carry the dollar breaker)
 - `backend/src/routes/healthGoalsRoutes.ts` (`GET /suggestions` — `aiLimiter` only, line 48)
 - `backend/src/routes/healthNeedsRoutes.ts` (`GET /analyze` — `aiLimiter` only, line 49)
 
 ### Frontend
 - `src/services/api/ai.ts` (`aiApi.chat` — SSE client; reads `usage.input_tokens`/`output_tokens` from `message_stop`, and decodes the 403 `PLAN_LIMIT_EXCEEDED` body into an upgrade CTA, lines 135-147)
 
-> NOTE: there is no schema/migration that owns spend state — the accumulator is
-> process memory in `aiCostTracker.ts`, not a table. That is itself a finding
-> dimension (see §3). Plan-limit counts are derived from existing tables
-> (`AuditLog`, `UserFile`, `Biomarker`, `InsurancePlan`, `CostAnalysis`), so no
-> new migration backs this domain.
+> NOTE: there is no schema/migration that owns spend state. The accumulator is
+> per-process memory in `aiCostTracker.ts` BY DEFAULT, but it is now pluggable
+> (M11/L33): when `REDIS_URL` is set it uses a shared Redis store (the same
+> Memorystore + ioredis connection the rate limiters use), so the daily cap is
+> consistent across Cloud Run instances instead of N×budget. The atomic gate
+> (`admitAISpend`) reserves + checks in one `INCRBYFLOAT`-then-compare-and-refund
+> per key, and fails CLOSED (503) on a store error. Plan-limit counts are still
+> derived from existing tables (`AuditLog`, `UserFile`, `Biomarker`,
+> `InsurancePlan`, `CostAnalysis`), so no new migration backs this domain.
 
 ## OwnMyHealth AI Cost-Control Architecture
 
@@ -131,17 +135,18 @@ response, or health values. The Anthropic key itself is owned by
 - [ ] `estimatedCostUsd` is logged with enough precision to be summable (`toFixed(6)`, `aiCostTracker.ts:102`) and emitted under the `AICost` service logger so spend can be aggregated downstream.
 - [ ] `recordSpend` increments BOTH `globalSpentUsd` and the per-user `Map` entry (`aiCostTracker.ts:56-60`) — a path that updates only one breaks one of the two scopes.
 
-### 2. Spend-guard route coverage (KNOWN GAP — do not soften)
-- [ ] Enumerate the AI routes that carry `aiSpendGuard`. As of 2026-06-01 there are exactly **five**: `POST /biomarkers/:id/guidance` (`biomarkerRoutes.ts:123`), `POST /expenses/analyze` (`expenseRoutes.ts:114`), `POST /ai/chat` (`aiRoutes.ts:32`), `POST /insurance/upload-sbc` (`insuranceRoutes.ts:136`), `PUT /insurance/plans/:id/reanalyze` (`insuranceRoutes.ts:123`).
-- [ ] FLAG: the Claude-backed **upload** routes carry `aiLimiter` (rate) and `requirePlanLimit('pdfUploadsPerMonth')` but **NOT** `aiSpendGuard` (dollar cap): `POST /upload/lab-report` (`uploadRoutes.ts:77-85` → `claudeExtraction`), `POST /upload/insurance-sbc` (`uploadRoutes.ts:94-102` → `sbcExtraction`), `POST /upload/lab-results-ocr` (`uploadRoutes.ts:124-132`, PDF branch → Claude). These call Claude (and `trackAIUsage` accrues their cost into the same accumulator) yet are NOT refused when the budget is exhausted. The dollar circuit breaker does not protect them.
-- [ ] Note the asymmetry: SBC extraction is reachable by two routes — `POST /insurance/upload-sbc` (guarded) and `POST /upload/insurance-sbc` (unguarded) — so the same expensive operation is dollar-capped on one path and not the other. Confirm this is intentional or close the gap.
+### 2. Spend-guard route coverage (GAP CLOSED — verify it stays closed)
+- [ ] Enumerate the AI routes that carry `aiSpendGuard`. As of 2026-06-13 there are **eight** — the original five plus the three Claude-backed upload routes whose gap was closed: `POST /biomarkers/:id/guidance`, `POST /expenses/analyze`, `POST /ai/chat`, `POST /insurance/upload-sbc`, `PUT /insurance/plans/:id/reanalyze`, and `POST /upload/lab-report` (`uploadRoutes.ts:82`), `POST /upload/insurance-sbc` (`uploadRoutes.ts:100`), `POST /upload/lab-results-ocr` (`uploadRoutes.ts:131`).
+- [ ] (Historical) The three `/upload/*` routes once carried `aiLimiter` + `requirePlanLimit('pdfUploadsPerMonth')` but NOT `aiSpendGuard`; that gap is now closed, so every route that reaches `claudeExtraction`/`sbcExtraction`/OCR-Claude is dollar-capped. Verify a new upload/AI route never reintroduces the gap.
+- [ ] The earlier SBC asymmetry (`/insurance/upload-sbc` guarded, `/upload/insurance-sbc` unguarded) is resolved — both paths now carry `aiSpendGuard`.
+- [ ] Multi-instance (M11/L33): the dollar cap is per-process in memory BY DEFAULT (effective ceiling N×budget under autoscale) UNLESS `REDIS_URL` is set, in which case `aiCostTracker` uses a shared Redis store (atomic `INCRBYFLOAT` gate) so the cap is consistent across instances. The rate limiters share the same switch (`rateLimitStore.ts`). Provisioning Cloud Memorystore + setting `REDIS_URL` is the single infra step that makes BOTH cross-instance.
 - [ ] Verify `aiLimiter` and `requirePlanLimit('pdfUploadsPerMonth')` are present on every unguarded upload route, since they are the ONLY cost controls there (rate + per-user monthly count, no global dollar ceiling).
 - [ ] FLAG / verify: `GET /health-goals/suggestions` (`healthGoalsRoutes.ts:48`) and `GET /health-needs/analyze` (`healthNeedsRoutes.ts:49`) carry `aiLimiter` but no `aiSpendGuard`. As of 2026-06-01 their controllers (`healthGoalsController`, `healthNeedsController`) do **not** import the Anthropic client and do not call Claude — so they accrue no Claude spend today. If a future change wires Claude into either handler, they would become Claude-backed routes with no dollar cap. Re-confirm they are still non-Claude before clearing this item.
 - [ ] The intended full AI guard order is `aiLimiter` → `aiSpendGuard` → `blockDemoAI` → `requirePlanLimit(...)` → `validate(...)` (see `aiRoutes.ts`); confirm each guarded route preserves it. Note `insuranceRoutes` orders the upload guards differently (`blockDemoAI` → `uploadLimiter` → `aiLimiter` → `aiSpendGuard`, lines 120-127 / 133-138) — verify the ordering is still safe (spend guard still runs after `authenticate` so `req.user` resolves).
 
 ### 3. Circuit-breaker behavior & response codes
 - [ ] `aiSpendGuard` fails **closed** with **503 `SERVICE_UNAVAILABLE`** (via `ServiceUnavailableError`, `aiSpendGuard.ts:42`), NOT 429 — 429 is `aiLimiter`'s rate-limit code (`rateLimiter.ts:115`) and 403 is the plan gate's code. Confirm the three governors return three distinct codes so the client can tell them apart.
-- [ ] `isAISpendExceeded` checks **global before per-user** and returns the offending `scope` (`aiCostTracker.ts:71-77`); the middleware uses `scope` to pick a global vs. per-user message (`aiSpendGuard.ts:43-46`). Verify the per-user message says "try again tomorrow" and the global says "temporarily unavailable" — they imply different remediation.
+- [ ] The atomic gate `admitAISpend` (in both `InMemorySpendStore`/`RedisSpendStore`) checks **global before per-user** and returns the offending `scope`; the middleware uses `scope` to pick a global vs. per-user message (`aiSpendGuard.ts`). Verify the per-user message says "try again tomorrow" and the global says "temporarily unavailable" — they imply different remediation. (Replaces the former separate `isAISpendExceeded` + `reserveAISpend` calls, which had a cross-instance check-then-reserve race; the gate is now one atomic reserve+check.)
 - [ ] A budget of `0` disables that scope (the `> 0` guards at `aiCostTracker.ts:71` and `:74`). Confirm `config.ai.dailyBudgetUsd` / `userDailyBudgetUsd` (`config/index.ts:196-197`) are not accidentally `0`/`NaN` in any deployed env — `Number(process.env... ?? '50')` yields `NaN` if the var is set to a non-numeric string, and `NaN > 0` is `false`, silently disabling the cap.
 - [ ] `aiSpendGuard` calls `next()` (allows the request) when `req.user?.id` is absent (`aiSpendGuard.ts:25`). Confirm it always runs AFTER `authenticate`/`requireBearerAuth` so an unauthenticated request can't slip past — and note that even so, the *global* cap still applies on the next authenticated request.
 - [ ] The per-UTC-day reset is driven by string comparison in `rollIfNewDay` (`aiCostTracker.ts:47`); confirm `utcDayKey` uses UTC (`toISOString().slice(0,10)`) so the window doesn't drift with server timezone, and that `isAISpendExceeded` calls `rollIfNewDay` before reading (it does, line 70) so a stale day's total can't block a fresh day.
