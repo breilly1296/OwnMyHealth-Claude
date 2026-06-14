@@ -245,7 +245,7 @@ Key Storage: Environment variable (PHI_ENCRYPTION_KEY)
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 22+ (Node 20 reached end-of-life Apr 2026; Prisma 7 requires ^22.12)
 - PostgreSQL 14+
 - npm
 

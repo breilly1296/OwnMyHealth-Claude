@@ -15,7 +15,9 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '20'
+  # M15: Node 20 reached EOL Apr 2026 → Node 22 (Maintenance LTS). Single source
+  # for every setup-node in this workflow (frontend/backend/security/rls jobs).
+  NODE_VERSION: '22'
 
 jobs:
   # Frontend Tests and Build
@@ -229,7 +231,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actions/setup-node@v4
-  #       with: { node-version: '20', cache: 'npm' }
+  #       with: { node-version: '22', cache: 'npm' }
   #     - run: npm ci
   #     - run: cd backend && npm ci && npx prisma migrate deploy
   #     - run: npm run test:e2e:install
