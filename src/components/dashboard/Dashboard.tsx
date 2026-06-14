@@ -17,7 +17,7 @@
  * @module components/dashboard/Dashboard
  */
 
-import React, { useState, useCallback, lazy, Suspense, useEffect } from 'react';
+import React, { useState, useCallback, lazy, Suspense, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Biomarker } from '../../types';
 import { onboardingApi } from '../../services/api';
@@ -142,13 +142,32 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
   // onboarding entirely — the sample dataset already makes the app useful.
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null);
   const [onboardingChecked, setOnboardingChecked] = useState(isDemoMode);
+  // Guards the one-time auto-complete POST below so a re-running effect (e.g.
+  // when user?.id settles) can't fire it more than once per session.
+  const onboardingAutoCompletedRef = useRef(false);
   useEffect(() => {
     if (isDemoMode || !user?.id) return;
     let cancelled = false;
     (async () => {
       try {
         const status = await onboardingApi.getStatus();
-        if (!cancelled) setOnboardingStatus(status);
+        if (cancelled) return;
+        setOnboardingStatus(status);
+        // GET /status is now a pure read. When the account already has data
+        // (completed:true) but the durable stamp hasn't been persisted yet
+        // (completedAt:null), write it via the CSRF-protected POST — once per
+        // session, fire-and-forget. On failure the column stays null and the
+        // backend heuristic simply re-derives completed:true on the next read.
+        if (
+          status.completed &&
+          status.completedAt === null &&
+          !onboardingAutoCompletedRef.current
+        ) {
+          onboardingAutoCompletedRef.current = true;
+          void onboardingApi.complete().catch(() => {
+            onboardingAutoCompletedRef.current = false;
+          });
+        }
       } catch {
         // Non-fatal — if the check fails, fall through to the normal
         // dashboard rather than trap the user behind a broken wizard.
