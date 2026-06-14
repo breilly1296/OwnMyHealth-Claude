@@ -2,14 +2,18 @@
 # Production-ready Node.js container for GCP Cloud Run deployment
 
 # Base image digest-pinned so a rebuild is reproducible and tamper-evident: the
-# `20-alpine` tag is mutable (Docker Hub re-points it on every patch release),
+# `22-alpine` tag is mutable (Docker Hub re-points it on every patch release),
 # so an unpinned FROM means two builds of the same commit can pull different
-# bytes. The trailing `# node:20-alpine` comment names the tag this digest
+# bytes. The trailing `# node:22-alpine` comment names the tag this digest
 # resolved to. Digest is the multi-arch index (linux/amd64 for Cloud Run),
-# resolved 2026-06-01 from Docker Hub registry-1.docker.io/library/node.
+# resolved 2026-06-14 from Docker Hub registry-1.docker.io/library/node.
 # Bump it deliberately (e.g. via Renovate) when adopting a newer patch.
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
-# node:20-alpine
+# M15: bumped from node:20-alpine (Node 20 reached end-of-life Apr 2026) to
+# node:22-alpine (Maintenance LTS). Prisma 7 requires Node ^22.12; 22-alpine
+# tracks the latest 22.x so it satisfies that. No native runtime modules
+# (Prisma 7 = WASM query compiler + pure-JS pg; bcryptjs is pure-JS).
+FROM node:22-alpine@sha256:9385cd9f3001dfc3431e8ead12c43e9e1f87cc1b9b5c6cfd0f73865d405b27c4 AS builder
+# node:22-alpine
 
 WORKDIR /app
 
@@ -30,8 +34,8 @@ RUN npm run build
 
 # Production stage — same digest-pinned base as the builder above (kept in sync;
 # bump both together).
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS production
-# node:20-alpine
+FROM node:22-alpine@sha256:9385cd9f3001dfc3431e8ead12c43e9e1f87cc1b9b5c6cfd0f73865d405b27c4 AS production
+# node:22-alpine
 
 WORKDIR /app
 

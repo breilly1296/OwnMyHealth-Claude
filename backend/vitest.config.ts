@@ -36,6 +36,8 @@ export default defineConfig({
     },
   },
   esbuild: {
-    target: 'node18',
+    // Transpile target for tests (JS feature level esbuild keeps), aligned with
+    // the Node 22 runtime. Not the runtime itself — see Dockerfile / engines.
+    target: 'node22',
   },
 });
