@@ -28,6 +28,7 @@ import {
   revokeRefreshToken,
   revokeAllUserTokens,
   revokeAccessToken,
+  revokeAccessTokenCrossInstance,
   refreshTokens,
   verifyRefreshToken,
   verifyEmail as verifyEmailService,
@@ -444,7 +445,17 @@ export async function logout(
   const accessTokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
   const accessTokenValue = accessTokenFromCookie || accessTokenFromHeader;
   if (accessTokenValue) {
+    // In-memory blacklist stops the token immediately on THIS instance.
     revokeAccessToken(accessTokenValue);
+    // M1: record the token's jti in the DB so it also stops authenticating on
+    // the OTHER Cloud Run replicas — single-device logout can't stamp the
+    // per-user tokensValidAfter cutoff (that kills the user's other devices).
+    // Scoped to the verified identity (access token or refresh session), so a
+    // forged token can't seed revocations for someone else.
+    const verifiedUserId = authReq.user?.id ?? sessionUser?.id;
+    if (verifiedUserId) {
+      await revokeAccessTokenCrossInstance(accessTokenValue, verifiedUserId);
+    }
   }
 
   // Clear cookies — always, even when no session resolved, so logout is
