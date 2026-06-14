@@ -116,6 +116,11 @@ interface MockPrismaClient {
     delete: ReturnType<typeof vi.fn>;
     deleteMany: ReturnType<typeof vi.fn>;
   };
+  revokedAccessToken: {
+    findMany: ReturnType<typeof vi.fn>;
+    upsert: ReturnType<typeof vi.fn>;
+    deleteMany: ReturnType<typeof vi.fn>;
+  };
   // Tagged-template API: the real Prisma client exposes $queryRaw as a
   // function that accepts a TemplateStringsArray plus interpolated args.
   // The mock's single-arg vi.fn is compatible at runtime.
@@ -175,6 +180,13 @@ describe('authService', () => {
         findUnique: vi.fn(),
         delete: vi.fn(),
         deleteMany: vi.fn(),
+      },
+      revokedAccessToken: {
+        // Default: no individually-revoked jtis for the user under test, so
+        // isAccessTokenStale falls through to the tokensValidAfter cutoff logic.
+        findMany: vi.fn().mockResolvedValue([]),
+        upsert: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       },
       // Tagged-template $queryRaw returns a Promise<Array<Row>>. Default to
       // empty so refreshTokens treats the session as already-consumed; the
@@ -290,7 +302,9 @@ describe('authService', () => {
     it('generateAccessToken should create an access token', () => {
       const token = authService.generateAccessToken(mockUserForToken);
       expect(jwt.sign).toHaveBeenCalledWith(
-        { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', plan: 'FREE', type: 'access' },
+        // M1: access tokens now carry a per-token jti for cross-instance
+        // single-device revocation (uuidv4 is mocked to 'mock-jti-123').
+        { id: MOCK_USER_ID, email: MOCK_EMAIL, role: 'PATIENT', plan: 'FREE', type: 'access', jti: 'mock-jti-123' },
         MOCK_ACCESS_SECRET,
         { ...JWT_SIGN_OPTIONS, expiresIn: '15m' }
       );
@@ -500,6 +514,63 @@ describe('authService', () => {
             await authService.isAccessTokenStale(UID, 1_000_000);
             expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
         });
+
+        // M1: single-device logout revokes a specific access-token jti
+        // cross-instance, independent of the per-user tokensValidAfter cutoff.
+        it('returns true when the token jti is in the revoked set (no cutoff needed)', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({ tokensValidAfter: null });
+            mockPrisma.revokedAccessToken.findMany.mockResolvedValueOnce([{ jti: 'revoked-jti' }]);
+            expect(await authService.isAccessTokenStale(UID, 9_999_999, 'revoked-jti')).toBe(true);
+        });
+
+        it('returns false when the jti is present but NOT revoked and no cutoff is set', async () => {
+            mockPrisma.user.findUnique.mockResolvedValueOnce({ tokensValidAfter: null });
+            mockPrisma.revokedAccessToken.findMany.mockResolvedValueOnce([{ jti: 'some-other-jti' }]);
+            expect(await authService.isAccessTokenStale(UID, 9_999_999, 'live-jti')).toBe(false);
+        });
+    });
+
+    describe('revokeAccessTokenCrossInstance (M1 single-device cross-replica revocation)', () => {
+        const UID = 'cross-instance-user';
+        const futureExp = Math.floor(Date.now() / 1000) + 600; // 10 min out
+        beforeEach(() => authService.invalidateTokensValidAfterCache(UID));
+
+        it('records the jti when the token belongs to the verified user', async () => {
+            vi.mocked(jwt.decode).mockReturnValueOnce({ jti: 'jti-A', id: UID, exp: futureExp });
+            await authService.revokeAccessTokenCrossInstance('tok', UID);
+            expect(mockPrisma.revokedAccessToken.upsert).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: { jti: 'jti-A' },
+                    create: expect.objectContaining({ jti: 'jti-A', userId: UID }),
+                })
+            );
+        });
+
+        it('does NOT record when the token id differs from the verified user (forged/mismatched)', async () => {
+            vi.mocked(jwt.decode).mockReturnValueOnce({ jti: 'jti-B', id: 'someone-else', exp: futureExp });
+            await authService.revokeAccessTokenCrossInstance('tok', UID);
+            expect(mockPrisma.revokedAccessToken.upsert).not.toHaveBeenCalled();
+        });
+
+        it('skips an already-expired token (it can no longer authenticate)', async () => {
+            const pastExp = Math.floor(Date.now() / 1000) - 60;
+            vi.mocked(jwt.decode).mockReturnValueOnce({ jti: 'jti-C', id: UID, exp: pastExp });
+            await authService.revokeAccessTokenCrossInstance('tok', UID);
+            expect(mockPrisma.revokedAccessToken.upsert).not.toHaveBeenCalled();
+        });
+
+        it('skips a token with no jti (minted before M1)', async () => {
+            vi.mocked(jwt.decode).mockReturnValueOnce({ id: UID, exp: futureExp });
+            await authService.revokeAccessTokenCrossInstance('tok', UID);
+            expect(mockPrisma.revokedAccessToken.upsert).not.toHaveBeenCalled();
+        });
+
+        it('swallows a DB failure (logout must still succeed)', async () => {
+            vi.mocked(jwt.decode).mockReturnValueOnce({ jti: 'jti-D', id: UID, exp: futureExp });
+            mockPrisma.revokedAccessToken.upsert.mockRejectedValueOnce(new Error('db down'));
+            await expect(authService.revokeAccessTokenCrossInstance('tok', UID)).resolves.toBeUndefined();
+            expect(logger.warn).toHaveBeenCalled();
+        });
     });
 
     it('refreshTokens should return new tokens and isDemo flag on valid refresh', async () => {
@@ -522,7 +593,11 @@ describe('authService', () => {
         ]);
         mockPrisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
         mockPrisma.session.delete.mockResolvedValueOnce({}); // consume the old row
-        vi.mocked(uuidv4).mockReturnValueOnce('new-jti');    // new refresh token JTI
+        // generateTokens consumes uuids in order: access-token jti FIRST (M1),
+        // then the new refresh token / session jti.
+        vi.mocked(uuidv4)
+            .mockReturnValueOnce('new-access-jti') // access-token JTI
+            .mockReturnValueOnce('new-jti');       // new refresh token / session JTI
 
         const result = await authService.refreshTokens(testRefreshToken);
 
@@ -566,7 +641,9 @@ describe('authService', () => {
         ]);
         mockPrisma.user.findUnique.mockResolvedValueOnce(MOCK_USER);
         mockPrisma.session.delete.mockResolvedValueOnce({});
-        vi.mocked(uuidv4).mockReturnValueOnce('race-new-jti');
+        vi.mocked(uuidv4)
+            .mockReturnValueOnce('race-new-access-jti') // access-token JTI (consumed first)
+            .mockReturnValueOnce('race-new-jti');       // new refresh token / session JTI
         await authService.refreshTokens('winner-token');
 
         // Tab B loses: replays the SAME token a moment later. Row is gone → reuse
