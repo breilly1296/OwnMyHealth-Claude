@@ -38,8 +38,11 @@ import {
   sanitizeExtractedSbc,
   mapExtractedDataToPlanFields,
   mapExtractedBenefits,
+  createBiomarkersFromOCRResult,
   type ExtractedSBCData,
+  type OCRBiomarker,
 } from './shared.js';
+import type { Prisma } from '../../../generated/prisma/index.js';
 
 // %PDF magic bytes — the lab-report path requires PDF; using real magic
 // bytes lets validateUploadFile's mimetype check pass so we can observe
@@ -312,5 +315,73 @@ describe('withGcsOrphanCleanup (M8/M25 — delete orphaned GCS object on tx roll
     storageMocks.deleteFile.mockRejectedValueOnce(new Error('GCS unavailable'));
     await expect(withGcsOrphanCleanup(KEY, ctx, async () => { throw boom; })).rejects.toBe(boom);
     expect(storageMocks.deleteFile).toHaveBeenCalledWith(KEY);
+  });
+});
+
+describe('createBiomarkersFromOCRResult — maxBiomarkers truncation (M12)', () => {
+  const enc = { encrypt: (v: string) => `enc(${v})` } as unknown as Parameters<typeof createBiomarkersFromOCRResult>[1];
+
+  function makeBiomarkers(n: number): OCRBiomarker[] {
+    return Array.from({ length: n }, (_, i) => ({
+      name: `B${i}`,
+      value: 1,
+      unit: 'mg/dL',
+      category: 'TEST',
+      confidence: 1,
+      normalRange: { min: 0, max: 10 },
+    }));
+  }
+
+  function mockTx(plan: string, biomarkerCount: number) {
+    const created: unknown[] = [];
+    const tx = {
+      user: { findUnique: vi.fn(async () => ({ plan, planExpiresAt: null })) },
+      biomarker: {
+        count: vi.fn(async () => biomarkerCount),
+        create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+          const row = { id: `id-${created.length}`, ...data };
+          created.push(row);
+          return row;
+        }),
+      },
+    } as unknown as Prisma.TransactionClient;
+    return { tx, created, countSpy: (tx as unknown as { biomarker: { count: ReturnType<typeof vi.fn> } }).biomarker.count };
+  }
+
+  const opts = (biomarkers: OCRBiomarker[]) => ({
+    userId: 'u1',
+    biomarkers,
+    reportDate: new Date('2026-01-01'),
+    notesPrefix: 'Extracted',
+    normalRangeSource: 'Lab',
+  });
+
+  it('a FREE user at 48/50 uploading 5 analytes inserts only the remaining 2', async () => {
+    const { tx, created } = mockTx('FREE', 48);
+    const result = await createBiomarkersFromOCRResult(tx, enc, 'salt', opts(makeBiomarkers(5)));
+    expect(result).toHaveLength(2);
+    expect(created).toHaveLength(2);
+  });
+
+  it('a FREE user already at the cap (50) inserts none', async () => {
+    const { tx, created } = mockTx('FREE', 50);
+    const result = await createBiomarkersFromOCRResult(tx, enc, 'salt', opts(makeBiomarkers(3)));
+    expect(result).toHaveLength(0);
+    expect(created).toHaveLength(0);
+  });
+
+  it('a FREE user under the cap inserts all when the upload fits', async () => {
+    const { tx, created } = mockTx('FREE', 10);
+    const result = await createBiomarkersFromOCRResult(tx, enc, 'salt', opts(makeBiomarkers(5)));
+    expect(result).toHaveLength(5);
+    expect(created).toHaveLength(5);
+  });
+
+  it('a PRO (unlimited) user inserts all and never runs the count query', async () => {
+    const { tx, created, countSpy } = mockTx('PRO', 9999);
+    const result = await createBiomarkersFromOCRResult(tx, enc, 'salt', opts(makeBiomarkers(5)));
+    expect(result).toHaveLength(5);
+    expect(created).toHaveLength(5);
+    expect(countSpy).not.toHaveBeenCalled();
   });
 });

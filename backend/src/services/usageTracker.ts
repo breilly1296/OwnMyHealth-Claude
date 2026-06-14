@@ -11,9 +11,11 @@
  */
 
 import { withRLSContext } from './database.js';
+import type { Prisma } from '../../generated/prisma/index.js';
 import {
   getPlanLimits,
   isUnlimited,
+  normalizePlan,
   type PlanLimits,
   type PlanTier,
 } from '../config/plans.js';
@@ -47,6 +49,35 @@ function startOfTodayUTC(): Date {
 function startOfMonthUTC(): Date {
   const d = new Date();
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+}
+
+/**
+ * Resolve a user's EFFECTIVE plan tier inside an existing RLS transaction — the
+ * same way `requirePlanLimit` does (fresh DB plan + a request-time
+ * `planExpiresAt` downgrade to FREE), but reusing the caller's `tx` so the plan
+ * read is atomic with whatever quota check/write the caller performs in the same
+ * transaction. Used by the non-middleware enforcement sites (the OCR biomarker
+ * insert site for M12, and the insurance-plan activation gate for M13) so they
+ * apply identical effective-plan semantics to the middleware. Mirrors
+ * planGating.ts:60-75.
+ *
+ * Unlike the middleware it does NOT catch→FREE on a DB error: a failed read here
+ * aborts the caller's transaction, which is the correct fail-closed outcome (no
+ * row is created/activated).
+ */
+export async function resolveEffectivePlan(
+  tx: Prisma.TransactionClient,
+  userId: string
+): Promise<PlanTier> {
+  const userRow = await tx.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, planExpiresAt: true },
+  });
+  let effectivePlan = normalizePlan(userRow?.plan);
+  if (userRow?.planExpiresAt && userRow.planExpiresAt.getTime() < Date.now()) {
+    effectivePlan = 'FREE';
+  }
+  return effectivePlan;
 }
 
 /**

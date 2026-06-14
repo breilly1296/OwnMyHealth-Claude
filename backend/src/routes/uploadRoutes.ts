@@ -82,6 +82,10 @@ router.post(
   aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('pdfUploadsPerMonth'),
+  // M12: this route ingests biomarkers, so also gate on maxBiomarkers — block an
+  // already-at-cap user at request time. (The shared insert site additionally
+  // truncates a single over-cap upload; see createBiomarkersFromOCRResult.)
+  requirePlanLimit('maxBiomarkers'),
   upload.single('file'),
   asyncHandler(uploadLabReport)
 );
@@ -131,6 +135,8 @@ router.post(
   aiSpendGuard,
   blockDemoAI,
   requirePlanLimit('pdfUploadsPerMonth'),
+  // M12: OCR ingestion also creates biomarkers — gate on maxBiomarkers too.
+  requirePlanLimit('maxBiomarkers'),
   uploadOCR.single('file'),
   asyncHandler(uploadLabResultOCR)
 );
