@@ -33,9 +33,24 @@ env:
   FRONTEND_BUCKET: ownmyhealth-frontend
 
 jobs:
+  # Gate the ENTIRE deploy on the full CI suite before anything is built or
+  # shipped: frontend lint+test+build, backend lint+test:ci+build, gitleaks
+  # secret scan, High/Critical dependency audit, the RLS-wrapper guard, and the
+  # NOBYPASSRLS tenant-isolation suite against a real Postgres. Without this, a
+  # master commit that breaks RLS / CSRF / refresh-token reuse detection / PHI
+  # encryption would still build and ship to the HIPAA production service on a
+  # green /health curl. ci.yml already exposes `workflow_call`, so we invoke it
+  # as a reusable workflow instead of duplicating its jobs.
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   # Build the image and deploy to Cloud Run at 0% traffic with a tagged URL.
-  # If this job fails, nothing has shifted in production.
+  # If this job fails, nothing has shifted in production. Gated on `ci`: a commit
+  # that fails lint / tests / audit / secret-scan / RLS is never built or staged.
   build-and-stage:
+    needs: ci
     runs-on: ubuntu-latest
     outputs:
       new_revision: ${{ steps.deploy.outputs.new_revision }}
@@ -207,7 +222,12 @@ jobs:
             --project "${{ env.PROJECT_ID }}" \
             --remove-tags="$TAG" || true
 
+  # Frontend ships only after CI passes AND the backend has successfully
+  # promoted, so the SPA is never published against a backend revision that
+  # failed to go live. Previously this job had no `needs` at all and deployed
+  # unconditionally, in parallel with (and regardless of) the backend pipeline.
   deploy-frontend:
+    needs: [ci, promote]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

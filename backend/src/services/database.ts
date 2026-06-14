@@ -190,6 +190,7 @@ export async function initializeDatabase(): Promise<void> {
   // exits if BYPASSRLS=true; in non-prod it warns. See assertNoBypassRLS for
   // the full rationale, and docs/c-8-part-c-runbook.md for the rollout/rollback.
   await assertNoBypassRLS();
+  await assertRLSForced();
 
   isInitialized = true;
   logger.startup('✓ All database services initialized');
@@ -255,6 +256,58 @@ async function assertNoBypassRLS(): Promise<void> {
   logger.warn(
     'WARNING: Database role has BYPASSRLS — RLS policies are not enforcing. ' +
     'This is acceptable in development but must be fixed before production.'
+  );
+}
+
+/**
+ * Fail loud if any RLS-enabled table is NOT also FORCE-protected (M2). Without
+ * FORCE, a table OWNER bypasses RLS, so a non-bypass role that owns the tables
+ * (a future `prisma db push`, an `ALTER ... OWNER`, a misconfigured URL) would
+ * silently skip every tenant policy. Migration 20260613 forces all current
+ * tables; this catches a FUTURE table that enables RLS but forgets FORCE.
+ * Production → refuse to start; non-prod → warn. Mirrors assertNoBypassRLS.
+ */
+async function assertRLSForced(): Promise<void> {
+  if (!prisma) return;
+
+  let unforced: string[] = [];
+  try {
+    const rows = await prisma.$queryRaw<Array<{ relname: string }>>`
+      SELECT c.relname
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relkind = 'r'
+        AND c.relrowsecurity = true
+        AND c.relforcerowsecurity = false
+      ORDER BY c.relname
+    `;
+    unforced = rows.map((r) => r.relname);
+  } catch (error) {
+    // A transient/permission error reading pg_class shouldn't crash boot; log
+    // loudly and let the next boot re-check (same posture as assertNoBypassRLS).
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.warn('RLS FORCE assertion check failed to run', { data: { error: msg } });
+    return;
+  }
+
+  if (unforced.length === 0) {
+    logger.startup('✓ RLS FORCE assertion passed: all RLS-enabled tables are FORCE-protected');
+    return;
+  }
+
+  if (config.isProduction) {
+    logger.error(
+      `FATAL: ${unforced.length} RLS-enabled table(s) are NOT FORCE-protected ` +
+        `(${unforced.join(', ')}). A table owner could bypass tenant isolation on them. ` +
+        'Refusing to start — add FORCE ROW LEVEL SECURITY (see migration 20260613).'
+    );
+    process.exit(1);
+  }
+
+  logger.warn(
+    `WARNING: ${unforced.length} RLS-enabled table(s) are not FORCE-protected ` +
+      `(${unforced.join(', ')}). Acceptable in development but must be fixed before production.`
   );
 }
 
@@ -466,9 +519,18 @@ export async function withRLSContext<T>(
 export async function withRLSTransaction<T>(
   userId: string | null,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { isAdmin?: boolean } = {}
+  options: { isAdmin?: boolean; timeout?: number; maxWait?: number } = {}
 ): Promise<T> {
-  return runWithRLS(userId, fn, options, undefined);
+  // Default: pass no txOptions so Prisma's own interactive-transaction default
+  // (5s) applies — unchanged for existing callers. A caller that runs many
+  // sequential statements in one transaction (e.g. the bulk biomarker series
+  // merge, up to ~100 readings) can opt into a longer window so it doesn't hit
+  // P2028 on a slow/cold Cloud SQL connection.
+  const txOptions =
+    options.timeout !== undefined || options.maxWait !== undefined
+      ? { maxWait: options.maxWait ?? 10_000, timeout: options.timeout ?? 30_000 }
+      : undefined;
+  return runWithRLS(userId, fn, options, txOptions);
 }
 
 // Export prisma getter for lazy initialization

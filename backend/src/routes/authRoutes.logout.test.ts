@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   logAuth: vi.fn(async () => undefined),
   revokeRefreshToken: vi.fn(async () => true),
   revokeAccessToken: vi.fn(),
+  revokeAccessTokenCrossInstance: vi.fn(async () => undefined),
   verifyRefreshToken: vi.fn(async () => null as unknown),
   isTokenRevoked: vi.fn(() => false),
   isAccessTokenStale: vi.fn(async () => false),
@@ -64,6 +65,7 @@ vi.mock('../services/authService.js', () => ({
   revokeRefreshToken: mocks.revokeRefreshToken,
   revokeAllUserTokens: vi.fn(),
   revokeAccessToken: mocks.revokeAccessToken,
+  revokeAccessTokenCrossInstance: mocks.revokeAccessTokenCrossInstance,
   refreshTokens: vi.fn(),
   verifyRefreshToken: mocks.verifyRefreshToken,
   verifyEmail: vi.fn(),
@@ -195,6 +197,11 @@ describe('POST /auth/logout (teardown #5 — idle logoff must end the session)',
     expect(mocks.revokeRefreshToken).toHaveBeenCalledWith(REFRESH_COOKIE_VALUE);
     // Expired access token still pushed onto the blacklist (harmless, kept).
     expect(mocks.revokeAccessToken).toHaveBeenCalledWith(expiredAccessToken);
+    // M1: cross-instance revocation invoked with the verified identity from the
+    // refresh-session lookup (req.user is absent on the expired-token path).
+    // The helper itself no-ops for an already-expired token; the controller's
+    // job is just to attempt it with the right user id.
+    expect(mocks.revokeAccessTokenCrossInstance).toHaveBeenCalledWith(expiredAccessToken, 'user-1');
 
     // Both auth cookies cleared.
     expect(clearedCookieNames(res)).toEqual(
@@ -217,6 +224,8 @@ describe('POST /auth/logout (teardown #5 — idle logoff must end the session)',
     expect(res.body).toMatchObject({ success: true });
     expect(mocks.revokeRefreshToken).not.toHaveBeenCalled();
     expect(mocks.verifyRefreshToken).not.toHaveBeenCalled();
+    // No access token present → nothing to revoke cross-instance.
+    expect(mocks.revokeAccessTokenCrossInstance).not.toHaveBeenCalled();
     // Cookies still cleared so a stale/unknown cookie set never survives.
     expect(clearedCookieNames(res)).toEqual(
       expect.arrayContaining(['access_token', 'refresh_token'])
@@ -261,6 +270,8 @@ describe('POST /auth/logout (teardown #5 — idle logoff must end the session)',
     expect(res.body).toMatchObject({ success: true });
     expect(mocks.revokeAccessToken).toHaveBeenCalledWith(liveAccessToken);
     expect(mocks.revokeRefreshToken).toHaveBeenCalledWith(REFRESH_COOKIE_VALUE);
+    // M1: cross-instance revocation invoked with the verified req.user identity.
+    expect(mocks.revokeAccessTokenCrossInstance).toHaveBeenCalledWith(liveAccessToken, 'user-1');
     // req.user resolved by optionalAuth — no DB session lookup needed.
     expect(mocks.verifyRefreshToken).not.toHaveBeenCalled();
     expect(mocks.logAuth).toHaveBeenCalledWith(

@@ -27,7 +27,7 @@ vi.mock('../../services/api', () => ({
   },
 }));
 
-import { fetchAllBiomarkers, useBiomarkerData } from '../../hooks/useBiomarkerData';
+import { fetchAllBiomarkers, mergeBiomarkersById, useBiomarkerData } from '../../hooks/useBiomarkerData';
 import { biomarkersApi, insuranceApi } from '../../services/api';
 import type { Biomarker } from '../../types';
 
@@ -250,6 +250,29 @@ describe('fetchAllBiomarkers', () => {
 // These assert the EXACT request bodies the hook sends. The backend rejects
 // flat normalRange* keys and non-ISO dates with 422 — and one bad item fails
 // an entire batch — so the shapes below are load-bearing.
+describe('mergeBiomarkersById', () => {
+  const mk = (id: string, value: number) => ({ id, value } as unknown as Biomarker);
+
+  it('replaces an existing id in place (no duplicate) when a merged series comes back', () => {
+    const prev = [mk('a', 1), mk('b', 2)];
+    // Backend returned series 'b' again (a new reading merged into it).
+    const merged = mergeBiomarkersById(prev, [mk('b', 99)]);
+    expect(merged).toHaveLength(2);
+    expect(merged.find((m) => m.id === 'b')?.value).toBe(99);
+  });
+
+  it('appends genuinely new series and preserves order/identity', () => {
+    const prev = [mk('a', 1)];
+    const merged = mergeBiomarkersById(prev, [mk('b', 2), mk('c', 3)]);
+    expect(merged.map((m) => m.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('is a no-op on empty incoming', () => {
+    const prev = [mk('a', 1)];
+    expect(mergeBiomarkersById(prev, [])).toEqual(prev);
+  });
+});
+
 describe('useBiomarkerData create payload contracts', () => {
   const user = { id: 'user-1', email: 'test@example.com', role: 'PATIENT' };
 
@@ -287,9 +310,13 @@ describe('useBiomarkerData create payload contracts', () => {
     vi.mocked(biomarkersApi.create).mockImplementation(
       async (data) => ({ ...data, id: 'bm-created', isOutOfRange: false }) as never
     );
+    // The backend merges readings by (name, unit) and returns a distinct series
+    // id per distinct metric, so key the mock id on the payload name rather than
+    // a per-chunk index (which would otherwise collide across chunks and be
+    // deduped by the by-id state merge).
     vi.mocked(biomarkersApi.createBatch).mockImplementation(
       async (items) =>
-        items.map((d, i) => ({ ...d, id: `bm-${i}`, isOutOfRange: false })) as never
+        items.map((d) => ({ ...d, id: `bm-${d.name}`, isOutOfRange: false })) as never
     );
   });
 
@@ -342,6 +369,29 @@ describe('useBiomarkerData create payload contracts', () => {
         sourceFile: 'lab-report.pdf',
         extractionConfidence: 0.92,
       },
+    ]);
+  });
+
+  it('handleClinicalFileExtract persists via createBatch (was local-only — L24)', async () => {
+    const { result } = renderBiomarkerHook();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleClinicalFileExtract([
+        makeExtractedItem({ name: 'T-Score', value: -1.2, unit: 'SD', category: 'Body Composition' }),
+      ]);
+    });
+
+    // Previously this wrote to local state only; it must now hit the server.
+    expect(biomarkersApi.createBatch).toHaveBeenCalledTimes(1);
+    expect(biomarkersApi.createBatch).toHaveBeenCalledWith([
+      expect.objectContaining({
+        name: 'T-Score',
+        value: -1.2,
+        unit: 'SD',
+        category: 'Body Composition',
+        sourceType: 'LAB_UPLOAD',
+      }),
     ]);
   });
 

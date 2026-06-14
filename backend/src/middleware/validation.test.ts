@@ -674,3 +674,51 @@ describe('delimitDocumentForPrompt (M10 — prompt-injection defense for extract
     expect(body).toContain('[document]');
   });
 });
+
+// M22 regression: the healthGoal create/list category was a strict uppercase
+// enum, but the modal default ("Other"), the suggestion fallbacks ("Vital
+// Signs"/"Lifestyle"), and biomarker-derived categories ("METABOLIC") are all
+// free text — so every realistic goal creation 422'd. Category is now free text
+// (the column is VarChar(100)). These pin that contract so the enum can't return.
+describe('schemas.healthGoal.create — category is free text (M22)', () => {
+  let next: NextFunction;
+  beforeEach(() => {
+    next = vi.fn();
+  });
+
+  const baseBody = {
+    name: 'Lower blood pressure',
+    targetValue: 120,
+    unit: 'mmHg',
+    direction: 'MAINTAIN',
+    startDate: '2026-01-01',
+    targetDate: '2026-06-01',
+  };
+
+  it.each(['Other', 'Vital Signs', 'Lifestyle', 'METABOLIC', 'Cardiovascular'])(
+    'accepts the previously-rejected free-text category "%s"',
+    (category) => {
+      const req = createMockRequest({ body: { ...baseBody, category } });
+      validate(schemas.healthGoal.create)(req, createMockResponse(), next);
+      expect(next).toHaveBeenCalledWith();
+    }
+  );
+
+  it('still rejects an empty category', () => {
+    const req = createMockRequest({ body: { ...baseBody, category: '' } });
+    validate(schemas.healthGoal.create)(req, createMockResponse(), next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  it('rejects a category longer than the VarChar(100) column', () => {
+    const req = createMockRequest({ body: { ...baseBody, category: 'x'.repeat(101) } });
+    validate(schemas.healthGoal.create)(req, createMockResponse(), next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  it('listQuery accepts a free-text category filter', () => {
+    const req = createMockRequest({ query: { category: 'METABOLIC' } });
+    validate(schemas.healthGoal.listQuery, 'query')(req, createMockResponse(), next);
+    expect(next).toHaveBeenCalledWith();
+  });
+});

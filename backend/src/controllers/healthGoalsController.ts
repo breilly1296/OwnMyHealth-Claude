@@ -20,28 +20,38 @@ import type { HealthGoal as PrismaHealthGoal, GoalProgressHistory, Prisma } from
 const RESOURCE_TYPE = 'HealthGoal';
 
 /**
- * Read the goal's targetValue in decrypted form.
+ * Read a numeric PHI value that may be stored encrypted (preferred) or as a
+ * legacy plaintext Decimal column. Returns null when neither is present.
  *
- * Prefers `targetValueEncrypted` when present (new write path after the
- * 20260420 migration) and falls back to the plaintext `targetValue`
- * Decimal column for rows written before encryption was wired up. Returns
- * 0 if decryption fails AND there's no plaintext fallback — callers that
- * need to distinguish "no target" from "zero target" should check both
- * columns themselves.
+ * Used for the goal value columns (target / current / start, and progress-
+ * history value) which were moved to encrypted-at-rest in M4 but keep a
+ * nullable plaintext twin so rows written before the migration still read.
+ */
+function readEncryptedNumber(
+  encrypted: string | null | undefined,
+  plaintext: unknown,
+  userSalt: string
+): number | null {
+  if (encrypted) {
+    try {
+      return parseFloat(getEncryptionService().decrypt(encrypted, userSalt));
+    } catch {
+      // decrypt already logs — fall through to the plaintext backup for legacy rows.
+    }
+  }
+  return plaintext !== null && plaintext !== undefined ? Number(plaintext) : null;
+}
+
+/**
+ * Read the goal's targetValue in decrypted form. Prefers `targetValueEncrypted`
+ * (the write path since the 20260420 migration) and falls back to the plaintext
+ * `targetValue` Decimal column for legacy rows. Returns 0 when neither is set.
  */
 function readTargetValue(
   goal: { targetValue: unknown; targetValueEncrypted: string | null },
   userSalt: string
 ): number {
-  const encryptionService = getEncryptionService();
-  if (goal.targetValueEncrypted) {
-    try {
-      return parseFloat(encryptionService.decrypt(goal.targetValueEncrypted, userSalt));
-    } catch {
-      // decrypt already logs — fall through to the plaintext backup.
-    }
-  }
-  return Number(goal.targetValue);
+  return readEncryptedNumber(goal.targetValueEncrypted, goal.targetValue, userSalt) ?? 0;
 }
 
 // Response types
@@ -132,8 +142,8 @@ function toResponse(
     description,
     category: goal.category,
     targetValue: readTargetValue(goal, userSalt),
-    currentValue: goal.currentValue ? Number(goal.currentValue) : null,
-    startValue: goal.startValue ? Number(goal.startValue) : null,
+    currentValue: readEncryptedNumber(goal.currentValueEncrypted, goal.currentValue, userSalt),
+    startValue: readEncryptedNumber(goal.startValueEncrypted, goal.startValue, userSalt),
     unit: goal.unit,
     direction: goal.direction,
     relatedBiomarkerId: goal.relatedBiomarkerId,
@@ -169,7 +179,7 @@ function toResponse(
       }
       return {
         id: h.id,
-        value: Number(h.value),
+        value: readEncryptedNumber(h.valueEncrypted, h.value, userSalt) ?? 0,
         progress: Number(h.progress),
         note,
         recordedAt: h.recordedAt,
@@ -387,11 +397,15 @@ export async function createHealthGoal(
     ? calculateProgress(startValue, currentValue, targetValue, direction || 'DECREASE')
     : 0;
 
-  // Encrypt targetValue at rest (M-6). The plaintext `targetValue` Decimal
-  // column is now nullable, so we write ONLY the encrypted column — no
-  // plaintext PHI persisted. The read path (readTargetValue) prefers the
-  // encrypted column and falls back to the legacy plaintext column for old rows.
+  // Encrypt all numeric PHI values at rest (M-6 targetValue + M4 current/start).
+  // The plaintext Decimal columns are now nullable, so we write ONLY the
+  // encrypted columns — no plaintext PHI persisted. Read paths prefer the
+  // encrypted column and fall back to the legacy plaintext column for old rows.
   const targetValueEncrypted = encryptionService.encrypt(targetValue.toString(), userSalt);
+  const startValueEncrypted = encryptionService.encrypt(startValue.toString(), userSalt);
+  const currentValueEncrypted = hasCurrentValue
+    ? encryptionService.encrypt(String(currentValue), userSalt)
+    : null;
 
   // Transaction ensures goal and initial history are created atomically
   const goal = await withRLSTransaction(userId, async (tx) => {
@@ -402,8 +416,10 @@ export async function createHealthGoal(
         descriptionEncrypted,
         category,
         targetValueEncrypted,
-        currentValue: currentValue ?? null,
-        startValue,
+        currentValueEncrypted,
+        currentValue: null,
+        startValueEncrypted,
+        startValue: null,
         unit,
         direction: direction || 'DECREASE',
         relatedBiomarkerId: relatedBiomarkerId || null,
@@ -416,12 +432,16 @@ export async function createHealthGoal(
       },
     });
 
-    // Create initial progress history entry if currentValue provided
-    if (currentValue !== undefined) {
+    // Create the initial progress-history entry when an initial value is
+    // present. Guard on hasCurrentValue (a real number) rather than
+    // `!== undefined` so an explicit null currentValue never tries to encrypt
+    // the string "null".
+    if (hasCurrentValue) {
       await tx.goalProgressHistory.create({
         data: {
           goalId: newGoal.id,
-          value: currentValue,
+          valueEncrypted: encryptionService.encrypt(String(currentValue), userSalt),
+          value: null,
           progress,
           noteEncrypted: encryptionService.encrypt('Initial value', userSalt),
         },
@@ -499,12 +519,10 @@ export async function updateHealthGoal(
       // percentage (derived from the old target) is stale until the user
       // logs another value. currentValue/startValue are Prisma Decimal
       // columns, so coerce to number for calculateProgress.
-      if (existingGoal.currentValue !== null && existingGoal.currentValue !== undefined) {
-        const curr = Number(existingGoal.currentValue);
+      const curr = readEncryptedNumber(existingGoal.currentValueEncrypted, existingGoal.currentValue, userSalt);
+      if (curr !== null) {
         const start =
-          existingGoal.startValue !== null && existingGoal.startValue !== undefined
-            ? Number(existingGoal.startValue)
-            : curr;
+          readEncryptedNumber(existingGoal.startValueEncrypted, existingGoal.startValue, userSalt) ?? curr;
         updateData.progress = calculateProgress(start, curr, targetValue, existingGoal.direction);
       }
     }
@@ -579,7 +597,8 @@ export async function updateGoalProgress(
     // authoritative one after the 20260420 migration. readTargetValue falls
     // back to the plaintext column transparently.
     const decryptedTargetValue = readTargetValue(foundGoal, userSalt);
-    const startValue = Number(foundGoal.startValue) || decryptedTargetValue;
+    const startValue =
+      readEncryptedNumber(foundGoal.startValueEncrypted, foundGoal.startValue, userSalt) ?? decryptedTargetValue;
     const progress = calculateProgress(startValue, value, decryptedTargetValue, foundGoal.direction);
 
     // Check if goal is achieved
@@ -606,11 +625,12 @@ export async function updateGoalProgress(
         })
       : null;
 
-    // Update goal
+    // Update goal — current value is encrypted at rest; null the plaintext twin.
     await tx.healthGoal.update({
       where: { id },
       data: {
-        currentValue: value,
+        currentValueEncrypted: encryptionService.encrypt(String(value), userSalt),
+        currentValue: null,
         progress,
         status,
         completedAt,
@@ -618,11 +638,12 @@ export async function updateGoalProgress(
       },
     });
 
-    // Create progress history entry
+    // Create progress history entry — value encrypted at rest, plaintext nulled.
     await tx.goalProgressHistory.create({
       data: {
         goalId: id,
-        value,
+        valueEncrypted: encryptionService.encrypt(String(value), userSalt),
+        value: null,
         progress,
         noteEncrypted: note ? encryptionService.encrypt(note, userSalt) : null,
       },
@@ -645,7 +666,7 @@ export async function updateGoalProgress(
   // Audit log
   const auditService = getAuditLogService(prisma);
   await auditService.logUpdate(RESOURCE_TYPE, id, {
-    currentValue: goal.currentValue ? Number(goal.currentValue) : null,
+    currentValue: readEncryptedNumber(goal.currentValueEncrypted, goal.currentValue, userSalt),
     progress: Number(goal.progress),
   }, {
     currentValue: value,

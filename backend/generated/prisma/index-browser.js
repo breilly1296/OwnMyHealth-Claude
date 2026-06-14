@@ -164,6 +164,13 @@ exports.Prisma.SessionScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.RevokedAccessTokenScalarFieldEnum = {
+  jti: 'jti',
+  userId: 'userId',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.UserEncryptionKeyScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -401,7 +408,9 @@ exports.Prisma.HealthGoalScalarFieldEnum = {
   targetValue: 'targetValue',
   targetValueEncrypted: 'targetValueEncrypted',
   currentValue: 'currentValue',
+  currentValueEncrypted: 'currentValueEncrypted',
   startValue: 'startValue',
+  startValueEncrypted: 'startValueEncrypted',
   unit: 'unit',
   direction: 'direction',
   relatedBiomarkerId: 'relatedBiomarkerId',
@@ -421,6 +430,7 @@ exports.Prisma.GoalProgressHistoryScalarFieldEnum = {
   id: 'id',
   goalId: 'goalId',
   value: 'value',
+  valueEncrypted: 'valueEncrypted',
   progress: 'progress',
   noteEncrypted: 'noteEncrypted',
   recordedAt: 'recordedAt'
@@ -656,6 +666,7 @@ exports.AuditAction = exports.$Enums.AuditAction = {
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
+  RevokedAccessToken: 'RevokedAccessToken',
   UserEncryptionKey: 'UserEncryptionKey',
   ProviderPatient: 'ProviderPatient',
   UserFile: 'UserFile',

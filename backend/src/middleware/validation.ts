@@ -593,7 +593,13 @@ export const schemas = {
     create: z.object({
       name: sanitizedString(1, 200),
       description: optionalSanitizedString(1000),
-      category: z.enum(['WEIGHT', 'FITNESS', 'NUTRITION', 'BIOMARKER', 'MEDICATION', 'LIFESTYLE', 'MENTAL_HEALTH', 'OTHER']),
+      // M22: category is a free-text label (the column is VarChar(100); goal
+      // suggestions derive their category from the linked biomarker, e.g.
+      // "METABOLIC" / "Vital Signs"). A fixed enum here 422'd every realistic
+      // create — manual (the modal defaults to "Other") and one-click-from-
+      // suggestion alike. Free text matches how category is treated everywhere
+      // else (controller create, list filter, summary groupBy).
+      category: sanitizedString(1, 100),
       // Goal numeric fields map to Decimal(10, 4) columns — max magnitude
       // 999999.9999. Reject NaN/Infinity and over-range values at the boundary.
       targetValue: finiteNumber.pipe(z.number().max(999999.9999)),
@@ -633,7 +639,8 @@ export const schemas = {
 
     listQuery: z.object({
       status: z.enum(['ACTIVE', 'PAUSED', 'ACHIEVED', 'FAILED', 'CANCELLED']).optional(),
-      category: z.enum(['WEIGHT', 'FITNESS', 'NUTRITION', 'BIOMARKER', 'MEDICATION', 'LIFESTYLE', 'MENTAL_HEALTH', 'OTHER']).optional(),
+      // M22: free-text to match create.category (above) and the String column.
+      category: optionalSanitizedString(100),
       // Pagination — clamped here so Prisma never sees unbounded take.
       page: z.string().optional().transform((val) => Math.max(1, parseInt(val || '1', 10))),
       limit: z.string().optional().transform((val) => Math.min(Math.max(1, parseInt(val || '20', 10)), 100)),

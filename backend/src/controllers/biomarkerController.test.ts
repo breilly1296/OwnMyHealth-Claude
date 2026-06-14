@@ -85,10 +85,9 @@ vi.mock('../services/userEncryption.js', () => ({
 
 vi.mock('../services/aiCostTracker.js', () => ({
   trackAIUsage: vi.fn(),
-  // aiSpendGuard middleware (now on the guidance route) reads this.
-  isAISpendExceeded: vi.fn(() => ({ exceeded: false, scope: null })),
-  // L-3: the guard reserves an in-flight estimate and gets back a settle fn.
-  reserveAISpend: vi.fn(() => vi.fn()),
+  // The controller only uses trackAIUsage; admitAISpend is mocked too so the
+  // module stub stays complete if the guard is ever exercised here.
+  admitAISpend: vi.fn(async () => ({ admitted: true, scope: null, settle: vi.fn() })),
 }));
 
 // Post-F-29: route now uses the shared anthropicClient SDK. Stub
@@ -156,6 +155,7 @@ vi.mock('../middleware/planGating.js', () => ({
 import {
   getBiomarkers,
   createBiomarker,
+  bulkCreateBiomarkers,
   deleteBiomarker,
 } from './biomarkerController.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
@@ -340,10 +340,120 @@ describe('createBiomarker', () => {
     expect(encryptedStringCalls).toHaveLength(0);
   });
 
+  it('appends a newer reading to an existing series and responds 200 (promoted)', async () => {
+    // An existing Glucose series whose current point is 2026-01-15.
+    const existing = makeBiomarkerRow({
+      id: 'series-1',
+      measurementDate: new Date('2026-01-15'),
+      valueEncrypted: 'enc:88',
+    });
+    tx.biomarker.findFirst.mockResolvedValue(existing);
+    tx.biomarker.update.mockResolvedValue(
+      makeBiomarkerRow({
+        id: 'series-1',
+        valueEncrypted: 'enc:99',
+        measurementDate: new Date('2026-02-01'),
+        history: [{ measurementDate: new Date('2026-01-15'), valueEncrypted: 'enc:88' }],
+      })
+    );
+
+    const req = createMockRequest({
+      user: { id: 'user-A', email: 'a@example.com', role: 'PATIENT' },
+      body: {
+        name: 'Glucose',
+        value: 99,
+        unit: 'mg/dL',
+        category: 'METABOLIC',
+        date: '2026-02-01',
+        normalRange: { min: 70, max: 100 },
+      },
+    });
+    const res = createMockResponse();
+
+    await createBiomarker(req, res);
+
+    // The prior current point was archived and the series advanced — NOT a new row.
+    expect(tx.biomarkerHistory.create).toHaveBeenCalledTimes(1);
+    expect(tx.biomarker.update).toHaveBeenCalledTimes(1);
+    expect(tx.biomarker.create).not.toHaveBeenCalled();
+
+    // A merge mints no new resource → 200, and the audit records the outcome.
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(audit.logCreate).toHaveBeenCalledWith(
+      'Biomarker',
+      'series-1',
+      expect.objectContaining({ name: 'Glucose', seriesOutcome: 'promoted' }),
+      expect.any(Object)
+    );
+  });
+
   // Note: the controller does NOT itself validate `category` against an
   // allowlist — that is delegated to the Zod route-level schema, and the
   // Zod schema allows any sanitized 1-50 char string (not an enum). There
   // is therefore no controller-level invalid-category test to write here.
+});
+
+// ============================================================================
+// bulkCreateBiomarkers — series merge
+// ============================================================================
+describe('bulkCreateBiomarkers', () => {
+  let tx: MockPrismaTx;
+  let audit: MockAuditService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tx = createMockPrismaTransaction();
+    audit = createMockAuditService();
+    mocks.tx = tx;
+    mocks.auditService = audit;
+    mocks.encryptionService = createMockEncryptionService();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('collapses two readings of the same metric into one series row', async () => {
+    const created1 = makeBiomarkerRow({
+      id: 'series-1',
+      measurementDate: new Date('2026-01-01'),
+      valueEncrypted: 'enc:90',
+    });
+    // 1st item: no existing series -> create. 2nd item (same name, newer): finds it -> promote.
+    tx.biomarker.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(created1);
+    tx.biomarker.create.mockResolvedValue({ ...created1, history: [] });
+    tx.biomarker.update.mockResolvedValue(
+      makeBiomarkerRow({
+        id: 'series-1',
+        valueEncrypted: 'enc:99',
+        measurementDate: new Date('2026-02-01'),
+        history: [{ measurementDate: new Date('2026-01-01'), valueEncrypted: 'enc:90' }],
+      })
+    );
+
+    const req = createMockRequest({
+      user: { id: 'user-A', email: 'a@example.com', role: 'PATIENT' },
+      body: {
+        biomarkers: [
+          { name: 'Glucose', value: 90, unit: 'mg/dL', category: 'METABOLIC', date: '2026-01-01', normalRange: { min: 70, max: 100 } },
+          { name: 'Glucose', value: 99, unit: 'mg/dL', category: 'METABOLIC', date: '2026-02-01', normalRange: { min: 70, max: 100 } },
+        ],
+      },
+    });
+    const res = createMockResponse();
+
+    await bulkCreateBiomarkers(req, res);
+
+    // One create (anchor) + one promote (merge), NOT two inserts.
+    expect(tx.biomarker.create).toHaveBeenCalledTimes(1);
+    expect(tx.biomarker.update).toHaveBeenCalledTimes(1);
+
+    const payload = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    // Two readings persisted, but only one series row returned.
+    expect(payload.data).toHaveLength(1);
+    expect(payload.meta).toMatchObject({ total: 2, succeeded: 2, seriesAffected: 1, failed: 0 });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
 });
 
 // ============================================================================
