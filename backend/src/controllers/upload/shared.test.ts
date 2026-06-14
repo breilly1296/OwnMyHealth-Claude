@@ -12,7 +12,7 @@
  * filename-mutation contract.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // shared.ts pulls in services/pdfParser.ts → pdf-parse, which has a
 // module-load side effect that opens a debug fixture file. That fails in
@@ -21,8 +21,20 @@ import { describe, expect, it, vi } from 'vitest';
 // services/pdfTextExtraction.test.ts.
 vi.mock('pdf-parse', () => ({ default: vi.fn() }));
 
+// shared.ts imports deleteFile from storageService for withGcsOrphanCleanup.
+// Mock the whole module so no real GCS client is constructed and we can assert
+// on the cleanup call.
+const storageMocks = vi.hoisted(() => ({ deleteFile: vi.fn(async () => undefined) }));
+vi.mock('../../services/storageService.js', () => ({
+  deleteFile: storageMocks.deleteFile,
+  uploadFile: vi.fn(),
+  deleteFiles: vi.fn(),
+  getFileStream: vi.fn(),
+}));
+
 import {
   validateUploadFile,
+  withGcsOrphanCleanup,
   sanitizeExtractedSbc,
   mapExtractedDataToPlanFields,
   mapExtractedBenefits,
@@ -265,5 +277,40 @@ describe('sanitizeExtractedSbc (M9/M10 — validate extracted SBC fields before 
         expect(value, `${key} percent <= 100`).toBeLessThanOrEqual(100);
       }
     }
+  });
+});
+
+describe('withGcsOrphanCleanup (M8/M25 — delete orphaned GCS object on tx rollback)', () => {
+  const ctx = { fileId: 'file-abc', userId: 'user-1' };
+  const KEY = 'user-1/file-abc.pdf';
+
+  beforeEach(() => {
+    storageMocks.deleteFile.mockReset();
+    storageMocks.deleteFile.mockResolvedValue(undefined);
+  });
+
+  it('returns the transaction result and does NOT delete on success', async () => {
+    const result = await withGcsOrphanCleanup(KEY, ctx, async () => ({ ok: true }));
+    expect(result).toEqual({ ok: true });
+    expect(storageMocks.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it('deletes the uploaded object and rethrows the ORIGINAL error when the tx throws', async () => {
+    const boom = new Error('tx rolled back');
+    await expect(withGcsOrphanCleanup(KEY, ctx, async () => { throw boom; })).rejects.toBe(boom);
+    expect(storageMocks.deleteFile).toHaveBeenCalledWith(KEY);
+  });
+
+  it('does NOT attempt deletion when storageKey is null (GCS upload was skipped)', async () => {
+    const boom = new Error('tx rolled back');
+    await expect(withGcsOrphanCleanup(null, ctx, async () => { throw boom; })).rejects.toBe(boom);
+    expect(storageMocks.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it('still rethrows the original tx error when the cleanup delete itself fails', async () => {
+    const boom = new Error('tx rolled back');
+    storageMocks.deleteFile.mockRejectedValueOnce(new Error('GCS unavailable'));
+    await expect(withGcsOrphanCleanup(KEY, ctx, async () => { throw boom; })).rejects.toBe(boom);
+    expect(storageMocks.deleteFile).toHaveBeenCalledWith(KEY);
   });
 });

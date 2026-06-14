@@ -22,6 +22,7 @@ import {
   Trash2,
   Activity,
   ClipboardList,
+  ShieldCheck,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -30,6 +31,7 @@ import {
 } from '../../services/api/provider';
 import type { BiomarkerData } from '../../services/api/biomarkers';
 import type { HealthNeedData } from '../../services/api/healthNeeds';
+import type { InsurancePlanData } from '../../services/api/insurance';
 import { extractErrorMessage } from '../../utils/errorHelpers';
 
 const RELATIONSHIP_TYPES = [
@@ -85,6 +87,7 @@ export default function MyPatientsPage() {
   const [detail, setDetail] = useState<PatientDetail | null>(null);
   const [biomarkers, setBiomarkers] = useState<BiomarkerData[]>([]);
   const [healthNeeds, setHealthNeeds] = useState<HealthNeedData[]>([]);
+  const [insurance, setInsurance] = useState<InsurancePlanData[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -136,6 +139,7 @@ export default function MyPatientsPage() {
     setDetail(null);
     setBiomarkers([]);
     setHealthNeeds([]);
+    setInsurance([]);
     try {
       const d = await providerApi.getPatient(patientId);
       setDetail(d as PatientDetail);
@@ -145,6 +149,9 @@ export default function MyPatientsPage() {
       }
       if (d.relationship.permissions.canViewHealthNeeds) {
         tasks.push(providerApi.getPatientHealthNeeds(patientId).then((n) => setHealthNeeds(n)).catch(() => undefined));
+      }
+      if (d.relationship.permissions.canViewInsurance) {
+        tasks.push(providerApi.getPatientInsurance(patientId).then((p) => setInsurance(p)).catch(() => undefined));
       }
       await Promise.all(tasks);
     } catch (err) {
@@ -278,6 +285,50 @@ export default function MyPatientsPage() {
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400 px-1">
                 The patient hasn&apos;t shared health needs with you.
+              </p>
+            )}
+
+            {/* Insurance (M3: gated on the patient's canViewInsurance consent) */}
+            {detail.relationship.permissions.canViewInsurance ? (
+              <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-brand-500" />
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    Insurance {insurance.length > 0 && `(${insurance.length})`}
+                  </h2>
+                </div>
+                <div className="p-4 sm:p-6">
+                  {insurance.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">No insurance plans recorded.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {insurance.map((p) => (
+                        <div key={p.id} className="p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">
+                              {p.planName}
+                              {p.isPrimary && (
+                                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
+                                  Primary
+                                </span>
+                              )}
+                            </p>
+                            <span className="text-xs text-slate-400">{p.planType}</span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{p.insurerName}</p>
+                          <div className="flex gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span>Deductible: ${p.deductibleIndividual.toLocaleString()}</span>
+                            <span>OOP max: ${p.oopMaxIndividual.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400 px-1">
+                The patient hasn&apos;t shared insurance with you.
               </p>
             )}
           </>

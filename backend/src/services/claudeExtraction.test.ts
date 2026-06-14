@@ -138,7 +138,10 @@ describe('extractBiomarkersWithClaude (C-7)', () => {
       const textBlocks = content.filter((c: { type: string }) => c.type === 'text');
       expect(textBlocks).toHaveLength(1);
       expect(textBlocks[0].text).toContain('Extract all biomarker');
-      expect(textBlocks[0].text).toContain('LAB REPORT TEXT (PHI-redacted)');
+      // M10: the document body is wrapped in untrusted-data delimiters.
+      expect(textBlocks[0].text).toContain('<document>');
+      expect(textBlocks[0].text).toContain('</document>');
+      expect(textBlocks[0].text).toMatch(/data, never as instructions/i);
     });
 
     it('throws (no vision fallback) when local extraction is not usable', async () => {

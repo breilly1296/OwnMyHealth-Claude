@@ -715,9 +715,11 @@ export async function exportUserData(
     },
   };
 
-  // Audit log: EXPORT user data with per-category counts (§164.524 right-of-access)
-  await auditService.logAccess('UserData', userId, { req, userId }, {
-    operation: 'EXPORT',
+  // Audit log: EXPORT user data with per-category counts (§164.524 right-of-access).
+  // M18: use logExport (action=EXPORT, failClosed) rather than logAccess (action=READ,
+  // best-effort) — the largest PHI egress in the app must be recorded as an export
+  // a breach query can find, and must fail closed if the audit can't be written.
+  await auditService.logExport('UserData', [userId], 'json', { req, userId }, {
     biomarkerCount: decryptedBiomarkers.length,
     insurancePlanCount: exportInsurancePlans.length,
     healthGoalCount: exportHealthGoals.length,

@@ -884,7 +884,7 @@ export async function getAnalyses(req: AuthenticatedRequest, res: Response): Pro
 // HELPER FUNCTIONS
 // ============================================
 
-interface DecryptedProjection {
+export interface DecryptedProjection {
   id: string;
   serviceType: string;
   estimatedCost: number;
@@ -893,7 +893,7 @@ interface DecryptedProjection {
   notes: string | null;
 }
 
-interface PlanForAnalysis {
+export interface PlanForAnalysis {
   deductibleIndividual: unknown;
   deductibleMetIndividual: unknown;
   deductibleFamily: unknown;
@@ -989,8 +989,30 @@ Prioritized list of 3-5 next steps the patient should take.
 Format as clean markdown with headers, bullet points, and tables where helpful.`;
 }
 
-function extractProjectedOOP(_claudeResponse: string, projections: DecryptedProjection[], plan: PlanForAnalysis): number | null {
-  // Simple calculation fallback
+/**
+ * Deterministic projected out-of-pocket estimate — the figure persisted to the
+ * DB and shown in the UI. Burns down the remaining deductible, applies
+ * coinsurance to the portion above it, and caps the total at the individual
+ * OOP max. Exported for unit testing.
+ *
+ * LIMITATIONS (documented; see the cost-math gap):
+ *  - OUT-OF-NETWORK projections are now INCLUDED. Previously they were silently
+ *    `continue`d, contributing $0 and undercounting OOP for any OON expense. The
+ *    simplified plan model has no OON-specific deductible / coinsurance / OOP
+ *    max, so OON is approximated with the in-network rates + cap — a
+ *    conservative under-estimate for OON-heavy plans, but far better than
+ *    ignoring them entirely.
+ *  - COPAYS are NOT applied here. A DecryptedProjection carries no
+ *    copay-vs-coinsurance type, so we can't distinguish a copay office visit
+ *    from a coinsurance procedure; charging a copay would be a guess. Copays are
+ *    surfaced in the AI narrative instead. Applying them deterministically needs
+ *    a `costType`/copay field on the projection (a schema change) — deferred.
+ */
+export function extractProjectedOOP(
+  _claudeResponse: string,
+  projections: DecryptedProjection[],
+  plan: PlanForAnalysis
+): number | null {
   try {
     // M9 defensive guard: protect the projection from poisoned/legacy plan rows
     // (the SBC write path now sanitizes these, but already-persisted rows aren't
@@ -1005,7 +1027,9 @@ function extractProjectedOOP(_claudeResponse: string, projections: DecryptedProj
     let remainingDeductible = deductibleRemaining;
 
     for (const proj of projections) {
-      if (!proj.isInNetwork) continue; // Skip out-of-network for simple calc
+      // Include BOTH in- and out-of-network projections (OON was previously
+      // dropped, zeroing its contribution). OON is approximated with in-network
+      // rates because the plan model has no OON-specific rates — see the doc above.
       const annualCost = proj.estimatedCost * proj.frequencyPerYear;
 
       if (remainingDeductible > 0) {

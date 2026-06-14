@@ -194,6 +194,64 @@ gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://ownmy
 
 For staging, build with `npm run build -- --mode staging` (loads `.env.staging`, `deploy-staging.yml:113`) and target `gs://ownmyhealth-frontend-staging/`.
 
+### 5.3 Provision frontend edge security headers (HSTS / nosniff / clickjacking) — teardown M16 / L14 / L15
+
+The SPA is served **directly** from `gs://ownmyhealth-frontend` with no proxy, so the only response headers it can carry are `Content-Type` + `Cache-Control` (GCS object metadata) and the `<meta http-equiv>` CSP baked into `index.html`. The following are **header-only** and therefore cannot be set on a directly-served bucket:
+
+- `Strict-Transport-Security` (HSTS — HTTPS pinning)
+- `X-Content-Type-Options: nosniff` (MIME-sniff defense)
+- `X-Frame-Options: DENY` / `Content-Security-Policy: frame-ancestors 'none'` (a meta-delivered `frame-ancestors` is **ignored** by browsers)
+
+**Interim (already shipped):** clickjacking is mitigated in-app by the frame-bust in `src/utils/frameGuard.ts` (the app refuses to mount inside a frame). This makes the missing real `frame-ancestors`/`X-Frame-Options` header defense-in-depth rather than the sole control. **HSTS and nosniff are still NOT enforced** — they require the edge layer below.
+
+**Real fix (requires provisioning — apply by hand, then cut over DNS):** front the bucket with an **external HTTPS load balancer + backend-bucket** and attach a **response-headers policy**. This is the same missing HTTPS LB that the Cloud Armor / DDoS playbook needs (§13 "Rate-limit abuse / DDoS"), so provision once and reuse.
+
+```bash
+# Project / names
+P=ownmyhealth-prod; REGION=us-central1
+BUCKET=ownmyhealth-frontend
+DOMAIN=app.ownmyhealth.io
+
+# 1. Reserve a global anycast IP for the LB
+gcloud compute addresses create omh-frontend-ip --global --project="$P"
+gcloud compute addresses describe omh-frontend-ip --global --project="$P" --format='value(address)'
+
+# 2. Backend bucket fronting the GCS bucket, with Cloud CDN
+gcloud compute backend-buckets create omh-frontend-be \
+  --gcs-bucket-name="$BUCKET" --enable-cdn --project="$P"
+
+# 3. Response-headers policy: the real security headers (HSTS/nosniff/frame/CSP)
+#    NOTE: custom-response-headers live on the backend-bucket. Update it:
+gcloud compute backend-buckets update omh-frontend-be --project="$P" \
+  --custom-response-header='Strict-Transport-Security: max-age=63072000; includeSubDomains; preload' \
+  --custom-response-header='X-Content-Type-Options: nosniff' \
+  --custom-response-header='X-Frame-Options: DENY' \
+  --custom-response-header='Content-Security-Policy: frame-ancestors '"'"'none'"'"''
+
+# 4. URL map → target HTTPS proxy → managed cert → forwarding rule
+gcloud compute url-maps create omh-frontend-urlmap --default-backend-bucket=omh-frontend-be --project="$P"
+gcloud compute ssl-certificates create omh-frontend-cert --domains="$DOMAIN" --global --project="$P"
+gcloud compute target-https-proxies create omh-frontend-proxy \
+  --url-map=omh-frontend-urlmap --ssl-certificates=omh-frontend-cert --project="$P"
+gcloud compute forwarding-rules create omh-frontend-fr --global \
+  --address=omh-frontend-ip --target-https-proxy=omh-frontend-proxy --ports=443 --project="$P"
+
+# 5. (Recommended) HTTP→HTTPS redirect so HSTS is established on first hit
+#    Create an HTTP url-map with a 301 redirect + an :80 forwarding rule on the
+#    same IP. (omitted for brevity — `gcloud compute url-maps import` with a
+#    redirectAction: { httpsRedirect: true }.)
+```
+
+**DNS cutover (the irreversible-ish step — do during a low-traffic window):** point `app.ownmyhealth.io` A record at the reserved `omh-frontend-ip`. The managed cert provisions only **after** DNS resolves to the LB (can take up to ~60 min). Verify before/after:
+
+```bash
+# After cutover + cert ACTIVE:
+curl -sI https://app.ownmyhealth.io/ | grep -iE 'strict-transport-security|x-content-type-options|x-frame-options|content-security-policy'
+gcloud compute ssl-certificates describe omh-frontend-cert --global --project="$P" --format='value(managed.status)'  # → ACTIVE
+```
+
+Once shipped: keep the `index.html` `<meta>` CSP as defense-in-depth, update its INFRA-REMAINDER comment to reference this section, and codify the above in IaC (this repo has no Terraform yet — if/when it adopts one, port these resources so the edge config can't drift). The in-app frame-bust can stay (harmless once the real header is present).
+
 ---
 
 ## 6. Rollback
@@ -534,8 +592,8 @@ Eight named rate limiters live in `rateLimiter.ts` (`standardLimiter:17`, `authL
 **Setting `REDIS_URL`** switches all limiters to a **shared Memorystore Redis store** so counters are consistent across instances (`config/index.ts:121-127`, `rateLimitStore.ts:32-64`):
 
 ```ts
-// Source: backend/src/middleware/rateLimitStore.ts:32-53 (intervening lines elided)
-function getClient(): RedisLike | null {
+// Source: backend/src/middleware/rateLimitStore.ts (intervening lines elided)
+export function getRedisClient(): RedisLike | null {
   if (!config.redis.url) return null;          // unset → undefined store → MemoryStore
   if (initialized) return client;
   initialized = true;
@@ -564,7 +622,9 @@ gcloud run services update-traffic ownmyhealth-backend --project=ownmyhealth-pro
   --region=us-central1 --to-latest   # pinning gotcha
 ```
 
-Confirm boot log `✓ Rate limiters using shared Redis store` (`rateLimitStore.ts:53`). To roll back, unset `REDIS_URL` (+ `--to-latest`) → limiters fall back to MemoryStore (`docs/INFRA_REDIS_AND_SCHEDULER.md:118-124`).
+Confirm boot log `✓ Rate limiters using shared Redis store` (`rateLimitStore.ts`). To roll back, unset `REDIS_URL` (+ `--to-latest`) → limiters fall back to MemoryStore (`docs/INFRA_REDIS_AND_SCHEDULER.md:118-124`).
+
+**Same switch also backs the AI spend cap (M11/L33).** `aiCostTracker` reuses this one `getRedisClient()` connection: with `REDIS_URL` set it stores the rolling daily spend in shared Redis (atomic `INCRBYFLOAT` gate) so the dollar cap is consistent across instances instead of N×budget; unset → per-instance memory (current behavior). Second boot log to confirm: `✓ AI spend cap using shared Redis store`. So provisioning Memorystore once closes BOTH the rate-limiter dilution (#37/M11) and the spend-cap dilution (L33). Note the postures differ on a runtime Redis error: rate limiters fail **open** (a blip must not 503 everyone; the DB account-lockout still guards login), the spend cap fails **closed** (a billing breaker must not uncap spend). Interim, before Memorystore exists: divide the budgets by `--max-instances` (`AI_DAILY_BUDGET_USD=17`, `AI_USER_DAILY_BUDGET_USD=2`) to approximate the intended $50/$5 aggregate across 3 instances.
 
 ---
 
@@ -621,7 +681,7 @@ Confirm boot log `✓ Rate limiters using shared Redis store` (`rateLimitStore.t
 
 **Symptoms**: AI endpoints return **503 SERVICE_UNAVAILABLE** with "daily budget reached" / "today's AI usage limit"; logs show `AI request refused — daily spend budget reached` (`aiSpendGuard.ts:36-47`).
 
-**Cause**: the rolling per-UTC-day spend accumulator crossed `AI_DAILY_BUDGET_USD` (global, default 50) or `AI_USER_DAILY_BUDGET_USD` (per-user, default 5) (`config/index.ts:195-198`, gate at `aiSpendGuard.ts:30`). The accumulator is **in-memory/per-instance**, so the effective ceiling is N×budget under autoscale (`config/index.ts:190-193`).
+**Cause**: the rolling per-UTC-day spend accumulator crossed `AI_DAILY_BUDGET_USD` (global, default 50) or `AI_USER_DAILY_BUDGET_USD` (per-user, default 5) (`config/index.ts`, gate at `aiSpendGuard.ts`). The accumulator is **in-memory/per-instance by default**, so the effective ceiling is N×budget under autoscale — UNLESS `REDIS_URL` is set, in which case `aiCostTracker` uses the SHARED Redis store and the cap is consistent across instances (same switch as the rate limiters, see §12). On a Redis outage the gate fails **closed** (503), so AI features pause while core CRUD keeps working.
 
 **Diagnosis (derived)**:
 1. Grep logs: `jsonPayload.message:"daily spend budget reached"` — `scope:"global"` vs per-user tells you which cap tripped.

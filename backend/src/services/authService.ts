@@ -153,7 +153,15 @@ const revokedTokens: Map<string, number> = new Map();
 // same-instance propagation is immediate (the stamping path clears the local
 // entry), cross-instance is bounded by the TTL.
 const TOKENS_VALID_AFTER_TTL_MS = 15_000;
-const tokensValidAfterCache: Map<string, { validAfterMs: number; fetchedAt: number }> = new Map();
+// Per-user cross-instance revocation state, cached for a short TTL so the
+// per-request DB cost is ~1 lookup/user/TTL. `validAfterMs` is the user-level
+// cutoff (logout-all / password change etc.); `revokedJtis` is the set of
+// individually-revoked access-token ids from single-device logout (M1). A
+// single combined read populates both — see fetchUserRevocationState.
+const tokensValidAfterCache: Map<
+  string,
+  { validAfterMs: number; revokedJtis: Set<string>; fetchedAt: number }
+> = new Map();
 
 // Clock-skew allowance applied when clamping blacklist retention in
 // revokeAccessToken below — covers drift between the issuing instance's
@@ -231,63 +239,146 @@ export function sweepRevokedTokens(): void {
 }
 
 /**
- * Read a user's tokensValidAfter cutoff (epoch ms; 0 = no cutoff) from the DB
- * under the user's own RLS context.
+ * Read a user's cross-instance revocation state from the DB under the user's own
+ * RLS context: the tokensValidAfter cutoff (epoch ms; 0 = no cutoff) AND the set
+ * of individually-revoked, not-yet-expired access-token jtis (M1 single-device
+ * logout). One round-trip populates both; the result is cached for a short TTL.
  */
-async function fetchTokensValidAfterMs(userId: string): Promise<number> {
-  const user = await withRLSContext(userId, async (tx) => {
-    return tx.user.findUnique({
-      where: { id: userId },
-      select: { tokensValidAfter: true },
-    });
+async function fetchUserRevocationState(
+  userId: string
+): Promise<{ validAfterMs: number; revokedJtis: Set<string> }> {
+  return withRLSContext(userId, async (tx) => {
+    const [user, revoked] = await Promise.all([
+      tx.user.findUnique({
+        where: { id: userId },
+        select: { tokensValidAfter: true },
+      }),
+      tx.revokedAccessToken.findMany({
+        where: { userId, expiresAt: { gt: new Date() } },
+        select: { jti: true },
+      }),
+    ]);
+    return {
+      validAfterMs: user?.tokensValidAfter ? user.tokensValidAfter.getTime() : 0,
+      revokedJtis: new Set(revoked.map((r) => r.jti)),
+    };
   });
-  return user?.tokensValidAfter ? user.tokensValidAfter.getTime() : 0;
 }
 
 /**
- * True if an access token (identified by its `iat`, in seconds) was issued
- * before the user's tokensValidAfter cutoff — i.e. it was invalidated by a
- * logout-all, password change/reset, email change, or admin deactivation/role
- * change on ANY instance. Consulted by the auth middleware on every protected
- * request, so results are cached for a short TTL.
+ * True if an access token has been invalidated on ANY instance — either because
+ * it was issued before the user's tokensValidAfter cutoff (logout-all, password
+ * change/reset, email change, admin deactivation/role change), OR because its
+ * specific `jti` was revoked by a single-device logout (M1). Consulted by the
+ * auth middleware on every protected request, so results are cached for a short
+ * TTL.
  *
- * Comparison is at second granularity (JWT `iat` is whole seconds) with a strict
- * `<`, so a token re-issued in the same wall-clock second as the cutoff (e.g. the
- * fresh token a password change hands back) is NOT invalidated.
+ * The cutoff comparison is at second granularity (JWT `iat` is whole seconds)
+ * with a strict `<`, so a token re-issued in the same wall-clock second as the
+ * cutoff (e.g. the fresh token a password change hands back) is NOT invalidated.
+ *
+ * `jti` is optional: tokens minted before M1 carry none and are matched only by
+ * the cutoff (they still expire naturally within the access-token lifetime).
  *
  * Fails OPEN (returns false) on a DB error: a transient blip must not mass-
  * logout users, and the in-memory blacklist still covers same-instance
  * revocation. During a real DB outage a stale token can't reach PHI anyway.
  */
-export async function isAccessTokenStale(userId: string, iatSeconds: number): Promise<boolean> {
+export async function isAccessTokenStale(
+  userId: string,
+  iatSeconds: number,
+  jti?: string
+): Promise<boolean> {
   const now = Date.now();
   const cached = tokensValidAfterCache.get(userId);
   let validAfterMs: number;
+  let revokedJtis: Set<string>;
   if (cached && now - cached.fetchedAt <= TOKENS_VALID_AFTER_TTL_MS) {
     validAfterMs = cached.validAfterMs;
+    revokedJtis = cached.revokedJtis;
   } else {
     try {
-      validAfterMs = await fetchTokensValidAfterMs(userId);
+      ({ validAfterMs, revokedJtis } = await fetchUserRevocationState(userId));
     } catch (error) {
-      logger.warn('tokensValidAfter lookup failed; allowing token (fail-open)', {
+      logger.warn('token revocation lookup failed; allowing token (fail-open)', {
         prefix: 'Auth',
         data: { error: error instanceof Error ? error.message : String(error) },
       });
       return false;
     }
-    tokensValidAfterCache.set(userId, { validAfterMs, fetchedAt: now });
+    tokensValidAfterCache.set(userId, { validAfterMs, revokedJtis, fetchedAt: now });
   }
-  if (validAfterMs === 0) return false; // no cutoff set
+  if (jti && revokedJtis.has(jti)) return true; // single-device logout (M1)
+  if (validAfterMs === 0) return false; // no user-level cutoff set
   return iatSeconds < Math.floor(validAfterMs / 1000);
 }
 
 /**
- * Drop a user's cached tokensValidAfter so the next request re-reads it from the
- * DB. Called right after stamping the cutoff so same-instance revocation is
- * immediate (other instances converge within the cache TTL).
+ * Drop a user's cached revocation state (tokensValidAfter cutoff + revoked-jti
+ * set) so the next request re-reads it from the DB. Called right after stamping
+ * the cutoff or recording a single-device revocation so same-instance revocation
+ * is immediate (other instances converge within the cache TTL).
  */
 export function invalidateTokensValidAfterCache(userId: string): void {
   tokensValidAfterCache.delete(userId);
+}
+
+/**
+ * Record a single access token's `jti` in the DB-backed revocation list so it
+ * stops authenticating on EVERY Cloud Run replica (M1). Used by single-device
+ * logout, which must NOT stamp the per-user tokensValidAfter cutoff — that would
+ * log the user out of their OTHER devices.
+ *
+ * Guards:
+ * - `verifiedUserId` is the caller's authenticated identity (from the verified
+ *   access token or refresh session). We only write a row when the access
+ *   token's own `id` matches it, so a forged/mismatched token (jwt.decode does
+ *   NOT verify the signature) can't seed rows for an arbitrary user.
+ * - A token already past expiry is skipped — it can't authenticate anyway.
+ * - `expiresAt` is the token's own exp, clamped to one access-token lifetime
+ *   (+skew) so a forged far-future exp can't pin an unsweepable row.
+ *
+ * Same-instance effect is immediate via the in-memory blacklist (the caller
+ * also calls revokeAccessToken); this closes the cross-instance gap. Best-effort:
+ * a DB failure is logged, not thrown — logout must still succeed and clear the
+ * client's cookies.
+ */
+export async function revokeAccessTokenCrossInstance(
+  token: string,
+  verifiedUserId: string
+): Promise<void> {
+  if (!token || !verifiedUserId) return;
+  let decoded: { jti?: string; id?: string; exp?: number } | null = null;
+  try {
+    decoded = jwt.decode(token) as { jti?: string; id?: string; exp?: number } | null;
+  } catch {
+    return; // malformed — nothing to revoke
+  }
+  if (!decoded?.jti || decoded.id !== verifiedUserId) return;
+  const nowMs = Date.now();
+  if (decoded.exp && decoded.exp * 1000 <= nowMs) return; // already expired
+
+  const maxExpMs = nowMs + accessTokenLifetimeMs() + REVOKED_TOKEN_EXP_SKEW_MS;
+  const expMs = decoded.exp ? Math.min(decoded.exp * 1000, maxExpMs) : maxExpMs;
+
+  try {
+    await withRLSContext(verifiedUserId, async (tx) => {
+      await tx.revokedAccessToken.upsert({
+        where: { jti: decoded!.jti! },
+        create: { jti: decoded!.jti!, userId: verifiedUserId, expiresAt: new Date(expMs) },
+        update: {},
+      });
+    });
+    // Same-instance immediacy: drop this user's cached revocation state so the
+    // next request on this instance re-reads the new jti (other instances
+    // converge within the cache TTL).
+    invalidateTokensValidAfterCache(verifiedUserId);
+  } catch (error) {
+    logger.warn('cross-instance access-token revocation failed', {
+      prefix: 'Auth',
+      data: { error: error instanceof Error ? error.message : String(error) },
+    });
+  }
 }
 
 // ============================================
@@ -341,12 +432,16 @@ export function validatePasswordStrength(password: string): { valid: boolean; er
  * Generate access token (short-lived, 15 minutes)
  */
 export function generateAccessToken(user: User): string {
-  const payload: TokenPayload = {
+  const payload: TokenPayload & { jti: string } = {
     id: user.id,
     email: user.email,
     role: user.role,
     plan: user.plan || 'FREE',
     type: 'access',
+    // M1: per-token id so a single access token can be revoked cross-instance
+    // (see revokeAccessTokenCrossInstance) without stamping the per-user
+    // tokensValidAfter cutoff, which would log out the user's other devices.
+    jti: uuidv4(),
   };
 
   return jwt.sign(payload, config.jwt.accessSecret, {
@@ -1633,20 +1728,29 @@ export async function initializeDemoUser(): Promise<void> {
 
 export async function cleanupExpiredSessions(): Promise<void> {
   try {
-    // Cross-user system cleanup — admin context.
-    const result = await withRLSContext(
+    // Cross-user system cleanup — admin context. Prune expired refresh sessions
+    // AND expired single-device access-token revocation rows (M1): once a
+    // revoked access token is past its exp it can no longer verify, so the row
+    // is no longer needed and is dropped to keep the table bounded.
+    const { sessions, revoked } = await withRLSContext(
       null,
       async (tx) => {
-        return tx.session.deleteMany({
-          where: {
-            expiresAt: { lt: new Date() },
-          },
+        const now = new Date();
+        const sessionResult = await tx.session.deleteMany({
+          where: { expiresAt: { lt: now } },
         });
+        const revokedResult = await tx.revokedAccessToken.deleteMany({
+          where: { expiresAt: { lt: now } },
+        });
+        return { sessions: sessionResult.count, revoked: revokedResult.count };
       },
       { isAdmin: true }
     );
-    if (result.count > 0) {
-      logger.info(`Cleaned up ${result.count} expired sessions`, { prefix: 'Auth' });
+    if (sessions > 0) {
+      logger.info(`Cleaned up ${sessions} expired sessions`, { prefix: 'Auth' });
+    }
+    if (revoked > 0) {
+      logger.info(`Cleaned up ${revoked} expired access-token revocations`, { prefix: 'Auth' });
     }
   } catch (error) {
     // Database might not be connected

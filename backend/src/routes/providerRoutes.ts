@@ -17,6 +17,8 @@ import { getPrismaClient, withRLSContext } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
+import { resolveProviderAccess, providerAccessError } from '../services/providerAccess.js';
+import { insurancePlanToResponse } from '../controllers/insuranceController.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -26,28 +28,22 @@ router.use(authenticate);
 router.use(requireRole('PROVIDER', 'ADMIN'));
 
 // ---------------------------------------------------------------------------
-// L-25 — ORPHANED PERMISSIONS: canViewInsurance / canEditData are grantable
-// but have NO consuming provider route. FLAGGED.
-//
-// Patients can grant `canViewInsurance` and `canEditData` (see
-// patientRoutes.ts consent grant/update + validation.ts
-// providerPatient.consent/update schemas) and the consent UI
-// (src/components/provider/CareTeamPage.tsx) presents them as real
-// capabilities ("Insurance & coverage", "Edit data"). But the provider API
-// surface below only exposes READ endpoints gated on canViewBiomarkers
-// (/patients/:id/biomarkers) and canViewHealthNeeds
-// (/patients/:id/health-needs). There is:
-//   - NO provider insurance endpoint that reads canViewInsurance, and
-//   - NO provider write endpoint that reads canEditData.
-// So granting either flag currently changes nothing a provider can do — the
-// consent UI overstates the provider's actual capability.
-//
-// Do NOT remove the columns/flags: dropping them would break the existing
-// grant/update API + UI contract and the admin override path. The correct
-// long-term fix is to either (a) wire the consuming routes (a read-only
-// /patients/:id/insurance gated on canViewInsurance, and edit endpoints gated
-// on canEditData) or (b) hide the unsupported toggles in the consent UI until
-// the routes exist. Tracked as L-25 in the security audit.
+// M3/L35 — consent-flag enforcement. Every read route below resolves access
+// through the single `resolveProviderAccess(tx, providerId, patientId, flag)`
+// choke point, which requires the relevant consent flag as an argument so a new
+// route cannot forget to gate on a permission.
+//   - canViewBiomarkers  -> /patients/:id/biomarkers   (ENFORCED)
+//   - canViewHealthNeeds -> /patients/:id/health-needs (ENFORCED)
+//   - canViewInsurance   -> /patients/:id/insurance    (ENFORCED — added M3)
+//   - canEditData        -> providers are read-only; there is NO provider write
+//     route. The "Edit data" consent toggle was therefore removed from the UI
+//     (src/components/provider/CareTeamPage.tsx) so it no longer promises a
+//     capability the app doesn't exercise. The DB column + RLS
+//     `has_provider_access(..,'edit')` branch are retained for a future,
+//     deliberately-designed provider-write feature; do NOT drop them.
+// The /patients and /patients/:id endpoints disclose only patient identity /
+// account metadata and are intentionally gated on ACTIVE consent alone (no data
+// flag), mirroring the users_select_provider / has_active_consent RLS policy.
 // ---------------------------------------------------------------------------
 
 /**
@@ -456,88 +452,28 @@ router.get(
     // provider's session the DB returns biomarker rows ONLY for an ACTIVE,
     // unexpired, can_view_biomarkers relationship — a true backstop matching the
     // app-layer checks below (which remain the primary gate + audit driver).
-    const { relationship, patient, biomarkers } = await withRLSContext(
-      providerId,
-      async (tx) => {
-        const rel = await tx.providerPatient.findUnique({
-          where: {
-            providerId_patientId: {
-              providerId,
-              patientId,
-            },
-          },
-        });
-
-        // Only reach through to PHI if the relationship row itself qualifies.
-        // The explicit ForbiddenError branches below still render the right
-        // audit reason, so early-return-null is safe.
-        const viable =
-          rel &&
-          rel.status === 'ACTIVE' &&
-          rel.canViewBiomarkers &&
-          !(rel.consentExpiresAt && new Date(rel.consentExpiresAt) < new Date());
-
-        if (!viable) return { relationship: rel, patient: null, biomarkers: [] };
-
-        const pt = await tx.user.findFirst({
-          where: {
-            id: patientId,
-            isActive: true,
-            OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
-          },
-          select: { id: true },
-        });
-
-        if (!pt) return { relationship: rel, patient: null, biomarkers: [] };
-
-        const rows = await tx.biomarker.findMany({
-          where: { userId: patientId },
-          orderBy: { measurementDate: 'desc' },
-        });
-        return { relationship: rel, patient: pt, biomarkers: rows };
-      },
-    );
+    const { access, biomarkers } = await withRLSContext(providerId, async (tx) => {
+      const access = await resolveProviderAccess(tx, providerId, patientId, 'canViewBiomarkers');
+      if (!access.ok) return { access, biomarkers: [] };
+      const rows = await tx.biomarker.findMany({
+        where: { userId: patientId },
+        orderBy: { measurementDate: 'desc' },
+      });
+      return { access, biomarkers: rows };
+    });
 
     const auditService = getAuditLogService(prisma);
 
-    if (!relationship || relationship.status !== 'ACTIVE') {
-      // Audit log: Failed biomarker access attempt
+    if (!access.ok) {
       await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
         operation: 'PHI_ACCESS',
         success: false,
-        reason: !relationship ? 'no_relationship' : 'relationship_not_active',
+        reason: access.reason,
+        ...(access.reason === 'consent_expired' && access.relationship?.consentExpiresAt
+          ? { consentExpiresAt: access.relationship.consentExpiresAt.toISOString() }
+          : {}),
       });
-      throw new ForbiddenError('You do not have access to this patient');
-    }
-
-    // Check consent expiration
-    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
-      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
-        operation: 'PHI_ACCESS',
-        success: false,
-        reason: 'consent_expired',
-        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
-      });
-      throw new ForbiddenError('Provider consent has expired');
-    }
-
-    if (!relationship.canViewBiomarkers) {
-      // Audit log: Failed biomarker access — insufficient permissions
-      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
-        operation: 'PHI_ACCESS',
-        success: false,
-        reason: 'permission_denied',
-      });
-      throw new ForbiddenError('You do not have permission to view this patient\'s biomarkers');
-    }
-
-    if (!patient) {
-      await auditService.logAccess('patient_biomarkers', patientId, { req, userId: providerId }, {
-        operation: 'PHI_ACCESS',
-        success: false,
-        reason: 'patient_inactive_or_locked',
-      });
-      throw new NotFoundError('Patient not found or account is inactive');
+      throw providerAccessError(access.reason, 'biomarkers');
     }
 
     // Decrypt biomarker PHI using patient's encryption key
@@ -599,85 +535,28 @@ router.get(
     // `OR has_provider_access(user_id, 'view_health_needs')` branch, so the DB
     // returns rows only for an ACTIVE, unexpired, can_view_health_needs
     // relationship. App-layer checks below stay the primary gate + audit driver.
-    const { relationship, patient, healthNeeds } = await withRLSContext(
-      providerId,
-      async (tx) => {
-        const rel = await tx.providerPatient.findUnique({
-          where: {
-            providerId_patientId: {
-              providerId,
-              patientId,
-            },
-          },
-        });
-
-        const viable =
-          rel &&
-          rel.status === 'ACTIVE' &&
-          rel.canViewHealthNeeds &&
-          !(rel.consentExpiresAt && new Date(rel.consentExpiresAt) < new Date());
-
-        if (!viable) return { relationship: rel, patient: null, healthNeeds: [] };
-
-        const pt = await tx.user.findFirst({
-          where: {
-            id: patientId,
-            isActive: true,
-            OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
-          },
-          select: { id: true },
-        });
-
-        if (!pt) return { relationship: rel, patient: null, healthNeeds: [] };
-
-        const rows = await tx.healthNeed.findMany({
-          where: { userId: patientId },
-          orderBy: { createdAt: 'desc' },
-        });
-        return { relationship: rel, patient: pt, healthNeeds: rows };
-      },
-    );
+    const { access, healthNeeds } = await withRLSContext(providerId, async (tx) => {
+      const access = await resolveProviderAccess(tx, providerId, patientId, 'canViewHealthNeeds');
+      if (!access.ok) return { access, healthNeeds: [] };
+      const rows = await tx.healthNeed.findMany({
+        where: { userId: patientId },
+        orderBy: { createdAt: 'desc' },
+      });
+      return { access, healthNeeds: rows };
+    });
 
     const auditService = getAuditLogService(prisma);
 
-    if (!relationship || relationship.status !== 'ACTIVE') {
-      // Audit log: Failed health needs access attempt
+    if (!access.ok) {
       await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
         operation: 'PHI_ACCESS',
         success: false,
-        reason: !relationship ? 'no_relationship' : 'relationship_not_active',
+        reason: access.reason,
+        ...(access.reason === 'consent_expired' && access.relationship?.consentExpiresAt
+          ? { consentExpiresAt: access.relationship.consentExpiresAt.toISOString() }
+          : {}),
       });
-      throw new ForbiddenError('You do not have access to this patient');
-    }
-
-    // Check consent expiration
-    if (relationship.consentExpiresAt && new Date(relationship.consentExpiresAt) < new Date()) {
-      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
-        operation: 'PHI_ACCESS',
-        success: false,
-        reason: 'consent_expired',
-        consentExpiresAt: relationship.consentExpiresAt.toISOString(),
-      });
-      throw new ForbiddenError('Provider consent has expired');
-    }
-
-    if (!relationship.canViewHealthNeeds) {
-      // Audit log: Failed health needs access — insufficient permissions
-      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
-        operation: 'PHI_ACCESS',
-        success: false,
-        reason: 'permission_denied',
-      });
-      throw new ForbiddenError('You do not have permission to view this patient\'s health needs');
-    }
-
-    if (!patient) {
-      await auditService.logAccess('patient_health_needs', patientId, { req, userId: providerId }, {
-        operation: 'PHI_ACCESS',
-        success: false,
-        reason: 'patient_inactive_or_locked',
-      });
-      throw new NotFoundError('Patient not found or account is inactive');
+      throw providerAccessError(access.reason, 'health needs');
     }
 
     // Decrypt health need PHI using patient's encryption key
@@ -709,6 +588,65 @@ router.get(
     const response: ApiResponse<typeof decryptedHealthNeeds> = {
       success: true,
       data: decryptedHealthNeeds,
+    };
+    res.json(response);
+  })
+);
+
+/**
+ * GET /api/v1/provider/patients/:patientId/insurance
+ * Get patient's insurance plans + benefits (if authorized). Gated on
+ * canViewInsurance (M3). insurance_plans_select / insurance_benefits_select
+ * carry the `OR has_provider_access(user_id, 'view_insurance')` RLS backstop.
+ */
+router.get(
+  '/patients/:patientId/insurance',
+  validate(schemas.patientIdParam, 'params'),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const prisma = getPrismaClient();
+    const providerId = req.user!.id;
+    const { patientId } = req.params;
+
+    const { access, plans } = await withRLSContext(providerId, async (tx) => {
+      const access = await resolveProviderAccess(tx, providerId, patientId, 'canViewInsurance');
+      if (!access.ok) return { access, plans: [] };
+      const rows = await tx.insurancePlan.findMany({
+        where: { userId: patientId },
+        include: { benefits: true },
+        orderBy: [{ isPrimary: 'desc' }, { isActive: 'desc' }, { effectiveDate: 'desc' }],
+      });
+      return { access, plans: rows };
+    });
+
+    const auditService = getAuditLogService(prisma);
+
+    if (!access.ok) {
+      await auditService.logAccess('patient_insurance', patientId, { req, userId: providerId }, {
+        operation: 'PHI_ACCESS',
+        success: false,
+        reason: access.reason,
+        ...(access.reason === 'consent_expired' && access.relationship?.consentExpiresAt
+          ? { consentExpiresAt: access.relationship.consentExpiresAt.toISOString() }
+          : {}),
+      });
+      throw providerAccessError(access.reason, 'insurance');
+    }
+
+    // Decrypt insurance PHI with the PATIENT's encryption key (the same shape the
+    // patient sees), then audit the cross-user PHI access.
+    const patientSalt = await getUserEncryptionSalt(patientId);
+    const decryptedPlans = plans.map((p) => insurancePlanToResponse(p, patientSalt));
+
+    await auditService.logAccess('patient_insurance', patientId, { req, userId: providerId }, {
+      operation: 'PHI_ACCESS',
+      patientId,
+      count: decryptedPlans.length,
+      accessedFields: ['insurance'],
+    });
+
+    const response: ApiResponse<typeof decryptedPlans> = {
+      success: true,
+      data: decryptedPlans,
     };
     res.json(response);
   })

@@ -374,10 +374,15 @@ describe('exportUserData', () => {
     vi.clearAllMocks();
     ex = ensureExportMocks(mockTx);
 
-    // logAccess isn't in the existing mockAuditService shape; attach it once.
-    (mockAuditService as unknown as { logAccess?: ReturnType<typeof vi.fn> }).logAccess ??=
-      vi.fn();
-    (mockAuditService as unknown as { logAccess: ReturnType<typeof vi.fn> }).logAccess.mockClear();
+    // logAccess/logExport aren't in the base mockAuditService shape; attach once.
+    const svc = mockAuditService as unknown as {
+      logAccess?: ReturnType<typeof vi.fn>;
+      logExport?: ReturnType<typeof vi.fn>;
+    };
+    svc.logAccess ??= vi.fn();
+    svc.logExport ??= vi.fn();
+    svc.logAccess.mockClear();
+    svc.logExport.mockClear();
 
     vi.mocked(getEncryptionService).mockReturnValue({
       decrypt: decryptMock,
@@ -705,25 +710,31 @@ describe('exportUserData', () => {
     expect(serialized).not.toContain('enc:');
   });
 
-  it('emits an audit-log EXPORT event with per-category counts matching the payload', async () => {
+  it('emits an audit-log EXPORT event (logExport, not logAccess) with per-category counts (M18)', async () => {
     const req = mockReq(userId);
     const res = mockRes();
 
     await exportUserData(req, res);
 
-    const logAccess = (
-      mockAuditService as unknown as { logAccess: ReturnType<typeof vi.fn> }
-    ).logAccess;
-    expect(logAccess).toHaveBeenCalledTimes(1);
-    const [resourceType, resourceId, context, metadata] = logAccess.mock.calls[0];
+    const svc = mockAuditService as unknown as {
+      logAccess: ReturnType<typeof vi.fn>;
+      logExport: ReturnType<typeof vi.fn>;
+    };
+    // M18: the export is recorded via logExport (action=EXPORT, failClosed), NOT
+    // logAccess (action=READ, best-effort).
+    expect(svc.logExport).toHaveBeenCalledTimes(1);
+    expect(svc.logAccess).not.toHaveBeenCalled();
+
+    // logExport(resourceType, resourceIds[], format, context, metadata)
+    const [resourceType, resourceIds, format, context, metadata] = svc.logExport.mock.calls[0];
     expect(resourceType).toBe('UserData');
-    expect(resourceId).toBe(userId);
+    expect(resourceIds).toEqual([userId]);
+    expect(format).toBe('json');
     expect(context).toEqual(expect.objectContaining({ userId }));
 
     // Counts in the audit metadata must match the categories returned.
     expect(metadata).toEqual(
       expect.objectContaining({
-        operation: 'EXPORT',
         biomarkerCount: 2,
         insurancePlanCount: 1,
         healthGoalCount: 1,

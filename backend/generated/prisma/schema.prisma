@@ -8,49 +8,50 @@ datasource db {
 }
 
 model User {
-  id                       String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                    String              @unique @db.VarChar(255)
-  passwordHash             String              @map("password_hash") @db.VarChar(255)
-  firstNameEncrypted       String?             @map("first_name_encrypted")
-  lastNameEncrypted        String?             @map("last_name_encrypted")
-  dateOfBirthEncrypted     String?             @map("date_of_birth_encrypted")
-  phoneEncrypted           String?             @map("phone_encrypted")
-  addressEncrypted         String?             @map("address_encrypted")
-  emailVerified            Boolean             @default(false) @map("email_verified")
-  emailVerificationToken   String?             @unique @map("email_verification_token") @db.VarChar(255)
-  emailVerificationExpires DateTime?           @map("email_verification_expires") @db.Timestamptz(6)
-  passwordResetToken       String?             @unique @map("password_reset_token") @db.VarChar(255)
-  passwordResetExpires     DateTime?           @map("password_reset_expires") @db.Timestamptz(6)
-  pendingEmail             String?             @map("pending_email") @db.VarChar(255)
-  emailChangeToken         String?             @unique @map("email_change_token") @db.VarChar(255)
-  emailChangeExpires       DateTime?           @map("email_change_expires") @db.Timestamptz(6)
-  isActive                 Boolean             @default(true) @map("is_active")
-  role                     UserRole            @default(PATIENT)
-  failedLoginAttempts      Int                 @default(0) @map("failed_login_attempts")
-  lockedUntil              DateTime?           @map("locked_until") @db.Timestamptz(6)
-  lastFailedLogin          DateTime?           @map("last_failed_login") @db.Timestamptz(6)
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                    String               @unique @db.VarChar(255)
+  passwordHash             String               @map("password_hash") @db.VarChar(255)
+  firstNameEncrypted       String?              @map("first_name_encrypted")
+  lastNameEncrypted        String?              @map("last_name_encrypted")
+  dateOfBirthEncrypted     String?              @map("date_of_birth_encrypted")
+  phoneEncrypted           String?              @map("phone_encrypted")
+  addressEncrypted         String?              @map("address_encrypted")
+  emailVerified            Boolean              @default(false) @map("email_verified")
+  emailVerificationToken   String?              @unique @map("email_verification_token") @db.VarChar(255)
+  emailVerificationExpires DateTime?            @map("email_verification_expires") @db.Timestamptz(6)
+  passwordResetToken       String?              @unique @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires     DateTime?            @map("password_reset_expires") @db.Timestamptz(6)
+  pendingEmail             String?              @map("pending_email") @db.VarChar(255)
+  emailChangeToken         String?              @unique @map("email_change_token") @db.VarChar(255)
+  emailChangeExpires       DateTime?            @map("email_change_expires") @db.Timestamptz(6)
+  isActive                 Boolean              @default(true) @map("is_active")
+  role                     UserRole             @default(PATIENT)
+  failedLoginAttempts      Int                  @default(0) @map("failed_login_attempts")
+  lockedUntil              DateTime?            @map("locked_until") @db.Timestamptz(6)
+  lastFailedLogin          DateTime?            @map("last_failed_login") @db.Timestamptz(6)
   // M-4: cross-instance access-token cutoff. Any access JWT with iat before this
   // instant is rejected by authenticate() on every replica. Stamped on
   // logout-all / password change+reset / email change / admin deactivation+role
   // change so revocation spans instances, not just the in-memory blacklist.
-  tokensValidAfter         DateTime?           @map("tokens_valid_after") @db.Timestamptz(6)
-  notificationPreferences  Json                @default("{}") @map("notification_preferences")
-  healthProfileEncrypted   String?             @map("health_profile_encrypted")
-  plan                     String              @default("FREE") @db.VarChar(20)
-  planExpiresAt            DateTime?           @map("plan_expires_at") @db.Timestamptz(6)
-  planUpdatedAt            DateTime?           @map("plan_updated_at") @db.Timestamptz(6)
-  onboardingCompletedAt    DateTime?           @map("onboarding_completed_at") @db.Timestamptz(6)
-  createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  lastLoginAt              DateTime?           @map("last_login_at") @db.Timestamptz(6)
+  tokensValidAfter         DateTime?            @map("tokens_valid_after") @db.Timestamptz(6)
+  notificationPreferences  Json                 @default("{}") @map("notification_preferences")
+  healthProfileEncrypted   String?              @map("health_profile_encrypted")
+  plan                     String               @default("FREE") @db.VarChar(20)
+  planExpiresAt            DateTime?            @map("plan_expires_at") @db.Timestamptz(6)
+  planUpdatedAt            DateTime?            @map("plan_updated_at") @db.Timestamptz(6)
+  onboardingCompletedAt    DateTime?            @map("onboarding_completed_at") @db.Timestamptz(6)
+  createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLoginAt              DateTime?            @map("last_login_at") @db.Timestamptz(6)
   auditLogs                AuditLog[]
   biomarkers               Biomarker[]
   healthGoals              HealthGoal[]
   healthNeeds              HealthNeed[]
   insurancePlans           InsurancePlan[]
-  patientRelationships     ProviderPatient[]   @relation("PatientUser")
-  providerRelationships    ProviderPatient[]   @relation("ProviderUser")
+  patientRelationships     ProviderPatient[]    @relation("PatientUser")
+  providerRelationships    ProviderPatient[]    @relation("ProviderUser")
   sessions                 Session[]
+  revokedAccessTokens      RevokedAccessToken[]
   encryptionKeys           UserEncryptionKey[]
   files                    UserFile[]
   expenseProjections       ExpenseProjection[]
@@ -77,6 +78,25 @@ model Session {
   @@index([token])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+// M1: cross-instance single-device access-token revocation. Single-device
+// logout must NOT stamp the per-user `tokensValidAfter` cutoff (that logs out
+// the user's OTHER devices), but the in-memory blacklist only stops the token
+// on the current Cloud Run instance. This table records the revoked access
+// token's `jti` so authenticate() rejects it on EVERY replica (folded into the
+// same cached per-user lookup that reads tokensValidAfter). Rows are swept once
+// past `expiresAt` (the token can no longer verify anyway).
+model RevokedAccessToken {
+  jti       String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("revoked_access_tokens")
 }
 
 model UserEncryptionKey {
@@ -407,39 +427,46 @@ model HealthNeed {
 }
 
 model HealthGoal {
-  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId               String                @map("user_id") @db.Uuid
-  name                 String                @db.VarChar(200)
-  descriptionEncrypted String?               @map("description_encrypted")
-  category             String                @db.VarChar(100)
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String                @map("user_id") @db.Uuid
+  name                  String                @db.VarChar(200)
+  descriptionEncrypted  String?               @map("description_encrypted")
+  category              String                @db.VarChar(100)
   // Nullable so rows that already have `targetValueEncrypted` can have the
   // plaintext twin nulled out to stop leaking PHI (see migration
   // 20260601_null_plaintext_health_goal_target). Legacy rows without an
   // encrypted value retain the plaintext until a backfill script re-encrypts.
-  targetValue          Decimal?              @map("target_value") @db.Decimal(10, 4)
+  targetValue           Decimal?              @map("target_value") @db.Decimal(10, 4)
   // Encrypted PHI replacement for targetValue. Numeric goals (target
   // cholesterol, weight, A1c) reveal sensitive health conditions on their
   // own; the Decimal column stays for backward-compat reads until a
   // migration re-encrypts and nulls it. Written by the controller; read
   // path prefers this and falls back to `targetValue` when null.
-  targetValueEncrypted String?               @map("target_value_encrypted")
-  currentValue         Decimal?              @map("current_value") @db.Decimal(10, 4)
-  startValue           Decimal?              @map("start_value") @db.Decimal(10, 4)
-  unit                 String                @db.VarChar(50)
-  direction            GoalDirection         @default(DECREASE)
-  relatedBiomarkerId   String?               @map("related_biomarker_id") @db.Uuid
-  startDate            DateTime              @map("start_date") @db.Date
-  targetDate           DateTime              @map("target_date") @db.Date
-  status               GoalStatus            @default(ACTIVE)
-  progress             Decimal               @default(0) @db.Decimal(5, 2)
-  milestones           String?
-  reminderFrequency    ReminderFrequency?    @map("reminder_frequency")
-  lastReminderSent     DateTime?             @map("last_reminder_sent") @db.Timestamptz(6)
-  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  completedAt          DateTime?             @map("completed_at") @db.Timestamptz(6)
-  progressHistory      GoalProgressHistory[]
-  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetValueEncrypted  String?               @map("target_value_encrypted")
+  currentValue          Decimal?              @map("current_value") @db.Decimal(10, 4)
+  // Encrypted PHI replacement for currentValue (M4). The latest measured value
+  // (current weight, A1c, blood pressure) reveals the user's condition on its
+  // own. New rows write this and null the plaintext twin; legacy rows keep
+  // plaintext until the backfill re-encrypts. Read path prefers this column.
+  currentValueEncrypted String?               @map("current_value_encrypted")
+  startValue            Decimal?              @map("start_value") @db.Decimal(10, 4)
+  // Encrypted PHI replacement for startValue (M4). Same rationale as currentValue.
+  startValueEncrypted   String?               @map("start_value_encrypted")
+  unit                  String                @db.VarChar(50)
+  direction             GoalDirection         @default(DECREASE)
+  relatedBiomarkerId    String?               @map("related_biomarker_id") @db.Uuid
+  startDate             DateTime              @map("start_date") @db.Date
+  targetDate            DateTime              @map("target_date") @db.Date
+  status                GoalStatus            @default(ACTIVE)
+  progress              Decimal               @default(0) @db.Decimal(5, 2)
+  milestones            String?
+  reminderFrequency     ReminderFrequency?    @map("reminder_frequency")
+  lastReminderSent      DateTime?             @map("last_reminder_sent") @db.Timestamptz(6)
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt           DateTime?             @map("completed_at") @db.Timestamptz(6)
+  progressHistory       GoalProgressHistory[]
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -451,13 +478,18 @@ model HealthGoal {
 }
 
 model GoalProgressHistory {
-  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  goalId        String     @map("goal_id") @db.Uuid
-  value         Decimal    @db.Decimal(10, 4)
-  progress      Decimal    @db.Decimal(5, 2)
-  noteEncrypted String?    @map("note_encrypted")
-  recordedAt    DateTime   @default(now()) @map("recorded_at") @db.Timestamptz(6)
-  goal          HealthGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goalId         String     @map("goal_id") @db.Uuid
+  // Nullable + encrypted twin (M4): each progress entry is a measured health
+  // value over time. New rows write `valueEncrypted` and null `value`; legacy
+  // rows keep plaintext until the backfill re-encrypts. Read path prefers the
+  // encrypted column.
+  value          Decimal?   @db.Decimal(10, 4)
+  valueEncrypted String?    @map("value_encrypted")
+  progress       Decimal    @db.Decimal(5, 2)
+  noteEncrypted  String?    @map("note_encrypted")
+  recordedAt     DateTime   @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  goal           HealthGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@index([goalId])
   @@index([recordedAt])
