@@ -41,6 +41,13 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
   const providerRevoked = { id: randomUUID(), email: `rls-prov-rev-${Date.now()}@test.local` };
   const providerSuspended = { id: randomUUID(), email: `rls-prov-susp-${Date.now()}@test.local` };
   const needName = '__RLS_TEST_NEED_A__';
+  // M19 audit-retention fixtures: one row well past the 7-year window, one recent.
+  const auditOldId = randomUUID();
+  const auditRecentId = randomUUID();
+  // M1: revoked-access-token rows, one per tenant, to exercise the
+  // revoked_access_tokens RLS policies (mirror of sessions).
+  const revokedJtiA = randomUUID();
+  const revokedJtiB = randomUUID();
 
   beforeAll(async () => {
     // Lazy-init Prisma only. initializeDatabase() would also kick off
@@ -164,6 +171,34 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
           canViewHealthNeeds: true,
         },
       });
+
+      // M19: two audit rows for the retention-delete policy test — one aged past
+      // the 7-year window, one recent.
+      await tx.auditLog.create({
+        data: {
+          id: auditOldId,
+          actorType: 'SYSTEM',
+          action: 'READ',
+          resourceType: '__RLS_TEST_AUDIT__',
+          createdAt: new Date('2010-01-01T00:00:00.000Z'),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          id: auditRecentId,
+          actorType: 'SYSTEM',
+          action: 'READ',
+          resourceType: '__RLS_TEST_AUDIT__',
+        },
+      });
+
+      // M1: one revoked-access-token row per tenant.
+      await tx.revokedAccessToken.create({
+        data: { jti: revokedJtiA, userId: userA.id, expiresAt: new Date(Date.now() + 60_000) },
+      });
+      await tx.revokedAccessToken.create({
+        data: { jti: revokedJtiB, userId: userB.id, expiresAt: new Date(Date.now() + 60_000) },
+      });
     });
   });
 
@@ -178,7 +213,11 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       ];
       await tx.providerPatient.deleteMany({ where: { providerId: { in: providerIds } } });
       await tx.healthNeed.deleteMany({ where: { name: needName } });
+      await tx.revokedAccessToken.deleteMany({ where: { jti: { in: [revokedJtiA, revokedJtiB] } } });
       await tx.biomarker.deleteMany({ where: { name: { in: markerNames } } });
+      // Aged test audit row is deletable; the recent one is policy-blocked and
+      // survives (the CI Postgres is ephemeral, so the leftover is harmless).
+      await tx.auditLog.deleteMany({ where: { resourceType: '__RLS_TEST_AUDIT__' } });
       await tx.user.deleteMany({
         where: { id: { in: [userA.id, userB.id, ...providerIds] } },
       });
@@ -220,6 +259,32 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
     );
     expect(aRows.map((r) => r.userId)).toEqual([userA.id]);
     expect(bRows.map((r) => r.userId)).toEqual([userB.id]);
+  });
+
+  // M1: revoked_access_tokens carries (jti, user_id) and backs cross-instance
+  // single-device logout. Its RLS policies mirror sessions — a tenant must see
+  // only their own revocation rows, admin sees all.
+  describe('revoked_access_tokens isolation', () => {
+    it('user A sees only their own revoked-token rows', async () => {
+      const rows = await withRLSContext(userA.id, async (tx) =>
+        tx.revokedAccessToken.findMany({ where: { jti: { in: [revokedJtiA, revokedJtiB] } } })
+      );
+      expect(rows.map((r) => r.jti)).toEqual([revokedJtiA]);
+    });
+
+    it('user B cannot see user A revoked-token row', async () => {
+      const rows = await withRLSContext(userB.id, async (tx) =>
+        tx.revokedAccessToken.findMany({ where: { jti: revokedJtiA } })
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('admin context sees both tenants revoked-token rows', async () => {
+      const rows = await withRLSContext(null, async (tx) =>
+        tx.revokedAccessToken.findMany({ where: { jti: { in: [revokedJtiA, revokedJtiB] } } })
+      );
+      expect(rows).toHaveLength(2);
+    });
   });
 
   // Consent-scoped cross-tenant access through the has_provider_access() policy
@@ -320,6 +385,45 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       });
       const rows = await readUserAMarker(providerOk.id);
       expect(rows).toHaveLength(0);
+    });
+  });
+
+  // M2 / M19 — RLS hardening: FORCE on every table + DB-enforced audit retention.
+  describe('RLS hardening (M2 FORCE + M19 audit retention)', () => {
+    it('every RLS-enabled public table is also FORCE-protected (M2)', async () => {
+      const prisma = getPrismaClient();
+      const unforced = await prisma.$queryRaw<Array<{ relname: string }>>`
+        SELECT c.relname
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relkind = 'r'
+          AND c.relrowsecurity = true
+          AND c.relforcerowsecurity = false
+        ORDER BY c.relname
+      `;
+      // Migration 20260613 forces every RLS table; a non-empty list means a
+      // table enabled RLS without FORCE — an owner-bypass tenant-isolation gap.
+      expect(unforced.map((r) => r.relname)).toEqual([]);
+    });
+
+    it('admin context CANNOT delete a recent audit row (within the 7-year window)', async () => {
+      const res = await withRLSContext(null, async (tx) =>
+        tx.auditLog.deleteMany({ where: { id: auditRecentId } })
+      );
+      expect(res.count).toBe(0);
+      // ...and the row is still present.
+      const still = await withRLSContext(null, async (tx) =>
+        tx.auditLog.findUnique({ where: { id: auditRecentId } })
+      );
+      expect(still).not.toBeNull();
+    });
+
+    it('admin context CAN delete an audit row past the 7-year window', async () => {
+      const res = await withRLSContext(null, async (tx) =>
+        tx.auditLog.deleteMany({ where: { id: auditOldId } })
+      );
+      expect(res.count).toBe(1);
     });
   });
 });

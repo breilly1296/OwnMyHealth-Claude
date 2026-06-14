@@ -21,6 +21,7 @@ vi.mock('../../services/api/provider', () => ({
     getPatient: vi.fn(),
     getPatientBiomarkers: vi.fn(),
     getPatientHealthNeeds: vi.fn(),
+    getPatientInsurance: vi.fn(),
     removePatient: vi.fn(),
   },
 }));
@@ -75,6 +76,7 @@ describe('MyPatientsPage', () => {
     mocked.getPatients.mockResolvedValue([]);
     mocked.getPatientBiomarkers.mockResolvedValue([]);
     mocked.getPatientHealthNeeds.mockResolvedValue([]);
+    mocked.getPatientInsurance.mockResolvedValue([]);
   });
 
   it('renders the request-access form and an empty roster', async () => {
@@ -107,7 +109,11 @@ describe('MyPatientsPage', () => {
   // ---- THE REGRESSION GUARD ----
   it('renders consent-granted sections from relationship.permissions (nested shape)', async () => {
     mocked.getPatients.mockResolvedValue([activeRel()]);
-    mocked.getPatient.mockResolvedValue(detailResponse({ canViewBiomarkers: true, canViewHealthNeeds: true }));
+    // Grant all three view scopes so every section renders and no "hasn't shared"
+    // fallback appears (insurance is gated on canViewInsurance — M3).
+    mocked.getPatient.mockResolvedValue(
+      detailResponse({ canViewBiomarkers: true, canViewHealthNeeds: true, canViewInsurance: true })
+    );
     render(<MyPatientsPage />);
 
     fireEvent.click(await screen.findByRole('button', { name: /^view$/i }));
@@ -115,10 +121,27 @@ describe('MyPatientsPage', () => {
     // Sections must render (consent granted) — NOT the "hasn't shared" fallback.
     expect(await screen.findByRole('heading', { name: /^Biomarkers/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^Health needs/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Insurance/i })).toBeInTheDocument();
     expect(screen.queryByText(/hasn.t shared/i)).not.toBeInTheDocument();
     // And it actually fetched the gated data because the nested flag read true.
     await waitFor(() => expect(mocked.getPatientBiomarkers).toHaveBeenCalledWith('patient-1'));
     expect(mocked.getPatientHealthNeeds).toHaveBeenCalledWith('patient-1');
+    expect(mocked.getPatientInsurance).toHaveBeenCalledWith('patient-1');
+  });
+
+  it('gates the insurance section on canViewInsurance (M3): shows fallback + skips fetch when denied', async () => {
+    mocked.getPatients.mockResolvedValue([activeRel()]);
+    // Insurance denied (default), biomarkers/health-needs granted.
+    mocked.getPatient.mockResolvedValue(
+      detailResponse({ canViewBiomarkers: true, canViewHealthNeeds: true, canViewInsurance: false })
+    );
+    render(<MyPatientsPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^view$/i }));
+
+    expect(await screen.findByText(/hasn.t shared insurance/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^Insurance/i })).not.toBeInTheDocument();
+    expect(mocked.getPatientInsurance).not.toHaveBeenCalled();
   });
 
   it('shows the not-shared fallback and skips the fetch when a scope is denied', async () => {

@@ -25,6 +25,9 @@ interface JwtPayload {
   type: 'access' | 'refresh';
   iat: number;
   exp: number;
+  // M1: per-token id on access tokens, used for cross-instance single-device
+  // revocation. Optional — tokens minted before M1 carry none.
+  jti?: string;
 }
 
 /**
@@ -100,7 +103,7 @@ export async function authenticate(
     // tokensValidAfter cutoff (logout-all / password change+reset / email
     // change / admin deactivation+role change on ANY replica). The in-memory
     // blacklist above only covers this instance. See authService.isAccessTokenStale.
-    if (await isAccessTokenStale(decoded.id, decoded.iat)) {
+    if (await isAccessTokenStale(decoded.id, decoded.iat, decoded.jti)) {
       throw new UnauthorizedError('Session has been revoked. Please log in again.');
     }
 
@@ -157,7 +160,7 @@ export async function optionalAuth(
 
     // Cross-instance revocation: a stale token means "no authenticated user"
     // for optional auth — drop the identity, don't fail the request.
-    if (await isAccessTokenStale(decoded.id, decoded.iat)) {
+    if (await isAccessTokenStale(decoded.id, decoded.iat, decoded.jti)) {
       return next();
     }
 
@@ -216,7 +219,7 @@ export async function requireBearerAuth(
 
     // Cross-instance revocation — see authenticate(). Bearer routes (e.g. the
     // SSE chat stream) must honor the same tokensValidAfter cutoff.
-    if (await isAccessTokenStale(decoded.id, decoded.iat)) {
+    if (await isAccessTokenStale(decoded.id, decoded.iat, decoded.jti)) {
       throw new UnauthorizedError('Session has been revoked. Please log in again.');
     }
 

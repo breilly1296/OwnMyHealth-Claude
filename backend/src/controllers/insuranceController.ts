@@ -407,6 +407,11 @@ function toResponse(
   };
 }
 
+// Exported for the provider insurance-view route (M3): it decrypts + shapes a
+// patient's plan with the PATIENT's salt, identical to the patient-facing read.
+export { toResponse as insurancePlanToResponse };
+export type { InsurancePlanResponse };
+
 // Get all insurance plans for user with pagination
 // PERFORMANCE: Added pagination to prevent loading unbounded data
 export async function getInsurancePlans(
