@@ -1,0 +1,167 @@
+name: Run maintenance job
+
+# Manually-triggered one-off data migrations that must run against PRODUCTION
+# with prod's exact DATABASE_URL + PHI_ENCRYPTION_KEY (so re-encrypted PHI is
+# decryptable by the live service). These scripts CANNOT run from a developer
+# laptop: the local .env points at a dev DB with a dev encryption key, and
+# encrypting with the wrong key would silently corrupt prod PHI.
+#
+# This runs the SAME container image the backend service is currently serving,
+# as a Cloud Run job, cloning the service's env + Secret Manager mounts so the
+# job boots identically (and the prod master key never leaves Secret Manager).
+# Mirrors the ownmyhealth-migrate job pattern in deploy.yml.
+#
+# SAFE BY DEFAULT: `apply` is false → the script runs in DRY RUN and only logs
+# counts. Re-run with apply=true to perform the migration.
+#
+# Pinned action SHAs match deploy.yml (see the F-30 note there).
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Which one-time migration to run'
+        required: true
+        type: choice
+        options:
+          - consolidate-biomarkers
+          - backfill-goal-values
+      apply:
+        description: 'Perform the migration (false = dry run, logs counts only)'
+        required: true
+        type: boolean
+        default: false
+      only_user:
+        description: 'Optional: limit to a single user UUID (blank = all users)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# Never let two maintenance executions (or a maintenance run and a deploy) race
+# on the shared job resource / the database.
+concurrency:
+  group: maintenance-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ownmyhealth-prod
+  REGION: us-central1
+  SERVICE: ownmyhealth-backend
+  MAINTENANCE_JOB: ownmyhealth-maintenance
+  CLOUDSQL_INSTANCE: ownmyhealth-prod:us-central1:ownmyhealth-db
+
+jobs:
+  run-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Google Auth
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Deploy and run the maintenance job
+        env:
+          TASK: ${{ inputs.task }}
+          APPLY: ${{ inputs.apply }}
+          ONLY_USER: ${{ inputs.only_user }}
+        run: |
+          set -euo pipefail
+
+          case "$TASK" in
+            consolidate-biomarkers) ENTRY="dist/maintenance/consolidateBiomarkerSeries.js" ;;
+            backfill-goal-values)   ENTRY="dist/maintenance/backfillGoalValues.js" ;;
+            *) echo "Unknown task: $TASK" >&2; exit 1 ;;
+          esac
+
+          # Read the live service once: its currently-serving image (carries the
+          # dist/maintenance/* entrypoints once this branch is deployed), its
+          # runtime SA, and its full env + Secret Manager wiring.
+          SVC_JSON=$(gcloud run services describe "$SERVICE" \
+            --region "$REGION" --project "$PROJECT_ID" --format=json)
+
+          IMAGE=$(echo "$SVC_JSON" | jq -r '.spec.template.spec.containers[0].image')
+          RUNTIME_SA=$(echo "$SVC_JSON" | jq -r '.spec.template.spec.serviceAccountName // ""')
+
+          # Clone the service's env. Plain vars joined with a "##" delimiter
+          # (gcloud's ^DELIM^ form) so values containing commas/@ (URLs, emails)
+          # are not mis-split. Secret mounts as ENV=secretName:version.
+          ENV_PAIRS=$(echo "$SVC_JSON" | jq -r '
+            (.spec.template.spec.containers[0].env // [])
+            | map(select(.value != null))
+            | map("\(.name)=\(.value)") | join("##")')
+          SECRET_PAIRS=$(echo "$SVC_JSON" | jq -r '
+            (.spec.template.spec.containers[0].env // [])
+            | map(select(.valueFrom.secretKeyRef != null))
+            | map("\(.name)=\(.valueFrom.secretKeyRef.name):\(.valueFrom.secretKeyRef.key)")
+            | join(",")')
+
+          ENV_FLAG=()
+          if [ -n "$ENV_PAIRS" ];    then ENV_FLAG=(--set-env-vars "^##^${ENV_PAIRS}"); fi
+          SECRET_FLAG=()
+          if [ -n "$SECRET_PAIRS" ]; then SECRET_FLAG=(--set-secrets "$SECRET_PAIRS"); fi
+          SA_FLAG=()
+          if [ -n "$RUNTIME_SA" ];   then SA_FLAG=(--service-account "$RUNTIME_SA"); fi
+
+          # Build the node args: dist/.../entry.js[,--apply][,--user,<uuid>]
+          ARGS="$ENTRY"
+          if [ "$APPLY" = "true" ]; then ARGS="$ARGS,--apply"; fi
+          if [ -n "$ONLY_USER" ];  then ARGS="$ARGS,--user,$ONLY_USER"; fi
+
+          echo "=================================================================="
+          if [ "$APPLY" = "true" ]; then
+            echo "  *** APPLY MODE — this WILL modify production data ***"
+          else
+            echo "  DRY RUN — no writes; logs counts only"
+          fi
+          echo "  task:    $TASK"
+          echo "  entry:   $ENTRY"
+          echo "  user:    ${ONLY_USER:-<all users>}"
+          echo "  image:   $IMAGE"
+          echo "  runtime SA: ${RUNTIME_SA:-<default compute SA>}"
+          echo "=================================================================="
+
+          # Create-or-update the shared job, then execute it. --max-retries 0:
+          # a data migration is not safely retried by a dumb re-run; a human
+          # inspects failures. --wait makes a nonzero script exit fail this step.
+          gcloud run jobs deploy "$MAINTENANCE_JOB" \
+            --image "$IMAGE" \
+            --region "$REGION" --project "$PROJECT_ID" \
+            --set-cloudsql-instances "$CLOUDSQL_INSTANCE" \
+            "${ENV_FLAG[@]}" "${SECRET_FLAG[@]}" "${SA_FLAG[@]}" \
+            --command node \
+            --args "$ARGS" \
+            --max-retries 0 \
+            --task-timeout 30m \
+            --memory 512Mi
+
+          gcloud run jobs execute "$MAINTENANCE_JOB" \
+            --region "$REGION" --project "$PROJECT_ID" --wait
+
+      - name: Print job output (counts)
+        if: always()
+        run: |
+          set -uo pipefail
+          EXEC=$(gcloud run jobs executions list \
+            --job "$MAINTENANCE_JOB" --region "$REGION" --project "$PROJECT_ID" \
+            --limit 1 --format='value(metadata.name)' 2>/dev/null || true)
+          if [ -z "${EXEC:-}" ]; then
+            echo "No execution found to read logs from."
+            exit 0
+          fi
+          echo "Logs for execution: $EXEC"
+          # Best-effort: console.log lines land in textPayload. Cloud Logging can
+          # lag a few seconds after the job exits; a missing line here is not a
+          # failure (the execute --wait step already gated success).
+          gcloud logging read \
+            "resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"$MAINTENANCE_JOB\" AND labels.\"run.googleapis.com/execution_name\"=\"$EXEC\"" \
+            --project "$PROJECT_ID" --limit 300 --freshness=1h \
+            --format='value(textPayload)' --order=asc || true

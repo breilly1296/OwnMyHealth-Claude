@@ -8,16 +8,23 @@
  * and goal_progress_history.value — which still hold plaintext PHI. Run it ONCE,
  * AFTER M4 is deployed.
  *
+ * This file lives under src/ (not scripts/) on purpose: it is compiled by
+ * `npm run build` into dist/maintenance/backfillGoalValues.js so it can run in
+ * the PRODUCTION image with plain `node` (the prod image has no tsx and does not
+ * copy scripts/). It is executed against prod as a Cloud Run job by
+ * .github/workflows/maintenance.yml, which mounts the SAME PHI_ENCRYPTION_KEY
+ * secret the service uses — so the ciphertext it writes is decryptable by prod.
+ * Nothing imports this module, so the top-level main() runs only when the file
+ * is invoked directly.
+ *
  * Safe by default: DRY RUN unless `--apply`. Operates per-user inside an RLS
  * transaction (one user's rows at a time), encrypting with that user's key. Logs
  * counts only — never PHI values. Idempotent (a value is backfilled only when
  * its plaintext is set and the encrypted twin is null).
  *
- * Usage (from backend/, with backend/.env providing DATABASE_URL + PHI_ENCRYPTION_KEY):
- *   npx tsx scripts/backfill-goal-value-encryption.ts             # dry run, all users
- *   npx tsx scripts/backfill-goal-value-encryption.ts --apply     # perform it
- *   npx tsx scripts/backfill-goal-value-encryption.ts --user <uuid> [--apply]
- * or via npm:  npm run backfill:goal-values -- --apply
+ * Usage:
+ *   Local (from backend/, with backend/.env): npm run backfill:goal-values -- [--apply] [--user <uuid>]
+ *   Prod  (Cloud Run job): node dist/maintenance/backfillGoalValues.js [--apply] [--user <uuid>]
  *
  * NOTE: this covers goal VALUE columns (per-user-salt encrypted). audit_logs.metadata
  * is also legacy-plaintext but uses a different encryption context and is a
@@ -29,14 +36,14 @@ import {
   disconnectDatabase,
   withRLSContext,
   withRLSTransaction,
-} from '../src/services/database.js';
-import { getEncryptionService } from '../src/services/encryption.js';
-import { getUserEncryptionSalt } from '../src/services/userEncryption.js';
+} from '../services/database.js';
+import { getEncryptionService } from '../services/encryption.js';
+import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import {
   planGoalValueBackfill,
   applyGoalValueBackfill,
   type BackfillableGoal,
-} from '../src/services/goalValueBackfill.js';
+} from '../services/goalValueBackfill.js';
 
 const APPLY = process.argv.includes('--apply');
 

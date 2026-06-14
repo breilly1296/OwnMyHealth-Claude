@@ -6,16 +6,21 @@
  * append to a series). Run this ONCE, AFTER that change is deployed — otherwise
  * freshly-merged data and old disconnected rows coexist.
  *
+ * This file lives under src/ (not scripts/) on purpose: it is compiled by
+ * `npm run build` into dist/maintenance/consolidateBiomarkerSeries.js so it can
+ * run in the PRODUCTION image with plain `node` (the prod image has no tsx and
+ * does not copy scripts/). It is executed against prod as a Cloud Run job by
+ * .github/workflows/maintenance.yml. Nothing imports this module, so the
+ * top-level main() runs only when the file is invoked directly.
+ *
  * Safe by default: DRY RUN unless `--apply` is passed. Operates per-user inside
  * an RLS transaction, so it can only ever touch one user's rows at a time. Logs
  * counts and metric names/units only — never PHI values (ciphertext is moved
  * as-is; nothing is decrypted).
  *
- * Usage (from backend/, with backend/.env providing DATABASE_URL etc.):
- *   npx tsx scripts/consolidate-biomarker-series.ts             # dry run, all users
- *   npx tsx scripts/consolidate-biomarker-series.ts --apply     # perform it
- *   npx tsx scripts/consolidate-biomarker-series.ts --user <uuid> [--apply]
- * or via npm:  npm run consolidate:biomarkers -- --apply
+ * Usage:
+ *   Local (from backend/, with backend/.env): npm run consolidate:biomarkers -- [--apply] [--user <uuid>]
+ *   Prod  (Cloud Run job): node dist/maintenance/consolidateBiomarkerSeries.js [--apply] [--user <uuid>]
  */
 
 import {
@@ -23,12 +28,12 @@ import {
   disconnectDatabase,
   withRLSContext,
   withRLSTransaction,
-} from '../src/services/database.js';
+} from '../services/database.js';
 import {
   planUserConsolidation,
   applyUserConsolidation,
   type ConsolidatableBiomarker,
-} from '../src/services/biomarkerConsolidation.js';
+} from '../services/biomarkerConsolidation.js';
 
 const APPLY = process.argv.includes('--apply');
 
