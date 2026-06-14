@@ -79,4 +79,11 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 -O /dev/null http://localhost:${PORT:-3001}/health || exit 1
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/app.js"]
+# Migrations do NOT run at boot. `prisma migrate deploy` runs as a Cloud Run
+# job in the deploy pipeline (.github/workflows/deploy.yml, "Run database
+# migrations") — teardown finding #18: the old `migrate && node` CMD made
+# every cold start pay the ~10s migrate check, and a failing migration
+# bricked container boot instead of failing the deploy. Local `docker run`s
+# must apply migrations separately, e.g.:
+#   docker run --rm -e DATABASE_URL=... <image> npx prisma migrate deploy
+CMD ["node", "dist/app.js"]

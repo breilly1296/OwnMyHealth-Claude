@@ -17,6 +17,18 @@ permissions:
 # staging is the smoke test. Keep the structure duplicated (not a reusable
 # workflow) while this is still young; factor once the two jobs drift enough
 # to make copy-paste painful.
+#
+# MIGRATIONS (teardown finding #18): backend/Dockerfile no longer runs
+# `prisma migrate deploy` at container boot — prod runs migrations as a
+# Cloud Run job step in deploy.yml before staging the new revision. This
+# workflow has NO migration step yet, deliberately: as of 2026-06-12 the
+# ownmyhealth-backend-staging service, a staging Cloud SQL instance, and a
+# staging DATABASE_URL secret do not exist in ownmyhealth-prod (verified via
+# gcloud), so there is nothing to point a migrate job at and no live staging
+# environment loses boot-migrate behavior. When staging infra is provisioned,
+# copy deploy.yml's "Run database migrations" step here with staging's own
+# job name / Cloud SQL instance / secret — without it the staging database
+# will never receive migrations.
 
 env:
   PROJECT_ID: ownmyhealth-prod
