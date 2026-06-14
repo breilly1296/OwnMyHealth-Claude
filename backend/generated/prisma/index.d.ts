@@ -18479,7 +18479,9 @@ export namespace Prisma {
     targetValue: Decimal | null
     targetValueEncrypted: string | null
     currentValue: Decimal | null
+    currentValueEncrypted: string | null
     startValue: Decimal | null
+    startValueEncrypted: string | null
     unit: string | null
     direction: $Enums.GoalDirection | null
     relatedBiomarkerId: string | null
@@ -18504,7 +18506,9 @@ export namespace Prisma {
     targetValue: Decimal | null
     targetValueEncrypted: string | null
     currentValue: Decimal | null
+    currentValueEncrypted: string | null
     startValue: Decimal | null
+    startValueEncrypted: string | null
     unit: string | null
     direction: $Enums.GoalDirection | null
     relatedBiomarkerId: string | null
@@ -18529,7 +18533,9 @@ export namespace Prisma {
     targetValue: number
     targetValueEncrypted: number
     currentValue: number
+    currentValueEncrypted: number
     startValue: number
+    startValueEncrypted: number
     unit: number
     direction: number
     relatedBiomarkerId: number
@@ -18570,7 +18576,9 @@ export namespace Prisma {
     targetValue?: true
     targetValueEncrypted?: true
     currentValue?: true
+    currentValueEncrypted?: true
     startValue?: true
+    startValueEncrypted?: true
     unit?: true
     direction?: true
     relatedBiomarkerId?: true
@@ -18595,7 +18603,9 @@ export namespace Prisma {
     targetValue?: true
     targetValueEncrypted?: true
     currentValue?: true
+    currentValueEncrypted?: true
     startValue?: true
+    startValueEncrypted?: true
     unit?: true
     direction?: true
     relatedBiomarkerId?: true
@@ -18620,7 +18630,9 @@ export namespace Prisma {
     targetValue?: true
     targetValueEncrypted?: true
     currentValue?: true
+    currentValueEncrypted?: true
     startValue?: true
+    startValueEncrypted?: true
     unit?: true
     direction?: true
     relatedBiomarkerId?: true
@@ -18732,7 +18744,9 @@ export namespace Prisma {
     targetValue: Decimal | null
     targetValueEncrypted: string | null
     currentValue: Decimal | null
+    currentValueEncrypted: string | null
     startValue: Decimal | null
+    startValueEncrypted: string | null
     unit: string
     direction: $Enums.GoalDirection
     relatedBiomarkerId: string | null
@@ -18776,7 +18790,9 @@ export namespace Prisma {
     targetValue?: boolean
     targetValueEncrypted?: boolean
     currentValue?: boolean
+    currentValueEncrypted?: boolean
     startValue?: boolean
+    startValueEncrypted?: boolean
     unit?: boolean
     direction?: boolean
     relatedBiomarkerId?: boolean
@@ -18804,7 +18820,9 @@ export namespace Prisma {
     targetValue?: boolean
     targetValueEncrypted?: boolean
     currentValue?: boolean
+    currentValueEncrypted?: boolean
     startValue?: boolean
+    startValueEncrypted?: boolean
     unit?: boolean
     direction?: boolean
     relatedBiomarkerId?: boolean
@@ -18830,7 +18848,9 @@ export namespace Prisma {
     targetValue?: boolean
     targetValueEncrypted?: boolean
     currentValue?: boolean
+    currentValueEncrypted?: boolean
     startValue?: boolean
+    startValueEncrypted?: boolean
     unit?: boolean
     direction?: boolean
     relatedBiomarkerId?: boolean
@@ -18856,7 +18876,9 @@ export namespace Prisma {
     targetValue?: boolean
     targetValueEncrypted?: boolean
     currentValue?: boolean
+    currentValueEncrypted?: boolean
     startValue?: boolean
+    startValueEncrypted?: boolean
     unit?: boolean
     direction?: boolean
     relatedBiomarkerId?: boolean
@@ -18872,7 +18894,7 @@ export namespace Prisma {
     completedAt?: boolean
   }
 
-  export type HealthGoalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "name" | "descriptionEncrypted" | "category" | "targetValue" | "targetValueEncrypted" | "currentValue" | "startValue" | "unit" | "direction" | "relatedBiomarkerId" | "startDate" | "targetDate" | "status" | "progress" | "milestones" | "reminderFrequency" | "lastReminderSent" | "createdAt" | "updatedAt" | "completedAt", ExtArgs["result"]["healthGoal"]>
+  export type HealthGoalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "name" | "descriptionEncrypted" | "category" | "targetValue" | "targetValueEncrypted" | "currentValue" | "currentValueEncrypted" | "startValue" | "startValueEncrypted" | "unit" | "direction" | "relatedBiomarkerId" | "startDate" | "targetDate" | "status" | "progress" | "milestones" | "reminderFrequency" | "lastReminderSent" | "createdAt" | "updatedAt" | "completedAt", ExtArgs["result"]["healthGoal"]>
   export type HealthGoalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     progressHistory?: boolean | HealthGoal$progressHistoryArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -18900,7 +18922,9 @@ export namespace Prisma {
       targetValue: Prisma.Decimal | null
       targetValueEncrypted: string | null
       currentValue: Prisma.Decimal | null
+      currentValueEncrypted: string | null
       startValue: Prisma.Decimal | null
+      startValueEncrypted: string | null
       unit: string
       direction: $Enums.GoalDirection
       relatedBiomarkerId: string | null
@@ -19347,7 +19371,9 @@ export namespace Prisma {
     readonly targetValue: FieldRef<"HealthGoal", 'Decimal'>
     readonly targetValueEncrypted: FieldRef<"HealthGoal", 'String'>
     readonly currentValue: FieldRef<"HealthGoal", 'Decimal'>
+    readonly currentValueEncrypted: FieldRef<"HealthGoal", 'String'>
     readonly startValue: FieldRef<"HealthGoal", 'Decimal'>
+    readonly startValueEncrypted: FieldRef<"HealthGoal", 'String'>
     readonly unit: FieldRef<"HealthGoal", 'String'>
     readonly direction: FieldRef<"HealthGoal", 'GoalDirection'>
     readonly relatedBiomarkerId: FieldRef<"HealthGoal", 'String'>
@@ -19830,6 +19856,7 @@ export namespace Prisma {
     id: string | null
     goalId: string | null
     value: Decimal | null
+    valueEncrypted: string | null
     progress: Decimal | null
     noteEncrypted: string | null
     recordedAt: Date | null
@@ -19839,6 +19866,7 @@ export namespace Prisma {
     id: string | null
     goalId: string | null
     value: Decimal | null
+    valueEncrypted: string | null
     progress: Decimal | null
     noteEncrypted: string | null
     recordedAt: Date | null
@@ -19848,6 +19876,7 @@ export namespace Prisma {
     id: number
     goalId: number
     value: number
+    valueEncrypted: number
     progress: number
     noteEncrypted: number
     recordedAt: number
@@ -19869,6 +19898,7 @@ export namespace Prisma {
     id?: true
     goalId?: true
     value?: true
+    valueEncrypted?: true
     progress?: true
     noteEncrypted?: true
     recordedAt?: true
@@ -19878,6 +19908,7 @@ export namespace Prisma {
     id?: true
     goalId?: true
     value?: true
+    valueEncrypted?: true
     progress?: true
     noteEncrypted?: true
     recordedAt?: true
@@ -19887,6 +19918,7 @@ export namespace Prisma {
     id?: true
     goalId?: true
     value?: true
+    valueEncrypted?: true
     progress?: true
     noteEncrypted?: true
     recordedAt?: true
@@ -19982,7 +20014,8 @@ export namespace Prisma {
   export type GoalProgressHistoryGroupByOutputType = {
     id: string
     goalId: string
-    value: Decimal
+    value: Decimal | null
+    valueEncrypted: string | null
     progress: Decimal
     noteEncrypted: string | null
     recordedAt: Date
@@ -20011,6 +20044,7 @@ export namespace Prisma {
     id?: boolean
     goalId?: boolean
     value?: boolean
+    valueEncrypted?: boolean
     progress?: boolean
     noteEncrypted?: boolean
     recordedAt?: boolean
@@ -20021,6 +20055,7 @@ export namespace Prisma {
     id?: boolean
     goalId?: boolean
     value?: boolean
+    valueEncrypted?: boolean
     progress?: boolean
     noteEncrypted?: boolean
     recordedAt?: boolean
@@ -20031,6 +20066,7 @@ export namespace Prisma {
     id?: boolean
     goalId?: boolean
     value?: boolean
+    valueEncrypted?: boolean
     progress?: boolean
     noteEncrypted?: boolean
     recordedAt?: boolean
@@ -20041,12 +20077,13 @@ export namespace Prisma {
     id?: boolean
     goalId?: boolean
     value?: boolean
+    valueEncrypted?: boolean
     progress?: boolean
     noteEncrypted?: boolean
     recordedAt?: boolean
   }
 
-  export type GoalProgressHistoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "goalId" | "value" | "progress" | "noteEncrypted" | "recordedAt", ExtArgs["result"]["goalProgressHistory"]>
+  export type GoalProgressHistoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "goalId" | "value" | "valueEncrypted" | "progress" | "noteEncrypted" | "recordedAt", ExtArgs["result"]["goalProgressHistory"]>
   export type GoalProgressHistoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     goal?: boolean | HealthGoalDefaultArgs<ExtArgs>
   }
@@ -20065,7 +20102,8 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: string
       goalId: string
-      value: Prisma.Decimal
+      value: Prisma.Decimal | null
+      valueEncrypted: string | null
       progress: Prisma.Decimal
       noteEncrypted: string | null
       recordedAt: Date
@@ -20496,6 +20534,7 @@ export namespace Prisma {
     readonly id: FieldRef<"GoalProgressHistory", 'String'>
     readonly goalId: FieldRef<"GoalProgressHistory", 'String'>
     readonly value: FieldRef<"GoalProgressHistory", 'Decimal'>
+    readonly valueEncrypted: FieldRef<"GoalProgressHistory", 'String'>
     readonly progress: FieldRef<"GoalProgressHistory", 'Decimal'>
     readonly noteEncrypted: FieldRef<"GoalProgressHistory", 'String'>
     readonly recordedAt: FieldRef<"GoalProgressHistory", 'DateTime'>
@@ -28368,7 +28407,9 @@ export namespace Prisma {
     targetValue: 'targetValue',
     targetValueEncrypted: 'targetValueEncrypted',
     currentValue: 'currentValue',
+    currentValueEncrypted: 'currentValueEncrypted',
     startValue: 'startValue',
+    startValueEncrypted: 'startValueEncrypted',
     unit: 'unit',
     direction: 'direction',
     relatedBiomarkerId: 'relatedBiomarkerId',
@@ -28391,6 +28432,7 @@ export namespace Prisma {
     id: 'id',
     goalId: 'goalId',
     value: 'value',
+    valueEncrypted: 'valueEncrypted',
     progress: 'progress',
     noteEncrypted: 'noteEncrypted',
     recordedAt: 'recordedAt'
@@ -30484,7 +30526,9 @@ export namespace Prisma {
     targetValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     unit?: StringFilter<"HealthGoal"> | string
     direction?: EnumGoalDirectionFilter<"HealthGoal"> | $Enums.GoalDirection
     relatedBiomarkerId?: UuidNullableFilter<"HealthGoal"> | string | null
@@ -30511,7 +30555,9 @@ export namespace Prisma {
     targetValue?: SortOrderInput | SortOrder
     targetValueEncrypted?: SortOrderInput | SortOrder
     currentValue?: SortOrderInput | SortOrder
+    currentValueEncrypted?: SortOrderInput | SortOrder
     startValue?: SortOrderInput | SortOrder
+    startValueEncrypted?: SortOrderInput | SortOrder
     unit?: SortOrder
     direction?: SortOrder
     relatedBiomarkerId?: SortOrderInput | SortOrder
@@ -30541,7 +30587,9 @@ export namespace Prisma {
     targetValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     unit?: StringFilter<"HealthGoal"> | string
     direction?: EnumGoalDirectionFilter<"HealthGoal"> | $Enums.GoalDirection
     relatedBiomarkerId?: UuidNullableFilter<"HealthGoal"> | string | null
@@ -30568,7 +30616,9 @@ export namespace Prisma {
     targetValue?: SortOrderInput | SortOrder
     targetValueEncrypted?: SortOrderInput | SortOrder
     currentValue?: SortOrderInput | SortOrder
+    currentValueEncrypted?: SortOrderInput | SortOrder
     startValue?: SortOrderInput | SortOrder
+    startValueEncrypted?: SortOrderInput | SortOrder
     unit?: SortOrder
     direction?: SortOrder
     relatedBiomarkerId?: SortOrderInput | SortOrder
@@ -30601,7 +30651,9 @@ export namespace Prisma {
     targetValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     startValue?: DecimalNullableWithAggregatesFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: StringNullableWithAggregatesFilter<"HealthGoal"> | string | null
     unit?: StringWithAggregatesFilter<"HealthGoal"> | string
     direction?: EnumGoalDirectionWithAggregatesFilter<"HealthGoal"> | $Enums.GoalDirection
     relatedBiomarkerId?: UuidNullableWithAggregatesFilter<"HealthGoal"> | string | null
@@ -30623,7 +30675,8 @@ export namespace Prisma {
     NOT?: GoalProgressHistoryWhereInput | GoalProgressHistoryWhereInput[]
     id?: UuidFilter<"GoalProgressHistory"> | string
     goalId?: UuidFilter<"GoalProgressHistory"> | string
-    value?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
+    value?: DecimalNullableFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
     progress?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
     noteEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
     recordedAt?: DateTimeFilter<"GoalProgressHistory"> | Date | string
@@ -30633,7 +30686,8 @@ export namespace Prisma {
   export type GoalProgressHistoryOrderByWithRelationInput = {
     id?: SortOrder
     goalId?: SortOrder
-    value?: SortOrder
+    value?: SortOrderInput | SortOrder
+    valueEncrypted?: SortOrderInput | SortOrder
     progress?: SortOrder
     noteEncrypted?: SortOrderInput | SortOrder
     recordedAt?: SortOrder
@@ -30646,7 +30700,8 @@ export namespace Prisma {
     OR?: GoalProgressHistoryWhereInput[]
     NOT?: GoalProgressHistoryWhereInput | GoalProgressHistoryWhereInput[]
     goalId?: UuidFilter<"GoalProgressHistory"> | string
-    value?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
+    value?: DecimalNullableFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
     progress?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
     noteEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
     recordedAt?: DateTimeFilter<"GoalProgressHistory"> | Date | string
@@ -30656,7 +30711,8 @@ export namespace Prisma {
   export type GoalProgressHistoryOrderByWithAggregationInput = {
     id?: SortOrder
     goalId?: SortOrder
-    value?: SortOrder
+    value?: SortOrderInput | SortOrder
+    valueEncrypted?: SortOrderInput | SortOrder
     progress?: SortOrder
     noteEncrypted?: SortOrderInput | SortOrder
     recordedAt?: SortOrder
@@ -30673,7 +30729,8 @@ export namespace Prisma {
     NOT?: GoalProgressHistoryScalarWhereWithAggregatesInput | GoalProgressHistoryScalarWhereWithAggregatesInput[]
     id?: UuidWithAggregatesFilter<"GoalProgressHistory"> | string
     goalId?: UuidWithAggregatesFilter<"GoalProgressHistory"> | string
-    value?: DecimalWithAggregatesFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
+    value?: DecimalNullableWithAggregatesFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: StringNullableWithAggregatesFilter<"GoalProgressHistory"> | string | null
     progress?: DecimalWithAggregatesFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
     noteEncrypted?: StringNullableWithAggregatesFilter<"GoalProgressHistory"> | string | null
     recordedAt?: DateTimeWithAggregatesFilter<"GoalProgressHistory"> | Date | string
@@ -33291,7 +33348,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -33318,7 +33377,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -33343,7 +33404,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33370,7 +33433,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33396,7 +33461,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -33420,7 +33487,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33445,7 +33514,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33463,7 +33534,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryCreateInput = {
     id?: string
-    value: Decimal | DecimalJsLike | number | string
+    value?: Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: string | null
     progress: Decimal | DecimalJsLike | number | string
     noteEncrypted?: string | null
     recordedAt?: Date | string
@@ -33473,7 +33545,8 @@ export namespace Prisma {
   export type GoalProgressHistoryUncheckedCreateInput = {
     id?: string
     goalId: string
-    value: Decimal | DecimalJsLike | number | string
+    value?: Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: string | null
     progress: Decimal | DecimalJsLike | number | string
     noteEncrypted?: string | null
     recordedAt?: Date | string
@@ -33481,7 +33554,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33491,7 +33565,8 @@ export namespace Prisma {
   export type GoalProgressHistoryUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     goalId?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33500,7 +33575,8 @@ export namespace Prisma {
   export type GoalProgressHistoryCreateManyInput = {
     id?: string
     goalId: string
-    value: Decimal | DecimalJsLike | number | string
+    value?: Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: string | null
     progress: Decimal | DecimalJsLike | number | string
     noteEncrypted?: string | null
     recordedAt?: Date | string
@@ -33508,7 +33584,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33517,7 +33594,8 @@ export namespace Prisma {
   export type GoalProgressHistoryUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     goalId?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -35983,7 +36061,9 @@ export namespace Prisma {
     targetValue?: SortOrder
     targetValueEncrypted?: SortOrder
     currentValue?: SortOrder
+    currentValueEncrypted?: SortOrder
     startValue?: SortOrder
+    startValueEncrypted?: SortOrder
     unit?: SortOrder
     direction?: SortOrder
     relatedBiomarkerId?: SortOrder
@@ -36015,7 +36095,9 @@ export namespace Prisma {
     targetValue?: SortOrder
     targetValueEncrypted?: SortOrder
     currentValue?: SortOrder
+    currentValueEncrypted?: SortOrder
     startValue?: SortOrder
+    startValueEncrypted?: SortOrder
     unit?: SortOrder
     direction?: SortOrder
     relatedBiomarkerId?: SortOrder
@@ -36040,7 +36122,9 @@ export namespace Prisma {
     targetValue?: SortOrder
     targetValueEncrypted?: SortOrder
     currentValue?: SortOrder
+    currentValueEncrypted?: SortOrder
     startValue?: SortOrder
+    startValueEncrypted?: SortOrder
     unit?: SortOrder
     direction?: SortOrder
     relatedBiomarkerId?: SortOrder
@@ -36102,6 +36186,7 @@ export namespace Prisma {
     id?: SortOrder
     goalId?: SortOrder
     value?: SortOrder
+    valueEncrypted?: SortOrder
     progress?: SortOrder
     noteEncrypted?: SortOrder
     recordedAt?: SortOrder
@@ -36116,6 +36201,7 @@ export namespace Prisma {
     id?: SortOrder
     goalId?: SortOrder
     value?: SortOrder
+    valueEncrypted?: SortOrder
     progress?: SortOrder
     noteEncrypted?: SortOrder
     recordedAt?: SortOrder
@@ -36125,6 +36211,7 @@ export namespace Prisma {
     id?: SortOrder
     goalId?: SortOrder
     value?: SortOrder
+    valueEncrypted?: SortOrder
     progress?: SortOrder
     noteEncrypted?: SortOrder
     recordedAt?: SortOrder
@@ -38586,7 +38673,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -38611,7 +38700,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -39406,7 +39497,9 @@ export namespace Prisma {
     targetValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     currentValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     startValue?: DecimalNullableFilter<"HealthGoal"> | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: StringNullableFilter<"HealthGoal"> | string | null
     unit?: StringFilter<"HealthGoal"> | string
     direction?: EnumGoalDirectionFilter<"HealthGoal"> | $Enums.GoalDirection
     relatedBiomarkerId?: UuidNullableFilter<"HealthGoal"> | string | null
@@ -42846,7 +42939,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryCreateWithoutGoalInput = {
     id?: string
-    value: Decimal | DecimalJsLike | number | string
+    value?: Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: string | null
     progress: Decimal | DecimalJsLike | number | string
     noteEncrypted?: string | null
     recordedAt?: Date | string
@@ -42854,7 +42948,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryUncheckedCreateWithoutGoalInput = {
     id?: string
-    value: Decimal | DecimalJsLike | number | string
+    value?: Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: string | null
     progress: Decimal | DecimalJsLike | number | string
     noteEncrypted?: string | null
     recordedAt?: Date | string
@@ -42993,7 +43088,8 @@ export namespace Prisma {
     NOT?: GoalProgressHistoryScalarWhereInput | GoalProgressHistoryScalarWhereInput[]
     id?: UuidFilter<"GoalProgressHistory"> | string
     goalId?: UuidFilter<"GoalProgressHistory"> | string
-    value?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
+    value?: DecimalNullableFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
     progress?: DecimalFilter<"GoalProgressHistory"> | Decimal | DecimalJsLike | number | string
     noteEncrypted?: StringNullableFilter<"GoalProgressHistory"> | string | null
     recordedAt?: DateTimeFilter<"GoalProgressHistory"> | Date | string
@@ -43114,7 +43210,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -43140,7 +43238,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -43180,7 +43280,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43206,7 +43308,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -45970,7 +46074,9 @@ export namespace Prisma {
     targetValue?: Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: string | null
     currentValue?: Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: string | null
     startValue?: Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: string | null
     unit: string
     direction?: $Enums.GoalDirection
     relatedBiomarkerId?: string | null
@@ -46380,7 +46486,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46405,7 +46513,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46430,7 +46540,9 @@ export namespace Prisma {
     targetValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     currentValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    currentValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     startValue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    startValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     unit?: StringFieldUpdateOperationsInput | string
     direction?: EnumGoalDirectionFieldUpdateOperationsInput | $Enums.GoalDirection
     relatedBiomarkerId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -47612,7 +47724,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryCreateManyGoalInput = {
     id?: string
-    value: Decimal | DecimalJsLike | number | string
+    value?: Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: string | null
     progress: Decimal | DecimalJsLike | number | string
     noteEncrypted?: string | null
     recordedAt?: Date | string
@@ -47620,7 +47733,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryUpdateWithoutGoalInput = {
     id?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -47628,7 +47742,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryUncheckedUpdateWithoutGoalInput = {
     id?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -47636,7 +47751,8 @@ export namespace Prisma {
 
   export type GoalProgressHistoryUncheckedUpdateManyWithoutGoalInput = {
     id?: StringFieldUpdateOperationsInput | string
-    value?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    value?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    valueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     progress?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     noteEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     recordedAt?: DateTimeFieldUpdateOperationsInput | Date | string
