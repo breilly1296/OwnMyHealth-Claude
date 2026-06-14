@@ -45,6 +45,10 @@ vi.mock('../../services/api', () => ({
     getCurrentUser: vi.fn(),
     logout: vi.fn(),
   },
+  onboardingApi: {
+    getStatus: vi.fn(),
+    complete: vi.fn(),
+  },
   setOnAuthFailure: vi.fn(),
   getAuthToken: vi.fn(),
   attemptTokenRefresh: vi.fn(),
@@ -96,7 +100,7 @@ vi.mock('../../components/dashboard/getIcon', () => ({
   getIcon: () => <span data-testid="mock-icon">icon</span>,
 }));
 
-import { biomarkersApi } from '../../services/api';
+import { biomarkersApi, onboardingApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Sample biomarker data for tests
@@ -130,6 +134,24 @@ describe('Dashboard', () => {
     vi.clearAllMocks();
     // Default mock implementations
     vi.mocked(biomarkersApi.getAll).mockResolvedValue({ biomarkers: mockBiomarkers } as any);
+    // Default onboarding: already completed + stamped → no wizard, no auto-complete POST.
+    vi.mocked(onboardingApi.getStatus).mockResolvedValue({
+      completed: true,
+      completedAt: '2026-01-01T00:00:00.000Z',
+      steps: {
+        emailVerified: true,
+        hasLabReport: true,
+        hasHealthProfile: false,
+        hasInsurancePlan: false,
+        hasBiomarkers: true,
+      },
+      suggestedNextStep: null,
+      lastLabUploadAt: null,
+    });
+    vi.mocked(onboardingApi.complete).mockResolvedValue({
+      completed: true,
+      completedAt: '2026-01-01T00:00:00.000Z',
+    });
     // Reset useAuth mock to default authenticated state
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser,
@@ -146,6 +168,64 @@ describe('Dashboard', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+  });
+
+  describe('Onboarding auto-complete (GET-write fix)', () => {
+    const steps = {
+      emailVerified: true,
+      hasLabReport: true,
+      hasHealthProfile: false,
+      hasInsurancePlan: false,
+      hasBiomarkers: true,
+    };
+
+    it('persists the stamp via a POST when status is completed but unstamped (completedAt:null)', async () => {
+      vi.mocked(onboardingApi.getStatus).mockResolvedValue({
+        completed: true,
+        completedAt: null, // has data, server did NOT stamp on the GET
+        steps,
+        suggestedNextStep: null,
+        lastLabUploadAt: null,
+      });
+
+      render(<Dashboard />);
+
+      await waitFor(() => {
+        expect(onboardingApi.complete).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('does NOT call complete() for a brand-new user (wizard should show)', async () => {
+      vi.mocked(onboardingApi.getStatus).mockResolvedValue({
+        completed: false,
+        completedAt: null,
+        steps: { ...steps, hasLabReport: false, hasBiomarkers: false },
+        suggestedNextStep: 'upload_lab',
+        lastLabUploadAt: null,
+      });
+
+      render(<Dashboard />);
+
+      await waitFor(() => expect(onboardingApi.getStatus).toHaveBeenCalled());
+      await waitFor(() => expect(screen.getByText(/ownmyhealth/i)).toBeInTheDocument());
+      expect(onboardingApi.complete).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call complete() when already stamped (completedAt set)', async () => {
+      vi.mocked(onboardingApi.getStatus).mockResolvedValue({
+        completed: true,
+        completedAt: '2026-01-01T00:00:00.000Z',
+        steps,
+        suggestedNextStep: null,
+        lastLabUploadAt: null,
+      });
+
+      render(<Dashboard />);
+
+      await waitFor(() => expect(onboardingApi.getStatus).toHaveBeenCalled());
+      await waitFor(() => expect(screen.getByText(/ownmyhealth/i)).toBeInTheDocument());
+      expect(onboardingApi.complete).not.toHaveBeenCalled();
+    });
   });
 
   describe('Rendering', () => {

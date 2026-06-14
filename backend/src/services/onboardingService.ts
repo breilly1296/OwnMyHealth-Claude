@@ -7,6 +7,15 @@
  *
  * Existing users from before this feature shipped are marked complete by the
  * migration's backfill; new signups start with NULL so the wizard shows.
+ *
+ * getOnboardingStatus is a PURE READ: it COMPUTES `completed` from the
+ * heuristic but never writes. The durable `onboardingCompletedAt` stamp is
+ * written only by completeOnboarding (POST /onboarding/complete), which is
+ * CSRF-protected. (A GET must be a safe method — and CSRF double-submit is
+ * skipped for GET — so stamping inside the status read was both an HTTP-
+ * semantics violation and a CSRF-exempt write.) The client detects the
+ * "has data but not yet stamped" state via completed:true + completedAt:null
+ * and fires the explicit POST once to persist it.
  */
 
 import { withRLSContext } from './database.js';
@@ -92,26 +101,22 @@ export async function getOnboardingStatus(userId: string): Promise<OnboardingSta
       hasBiomarkers: biomarkerCount > 0,
     };
 
-    // If the column is already stamped, trust it — that's the explicit
-    // "user clicked Done" signal. Otherwise auto-complete when the account
-    // has any meaningful data (covers pre-migration users who slipped
-    // through the backfill, and users who uploaded before opening the
-    // wizard for any reason).
-    let completedAt = user?.onboardingCompletedAt ?? null;
-    if (!completedAt && hasMeaningfulData(steps)) {
-      const stamped = new Date();
-      await tx.user.update({
-        where: { id: userId },
-        data: { onboardingCompletedAt: stamped },
-      });
-      completedAt = stamped;
-    }
+    // `completed` is COMPUTED, never written here: true if the column is
+    // already stamped (the explicit "user clicked Done" signal) OR the account
+    // already has meaningful data (so the wizard would be noise — covers
+    // pre-migration users who slipped through the backfill, and users who
+    // uploaded before opening the wizard). The durable stamp is persisted only
+    // by the CSRF-protected POST /onboarding/complete; this read has no side
+    // effect, so a prefetch/retry/cache replay of the GET is benign. The client
+    // sees completed:true + completedAt:null and fires that POST once.
+    const completedAt = user?.onboardingCompletedAt ?? null;
+    const completed = !!completedAt || hasMeaningfulData(steps);
 
     return {
-      completed: !!completedAt,
+      completed,
       completedAt: completedAt ? completedAt.toISOString() : null,
       steps,
-      suggestedNextStep: completedAt ? null : pickSuggestedStep(steps),
+      suggestedNextStep: completed ? null : pickSuggestedStep(steps),
       lastLabUploadAt: latestFile?.createdAt?.toISOString() ?? null,
     };
   });
@@ -120,10 +125,21 @@ export async function getOnboardingStatus(userId: string): Promise<OnboardingSta
 export async function completeOnboarding(userId: string): Promise<Date> {
   return withRLSContext(userId, async (tx) => {
     const now = new Date();
-    await tx.user.update({
-      where: { id: userId },
+    // Idempotent / race-safe stamp. updateMany with the `onboardingCompletedAt:
+    // null` predicate compiles to a single atomic `UPDATE ... WHERE
+    // onboarding_completed_at IS NULL`, so a second concurrent writer (another
+    // tab / Cloud Run replica, or the dashboard auto-complete racing a "Done"
+    // click) matches zero rows and is a no-op — the first writer's timestamp
+    // wins, with no lost update and no re-stamp. Re-read so we always return the
+    // PERSISTED value, not the local `now` that may have lost the race.
+    await tx.user.updateMany({
+      where: { id: userId, onboardingCompletedAt: null },
       data: { onboardingCompletedAt: now },
     });
-    return now;
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { onboardingCompletedAt: true },
+    });
+    return user?.onboardingCompletedAt ?? now;
   });
 }

@@ -4,9 +4,11 @@
  *   GET  /api/v1/onboarding/status    — step completion + suggested next step
  *   POST /api/v1/onboarding/complete  — mark the wizard as finished
  *
- * Both require authentication. Status auto-heals (if the account already has
- * data it auto-completes without a client POST) so the wizard never ambushes
- * a long-time user.
+ * Both require authentication. GET /status is a pure read: it reports
+ * completed:true for a user who already has data (so the wizard never ambushes
+ * a long-time user) WITHOUT writing — the durable `onboardingCompletedAt` stamp
+ * is persisted only by the CSRF-protected POST /complete. (Stamping inside the
+ * GET would be a CSRF-exempt, non-idempotent write on a safe method.)
  */
 
 import { Router, Request, Response } from 'express';

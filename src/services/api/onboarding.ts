@@ -1,9 +1,12 @@
 /**
  * Onboarding API
  *
- * First-session wizard state. `getStatus()` is the single source of truth —
- * the backend auto-completes onboarding when the account already has data,
- * so the client doesn't need to duplicate that heuristic.
+ * First-session wizard state. `getStatus()` is a pure read: the backend
+ * reports `completed: true` for an account that already has data, but does NOT
+ * persist the `onboardingCompletedAt` stamp (a GET must stay side-effect-free).
+ * When status comes back `completed: true` with `completedAt: null`, the data
+ * exists but the stamp hasn't been written yet — the dashboard calls
+ * `complete()` once to persist it via the CSRF-protected POST.
  */
 
 import { apiFetch } from './client';
