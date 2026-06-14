@@ -32,29 +32,6 @@ declare global {
        * User ID (may differ from req.user.id in provider access scenarios)
        */
       userId?: string;
-
-      /**
-       * User scope for RBAC (set by rbac middleware)
-       */
-      userScope?: {
-        type: 'self' | 'provider' | 'admin';
-        userId?: string;
-        providerId?: string;
-      };
-
-      /**
-       * Provider-patient relationship (set by checkPatientAccess middleware)
-       */
-      providerPatientRelationship?: {
-        id: string;
-        providerId: string;
-        patientId: string;
-        canViewBiomarkers: boolean;
-        canViewInsurance: boolean;
-        canViewHealthNeeds: boolean;
-        canEditData: boolean;
-        status: string;
-      };
     }
   }
 }

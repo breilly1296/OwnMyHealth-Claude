@@ -16,21 +16,6 @@ export interface AuthenticatedRequest extends Request {
     role: string;
     plan: string;
   };
-  userScope?: {
-    type: 'self' | 'provider' | 'admin';
-    userId?: string;
-    providerId?: string;
-  };
-  providerPatientRelationship?: {
-    id: string;
-    providerId: string;
-    patientId: string;
-    canViewBiomarkers: boolean;
-    canViewInsurance: boolean;
-    canViewHealthNeeds: boolean;
-    canEditData: boolean;
-    status: string;
-  };
 }
 
 // Biomarker types
