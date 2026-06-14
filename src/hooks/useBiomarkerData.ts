@@ -70,6 +70,23 @@ export async function fetchAllBiomarkers(): Promise<{
   return { biomarkers: all, truncated: totalPages > MAX_BIOMARKER_PAGES };
 }
 
+/**
+ * Merge `incoming` biomarkers into `prev` by id. The backend now appends a new
+ * reading to its existing series and returns that series' (existing) id, so a
+ * create/upload response can carry an id already in local state — a blind
+ * append would then render the same series twice until the next refresh. Last
+ * write wins (the server response is the freshest copy, with full history).
+ * Exported for testing.
+ */
+export function mergeBiomarkersById(
+  prev: Biomarker[],
+  incoming: Biomarker[]
+): Biomarker[] {
+  const byId = new Map(prev.map((b) => [b.id, b]));
+  for (const b of incoming) byId.set(b.id, b);
+  return Array.from(byId.values());
+}
+
 const TRUNCATION_WARNING =
   'Too many biomarker records to load — displayed data may be incomplete.';
 
@@ -325,7 +342,8 @@ export function useBiomarkerData({
         },
         notes: newBiomarker.notes,
       });
-      setBiomarkers(prev => [...prev, created as unknown as Biomarker]);
+      // Upsert by id: a merged reading comes back with its existing series id.
+      setBiomarkers(prev => mergeBiomarkersById(prev, [created as unknown as Biomarker]));
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to save measurement';
       dashboardLogger.error('Error adding measurement', { error: errorMsg });
@@ -383,11 +401,13 @@ export function useBiomarkerData({
         onErrorRef.current(`${errorMsg}. Data added locally but not synced to server.`);
         // Chunks before `start` are already persisted (server copies are in
         // `created`); only the unsaved remainder falls back to local copies.
-        setBiomarkers(prev => [...prev, ...created, ...newBiomarkers.slice(start)]);
+        // Upsert the saved server rows by id (readings may have merged into
+        // existing series), then append the unsaved local-only fallbacks.
+        setBiomarkers(prev => [...mergeBiomarkersById(prev, created), ...newBiomarkers.slice(start)]);
         return;
       }
     }
-    setBiomarkers(prev => [...prev, ...created]);
+    setBiomarkers(prev => mergeBiomarkersById(prev, created));
   }, []);
 
   // Handle clinical file extraction
