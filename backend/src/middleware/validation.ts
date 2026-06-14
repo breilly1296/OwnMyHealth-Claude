@@ -38,7 +38,7 @@ function zodIssueToDetail(issue: ZodIssue): ValidationErrorDetail {
  * Sanitize string input: trim whitespace, escape HTML special characters
  * Prevents XSS and normalizes input
  */
-function sanitizeString(str: string): string {
+export function sanitizeString(str: string): string {
   return str
     .trim()
     .replace(/&/g, '&amp;')

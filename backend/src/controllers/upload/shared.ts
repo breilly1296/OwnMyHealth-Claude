@@ -27,6 +27,7 @@ import {
 } from '../../services/sbcExtraction.js';
 import { logger } from '../../utils/logger.js';
 import { deleteFile } from '../../services/storageService.js';
+import { sanitizeString } from '../../middleware/validation.js';
 
 // ============================================
 // Request type
@@ -313,6 +314,213 @@ export interface ExtractedSBCData {
   usedClaudeExtraction: boolean;
 }
 
+// ============================================
+// SBC: sanitize extracted data (M9/M10)
+// ============================================
+//
+// Claude (and the regex fallback) can emit out-of-range, wrong-sign, wrong-type,
+// or absurdly-long values that — written verbatim — either poison the cost-math
+// / AI prompt (e.g. coinsuranceRate 850 → an 850% multiplier in extractProjectedOOP)
+// or overflow a Postgres Decimal/VarChar column and 500 the whole upload (a
+// self-inflicted DoS). This sanitizer runs at the SINGLE producer-side choke
+// point (end of extractSBCData), so every downstream sink — mapExtractedDataToPlanFields,
+// mapExtractedBenefits, the insurancePlan.create/update writes, the cost-math, and
+// the AI prompt — receives already-clean values on BOTH the Claude and regex paths.
+//
+// Policy: CLAMP/DROP per field, never reject the whole upload (extraction is
+// best-effort and the user reviews the parsed plan). The only whole-upload reject
+// stays the pre-existing "nothing parsed" gate in the controllers.
+
+const SBC_MONEY_MAX = 999_999.99; // safely inside Decimal(10,2) = 99,999,999.99
+const SBC_INT_LIMIT_MAX = 3650; // visit/day limits — 10y of days is generous
+const SBC_PLAN_TYPES = ['HMO', 'PPO', 'EPO', 'POS', 'HDHP'] as const;
+
+/** Non-negative finite money, clamped to the Decimal(10,2)-safe ceiling; else undefined. */
+function sanitizeMoney(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return undefined;
+  return Math.min(SBC_MONEY_MAX, v);
+}
+
+/** Coinsurance/percent, clamped to 0–100 (the stored convention); else undefined. */
+function sanitizePercent(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return undefined;
+  return Math.min(100, v);
+}
+
+/** Non-negative integer visit/day limit, clamped; else undefined. */
+function sanitizeIntLimit(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return undefined;
+  return Math.min(SBC_INT_LIMIT_MAX, Math.round(v));
+}
+
+/** Strip control chars, HTML-escape, cap to the column length; empty → undefined. */
+function sanitizeStr(v: unknown, maxLen: number): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  // eslint-disable-next-line no-control-regex
+  const stripped = v.replace(/[\x00-\x1F\x7F]/g, '');
+  const escaped = sanitizeString(stripped);
+  const capped = escaped.length > maxLen ? escaped.slice(0, maxLen) : escaped;
+  return capped.length > 0 ? capped : undefined;
+}
+
+function sanitizePlanType(v: unknown): ExtractedSBCData['planType'] {
+  return typeof v === 'string' && (SBC_PLAN_TYPES as readonly string[]).includes(v)
+    ? (v as ExtractedSBCData['planType'])
+    : undefined;
+}
+
+/** Keep only a real ISO calendar date; else undefined (so the call-site date fallback engages). */
+function sanitizeIsoDate(v: unknown): string | undefined {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(v)) return undefined;
+  return Number.isNaN(new Date(v).getTime()) ? undefined : v;
+}
+
+type FieldSpec = {
+  money?: readonly string[];
+  percent?: readonly string[];
+  int?: readonly string[];
+  str?: ReadonlyArray<readonly [string, number]>;
+};
+
+/** Clamp the named keys of a (possibly undefined) sub-object in place. */
+function clampFields(obj: Record<string, unknown> | undefined, spec: FieldSpec): void {
+  if (!obj || typeof obj !== 'object') return;
+  for (const k of spec.money ?? []) if (obj[k] !== undefined) obj[k] = sanitizeMoney(obj[k]);
+  for (const k of spec.percent ?? []) if (obj[k] !== undefined) obj[k] = sanitizePercent(obj[k]);
+  for (const k of spec.int ?? []) if (obj[k] !== undefined) obj[k] = sanitizeIntLimit(obj[k]);
+  for (const [k, max] of spec.str ?? []) if (obj[k] !== undefined) obj[k] = sanitizeStr(obj[k], max);
+}
+
+// Field classification per (sub-)object, derived from the Extracted* interfaces.
+const TOP_LEVEL_SPEC: FieldSpec = {
+  money: [
+    'deductibleIndividual', 'deductibleFamily', 'oopMaxIndividual', 'oopMaxFamily',
+    'deductibleIndividualOutOfNetwork', 'deductibleFamilyOutOfNetwork',
+    'oopMaxIndividualOutOfNetwork', 'oopMaxFamilyOutOfNetwork', 'premiumMonthly',
+    'copayPrimaryCare', 'copaySpecialist', 'copayPreventive', 'copayUrgentCare',
+    'copayEmergency', 'copayTelehealth', 'copayLabWork', 'copayXray', 'copayAdvancedImaging',
+  ],
+  percent: [
+    'coinsuranceRate', 'coinsurancePrimaryCare', 'coinsuranceSpecialist',
+    'coinsuranceUrgentCare', 'coinsuranceEmergency', 'coinsuranceTelehealth',
+    'coinsuranceLabWork', 'coinsuranceXray', 'coinsuranceAdvancedImaging',
+  ],
+  str: [['planName', 300], ['insurerName', 200], ['planIdNumber', 100]],
+};
+const INPATIENT_SPEC: FieldSpec = {
+  money: ['hospitalCopayPerDay', 'hospitalCopayPerAdmission', 'mentalHealthCopay', 'substanceAbuseCopay', 'maternityCopay', 'skilledNursingCopay', 'rehabilitationCopay'],
+  percent: ['hospitalCoinsurance', 'mentalHealthCoinsurance', 'substanceAbuseCoinsurance', 'maternityCoinsurance', 'skilledNursingCoinsurance', 'rehabilitationCoinsurance'],
+  int: ['hospitalDayLimit', 'mentalHealthDayLimit', 'substanceAbuseDayLimit', 'skilledNursingDaysLimit', 'rehabilitationDayLimit'],
+};
+const OUTPATIENT_SPEC: FieldSpec = {
+  money: ['surgeryCopay', 'mentalHealthIndividualCopay', 'mentalHealthGroupCopay', 'substanceAbuseIndividualCopay', 'substanceAbuseGroupCopay', 'labWorkCopay', 'xrayCopay', 'advancedImagingCopay', 'chemotherapyCopay', 'radiationCopay', 'dialysisCopay'],
+  percent: ['surgeryCoinsurance', 'mentalHealthCoinsurance', 'substanceAbuseCoinsurance', 'labWorkCoinsurance', 'xrayCoinsurance', 'advancedImagingCoinsurance', 'chemotherapyCoinsurance', 'radiationCoinsurance', 'dialysisCoinsurance'],
+  int: ['mentalHealthVisitLimit'],
+};
+const THERAPY_SPEC: FieldSpec = {
+  money: ['physicalTherapyCopay', 'occupationalTherapyCopay', 'speechTherapyCopay', 'cardiacRehabCopay', 'pulmonaryRehabCopay', 'chiropracticCopay', 'acupunctureCopay'],
+  percent: ['physicalTherapyCoinsurance', 'occupationalTherapyCoinsurance', 'speechTherapyCoinsurance'],
+  int: ['physicalTherapyVisitsLimit', 'occupationalTherapyVisitsLimit', 'speechTherapyVisitsLimit', 'cardiacRehabVisitsLimit', 'pulmonaryRehabVisitsLimit', 'chiropracticVisitsLimit', 'acupunctureVisitsLimit'],
+};
+const EMERGENCY_SPEC: FieldSpec = {
+  money: ['emergencyRoomCopay', 'urgentCareCopay', 'ambulanceGroundCopay', 'ambulanceAirCopay'],
+  percent: ['emergencyRoomCoinsurance', 'urgentCareCoinsurance', 'ambulanceGroundCoinsurance', 'ambulanceAirCoinsurance'],
+};
+const RX_SPEC: FieldSpec = {
+  money: ['tier1Copay', 'tier2Copay', 'tier3Copay', 'tier4Copay', 'specialtyCopay', 'deductibleIndividual', 'deductibleFamily', 'oopMaxIndividual', 'oopMaxFamily', 'mailOrderCostMultiplier'],
+  percent: ['tier1CoinsurancePercent', 'tier2CoinsurancePercent', 'tier3CoinsurancePercent', 'tier4CoinsurancePercent', 'specialtyCoinsurancePercent'],
+  int: ['retailDaysSupply', 'mailOrderDaysSupply'],
+};
+const VISION_SPEC: FieldSpec = {
+  money: ['examCopay', 'lensesAllowance', 'framesAllowance', 'contactsAllowance'],
+  str: [['examFrequency', 100], ['lensesFrequency', 100], ['framesFrequency', 100], ['contactsFrequency', 100]],
+};
+const DENTAL_SPEC: FieldSpec = {
+  money: ['annualMaximum', 'deductible', 'orthodontiaLifetimeMax'],
+  percent: ['preventiveCoinsurance', 'basicCoinsurance', 'majorCoinsurance', 'orthodontiaCoinsurance'],
+};
+const DME_SPEC: FieldSpec = {
+  money: ['copay'],
+  percent: ['coinsurance'],
+  str: [['rentalVsPurchase', 100]],
+};
+const HOME_HEALTH_SPEC: FieldSpec = {
+  money: ['visitCopay'],
+  percent: ['visitCoinsurance'],
+  int: ['visitLimit'],
+};
+const HOSPICE_SPEC: FieldSpec = {
+  money: ['inpatientCopay', 'respiteCopay'],
+  percent: ['inpatientCoinsurance', 'respiteCoinsurance'],
+  int: ['respiteDayLimit'],
+};
+const BENEFIT_SPEC: FieldSpec = {
+  money: ['inNetworkCopay', 'outNetworkCopay'],
+  percent: ['inNetworkCoinsurance', 'outNetworkCoinsurance'],
+  int: ['visitLimit', 'dayLimit'],
+  str: [['limitations', 500]],
+};
+
+/**
+ * Range/sign/type/length-validate every extracted SBC field before it is mapped
+ * to the DB. Mutates and returns the SAME object (so the caller's `return
+ * sanitizeExtractedSbc({...})` reads naturally). See the section comment above.
+ */
+export function sanitizeExtractedSbc(data: ExtractedSBCData): ExtractedSBCData {
+  const d = data as unknown as Record<string, unknown>;
+
+  // Top-level scalars
+  clampFields(d, TOP_LEVEL_SPEC);
+  data.planType = sanitizePlanType(data.planType);
+  data.effectiveDate = sanitizeIsoDate(data.effectiveDate);
+
+  // Nested coverage objects
+  clampFields(data.inpatientCoverage as Record<string, unknown> | undefined, INPATIENT_SPEC);
+  clampFields(data.outpatientCoverage as Record<string, unknown> | undefined, OUTPATIENT_SPEC);
+  clampFields(data.therapyCoverage as Record<string, unknown> | undefined, THERAPY_SPEC);
+  clampFields(data.emergencyCoverage as Record<string, unknown> | undefined, EMERGENCY_SPEC);
+  clampFields(data.rxBenefits as Record<string, unknown> | undefined, RX_SPEC);
+  clampFields(data.visionCoverage as Record<string, unknown> | undefined, VISION_SPEC);
+  clampFields(data.dentalCoverage as Record<string, unknown> | undefined, DENTAL_SPEC);
+  clampFields(data.dmeCoverage as Record<string, unknown> | undefined, DME_SPEC);
+  clampFields(data.homeHealthCoverage as Record<string, unknown> | undefined, HOME_HEALTH_SPEC);
+  clampFields(data.hospiceCoverage as Record<string, unknown> | undefined, HOSPICE_SPEC);
+
+  // Benefit rows: clamp numerics + strings, then drop any row missing a
+  // service name/category after sanitize (parity with the Claude-path filter).
+  if (Array.isArray(data.benefits)) {
+    data.benefits = data.benefits
+      .map((b) => {
+        const row = b as unknown as Record<string, unknown>;
+        clampFields(row, BENEFIT_SPEC);
+        row.serviceName = sanitizeStr(row.serviceName, 200);
+        row.serviceCategory = sanitizeStr(row.serviceCategory, 100);
+        return b;
+      })
+      .filter((b) => b.serviceName && b.serviceCategory);
+  }
+
+  // String lists (JSON-stringified into Text columns): strip/escape each item,
+  // cap the array length so a hostile extraction can't store an unbounded blob.
+  for (const key of ['preventiveServices', 'exclusions', 'priorAuthRequirements'] as const) {
+    const list = data[key];
+    if (Array.isArray(list)) {
+      data[key] = list
+        .map((item) => sanitizeStr(item, 200))
+        .filter((s): s is string => Boolean(s))
+        .slice(0, 200);
+    }
+  }
+  if (Array.isArray(data.servicesWithLimits)) {
+    data.servicesWithLimits = data.servicesWithLimits
+      .filter((s) => s && typeof s.service === 'string')
+      .slice(0, 200)
+      .map((s) => ({ ...s, service: sanitizeStr(s.service, 200) ?? '', limit: sanitizeMoney(s.limit) ?? 0 }));
+  }
+
+  return data;
+}
+
 /**
  * Extract SBC data from a PDF buffer.
  * Prefers Claude Sonnet when configured; falls back to the regex parser on
@@ -338,7 +546,7 @@ export async function extractSBCData(
       );
       const claudeResult = await extractInsuranceFromSBC(fileBuffer, userId);
 
-      return {
+      return sanitizeExtractedSbc({
         planName: claudeResult.planName,
         insurerName: claudeResult.insurerName,
         planType: claudeResult.planType,
@@ -404,7 +612,7 @@ export async function extractSBCData(
           limitations: b.limitations,
         })),
         usedClaudeExtraction: true,
-      };
+      });
     } catch (error) {
       logger.warn(
         context.planId
@@ -431,7 +639,7 @@ export async function extractSBCData(
   const parseResult = await parseSBC(fileBuffer, fileName);
   const { plan: parsedPlan } = parseResult;
 
-  return {
+  return sanitizeExtractedSbc({
     planName: parsedPlan.planName,
     insurerName: parsedPlan.insurerName,
     planType: parsedPlan.planType,
@@ -455,7 +663,7 @@ export async function extractSBCData(
     })),
     extractionConfidence: parsedPlan.extractionConfidence,
     usedClaudeExtraction: false,
-  };
+  });
 }
 
 // ============================================
