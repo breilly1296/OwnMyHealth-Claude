@@ -8,8 +8,10 @@
 import path from 'node:path';
 import type { AuthenticatedRequest } from '../../types/index.js';
 import { ValidationError } from '../../middleware/errorHandler.js';
-import { getPrismaClient } from '../../services/database.js';
+import type { Prisma } from '../../../generated/prisma/index.js';
 import { getEncryptionService } from '../../services/encryption.js';
+import { resolveEffectivePlan } from '../../services/usageTracker.js';
+import { getPlanLimits, isUnlimited } from '../../config/plans.js';
 import { parseSBC } from '../../services/pdfParser.js';
 import {
   extractInsuranceFromSBC,
@@ -184,15 +186,43 @@ export interface CreateBiomarkersOptions {
  * grep if the local parameter was also named `prisma`.
  */
 export async function createBiomarkersFromOCRResult(
-  tx: { biomarker: ReturnType<typeof getPrismaClient>['biomarker'] },
+  tx: Prisma.TransactionClient,
   encryptionService: ReturnType<typeof getEncryptionService>,
   userSalt: string,
   options: CreateBiomarkersOptions
 ): Promise<BiomarkerResult[]> {
   const { userId, biomarkers, reportDate, labName, notesPrefix, normalRangeSource, userFileId } = options;
+
+  // M12: cap how many NEW biomarker rows a single ingestion can create so one
+  // upload/OCR can't push the user past their maxBiomarkers plan limit. The
+  // request-time requirePlanLimit('maxBiomarkers') gate only blocks an ALREADY-
+  // at-cap user; this closes the per-upload overshoot at the shared insert site
+  // for every caller, using the caller's RLS tx so the count + inserts stay
+  // consistent. (FREE=50; PRO/TEAM unlimited → no-op.)
+  let toInsert = biomarkers;
+  const effectivePlan = await resolveEffectivePlan(tx, userId);
+  const maxBiomarkers = getPlanLimits(effectivePlan).maxBiomarkers;
+  if (!isUnlimited(maxBiomarkers)) {
+    const current = await tx.biomarker.count({ where: { userId } });
+    const remaining = Math.max(0, maxBiomarkers - current);
+    if (biomarkers.length > remaining) {
+      toInsert = biomarkers.slice(0, remaining);
+      logger.warn('maxBiomarkers reached — truncating ingested biomarkers to the plan cap', {
+        data: {
+          userId,
+          plan: effectivePlan,
+          limit: maxBiomarkers,
+          current,
+          requested: biomarkers.length,
+          inserted: toInsert.length,
+        },
+      });
+    }
+  }
+
   const results: BiomarkerResult[] = [];
 
-  for (const biomarker of biomarkers) {
+  for (const biomarker of toInsert) {
     const valueEncrypted = encryptionService.encrypt(biomarker.value.toString(), userSalt);
 
     const notes = labName ? `${notesPrefix}: ${labName}` : notesPrefix;

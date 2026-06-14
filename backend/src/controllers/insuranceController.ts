@@ -15,6 +15,8 @@ import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { logger } from '../utils/logger.js';
 import { getAuditLogService } from '../services/auditLog.js';
+import { resolveEffectivePlan } from '../services/usageTracker.js';
+import { getPlanLimits, isUnlimited } from '../config/plans.js';
 import { parsePagination, parseBooleanParam, createPaginationMeta } from '../utils/queryHelpers.js';
 import { toNumber } from '../utils/numberConversion.js';
 import type { InsurancePlan as PrismaInsurancePlan, InsuranceBenefit as PrismaInsuranceBenefit } from '../../generated/prisma/index.js';
@@ -659,13 +661,33 @@ export async function updateInsurancePlan(
     updateData.isPrimary = false;
   }
 
-  const { existing, updated } = await withRLSTransaction(userId, async (tx) => {
+  const result = await withRLSTransaction(userId, async (tx) => {
     const existing = await tx.insurancePlan.findFirst({
       where: { id, userId },
     });
 
     if (!existing) {
       throw new NotFoundError('Insurance plan not found');
+    }
+
+    // M13: activating an archived plan (isActive false→true) consumes an
+    // active-plan slot, so re-check the insurancePlans quota IN THIS TX. The
+    // create gate counts only ACTIVE plans, so without this a user creates N
+    // plans as isActive:false (each passes the create gate while the active
+    // count stays 0) then PATCHes each to active to exceed the limit. Only a
+    // false→true transition is gated — ordinary edits and active→inactive are
+    // unaffected.
+    if (input.isActive === true && existing.isActive === false) {
+      const effectivePlan = await resolveEffectivePlan(tx, userId);
+      const limit = getPlanLimits(effectivePlan).insurancePlans;
+      if (!isUnlimited(limit)) {
+        const activeCount = await tx.insurancePlan.count({
+          where: { userId, isActive: true },
+        });
+        if (activeCount >= limit) {
+          return { kind: 'limit' as const, limit, current: activeCount };
+        }
+      }
     }
 
     // Handle primary flag
@@ -682,8 +704,29 @@ export async function updateInsurancePlan(
       include: { benefits: true },
     });
 
-    return { existing, updated };
+    return { kind: 'ok' as const, existing, updated };
   });
+
+  // M13: over-limit activation — respond 403 with the SAME PLAN_LIMIT_EXCEEDED
+  // body shape the requirePlanLimit middleware emits (the central errorHandler
+  // discards custom AppError fields, so build the body here). No write happened —
+  // the transaction returned before the update.
+  if (result.kind === 'limit') {
+    res.status(403).json({
+      success: false,
+      error: {
+        code: 'PLAN_LIMIT_EXCEEDED',
+        message: `You've reached your plan limit (${result.current}/${result.limit}). Upgrade to continue.`,
+        limit: result.limit,
+        current: result.current,
+        feature: 'insurancePlans',
+        upgradeRequired: true,
+      },
+    });
+    return;
+  }
+
+  const { existing, updated } = result;
 
   // Audit log: UPDATE insurance plan
   const auditService = getAuditLogService(prisma);
