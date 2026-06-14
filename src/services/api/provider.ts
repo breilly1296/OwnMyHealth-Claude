@@ -5,6 +5,7 @@
 import { apiFetch } from './client';
 import { BiomarkerData } from './biomarkers';
 import { HealthNeedData } from './healthNeeds';
+import type { InsurancePlanData } from './insurance';
 
 export type UserRole = 'PATIENT' | 'PROVIDER' | 'ADMIN';
 
@@ -73,6 +74,12 @@ export const providerApi = {
 
   async getPatientHealthNeeds(patientId: string): Promise<HealthNeedData[]> {
     const response = await apiFetch<HealthNeedData[]>(`/provider/patients/${patientId}/health-needs`);
+    return response.data;
+  },
+
+  // M3: gated on the patient's canViewInsurance consent flag, server-side.
+  async getPatientInsurance(patientId: string): Promise<InsurancePlanData[]> {
+    const response = await apiFetch<InsurancePlanData[]>(`/provider/patients/${patientId}/insurance`);
     return response.data;
   },
 

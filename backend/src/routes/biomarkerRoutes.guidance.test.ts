@@ -68,10 +68,9 @@ vi.mock('../services/userEncryption.js', () => ({
 
 vi.mock('../services/aiCostTracker.js', () => ({
   trackAIUsage: vi.fn(),
-  // aiSpendGuard middleware (now on the guidance route) reads this.
-  isAISpendExceeded: vi.fn(() => ({ exceeded: false, scope: null })),
-  // L-3: the guard reserves an in-flight estimate and gets back a settle fn.
-  reserveAISpend: vi.fn(() => vi.fn()),
+  // aiSpendGuard middleware (now on the guidance route) calls this atomic gate
+  // and registers the returned settle() on response completion.
+  admitAISpend: vi.fn(async () => ({ admitted: true, scope: null, settle: vi.fn() })),
 }));
 
 vi.mock('../utils/logger.js', () => ({

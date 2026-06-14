@@ -6,37 +6,60 @@
  * buggy client loop, a compromised key, or an abusive (especially unlimited-
  * tier) account that the per-user/IP rate limiters don't bound by dollars.
  *
- * The accumulator lives in aiCostTracker (updated post-call by trackAIUsage);
- * this middleware only reads it. Apply alongside aiLimiter on AI routes.
+ * The accumulator lives in aiCostTracker (in-memory by default, or a shared
+ * Redis store when REDIS_URL is set). This middleware atomically reserves +
+ * checks via admitAISpend() and registers the returned settle() on response
+ * completion; the real per-call cost is added post-call by trackAIUsage.
  *
- * Fails closed with 503 SERVICE_UNAVAILABLE. Must run AFTER `authenticate` so
- * the per-user budget can resolve; with no user it falls through (the global
- * cap still applies on the next authenticated request).
+ * Fails closed with 503 SERVICE_UNAVAILABLE — both when the budget is reached
+ * AND when the shared store errors (a billing breaker must not uncap spend
+ * during a Redis blip; the fast-fail client config makes that a quick 503, not
+ * a hang). Must run AFTER `authenticate` so the per-user budget can resolve;
+ * with no user it falls through (the global cap still applies on the next
+ * authenticated request).
  */
 
 import { Request, Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../types/index.js';
-import { isAISpendExceeded, reserveAISpend } from '../services/aiCostTracker.js';
+import { admitAISpend, type Admission } from '../services/aiCostTracker.js';
 import { ServiceUnavailableError } from './errorHandler.js';
 import { logger } from '../utils/logger.js';
 
-export function aiSpendGuard(req: Request, res: Response, next: NextFunction): void {
+export async function aiSpendGuard(req: Request, res: Response, next: NextFunction): Promise<void> {
   const userId = (req as AuthenticatedRequest).user?.id;
   if (!userId) {
     next();
     return;
   }
 
-  const { exceeded, scope } = isAISpendExceeded(userId);
-  if (exceeded) {
+  let admission: Admission;
+  try {
+    admission = await admitAISpend(userId);
+  } catch (err) {
+    // Shared-store (Redis) error → fail CLOSED. A billing breaker must not
+    // uncap Anthropic spend during a store outage; only reachable when
+    // REDIS_URL is set (the in-memory store never rejects).
+    logger.error('AI spend gate errored — failing closed (503)', {
+      prefix: 'AISpendGuard',
+      data: { userId, path: req.path, error: err instanceof Error ? err.message : String(err) },
+    });
+    next(
+      new ServiceUnavailableError(
+        'AI features are temporarily unavailable. Please try again later.'
+      )
+    );
+    return;
+  }
+
+  if (!admission.admitted) {
     logger.warn('AI request refused — daily spend budget reached', {
       prefix: 'AISpendGuard',
-      data: { userId, scope, path: req.path },
+      data: { userId, scope: admission.scope, path: req.path },
     });
 
     next(
       new ServiceUnavailableError(
-        scope === 'global'
+        admission.scope === 'global'
           ? 'AI features are temporarily unavailable (daily budget reached). Please try again later.'
           : "You've reached today's AI usage limit. Please try again tomorrow."
       )
@@ -44,15 +67,12 @@ export function aiSpendGuard(req: Request, res: Response, next: NextFunction): v
     return;
   }
 
-  // L-3: hold a conservative reservation for this in-flight call so a burst of
-  // concurrent requests can't all slip under the cap before any of them records
-  // its actual cost. Backed out when the response completes — the real cost is
-  // added independently by trackAIUsage. Register on both 'finish' (normal
-  // responses) and 'close' (aborted SSE streams / dropped connections); settle()
-  // is idempotent so the double-registration is safe.
-  const settle = reserveAISpend(userId);
-  res.on('finish', settle);
-  res.on('close', settle);
+  // L-3: back the in-flight reservation out when the response completes — the
+  // real cost is added independently by trackAIUsage. Register on both 'finish'
+  // (normal responses) and 'close' (aborted SSE streams / dropped connections);
+  // settle() is idempotent so the double-registration is safe.
+  res.on('finish', admission.settle);
+  res.on('close', admission.settle);
 
   next();
 }
