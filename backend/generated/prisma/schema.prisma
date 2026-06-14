@@ -40,6 +40,12 @@ model User {
   planExpiresAt            DateTime?            @map("plan_expires_at") @db.Timestamptz(6)
   planUpdatedAt            DateTime?            @map("plan_updated_at") @db.Timestamptz(6)
   onboardingCompletedAt    DateTime?            @map("onboarding_completed_at") @db.Timestamptz(6)
+  // Per-recipient "last sent" markers for the email scheduler — let a weekly
+  // summary / plan-expiring notice be claimed atomically so it is sent at most
+  // once per period even across multiple Cloud Run instances. Timestamps, not
+  // PHI (not encrypted, not in PHI_FIELDS). Goal reminders reuse HealthGoal.lastReminderSent.
+  lastWeeklySummarySent    DateTime?            @map("last_weekly_summary_sent") @db.Timestamptz(6)
+  lastPlanExpiringSent     DateTime?            @map("last_plan_expiring_sent") @db.Timestamptz(6)
   createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastLoginAt              DateTime?            @map("last_login_at") @db.Timestamptz(6)

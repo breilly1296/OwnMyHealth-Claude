@@ -149,6 +149,8 @@ exports.Prisma.UserScalarFieldEnum = {
   planExpiresAt: 'planExpiresAt',
   planUpdatedAt: 'planUpdatedAt',
   onboardingCompletedAt: 'onboardingCompletedAt',
+  lastWeeklySummarySent: 'lastWeeklySummarySent',
+  lastPlanExpiringSent: 'lastPlanExpiringSent',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastLoginAt: 'lastLoginAt'

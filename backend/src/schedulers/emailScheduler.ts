@@ -15,6 +15,13 @@
  * Dispatch is fire-and-forget per user so one SendGrid failure doesn't
  * stop the batch. Everything routes through notificationService which
  * respects user preferences.
+ *
+ * MULTI-INSTANCE: this runs on every Cloud Run replica. See the "Multi-instance
+ * coordination" section below — a per-sub-batch advisory lock (only one instance
+ * runs each tick) plus per-recipient sent-markers (atomic claim before each
+ * send) make every send idempotent across instances, so a user can't be mailed
+ * once per replica. Both are Postgres-only; the in-memory day-key guards are now
+ * just a per-process pre-filter, not the correctness boundary.
  */
 
 import { withRLSContext, getPrismaClient } from '../services/database.js';
@@ -71,12 +78,108 @@ async function runBatched<T>(
 }
 
 // ============================================
+// Multi-instance coordination
+// ============================================
+//
+// Cloud Run runs up to --max-instances replicas, each with its own copy of this
+// scheduler's setInterval. The in-memory day-key guards below are module-scoped
+// (per process), so they don't coordinate replicas — without the two mechanisms
+// here, every replica runs each tick and a user gets one duplicate engagement
+// email per instance. Both mechanisms are Postgres-only (no Redis):
+//   1. A per-sub-batch ADVISORY LOCK so only ONE instance runs each sub-batch
+//      per tick (withTickLock). Cuts the work to 1x and serializes.
+//   2. Per-recipient sent-markers claimed atomically right before each send
+//      (users.last_weekly_summary_sent / last_plan_expiring_sent and
+//      health_goals.last_reminder_sent) so even if the lock is lost mid-batch
+//      (crash, DB blip, fail-open) a given recipient is mailed at most once
+//      per period.
+
+// Fixed 64-bit advisory-lock keys, one per sub-batch. The 9100xx range is
+// reserved for this scheduler so a future advisory-lock user can't collide.
+const LOCK_KEY_WEEKLY = 910001;
+const LOCK_KEY_GOAL_REMINDER = 910002;
+const LOCK_KEY_PLAN_EXPIRY = 910003;
+
+/**
+ * Run `fn` only if this instance wins the Postgres advisory lock `key`, so a
+ * per-tick sub-batch runs on exactly ONE instance. Uses the non-blocking
+ * pg_try_advisory_xact_lock (a replica that loses the race returns immediately
+ * and skips, rather than queueing) inside a transaction whose sole job is to
+ * hold the lock for the wall-clock duration of `fn`; it auto-releases on commit
+ * / rollback / connection loss, so a crashed holder never leaks it. Advisory
+ * locks are a server-global facility, NOT rows, so they are not subject to RLS
+ * and the NOBYPASSRLS app role can take them with no policy. The sub-batch's own
+ * per-user reads/sends inside `fn` keep using their own withRLSContext
+ * transactions on other pooled connections.
+ *
+ * FAILS OPEN: if acquiring the lock errors (e.g. DB unreachable) we log and
+ * still run `fn` unlocked — silently skipping a send window is worse than a rare
+ * unlocked run, and the per-recipient markers still cap duplicates. Returns
+ * whether `fn` ran (true = ran under the lock or fail-open; false = skipped
+ * because another instance held it).
+ */
+export async function withTickLock(key: number, fn: () => Promise<void>): Promise<boolean> {
+  const prisma = getPrismaClient();
+  let ran = false;
+  try {
+    // An advisory lock is a server-global facility, not a table row, so this
+    // transaction deliberately runs OUTSIDE withRLSContext and touches no
+    // RLS-protected table (only pg_try_advisory_xact_lock). The sub-batch's own
+    // per-user reads/sends inside fn() keep their withRLSContext wrappers.
+    await prisma.$transaction( // RLS-exempt: advisory lock only; no RLS-protected table touched
+      async (tx) => {
+        const rows = await tx.$queryRaw<{ locked: boolean }[]>`
+          SELECT pg_try_advisory_xact_lock(${BigInt(key)}) AS locked
+        `;
+        if (!rows[0]?.locked) {
+          logger.info(`[EmailScheduler] sub-batch key=${key} held by another instance; skipping`);
+          return;
+        }
+        ran = true;
+        await fn();
+      },
+      // The outer tx holds the lock for the whole batch, which can exceed
+      // Prisma's 5s default interactive-transaction timeout.
+      { timeout: 120_000, maxWait: 5_000 }
+    );
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    if (ran) {
+      // The lock was held and fn started, then errored (fn failure or tx
+      // timeout mid-batch). Do NOT re-run — that would double-send. The
+      // per-recipient markers bound any duplicate from a partial send.
+      logger.error(`[EmailScheduler] sub-batch key=${key} failed under lock`, { data: { error } });
+      return true;
+    }
+    // Acquisition itself failed before fn ran. Fail open.
+    logger.warn(`[EmailScheduler] advisory lock unavailable for key=${key}; running unlocked`, {
+      data: { error },
+    });
+    ran = true;
+    await fn();
+  }
+  return ran;
+}
+
+/** Monday 00:00:00 UTC of the current ISO week — the weekly-summary claim cutoff. */
+function startOfIsoWeekUTC(now: Date): Date {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const daysSinceMonday = (d.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
+  d.setUTCDate(d.getUTCDate() - daysSinceMonday);
+  return d;
+}
+
+/** 00:00:00 UTC today — the plan-expiring claim cutoff. */
+function startOfUtcDay(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+// ============================================
 // Weekly summary
 // ============================================
 
-async function sendWeeklySummaries(): Promise<void> {
-  const prisma = getPrismaClient();
-  void prisma;
+export async function sendWeeklySummaries(): Promise<void> {
+  const weekStart = startOfIsoWeekUTC(new Date());
 
   // Fetch active users. Preference filtering happens inside notificationService
   // so this query can be cheap and index-friendly.
@@ -123,8 +226,26 @@ async function sendWeeklySummaries(): Promise<void> {
     });
 
     // Skip accounts with literally nothing tracked — an empty summary is
-    // noise, not engagement.
+    // noise, not engagement (and we don't burn the marker on them).
     if (data.totalBiomarkers === 0 && data.activeGoals === 0) return;
+
+    // Claim this user's weekly send atomically so only one instance mails them
+    // this ISO week (idempotent even if the advisory lock was lost). The marker
+    // is set BEFORE the send → a send failure means "missed this week", never
+    // "double-mailed" — the correct bias for engagement email.
+    const claim = await withRLSContext(
+      null,
+      async (tx) =>
+        tx.user.updateMany({
+          where: {
+            id: userId,
+            OR: [{ lastWeeklySummarySent: null }, { lastWeeklySummarySent: { lt: weekStart } }],
+          },
+          data: { lastWeeklySummarySent: new Date() },
+        }),
+      { isAdmin: true }
+    );
+    if (claim.count !== 1) return; // another instance already claimed this user this week
 
     await notifyWeeklySummary(userId, {
       inRangePct: data.inRangePct,
@@ -154,7 +275,7 @@ const REMINDER_INTERVAL_DAYS: Record<string, number> = {
 };
 const DEFAULT_REMINDER_INTERVAL_DAYS = 7;
 
-async function sendGoalReminders(): Promise<void> {
+export async function sendGoalReminders(): Promise<void> {
   const nowMs = Date.now();
 
   // Users with at least one active goal. Filter at the DB so we skip users
@@ -176,8 +297,16 @@ async function sendGoalReminders(): Promise<void> {
 
   let sent = 0;
   await runBatched(userRows, 20, async ({ id: userId }) => {
-    // Only remind about goals whose cadence has elapsed since the last reminder.
-    const dueGoals = await withRLSContext(userId, async (tx) => {
+    const now = new Date();
+
+    // Read the due goals, then CLAIM each via a compare-and-swap on its
+    // lastReminderSent (stamp BEFORE the send). The CAS makes the stamp atomic:
+    // a concurrent ticker's UPDATE matches 0 rows because the value it read is
+    // already advanced, so a goal is reminded once even if the advisory lock was
+    // lost. Stamp-before-send biases to "missed once" over "sent twice", which
+    // is correct for engagement email. (Replaces the old read→notify→updateMany
+    // shape whose TOCTOU window let concurrent ticks both send.)
+    const claimedGoals = await withRLSContext(userId, async (tx) => {
       const goals = await tx.healthGoal.findMany({
         where: { userId, status: 'ACTIVE' },
         select: {
@@ -189,7 +318,7 @@ async function sendGoalReminders(): Promise<void> {
         },
         orderBy: { targetDate: 'asc' },
       });
-      return goals.filter((g) => {
+      const due = goals.filter((g) => {
         const intervalDays =
           REMINDER_INTERVAL_DAYS[g.reminderFrequency ?? ''] ?? DEFAULT_REMINDER_INTERVAL_DAYS;
         if (!g.lastReminderSent) return true;
@@ -197,25 +326,26 @@ async function sendGoalReminders(): Promise<void> {
         // 1h grace so a daily sweep that drifts slightly still fires on schedule.
         return elapsed >= intervalDays * 24 * ONE_HOUR_MS - ONE_HOUR_MS;
       });
+
+      const won: typeof due = [];
+      for (const g of due) {
+        const res = await tx.healthGoal.updateMany({
+          // CAS: only stamp if lastReminderSent is still exactly what we read.
+          where: { id: g.id, userId, lastReminderSent: g.lastReminderSent ?? null },
+          data: { lastReminderSent: now },
+        });
+        if (res.count === 1) won.push(g);
+      }
+      return won;
     });
 
-    if (dueGoals.length === 0) return;
+    if (claimedGoals.length === 0) return;
 
     await notifyGoalReminder(userId, {
-      goals: dueGoals.slice(0, 5).map((g) => ({
+      goals: claimedGoals.slice(0, 5).map((g) => ({
         name: g.name,
         progressPct: Number(g.progress),
       })),
-    });
-
-    // Stamp every due goal so the next reminder respects its cadence. Done
-    // after a successful notify so a send error leaves the goal due to retry.
-    const sentAt = new Date();
-    await withRLSContext(userId, async (tx) => {
-      await tx.healthGoal.updateMany({
-        where: { userId, id: { in: dueGoals.map((g) => g.id) } },
-        data: { lastReminderSent: sentAt },
-      });
     });
 
     sent += 1;
@@ -228,13 +358,10 @@ async function sendGoalReminders(): Promise<void> {
 // Plan expiring (daily)
 // ============================================
 
-async function sendPlanExpiringNotifications(): Promise<void> {
-  // Narrow to users whose expiry is between (now + 6d) and (now + 7d). The
-  // 1-day-wide window combined with the once-per-UTC-day guard in runTick
-  // (lastPlanExpiryRunKey) means each user is swept about once — no sent-at
-  // column required. If the scheduler skips a day we'll just miss that user's
-  // notification; acceptable for v1.
+export async function sendPlanExpiringNotifications(): Promise<void> {
+  // Narrow to users whose expiry is between (now + 6d) and (now + 7d).
   const now = new Date();
+  const todayStart = startOfUtcDay(now);
   const rangeStart = new Date(now.getTime() + (PLAN_EXPIRY_WINDOW_DAYS - 1) * 24 * ONE_HOUR_MS);
   const rangeEnd = new Date(now.getTime() + PLAN_EXPIRY_WINDOW_DAYS * 24 * ONE_HOUR_MS);
 
@@ -257,6 +384,25 @@ async function sendPlanExpiringNotifications(): Promise<void> {
   let sent = 0;
   await runBatched(users, 20, async (u) => {
     if (!u.planExpiresAt) return;
+
+    // Claim atomically so each user is notified at most once per UTC day even
+    // across instances. Plan-expiring previously had NO per-user marker — it
+    // relied solely on the process-local once-per-day guard, which doesn't
+    // coordinate replicas — so this closes the multi-instance duplicate gap.
+    const claim = await withRLSContext(
+      null,
+      async (tx) =>
+        tx.user.updateMany({
+          where: {
+            id: u.id,
+            OR: [{ lastPlanExpiringSent: null }, { lastPlanExpiringSent: { lt: todayStart } }],
+          },
+          data: { lastPlanExpiringSent: new Date() },
+        }),
+      { isAdmin: true }
+    );
+    if (claim.count !== 1) return; // another instance already claimed this user today
+
     const tier = normalizePlan(u.plan);
     const daysRemaining = Math.max(
       0,
@@ -284,22 +430,27 @@ export async function runTick(): Promise<void> {
   const isMondayMorning = now.getUTCDay() === 1 && now.getUTCHours() === 8;
   const dayKey = utcDayKey(now);
 
+  // Each sub-batch is wrapped in withTickLock so only ONE instance runs it per
+  // tick (the per-recipient markers inside each batch are the idempotency
+  // backstop). The in-memory day-key guards remain a cheap per-process
+  // pre-filter to avoid re-attempting within the same process-day; they are no
+  // longer the correctness boundary.
   try {
     if (isMondayMorning && lastWeeklyRunKey !== dayKey) {
       lastWeeklyRunKey = dayKey;
-      await sendWeeklySummaries();
+      await withTickLock(LOCK_KEY_WEEKLY, sendWeeklySummaries);
     }
     // Goal reminders sweep once per UTC day; each goal is then honored at its
     // own reminderFrequency cadence inside sendGoalReminders (via lastReminderSent).
     if (lastGoalReminderRunKey !== dayKey) {
       lastGoalReminderRunKey = dayKey;
-      await sendGoalReminders();
+      await withTickLock(LOCK_KEY_GOAL_REMINDER, sendGoalReminders);
     }
     // Once per UTC day (see lastPlanExpiryRunKey) — the hourly tick would
     // otherwise re-notify each in-window user ~24×.
     if (lastPlanExpiryRunKey !== dayKey) {
       lastPlanExpiryRunKey = dayKey;
-      await sendPlanExpiringNotifications();
+      await withTickLock(LOCK_KEY_PLAN_EXPIRY, sendPlanExpiringNotifications);
     }
   } catch (err) {
     logger.error('[EmailScheduler] Tick failed', {
@@ -322,4 +473,14 @@ export function stopEmailScheduler(): void {
     schedulerInterval = null;
     logger.info('[EmailScheduler] Stopped');
   }
+}
+
+/**
+ * Test-only: reset the module-scoped per-process day-key guards so each test
+ * starts from a clean slate (they persist across runTick calls by design).
+ */
+export function __resetSchedulerStateForTests(): void {
+  lastWeeklyRunKey = null;
+  lastPlanExpiryRunKey = null;
+  lastGoalReminderRunKey = null;
 }
