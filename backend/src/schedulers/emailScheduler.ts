@@ -122,7 +122,11 @@ export async function withTickLock(key: number, fn: () => Promise<void>): Promis
   const prisma = getPrismaClient();
   let ran = false;
   try {
-    await prisma.$transaction(
+    // An advisory lock is a server-global facility, not a table row, so this
+    // transaction deliberately runs OUTSIDE withRLSContext and touches no
+    // RLS-protected table (only pg_try_advisory_xact_lock). The sub-batch's own
+    // per-user reads/sends inside fn() keep their withRLSContext wrappers.
+    await prisma.$transaction( // RLS-exempt: advisory lock only; no RLS-protected table touched
       async (tx) => {
         const rows = await tx.$queryRaw<{ locked: boolean }[]>`
           SELECT pg_try_advisory_xact_lock(${BigInt(key)}) AS locked
