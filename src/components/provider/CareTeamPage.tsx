@@ -38,11 +38,16 @@ interface PermissionState {
   canEditData: boolean;
 }
 
+// M3: `canEditData` is intentionally NOT offered as a toggle — providers are
+// read-only (there is no provider write route), so presenting an "Edit data"
+// consent would overstate the provider's actual capability. The field still
+// exists in PermissionState and is sent as its default (false) on approve/update
+// so the DB contract is unchanged; it is simply not patient-settable until a
+// real provider-write feature is designed. Re-add a row here when that ships.
 const PERMISSION_LABELS: { key: keyof PermissionState; label: string; hint: string }[] = [
   { key: 'canViewBiomarkers', label: 'Biomarkers & lab results', hint: 'View your tracked measurements and history' },
   { key: 'canViewInsurance', label: 'Insurance & coverage', hint: 'View your plans and benefits' },
   { key: 'canViewHealthNeeds', label: 'Health needs', hint: 'View conditions, follow-ups, and recommended services' },
-  { key: 'canEditData', label: 'Edit data', hint: 'Allow this provider to add or change your records' },
 ];
 
 const DURATION_OPTIONS = [
