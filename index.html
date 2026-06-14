@@ -33,7 +33,14 @@
         - Strict-Transport-Security (HSTS)        (HTTPS pinning; header-only)
         - X-Content-Type-Options: nosniff         (MIME sniffing; header-only)
       GCS object metadata can't deliver these, so they are tracked as the
-      documented edge-config remainder for RT-H2.
+      documented edge-config remainder for RT-H2. The exact provisioning steps
+      live in the "Provision frontend edge security headers" RUNBOOK playbook.
+
+      INTERIM (M16/L14): clickjacking is mitigated in-app by the frame-bust in
+      src/utils/frameGuard.ts (the app refuses to mount inside a frame), so the
+      missing real frame-ancestors/X-Frame-Options header is defense-in-depth
+      rather than the sole control until the edge layer ships. HSTS and nosniff
+      remain genuinely edge-only and are NOT yet enforced.
     -->
     <meta
       http-equiv="Content-Security-Policy"
