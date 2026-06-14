@@ -194,6 +194,64 @@ gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://ownmy
 
 For staging, build with `npm run build -- --mode staging` (loads `.env.staging`, `deploy-staging.yml:113`) and target `gs://ownmyhealth-frontend-staging/`.
 
+### 5.3 Provision frontend edge security headers (HSTS / nosniff / clickjacking) — teardown M16 / L14 / L15
+
+The SPA is served **directly** from `gs://ownmyhealth-frontend` with no proxy, so the only response headers it can carry are `Content-Type` + `Cache-Control` (GCS object metadata) and the `<meta http-equiv>` CSP baked into `index.html`. The following are **header-only** and therefore cannot be set on a directly-served bucket:
+
+- `Strict-Transport-Security` (HSTS — HTTPS pinning)
+- `X-Content-Type-Options: nosniff` (MIME-sniff defense)
+- `X-Frame-Options: DENY` / `Content-Security-Policy: frame-ancestors 'none'` (a meta-delivered `frame-ancestors` is **ignored** by browsers)
+
+**Interim (already shipped):** clickjacking is mitigated in-app by the frame-bust in `src/utils/frameGuard.ts` (the app refuses to mount inside a frame). This makes the missing real `frame-ancestors`/`X-Frame-Options` header defense-in-depth rather than the sole control. **HSTS and nosniff are still NOT enforced** — they require the edge layer below.
+
+**Real fix (requires provisioning — apply by hand, then cut over DNS):** front the bucket with an **external HTTPS load balancer + backend-bucket** and attach a **response-headers policy**. This is the same missing HTTPS LB that the Cloud Armor / DDoS playbook needs (§13 "Rate-limit abuse / DDoS"), so provision once and reuse.
+
+```bash
+# Project / names
+P=ownmyhealth-prod; REGION=us-central1
+BUCKET=ownmyhealth-frontend
+DOMAIN=app.ownmyhealth.io
+
+# 1. Reserve a global anycast IP for the LB
+gcloud compute addresses create omh-frontend-ip --global --project="$P"
+gcloud compute addresses describe omh-frontend-ip --global --project="$P" --format='value(address)'
+
+# 2. Backend bucket fronting the GCS bucket, with Cloud CDN
+gcloud compute backend-buckets create omh-frontend-be \
+  --gcs-bucket-name="$BUCKET" --enable-cdn --project="$P"
+
+# 3. Response-headers policy: the real security headers (HSTS/nosniff/frame/CSP)
+#    NOTE: custom-response-headers live on the backend-bucket. Update it:
+gcloud compute backend-buckets update omh-frontend-be --project="$P" \
+  --custom-response-header='Strict-Transport-Security: max-age=63072000; includeSubDomains; preload' \
+  --custom-response-header='X-Content-Type-Options: nosniff' \
+  --custom-response-header='X-Frame-Options: DENY' \
+  --custom-response-header='Content-Security-Policy: frame-ancestors '"'"'none'"'"''
+
+# 4. URL map → target HTTPS proxy → managed cert → forwarding rule
+gcloud compute url-maps create omh-frontend-urlmap --default-backend-bucket=omh-frontend-be --project="$P"
+gcloud compute ssl-certificates create omh-frontend-cert --domains="$DOMAIN" --global --project="$P"
+gcloud compute target-https-proxies create omh-frontend-proxy \
+  --url-map=omh-frontend-urlmap --ssl-certificates=omh-frontend-cert --project="$P"
+gcloud compute forwarding-rules create omh-frontend-fr --global \
+  --address=omh-frontend-ip --target-https-proxy=omh-frontend-proxy --ports=443 --project="$P"
+
+# 5. (Recommended) HTTP→HTTPS redirect so HSTS is established on first hit
+#    Create an HTTP url-map with a 301 redirect + an :80 forwarding rule on the
+#    same IP. (omitted for brevity — `gcloud compute url-maps import` with a
+#    redirectAction: { httpsRedirect: true }.)
+```
+
+**DNS cutover (the irreversible-ish step — do during a low-traffic window):** point `app.ownmyhealth.io` A record at the reserved `omh-frontend-ip`. The managed cert provisions only **after** DNS resolves to the LB (can take up to ~60 min). Verify before/after:
+
+```bash
+# After cutover + cert ACTIVE:
+curl -sI https://app.ownmyhealth.io/ | grep -iE 'strict-transport-security|x-content-type-options|x-frame-options|content-security-policy'
+gcloud compute ssl-certificates describe omh-frontend-cert --global --project="$P" --format='value(managed.status)'  # → ACTIVE
+```
+
+Once shipped: keep the `index.html` `<meta>` CSP as defense-in-depth, update its INFRA-REMAINDER comment to reference this section, and codify the above in IaC (this repo has no Terraform yet — if/when it adopts one, port these resources so the edge config can't drift). The in-app frame-bust can stay (harmless once the real header is present).
+
 ---
 
 ## 6. Rollback
