@@ -9,6 +9,7 @@
 
 import { logger } from '../utils/logger.js';
 import { InternalServerError, ValidationError } from '../middleware/errorHandler.js';
+import { delimitDocumentForPrompt } from '../middleware/validation.js';
 import { trackAIUsage } from './aiCostTracker.js';
 import { extractTextFromPDF } from './pdfTextExtraction.js';
 import { redactPHI, stripPHIFromText } from '../utils/phiRedaction.js';
@@ -813,7 +814,9 @@ export async function extractInsuranceFromSBC(
           content: [
             {
               type: 'text',
-              text: `${SBC_EXTRACTION_PROMPT}\n\n--- SBC DOCUMENT TEXT (PHI-redacted) ---\n${redactedText}\n\nNote: patient/subscriber identifiers have been redacted as [*_REDACTED] tokens. Do not attempt to reconstruct them.`,
+              // M10: the SBC body is untrusted — delimit it and mark it as data,
+              // not instructions. The redaction note stays OUTSIDE the data block.
+              text: `${SBC_EXTRACTION_PROMPT}\n\n${delimitDocumentForPrompt(redactedText)}\n\nNote: patient/subscriber identifiers have been redacted as [*_REDACTED] tokens. Do not attempt to reconstruct them.`,
             },
           ],
         },

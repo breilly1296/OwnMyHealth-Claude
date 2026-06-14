@@ -10,6 +10,7 @@
 
 import { logger } from '../utils/logger.js';
 import { InternalServerError, ValidationError } from '../middleware/errorHandler.js';
+import { delimitDocumentForPrompt } from '../middleware/validation.js';
 import { redactPHI, stripPHIFromText } from '../utils/phiRedaction.js';
 import { trackAIUsage } from './aiCostTracker.js';
 import { extractTextFromPDF } from './pdfTextExtraction.js';
@@ -155,7 +156,9 @@ export async function extractBiomarkersWithClaude(
           content: [
             {
               type: 'text',
-              text: `${EXTRACTION_PROMPT}\n\n--- LAB REPORT TEXT (PHI-redacted) ---\n${redactedText}`,
+              // M10: the document body is untrusted — delimit it and mark it as
+              // data, not instructions (it's PHI-redacted, not injection-safe).
+              text: `${EXTRACTION_PROMPT}\n\n${delimitDocumentForPrompt(redactedText)}`,
             },
           ],
         },
