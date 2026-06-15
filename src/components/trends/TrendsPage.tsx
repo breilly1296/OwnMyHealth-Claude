@@ -27,6 +27,9 @@ import { calculateTrend, type TrendInfo } from '../../utils/biomarkers/trendCalc
 interface TrendsPageProps {
   /** Array of all biomarkers to display */
   biomarkers: Biomarker[];
+  /** ONB-7: opens the lab-upload flow from the empty-state CTA (its copy already
+   *  says "upload a lab report", but there was no button). */
+  onUploadLab?: () => void;
 }
 
 type TimeRange = '30d' | '90d' | '1y' | 'all';
@@ -83,7 +86,7 @@ const filterByTimeRange = (biomarker: Biomarker, range: TimeRange): Biomarker =>
   };
 };
 
-export default function TrendsPage({ biomarkers }: TrendsPageProps) {
+export default function TrendsPage({ biomarkers, onUploadLab }: TrendsPageProps) {
   // State
   const [selectedCategory, setSelectedCategory] = useState<BiomarkerCategoryType | 'All'>('All');
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
@@ -302,6 +305,15 @@ export default function TrendsPage({ biomarkers }: TrendsPageProps) {
               ? `You don't have any biomarkers in the "${selectedCategory}" category yet. Upload a lab report to populate it.`
               : 'Once you have 2+ readings of a biomarker, trend charts will appear here. Upload another lab report to start seeing how your numbers move.'}
           </p>
+          {onUploadLab && (
+            <button
+              type="button"
+              onClick={onUploadLab}
+              className="mt-6 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
+            >
+              Upload Lab Report
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
