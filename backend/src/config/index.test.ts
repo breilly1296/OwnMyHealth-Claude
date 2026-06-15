@@ -129,3 +129,75 @@ describe('config — JWT secrets (C-3)', () => {
     expect((mod.config.jwt as Record<string, unknown>).expiresIn).toBeUndefined();
   });
 });
+
+// M7 — `cookie.secure` must be derived from the resolved SameSite (forced for any
+// cross-site / COOKIE_DOMAIN deploy, in every tier), not gated on production
+// alone. The bug: staging (NODE_ENV=staging, COOKIE_SAME_SITE=none) emitted
+// SameSite=None WITHOUT Secure, so the browser dropped every auth/refresh/csrf
+// cookie. These tests pin the derivation so a regression can't reintroduce the
+// impossible None-without-Secure combination (which the boot invariant also
+// guards — but the derivation makes that combo unreachable via config, the
+// invariant is the tripwire for a future edit to the derivation itself).
+describe('config — cookie Secure/SameSite (M7)', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+    delete process.env.NODE_ENV;
+    delete process.env.COOKIE_SAME_SITE;
+    delete process.env.COOKIE_DOMAIN;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('dev with no overrides: secure=false, sameSite=lax (keeps npm run dev usable)', async () => {
+    validEnv(); // NODE_ENV=development
+    delete process.env.COOKIE_SAME_SITE;
+    delete process.env.COOKIE_DOMAIN;
+    const { config } = await import('./index.js');
+    expect(config.cookie.secure).toBe(false);
+    expect(config.cookie.sameSite).toBe('lax');
+  });
+
+  it('production same-domain: secure=true, sameSite=strict', async () => {
+    validEnv();
+    process.env.NODE_ENV = 'production';
+    // prod/staging validation rejects the all-zeros placeholder PHI key and
+    // production requires GCS_BUCKET_NAME — set real-ish values so module load
+    // reaches the cookie config under test.
+    process.env.PHI_ENCRYPTION_KEY = 'a'.repeat(64);
+    process.env.GCS_BUCKET_NAME = 'test-bucket';
+    const { config } = await import('./index.js');
+    expect(config.cookie.secure).toBe(true);
+    expect(config.cookie.sameSite).toBe('strict');
+  });
+
+  it('staging forces Secure even on the same-domain path', async () => {
+    validEnv();
+    process.env.NODE_ENV = 'staging';
+    process.env.PHI_ENCRYPTION_KEY = 'a'.repeat(64);
+    const { config } = await import('./index.js');
+    expect(config.cookie.secure).toBe(true);
+  });
+
+  it('COOKIE_DOMAIN set → sameSite=none AND secure forced true', async () => {
+    validEnv();
+    process.env.COOKIE_DOMAIN = '.ownmyhealth.io';
+    const { config } = await import('./index.js');
+    expect(config.cookie.sameSite).toBe('none');
+    expect(config.cookie.secure).toBe(true);
+  });
+
+  it('the staging bug scenario: COOKIE_SAME_SITE=none now FORCES secure=true (no longer None-without-Secure)', async () => {
+    validEnv();
+    process.env.NODE_ENV = 'staging';
+    process.env.PHI_ENCRYPTION_KEY = 'a'.repeat(64);
+    process.env.COOKIE_SAME_SITE = 'none';
+    const { config } = await import('./index.js');
+    expect(config.cookie.sameSite).toBe('none');
+    expect(config.cookie.secure).toBe(true);
+  });
+});
