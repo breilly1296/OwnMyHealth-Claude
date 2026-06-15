@@ -17,6 +17,7 @@
 import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 import { logger } from '../utils/logger.js';
 import { InternalServerError, BadRequestError } from '../middleware/errorHandler.js';
+import { PdfPageLimitError } from '../utils/securePdfParsing.js';
 import { config } from '../config/index.js';
 import {
   type ExtractedBiomarker,
@@ -403,6 +404,16 @@ export async function processDocument(
         return await processPDFWithClaude(buffer, mimeType, startTime, userId);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        // L28: an over-long PDF must HARD-REJECT, not degrade into per-page
+        // Document AI OCR (which bills per page — the exact downstream cost
+        // amplification the page cap exists to prevent). Re-throw so the upload
+        // fails with a 400 before any OCR cost is incurred. Mirrors the re-throw
+        // in pdfTextExtraction; without it the BAA-active deploy would still
+        // amplify cost via the fallback below.
+        if (error instanceof PdfPageLimitError) {
+          throw error;
+        }
 
         // Scanned PDFs surface as a no-extractable-text failure from the
         // text-only Claude path. If a BAA is active, route the raw PDF bytes
