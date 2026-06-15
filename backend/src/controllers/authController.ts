@@ -140,6 +140,17 @@ function clearAuthCookies(res: Response): void {
     path: '/',
     ...(config.cookie.domain && { domain: config.cookie.domain }),
   });
+  // L26: also clear the double-submit csrf_token cookie. It is httpOnly:false
+  // (JS-readable) and previously survived logout until its own maxAge, leaving a
+  // stale double-submit token usable on the device. Mirror setCsrfCookie's
+  // attributes (notably httpOnly:false) so the browser matches and deletes it.
+  res.clearCookie('csrf_token', {
+    httpOnly: false,
+    secure: config.cookie.secure,
+    sameSite: config.cookie.sameSite,
+    path: '/',
+    ...(config.cookie.domain && { domain: config.cookie.domain }),
+  });
 }
 
 /**

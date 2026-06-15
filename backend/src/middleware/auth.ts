@@ -12,7 +12,7 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
-import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
+import { JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
 import { UnauthorizedError } from './errorHandler.js';
 import { isTokenRevoked, isAccessTokenStale } from '../services/authService.js';
 import type { AuthenticatedRequest } from '../types/index.js';
@@ -242,24 +242,9 @@ export async function requireBearerAuth(
   }
 }
 
-/**
- * Generate JWT token (legacy support for other parts of the app)
- */
-export function generateToken(payload: { id: string; email: string; role?: string }): string {
-  return jwt.sign(
-    { ...payload, type: 'access' },
-    config.jwt.accessSecret,
-    { ...JWT_SIGN_OPTIONS, expiresIn: config.jwt.accessExpiresIn }
-  );
-}
-
-/**
- * Verify token without middleware (utility function)
- */
-export function verifyToken(token: string): JwtPayload | null {
-  try {
-    return jwt.verify(token, config.jwt.accessSecret, JWT_VERIFY_OPTIONS) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
+// L22: the legacy generateToken()/verifyToken() helpers were removed. They had
+// no production or test callers (verified by grep) and were a latent foot-gun:
+// verifyToken did a bare jwt.verify with no isTokenRevoked / isAccessTokenStale
+// check, so anything that started using it would have accepted revoked/stale
+// access tokens that the real authenticate() path rejects. Token mint/verify now
+// lives solely in authService (the revocation-aware path).

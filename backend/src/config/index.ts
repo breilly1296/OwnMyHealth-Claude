@@ -75,6 +75,25 @@ function parseBudget(raw: string | undefined, fallback: number, name: string): n
   return n;
 }
 
+// Cookie security tier (M7). A SameSite=None cookie is silently REJECTED by
+// browsers unless it is also Secure, so `secure` must be derived from the
+// resolved SameSite — not gated on NODE_ENV==='production' alone. Staging sets
+// COOKIE_SAME_SITE=none (cross-subdomain app./api.) while NODE_ENV='staging',
+// which previously produced SameSite=None + Secure=false → the browser dropped
+// every auth/refresh/csrf cookie and login silently failed. We now force Secure
+// whenever the cookie must cross sites (SameSite=None) or a COOKIE_DOMAIN is
+// configured, in any tier. The boot invariant after the config object hard-fails
+// the impossible None-without-Secure combination so a future env typo or edit to
+// this derivation can't reintroduce it.
+const resolvedSameSite: 'strict' | 'lax' | 'none' =
+  (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
+  (process.env.COOKIE_DOMAIN ? 'none' : (isProductionEnv ? 'strict' : 'lax'));
+const resolvedCookieSecure =
+  isProductionEnv ||
+  isStagingEnv ||
+  resolvedSameSite === 'none' ||
+  !!process.env.COOKIE_DOMAIN;
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -112,10 +131,12 @@ export const config = {
   // - Set COOKIE_SAME_SITE=none (required for cross-domain)
   // - Secure will be true in production (required when SameSite=none)
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    // secure/sameSite are resolved together above (M7). A SameSite=None cookie
+    // MUST be Secure or the browser drops it, so `secure` is no longer gated on
+    // production alone — it is forced for any cross-site (None) or COOKIE_DOMAIN
+    // deploy, including staging.
+    secure: resolvedCookieSecure,
     httpOnly: true,
-    // Cross-domain requires SameSite=none; same-domain can use strict/lax
-    // If COOKIE_DOMAIN is set, default to 'none' for cross-domain support
     // sameSite default rules:
     //   - explicit COOKIE_SAME_SITE env wins (cross-domain staging sets 'none')
     //   - cross-domain (COOKIE_DOMAIN set) → 'none' (required for SameSite=none cookies)
@@ -123,8 +144,7 @@ export const config = {
     //   - dev same-domain → 'lax' (keeps copy-paste-link flows usable from `npm run dev`)
     // Was 'lax' on production same-domain too; tightened in F-18 fix. Override
     // via COOKIE_SAME_SITE if a deploy needs the looser policy temporarily.
-    sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
-      (process.env.COOKIE_DOMAIN ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax')),
+    sameSite: resolvedSameSite,
     domain: process.env.COOKIE_DOMAIN || undefined,
     maxAge: {
       accessToken: 15 * 60 * 1000, // 15 minutes in ms
@@ -271,6 +291,20 @@ export const config = {
   isStaging: isStagingEnv,
   isProduction: isProductionEnv,
 } as const;
+
+// M7 invariant — SameSite=None without Secure is silently rejected by browsers,
+// which would drop the auth/refresh/csrf cookies entirely (login appears to fail
+// for no visible reason). The derivation above already forces Secure for
+// cross-site cookies; this guard ensures a future edit to that logic, or a manual
+// COOKIE_SAME_SITE=none on an insecure tier, can't reintroduce the impossible
+// combination. Runs in every environment.
+if (config.cookie.sameSite === 'none' && !config.cookie.secure) {
+  throw new Error(
+    'Invalid cookie configuration: SameSite=None requires Secure=true — browsers ' +
+    'silently reject SameSite=None cookies that are not Secure, dropping auth/refresh/csrf. ' +
+    'Check COOKIE_SAME_SITE / COOKIE_DOMAIN / NODE_ENV.'
+  );
+}
 
 // Universal JWT-secret-quality checks — run in EVERY environment, not just prod.
 // The hardcoded-default strings no longer reach this code (the fallbacks were

@@ -205,7 +205,9 @@ describe('POST /auth/logout (teardown #5 — idle logoff must end the session)',
 
     // Both auth cookies cleared.
     expect(clearedCookieNames(res)).toEqual(
-      expect.arrayContaining(['access_token', 'refresh_token'])
+      // L26: the JS-readable csrf_token double-submit cookie is also cleared on
+      // logout so no stale token survives the session.
+      expect.arrayContaining(['access_token', 'refresh_token', 'csrf_token'])
     );
 
     // Audit attributed via the refresh-session lookup (req.user is absent).
@@ -228,7 +230,9 @@ describe('POST /auth/logout (teardown #5 — idle logoff must end the session)',
     expect(mocks.revokeAccessTokenCrossInstance).not.toHaveBeenCalled();
     // Cookies still cleared so a stale/unknown cookie set never survives.
     expect(clearedCookieNames(res)).toEqual(
-      expect.arrayContaining(['access_token', 'refresh_token'])
+      // L26: the JS-readable csrf_token double-submit cookie is also cleared on
+      // logout so no stale token survives the session.
+      expect.arrayContaining(['access_token', 'refresh_token', 'csrf_token'])
     );
     // Unattributed audit entry per existing pattern.
     expect(mocks.logAuth).toHaveBeenCalledWith(
@@ -251,7 +255,9 @@ describe('POST /auth/logout (teardown #5 — idle logoff must end the session)',
     expect(res.body).toMatchObject({ success: true });
     expect(mocks.revokeRefreshToken).toHaveBeenCalledWith('garbage');
     expect(clearedCookieNames(res)).toEqual(
-      expect.arrayContaining(['access_token', 'refresh_token'])
+      // L26: the JS-readable csrf_token double-submit cookie is also cleared on
+      // logout so no stale token survives the session.
+      expect.arrayContaining(['access_token', 'refresh_token', 'csrf_token'])
     );
   });
 
@@ -333,7 +339,9 @@ describe('POST /auth/logout behind the REAL global csrfProtection (app.ts parity
     expect(res.body).toMatchObject({ success: true });
     expect(mocks.revokeRefreshToken).toHaveBeenCalledWith(REFRESH_COOKIE_VALUE);
     expect(clearedCookieNames(res)).toEqual(
-      expect.arrayContaining(['access_token', 'refresh_token'])
+      // L26: the JS-readable csrf_token double-submit cookie is also cleared on
+      // logout so no stale token survives the session.
+      expect.arrayContaining(['access_token', 'refresh_token', 'csrf_token'])
     );
   });
 

@@ -44,7 +44,11 @@ export function setCsrfCookie(res: Response, token?: string): string {
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     path: '/',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    // L26: tie the double-submit token lifetime to the session (refresh-token)
+    // lifetime instead of an arbitrary fixed 24h. A new csrf_token is re-issued
+    // on every successful /refresh, and the cookie is now cleared on logout
+    // (clearAuthCookies), so it never outlives the session it protects.
+    maxAge: config.cookie.maxAge.refreshToken,
   };
 
   // Add domain for cross-domain cookie sharing
