@@ -34,6 +34,7 @@ import { getAnthropicClient } from '../services/anthropicClient.js';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { stripPHIFromText } from '../utils/phiRedaction.js';
+import { disclaimerToAppend } from '../utils/aiDisclaimer.js';
 
 const RESOURCE_TYPE = 'HealthGuide';
 // L-35: Blocked/failed chats must NOT consume the daily aiChatsPerDay quota.
@@ -202,6 +203,20 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
 
   const messages = [...sanitizedHistory, { role: 'user' as const, content: sanitizedMessage }];
 
+  // L42: write a FAIL-CLOSED pre-flight audit BEFORE any PHI leaves for Anthropic
+  // (and before SSE headers are flushed, so a failed write still surfaces as a
+  // clean JSON 500). The success/failure audits below run only after the stream
+  // completes or in the catch — a process death mid-stream would otherwise leave
+  // the external PHI disclosure unrecorded. If this row can't be written, we
+  // refuse to make the call rather than disclose PHI without an audit trail.
+  await auditService.logAccess(
+    RESOURCE_TYPE_ATTEMPT,
+    undefined,
+    { req, userId },
+    { operation: 'CHAT_INITIATED', externalApiCall: true, model: MODEL },
+    { failClosed: true }
+  );
+
   // 3. Set SSE headers and start streaming.
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -232,6 +247,9 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
     // for an educational chat; avoids the higher-risk alternative of
     // emitting raw chunks and hoping Claude never reflects PHI.
     let scrubBuffer = '';
+    // L33: accumulate the post-scrub text actually emitted to the client so we
+    // can verify the educational disclaimer is present after the stream ends.
+    let emittedText = '';
 
     for await (const event of stream) {
       // Pass through text deltas to the client. Other event types
@@ -243,9 +261,11 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
           const flushLen = scrubBuffer.length - PHI_SCRUB_WINDOW;
           const toFlush = scrubBuffer.slice(0, flushLen);
           scrubBuffer = scrubBuffer.slice(flushLen);
+          const cleaned = stripPHIFromText(toFlush);
+          emittedText += cleaned;
           writeSSE(res, {
             type: 'content_block_delta',
-            delta: { text: stripPHIFromText(toFlush) },
+            delta: { text: cleaned },
           });
         }
       }
@@ -254,9 +274,23 @@ export async function handleAIChat(req: AuthenticatedRequest, res: Response): Pr
     // Flush the remaining tail. At EOF there's no more incoming text, so
     // any PHI pattern in the buffer is fully visible to the scrubber.
     if (scrubBuffer.length > 0) {
+      const cleaned = stripPHIFromText(scrubBuffer);
+      emittedText += cleaned;
       writeSSE(res, {
         type: 'content_block_delta',
-        delta: { text: stripPHIFromText(scrubBuffer) },
+        delta: { text: cleaned },
+      });
+    }
+
+    // L33: the system prompt asks Claude to append the educational disclaimer,
+    // but that is model-dependent. If the streamed answer doesn't already carry
+    // an equivalent, emit it as a final text delta so every SSE/API consumer
+    // receives it regardless of what the model produced.
+    const disclaimerTail = disclaimerToAppend(emittedText);
+    if (disclaimerTail) {
+      writeSSE(res, {
+        type: 'content_block_delta',
+        delta: { text: disclaimerTail },
       });
     }
 

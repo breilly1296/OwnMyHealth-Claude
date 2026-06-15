@@ -39,6 +39,7 @@ import { getAnthropicClient, isEnabled as isAnthropicEnabled } from '../services
 import { toNumber } from '../utils/numberConversion.js';
 import { config } from '../config/index.js';
 import { stripPHIFromText } from '../utils/phiRedaction.js';
+import { disclaimerToAppend } from '../utils/aiDisclaimer.js';
 import type { AuthenticatedRequest } from '../types/index.js';
 
 const router = Router();
@@ -253,7 +254,11 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
       // Matches the response-sanitization pattern in claudeExtraction.ts.
       const textContent = response.content.find((block) => block.type === 'text');
       const rawText = textContent && textContent.type === 'text' ? textContent.text : '';
-      const guidance = stripPHIFromText(rawText || 'Unable to generate guidance');
+      let guidance = stripPHIFromText(rawText || 'Unable to generate guidance');
+      // L33: guarantee the educational disclaimer server-side instead of relying
+      // on the model to honor the prompt instruction.
+      const disclaimerTail = disclaimerToAppend(guidance);
+      if (disclaimerTail) guidance += disclaimerTail;
 
       // Track AI usage for cost monitoring. Always call trackAIUsage — a
       // missing `usage` object must not silently skip cost tracking. Mirrors
