@@ -10,6 +10,26 @@ export interface NormalRange {
   source: string;
 }
 
+/**
+ * Per-analyte trend directionality (DV-3/JC-2). A property of the analyte type,
+ * resolved by name via src/data/biomarkerDirections.ts — NOT stored on a row.
+ */
+export type BiomarkerDirection =
+  | 'higherIsBetter'
+  | 'lowerIsBetter'
+  | 'targetBand'
+  | 'unknown';
+
+/** Result of the centralized, direction-aware biomarker trend classifier. */
+export interface TrendClassification {
+  /** Clinical reading of the change (color is driven by this, not by the arrow). */
+  status: 'improving' | 'worsening' | 'stable' | 'insufficient';
+  /** Signed % change oldest→newest, or null when not computable. */
+  magnitudePct: number | null;
+  /** Raw movement for the glyph only — decoupled from good/bad. */
+  direction: 'up' | 'down' | 'flat';
+}
+
 // Biomarker category type - all supported categories (24 total)
 export type BiomarkerCategoryType =
   // Core categories

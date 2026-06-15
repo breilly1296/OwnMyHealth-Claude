@@ -17,6 +17,7 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';
+import { classifyBiomarker, getTrendDisplay } from '../../utils/biomarkers/trendCalculations';
 
 interface BiomarkerGraphProps {
   /** The biomarker data to visualize */
@@ -29,22 +30,9 @@ export default function BiomarkerGraph({ biomarker, compact = false }: Biomarker
   const history = biomarker.history;
   if (!history || history.length === 0) return null;
 
-  // Calculate trend
-  const getTrend = () => {
-    if (history.length < 2) return { direction: 'stable', change: 0 };
-
-    const recent = history[history.length - 1].value;
-    const previous = history[history.length - 2].value;
-    const change = ((recent - previous) / previous) * 100;
-
-    if (Math.abs(change) < 2) return { direction: 'stable', change: 0 };
-    return {
-      direction: change > 0 ? 'up' : 'down',
-      change: Math.abs(change).toFixed(1)
-    };
-  };
-
-  const trend = getTrend();
+  // DV-3/JC-2: direction-aware trend (rising HDL = improving/green, not amber).
+  const trendClass = classifyBiomarker(biomarker);
+  const trendDisplay = getTrendDisplay(trendClass);
   const isInRange = biomarker.value >= biomarker.normalRange.min && biomarker.value <= biomarker.normalRange.max;
 
   if (compact) {
@@ -71,22 +59,22 @@ export default function BiomarkerGraph({ biomarker, compact = false }: Biomarker
               </span>
               <span className="text-sm text-slate-500">{biomarker.unit}</span>
             </div>
-            {trend.direction !== 'stable' && (
-              <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${
-                trend.direction === 'up' ? 'text-amber-600' : 'text-wellness-600'
-              }`}>
-                {trend.direction === 'up' ? (
+            {trendDisplay.arrow !== 'flat' ? (
+              <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${trendDisplay.textClass}`}>
+                {trendDisplay.arrow === 'up' ? (
                   <TrendingUp className="w-3 h-3" />
                 ) : (
                   <TrendingDown className="w-3 h-3" />
                 )}
-                <span>{trend.change}% from last</span>
+                <span>
+                  {trendClass.magnitudePct !== null ? `${Math.abs(trendClass.magnitudePct).toFixed(1)}% ` : ''}
+                  {trendDisplay.label.toLowerCase()}
+                </span>
               </div>
-            )}
-            {trend.direction === 'stable' && (
+            ) : (
               <div className="flex items-center justify-end gap-1 mt-1 text-xs text-slate-400">
                 <Minus className="w-3 h-3" />
-                <span>Stable</span>
+                <span>{trendDisplay.label}</span>
               </div>
             )}
           </div>
