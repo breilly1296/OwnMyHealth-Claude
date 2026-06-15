@@ -16,6 +16,7 @@
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Activity, Target } from 'lucide-react';
 import { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';
+import { classifyBiomarker, getTrendDisplay } from '../../utils/biomarkers/trendCalculations';
 
 interface TrendModalProps {
   /** Controls modal visibility */
@@ -29,41 +30,32 @@ interface TrendModalProps {
 export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalProps) {
   if (!isOpen) return null;
 
-  // Calculate statistics
+  // Statistics over history (min/max/avg are directional-agnostic).
   const getStats = () => {
     if (!biomarker.history || biomarker.history.length === 0) {
-      return {
-        min: biomarker.value,
-        max: biomarker.value,
-        avg: biomarker.value,
-        trend: { direction: 'stable', change: 0 }
-      };
+      return { min: biomarker.value, max: biomarker.value, avg: biomarker.value };
     }
-
-    const values = biomarker.history.map(h => h.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-
-    // Calculate trend
-    let trend = { direction: 'stable' as 'up' | 'down' | 'stable', change: 0 };
-    if (biomarker.history.length >= 2) {
-      const recent = biomarker.history[biomarker.history.length - 1].value;
-      const previous = biomarker.history[biomarker.history.length - 2].value;
-      const change = ((recent - previous) / previous) * 100;
-
-      if (Math.abs(change) >= 2) {
-        trend = {
-          direction: change > 0 ? 'up' : 'down',
-          change: Math.abs(change)
-        };
-      }
-    }
-
-    return { min, max, avg, trend };
+    const values = biomarker.history.map((h) => h.value);
+    return {
+      min: Math.min(...values),
+      max: Math.max(...values),
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
+    };
   };
 
   const stats = getStats();
+  // DV-3/JC-2: direction-aware trend — a rising HDL is improving (green), a
+  // rising LDL is worsening (red); color follows clinical status, not the arrow.
+  const trend = classifyBiomarker(biomarker);
+  const trendDisplay = getTrendDisplay(trend);
+  const trendVerb =
+    trendDisplay.label === 'Improving'
+      ? 'improving'
+      : trendDisplay.label === 'Worsening'
+        ? 'worsening'
+        : trendDisplay.label === 'Not enough data'
+          ? '—'
+          : 'stable';
   const isInRange = biomarker.value >= biomarker.normalRange.min && biomarker.value <= biomarker.normalRange.max;
   const isLow = biomarker.value < biomarker.normalRange.min;
 
@@ -113,28 +105,22 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
             {/* Trend */}
             <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200/60 dark:border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                {stats.trend.direction === 'up' ? (
-                  <TrendingUp className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                ) : stats.trend.direction === 'down' ? (
-                  <TrendingDown className="w-4 h-4 text-wellness-500 dark:text-wellness-400" />
+                {trendDisplay.arrow === 'up' ? (
+                  <TrendingUp className={`w-4 h-4 ${trendDisplay.textClass}`} />
+                ) : trendDisplay.arrow === 'down' ? (
+                  <TrendingDown className={`w-4 h-4 ${trendDisplay.textClass}`} />
                 ) : (
                   <Minus className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 )}
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Trend</span>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-bold ${
-                  stats.trend.direction === 'up' ? 'text-amber-600 dark:text-amber-400' :
-                  stats.trend.direction === 'down' ? 'text-wellness-600 dark:text-wellness-400' :
-                  'text-slate-600 dark:text-slate-400'
-                }`}>
-                  {stats.trend.change > 0 ? `${stats.trend.change.toFixed(1)}%` : '—'}
+                <span className={`text-2xl font-bold ${trendDisplay.textClass}`}>
+                  {trend.magnitudePct !== null && Math.abs(trend.magnitudePct) >= 5
+                    ? `${Math.abs(trend.magnitudePct).toFixed(1)}%`
+                    : '—'}
                 </span>
-                <span className="text-sm text-slate-400 dark:text-slate-500">
-                  {stats.trend.direction === 'up' ? 'increase' :
-                   stats.trend.direction === 'down' ? 'decrease' :
-                   'stable'}
-                </span>
+                <span className="text-sm text-slate-400 dark:text-slate-500">{trendVerb}</span>
               </div>
             </div>
 

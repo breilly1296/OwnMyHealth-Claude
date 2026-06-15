@@ -19,6 +19,7 @@ import { X, TrendingUp, TrendingDown, Minus, Activity, Target, Calendar, BarChar
 import type { Biomarker } from '../../types';
 import { BiomarkerChart } from '../biomarkers';
 import BiomarkerAIGuidance from './BiomarkerAIGuidance';
+import { classifyBiomarker } from '../../utils/biomarkers/trendCalculations';
 
 interface TrendDetailModalProps {
   /** Controls modal visibility */
@@ -63,30 +64,19 @@ export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDe
     const max = Math.max(...allValues);
     const avg = allValues.reduce((a, b) => a + b, 0) / allValues.length;
 
-    // Calculate percent change from oldest to newest
-    const oldest = history[0].value;
-    const percentChange = oldest !== 0 ? ((current - oldest) / oldest) * 100 : 0;
-
-    // Determine direction
-    let direction: 'up' | 'down' | 'stable' = 'stable';
-    if (Math.abs(percentChange) >= 5) {
-      direction = percentChange > 0 ? 'up' : 'down';
-    }
-
-    // Determine if improving (moving toward normal range midpoint)
-    const midRange = (biomarker.normalRange.min + biomarker.normalRange.max) / 2;
-    const wasCloser = Math.abs(oldest - midRange);
-    const isCloser = Math.abs(current - midRange);
-    const isImproving = isCloser < wasCloser;
+    // DV-3/JC-2: direction-aware status via the central classifier — replaces the
+    // inline "moving toward the range midpoint = improving" heuristic, which
+    // mis-scored one-sided analytes (a rising HDL read as declining).
+    const c = classifyBiomarker(biomarker);
 
     return {
       min,
       max,
       avg,
       current,
-      percentChange: Math.abs(percentChange),
-      direction,
-      isImproving: Math.abs(percentChange) >= 5 ? isImproving : null,
+      percentChange: c.magnitudePct === null ? 0 : Math.abs(c.magnitudePct),
+      direction: c.direction === 'flat' ? 'stable' : c.direction,
+      isImproving: c.status === 'improving' ? true : c.status === 'worsening' ? false : null,
     };
   }, [biomarker]);
 
