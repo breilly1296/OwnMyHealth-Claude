@@ -295,7 +295,7 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       case 'Trends':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <TrendsPage biomarkers={biomarkers} />
+            <TrendsPage biomarkers={biomarkers} onUploadLab={() => modals.open('pdfUpload')} />
           </Suspense>
         );
       case 'Health Guide':

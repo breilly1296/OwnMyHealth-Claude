@@ -159,6 +159,35 @@ export function DashboardContent({
         </p>
       </div>
 
+      {/* ONB-7: at zero data, lead with the upload CTA instead of burying it
+          below the stat cards, Quick Actions, and ~24 empty category cards. */}
+      {biomarkers.length === 0 && (
+        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 mb-8">
+          <Activity className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            No biomarkers tracked yet
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+            Upload a lab report to see your health data at a glance.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 justify-center">
+            <button
+              onClick={onOpenAddMeasurement}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add manually
+            </button>
+            <button
+              onClick={onOpenPDFUpload}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
+            >
+              Upload Lab Report
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {/* Biomarkers in Range */}
@@ -293,7 +322,9 @@ export function DashboardContent({
         </div>
       </div>
 
-      {/* Category Cards */}
+      {/* Category Cards — hidden at zero data (ONB-7): 24 empty "0 biomarkers"
+          cards are noise; the empty-state hero above leads the first run. */}
+      {biomarkers.length > 0 && (
       <div>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           Categories
@@ -359,35 +390,6 @@ export function DashboardContent({
             })}
         </div>
       </div>
-
-      {/* Empty State — action-oriented, leads with the upload path because a
-          PDF populates the dashboard instantly. Manual entry is a secondary
-          option for users who don't have a lab report handy. */}
-      {biomarkers.length === 0 && (
-        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 mt-8">
-          <Activity className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-            No biomarkers tracked yet
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
-            Upload a lab report to see your health data at a glance.
-          </p>
-          <div className="flex flex-col-reverse sm:flex-row gap-2 justify-center">
-            <button
-              onClick={onOpenAddMeasurement}
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add manually
-            </button>
-            <button
-              onClick={onOpenPDFUpload}
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-slate-900 dark:bg-brand-600 rounded-xl hover:bg-slate-800 dark:hover:bg-brand-700 transition-colors"
-            >
-              Upload Lab Report
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
