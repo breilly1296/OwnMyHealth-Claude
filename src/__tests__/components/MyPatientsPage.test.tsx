@@ -173,4 +173,31 @@ describe('MyPatientsPage', () => {
     expect(await screen.findByText('Vitamin D')).toBeInTheDocument();
     expect(screen.getByText(/22 ng\/mL/i)).toBeInTheDocument();
   });
+
+  // PA-1: a granted-but-failed sub-fetch must not read as an empty chart.
+  it('shows a per-section error + retry (not a false "No biomarkers recorded.") when a sub-fetch fails', async () => {
+    mocked.getPatients.mockResolvedValue([activeRel()]);
+    mocked.getPatient.mockResolvedValue(detailResponse({ canViewBiomarkers: true }));
+    // First biomarker fetch 403s/500s under a granted-access header.
+    mocked.getPatientBiomarkers.mockRejectedValueOnce(new Error('403 Forbidden'));
+    render(<MyPatientsPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^view$/i }));
+
+    // Error + retry, NOT the clinical false-negative.
+    expect(await screen.findByText(/couldn.t load biomarkers/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no biomarkers recorded/i)).not.toBeInTheDocument();
+
+    // Retry re-fetches; the second call succeeds → rows render, error clears.
+    mocked.getPatientBiomarkers.mockResolvedValueOnce([
+      {
+        id: 'b1', name: 'Vitamin D', value: 22, unit: 'ng/mL', date: '2026-03-01', category: 'Vitamins',
+        normalRange: { min: 30, max: 100 }, isOutOfRange: true,
+      },
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+    expect(await screen.findByText('Vitamin D')).toBeInTheDocument();
+    expect(screen.queryByText(/couldn.t load biomarkers/i)).not.toBeInTheDocument();
+  });
 });

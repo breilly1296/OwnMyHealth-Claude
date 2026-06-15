@@ -124,7 +124,7 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
             </label>
             <input
               type="number"
-              step="0.1"
+              step="any"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
@@ -152,7 +152,7 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
                     <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Min</label>
                     <input
                       type="number"
-                      step="0.1"
+                      step="any"
                       value={normalRange.min}
                       onChange={(e) => setNormalRange(prev => ({ ...prev, min: parseFloat(e.target.value) }))}
                       className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
@@ -163,7 +163,7 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
                     <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Max</label>
                     <input
                       type="number"
-                      step="0.1"
+                      step="any"
                       value={normalRange.max}
                       onChange={(e) => setNormalRange(prev => ({ ...prev, max: parseFloat(e.target.value) }))}
                       className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"

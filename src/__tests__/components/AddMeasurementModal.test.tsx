@@ -371,6 +371,22 @@ describe('AddMeasurementModal', () => {
         );
       });
     });
+
+    it('uses step="any" so fine-grained decimals (e.g. 0.85) are not rejected (CF-4)', async () => {
+      render(<AddMeasurementModal {...defaultProps} />);
+
+      const valueInput = screen.getByRole('spinbutton');
+      expect(valueInput).toHaveAttribute('step', 'any'); // not step="0.1"
+
+      const dropdown = screen.getByRole('combobox');
+      fireEvent.change(dropdown, { target: { value: 'Glucose' } });
+      await userEvent.type(valueInput, '0.85');
+      fireEvent.click(screen.getByRole('button', { name: /add measurement/i }));
+
+      await waitFor(() => {
+        expect(mockOnAdd).toHaveBeenCalledWith(expect.objectContaining({ value: 0.85 }));
+      });
+    });
   });
 
   describe('Empty Category', () => {

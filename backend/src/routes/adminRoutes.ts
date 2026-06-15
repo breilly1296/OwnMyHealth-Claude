@@ -73,6 +73,11 @@ router.get(
               emailVerified: true,
               createdAt: true,
               lastLoginAt: true,
+              // PA-2: the Users tab renders each user's plan, but these columns
+              // were omitted from the select, so every row showed the FREE
+              // default and a successful plan change visually reverted on reload.
+              plan: true,
+              planExpiresAt: true,
               _count: {
                 select: {
                   biomarkers: true,

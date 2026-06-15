@@ -90,6 +90,13 @@ export default function MyPatientsPage() {
   const [insurance, setInsurance] = useState<InsurancePlanData[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  // PA-1: track per-section sub-fetch failures so a 403/500 renders an error +
+  // retry instead of a clinical false-negative ("No biomarkers recorded.").
+  const [sectionErrors, setSectionErrors] = useState<{
+    biomarkers?: boolean;
+    healthNeeds?: boolean;
+    insurance?: boolean;
+  }>({});
 
   const showToast = useCallback((msg: string, type: 'success' | 'error') => {
     setToast({ message: msg, type });
@@ -140,18 +147,19 @@ export default function MyPatientsPage() {
     setBiomarkers([]);
     setHealthNeeds([]);
     setInsurance([]);
+    setSectionErrors({});
     try {
       const d = await providerApi.getPatient(patientId);
       setDetail(d as PatientDetail);
       const tasks: Promise<void>[] = [];
       if (d.relationship.permissions.canViewBiomarkers) {
-        tasks.push(providerApi.getPatientBiomarkers(patientId).then((b) => setBiomarkers(b)).catch(() => undefined));
+        tasks.push(providerApi.getPatientBiomarkers(patientId).then((b) => setBiomarkers(b)).catch(() => setSectionErrors((s) => ({ ...s, biomarkers: true }))));
       }
       if (d.relationship.permissions.canViewHealthNeeds) {
-        tasks.push(providerApi.getPatientHealthNeeds(patientId).then((n) => setHealthNeeds(n)).catch(() => undefined));
+        tasks.push(providerApi.getPatientHealthNeeds(patientId).then((n) => setHealthNeeds(n)).catch(() => setSectionErrors((s) => ({ ...s, healthNeeds: true }))));
       }
       if (d.relationship.permissions.canViewInsurance) {
-        tasks.push(providerApi.getPatientInsurance(patientId).then((p) => setInsurance(p)).catch(() => undefined));
+        tasks.push(providerApi.getPatientInsurance(patientId).then((p) => setInsurance(p)).catch(() => setSectionErrors((s) => ({ ...s, insurance: true }))));
       }
       await Promise.all(tasks);
     } catch (err) {
@@ -172,6 +180,22 @@ export default function MyPatientsPage() {
       showToast(extractErrorMessage(err, 'Failed to remove patient'), 'error');
     }
   };
+
+  // PA-1: a permission-gated/failed sub-fetch must not read as an empty record.
+  const renderSectionError = (label: string) => (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm text-amber-700 dark:text-amber-400">
+        Couldn&apos;t load {label} — this may be a temporary error, not an empty record.
+      </p>
+      <button
+        type="button"
+        onClick={() => selectedId && openDetail(selectedId)}
+        className="inline-flex items-center gap-1 text-sm text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap"
+      >
+        <RefreshCw className="w-4 h-4" /> Retry
+      </button>
+    </div>
+  );
 
   // ---- Detail view ----
   if (selectedId) {
@@ -215,7 +239,9 @@ export default function MyPatientsPage() {
                   </h2>
                 </div>
                 <div className="p-4 sm:p-6">
-                  {biomarkers.length === 0 ? (
+                  {sectionErrors.biomarkers ? (
+                    renderSectionError('biomarkers')
+                  ) : biomarkers.length === 0 ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">No biomarkers recorded.</p>
                   ) : (
                     <div className="space-y-2">
@@ -260,7 +286,9 @@ export default function MyPatientsPage() {
                   </h2>
                 </div>
                 <div className="p-4 sm:p-6">
-                  {healthNeeds.length === 0 ? (
+                  {sectionErrors.healthNeeds ? (
+                    renderSectionError('health needs')
+                  ) : healthNeeds.length === 0 ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">No health needs recorded.</p>
                   ) : (
                     <div className="space-y-2">
@@ -298,7 +326,9 @@ export default function MyPatientsPage() {
                   </h2>
                 </div>
                 <div className="p-4 sm:p-6">
-                  {insurance.length === 0 ? (
+                  {sectionErrors.insurance ? (
+                    renderSectionError('insurance plans')
+                  ) : insurance.length === 0 ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">No insurance plans recorded.</p>
                   ) : (
                     <div className="space-y-2">

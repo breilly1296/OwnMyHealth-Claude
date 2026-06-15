@@ -201,7 +201,11 @@ export function useBiomarkerData({
         if (!cancelled) {
           const errorMsg = error instanceof Error ? error.message : 'Failed to load biomarkers';
           dashboardLogger.error('Error fetching biomarkers', { error: errorMsg });
-          onErrorRef.current(`${errorMsg}. Using sample data for demonstration.`);
+          // JC-5: do NOT claim "sample data" — an authenticated user has no sample
+          // set (initialBiomarkers is []), so the old copy told them their record
+          // was replaced by demo data. Report the load failure honestly. (A
+          // page-level error+Retry state is the larger FB-2 follow-up.)
+          onErrorRef.current(`Couldn't load your biomarkers — ${errorMsg}. Please try again.`);
           setBiomarkers(initialBiomarkersRef.current);
         }
       } finally {
