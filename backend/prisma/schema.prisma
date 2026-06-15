@@ -514,12 +514,12 @@ model AuditLog {
   resourceId             String?     @map("resource_id") @db.Uuid
   previousValueEncrypted String?     @map("previous_value_encrypted")
   newValueEncrypted      String?     @map("new_value_encrypted")
-  // Legacy plaintext metadata (pre-encryption rows). New rows write
-  // metadataEncrypted instead; this column is retained read-only for history.
-  metadata               String?
   // AES-256-GCM ciphertext of the metadata JSON (system-salt key), so PHI that
   // can ride in metadata (e.g. filenames) is held to the same field-level
-  // encryption standard as previous/new values.
+  // encryption standard as previous/new values. The legacy plaintext `metadata`
+  // column (pre-2026-06-06 rows) was DROPPED in migration
+  // 20260615_drop_legacy_audit_metadata (M6) — it held plaintext PHI residue and
+  // the audit table is immutable-by-RLS so it could not be re-encrypted in place.
   metadataEncrypted      String?     @map("metadata_encrypted")
   success                Boolean     @default(true)
   errorMessage           String?     @map("error_message")

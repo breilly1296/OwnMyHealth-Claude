@@ -21005,7 +21005,6 @@ export namespace Prisma {
     resourceId: string | null
     previousValueEncrypted: string | null
     newValueEncrypted: string | null
-    metadata: string | null
     metadataEncrypted: string | null
     success: boolean | null
     errorMessage: string | null
@@ -21024,7 +21023,6 @@ export namespace Prisma {
     resourceId: string | null
     previousValueEncrypted: string | null
     newValueEncrypted: string | null
-    metadata: string | null
     metadataEncrypted: string | null
     success: boolean | null
     errorMessage: string | null
@@ -21043,7 +21041,6 @@ export namespace Prisma {
     resourceId: number
     previousValueEncrypted: number
     newValueEncrypted: number
-    metadata: number
     metadataEncrypted: number
     success: number
     errorMessage: number
@@ -21064,7 +21061,6 @@ export namespace Prisma {
     resourceId?: true
     previousValueEncrypted?: true
     newValueEncrypted?: true
-    metadata?: true
     metadataEncrypted?: true
     success?: true
     errorMessage?: true
@@ -21083,7 +21079,6 @@ export namespace Prisma {
     resourceId?: true
     previousValueEncrypted?: true
     newValueEncrypted?: true
-    metadata?: true
     metadataEncrypted?: true
     success?: true
     errorMessage?: true
@@ -21102,7 +21097,6 @@ export namespace Prisma {
     resourceId?: true
     previousValueEncrypted?: true
     newValueEncrypted?: true
-    metadata?: true
     metadataEncrypted?: true
     success?: true
     errorMessage?: true
@@ -21194,7 +21188,6 @@ export namespace Prisma {
     resourceId: string | null
     previousValueEncrypted: string | null
     newValueEncrypted: string | null
-    metadata: string | null
     metadataEncrypted: string | null
     success: boolean
     errorMessage: string | null
@@ -21230,7 +21223,6 @@ export namespace Prisma {
     resourceId?: boolean
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
-    metadata?: boolean
     metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
@@ -21250,7 +21242,6 @@ export namespace Prisma {
     resourceId?: boolean
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
-    metadata?: boolean
     metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
@@ -21270,7 +21261,6 @@ export namespace Prisma {
     resourceId?: boolean
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
-    metadata?: boolean
     metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
@@ -21290,14 +21280,13 @@ export namespace Prisma {
     resourceId?: boolean
     previousValueEncrypted?: boolean
     newValueEncrypted?: boolean
-    metadata?: boolean
     metadataEncrypted?: boolean
     success?: boolean
     errorMessage?: boolean
     createdAt?: boolean
   }
 
-  export type AuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "actorType" | "ipAddress" | "userAgent" | "sessionId" | "action" | "resourceType" | "resourceId" | "previousValueEncrypted" | "newValueEncrypted" | "metadata" | "metadataEncrypted" | "success" | "errorMessage" | "createdAt", ExtArgs["result"]["auditLog"]>
+  export type AuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "actorType" | "ipAddress" | "userAgent" | "sessionId" | "action" | "resourceType" | "resourceId" | "previousValueEncrypted" | "newValueEncrypted" | "metadataEncrypted" | "success" | "errorMessage" | "createdAt", ExtArgs["result"]["auditLog"]>
   export type AuditLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | AuditLog$userArgs<ExtArgs>
   }
@@ -21325,7 +21314,6 @@ export namespace Prisma {
       resourceId: string | null
       previousValueEncrypted: string | null
       newValueEncrypted: string | null
-      metadata: string | null
       metadataEncrypted: string | null
       success: boolean
       errorMessage: string | null
@@ -21765,7 +21753,6 @@ export namespace Prisma {
     readonly resourceId: FieldRef<"AuditLog", 'String'>
     readonly previousValueEncrypted: FieldRef<"AuditLog", 'String'>
     readonly newValueEncrypted: FieldRef<"AuditLog", 'String'>
-    readonly metadata: FieldRef<"AuditLog", 'String'>
     readonly metadataEncrypted: FieldRef<"AuditLog", 'String'>
     readonly success: FieldRef<"AuditLog", 'Boolean'>
     readonly errorMessage: FieldRef<"AuditLog", 'String'>
@@ -28481,7 +28468,6 @@ export namespace Prisma {
     resourceId: 'resourceId',
     previousValueEncrypted: 'previousValueEncrypted',
     newValueEncrypted: 'newValueEncrypted',
-    metadata: 'metadata',
     metadataEncrypted: 'metadataEncrypted',
     success: 'success',
     errorMessage: 'errorMessage',
@@ -30789,7 +30775,6 @@ export namespace Prisma {
     resourceId?: UuidNullableFilter<"AuditLog"> | string | null
     previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
-    metadata?: StringNullableFilter<"AuditLog"> | string | null
     metadataEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     success?: BoolFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableFilter<"AuditLog"> | string | null
@@ -30809,7 +30794,6 @@ export namespace Prisma {
     resourceId?: SortOrderInput | SortOrder
     previousValueEncrypted?: SortOrderInput | SortOrder
     newValueEncrypted?: SortOrderInput | SortOrder
-    metadata?: SortOrderInput | SortOrder
     metadataEncrypted?: SortOrderInput | SortOrder
     success?: SortOrder
     errorMessage?: SortOrderInput | SortOrder
@@ -30832,7 +30816,6 @@ export namespace Prisma {
     resourceId?: UuidNullableFilter<"AuditLog"> | string | null
     previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
-    metadata?: StringNullableFilter<"AuditLog"> | string | null
     metadataEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     success?: BoolFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableFilter<"AuditLog"> | string | null
@@ -30852,7 +30835,6 @@ export namespace Prisma {
     resourceId?: SortOrderInput | SortOrder
     previousValueEncrypted?: SortOrderInput | SortOrder
     newValueEncrypted?: SortOrderInput | SortOrder
-    metadata?: SortOrderInput | SortOrder
     metadataEncrypted?: SortOrderInput | SortOrder
     success?: SortOrder
     errorMessage?: SortOrderInput | SortOrder
@@ -30877,7 +30859,6 @@ export namespace Prisma {
     resourceId?: UuidNullableWithAggregatesFilter<"AuditLog"> | string | null
     previousValueEncrypted?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
-    metadata?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     metadataEncrypted?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
     success?: BoolWithAggregatesFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableWithAggregatesFilter<"AuditLog"> | string | null
@@ -33664,7 +33645,6 @@ export namespace Prisma {
     resourceId?: string | null
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
-    metadata?: string | null
     metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
@@ -33684,7 +33664,6 @@ export namespace Prisma {
     resourceId?: string | null
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
-    metadata?: string | null
     metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
@@ -33702,7 +33681,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33722,7 +33700,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33741,7 +33718,6 @@ export namespace Prisma {
     resourceId?: string | null
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
-    metadata?: string | null
     metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
@@ -33759,7 +33735,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33778,7 +33753,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
@@ -36311,7 +36285,6 @@ export namespace Prisma {
     resourceId?: SortOrder
     previousValueEncrypted?: SortOrder
     newValueEncrypted?: SortOrder
-    metadata?: SortOrder
     metadataEncrypted?: SortOrder
     success?: SortOrder
     errorMessage?: SortOrder
@@ -36330,7 +36303,6 @@ export namespace Prisma {
     resourceId?: SortOrder
     previousValueEncrypted?: SortOrder
     newValueEncrypted?: SortOrder
-    metadata?: SortOrder
     metadataEncrypted?: SortOrder
     success?: SortOrder
     errorMessage?: SortOrder
@@ -36349,7 +36321,6 @@ export namespace Prisma {
     resourceId?: SortOrder
     previousValueEncrypted?: SortOrder
     newValueEncrypted?: SortOrder
-    metadata?: SortOrder
     metadataEncrypted?: SortOrder
     success?: SortOrder
     errorMessage?: SortOrder
@@ -38632,7 +38603,6 @@ export namespace Prisma {
     resourceId?: string | null
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
-    metadata?: string | null
     metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
@@ -38650,7 +38620,6 @@ export namespace Prisma {
     resourceId?: string | null
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
-    metadata?: string | null
     metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
@@ -39478,7 +39447,6 @@ export namespace Prisma {
     resourceId?: UuidNullableFilter<"AuditLog"> | string | null
     previousValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     newValueEncrypted?: StringNullableFilter<"AuditLog"> | string | null
-    metadata?: StringNullableFilter<"AuditLog"> | string | null
     metadataEncrypted?: StringNullableFilter<"AuditLog"> | string | null
     success?: BoolFilter<"AuditLog"> | boolean
     errorMessage?: StringNullableFilter<"AuditLog"> | string | null
@@ -46215,7 +46183,6 @@ export namespace Prisma {
     resourceId?: string | null
     previousValueEncrypted?: string | null
     newValueEncrypted?: string | null
-    metadata?: string | null
     metadataEncrypted?: string | null
     success?: boolean
     errorMessage?: string | null
@@ -46545,7 +46512,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46563,7 +46529,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46581,7 +46546,6 @@ export namespace Prisma {
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     previousValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     newValueEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
-    metadata?: NullableStringFieldUpdateOperationsInput | string | null
     metadataEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     success?: BoolFieldUpdateOperationsInput | boolean
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
