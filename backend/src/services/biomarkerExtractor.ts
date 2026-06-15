@@ -503,6 +503,12 @@ export function extractBiomarkersFromText(text: string): ExtractedBiomarker[] {
   return combined;
 }
 
+// L31: absolute magnitude ceiling applied to EVERY extracted value, including
+// analytes we don't recognize. Generous enough for any real measurement (viral
+// loads reach ~1e8 copies/mL); its job is to reject Infinity / NaN / overflow
+// garbage from an OCR/Claude extraction, not to tightly range-check.
+const MAX_BIOMARKER_MAGNITUDE = 1e12;
+
 /**
  * Validate extracted biomarker values
  */
@@ -511,6 +517,13 @@ export function validateBiomarkerValue(
   value: number,
   _unit: string
 ): { valid: boolean; reason?: string } {
+  // Bound ALL values first — an unknown name must not skip numeric validation.
+  // Only magnitude is checked (not sign): some analytes are legitimately
+  // negative, e.g. base excess.
+  if (!Number.isFinite(value) || Math.abs(value) > MAX_BIOMARKER_MAGNITUDE) {
+    return { valid: false, reason: `Value ${value} is not a plausible measurement` };
+  }
+
   const biomarker = ALL_BIOMARKERS.find(
     (b) => b.name === name || b.aliases.some((a) => a.toLowerCase() === name.toLowerCase())
   );

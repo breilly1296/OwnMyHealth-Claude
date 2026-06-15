@@ -26,6 +26,19 @@ import {
 } from './shared.js';
 
 /**
+ * L32: the Claude-extracted effectiveDate is a free-text string. Passing an
+ * unparseable value to `new Date()` yields an Invalid Date, which throws a
+ * RangeError when Prisma serializes it for persistence — surfacing as an opaque
+ * 500 on an otherwise-successful extraction. Parse defensively and fall back to
+ * the supplied default when the result isn't a valid date.
+ */
+function safeDate(raw: string | null | undefined, fallback: Date): Date {
+  if (!raw) return fallback;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+/**
  * Upload and process an insurance SBC PDF.
  * Creates a new InsurancePlan with extracted coverage data and persists the
  * source PDF to GCS as a UserFile (F-21).
@@ -66,9 +79,7 @@ export async function uploadSBC(
 
   const planName = extractedData.planName || `Uploaded Plan ${new Date().toLocaleDateString()}`;
   const insurerName = extractedData.insurerName || 'Unknown Insurer';
-  const effectiveDate = extractedData.effectiveDate
-    ? new Date(extractedData.effectiveDate)
-    : new Date();
+  const effectiveDate = safeDate(extractedData.effectiveDate, new Date());
 
   // Persist source PDF to GCS (F-21). Non-fatal on failure — the plan is
   // still created; only the file record is skipped.
@@ -279,9 +290,7 @@ export async function reanalyzePlan(
         insurerName: extractedData.insurerName || existingPlan.insurerName,
         planType: extractedData.planType || existingPlan.planType,
         planIdNumber: extractedData.planIdNumber ?? existingPlan.planIdNumber,
-        effectiveDate: extractedData.effectiveDate
-          ? new Date(extractedData.effectiveDate)
-          : existingPlan.effectiveDate,
+        effectiveDate: safeDate(extractedData.effectiveDate, existingPlan.effectiveDate),
         premiumMonthly: extractedData.premiumMonthly ?? existingPlan.premiumMonthly,
         deductibleIndividual: extractedData.deductibleIndividual ?? Number(existingPlan.deductibleIndividual),
         deductibleFamily:
