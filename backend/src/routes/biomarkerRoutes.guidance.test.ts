@@ -271,10 +271,11 @@ describe('POST /biomarkers/:id/guidance (C-7 + F-3)', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({
-        success: true,
-        data: { guidance: 'Canned guidance text.' },
-      });
+      expect(res.body.success).toBe(true);
+      // L33: the mocked model output carries no disclaimer, so the server
+      // appends the canonical educational disclaimer to the returned guidance.
+      expect(res.body.data.guidance).toContain('Canned guidance text.');
+      expect(res.body.data.guidance).toContain('This information is educational only');
 
       // Post-F-29: assert against the SDK call shape. messages.create
       // receives `{ model, max_tokens, messages: [{ role, content }] }` as

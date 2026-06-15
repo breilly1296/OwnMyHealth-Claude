@@ -28,5 +28,8 @@ describe('disclaimerToAppend (L33)', () => {
     ).toBeNull();
     expect(disclaimerToAppend('Always consult a health care professional.')).toBeNull();
     expect(disclaimerToAppend('Consult healthcare provider for diagnosis.')).toBeNull();
+    // The exact wording the system prompts instruct (gerund + "with" ordering).
+    expect(disclaimerToAppend('We recommend consulting a healthcare provider.')).toBeNull();
+    expect(disclaimerToAppend('Please consult with your healthcare provider.')).toBeNull();
   });
 });

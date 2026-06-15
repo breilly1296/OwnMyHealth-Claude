@@ -22,7 +22,11 @@ export const AI_DISCLAIMER =
  * model-supplied disclaimer doesn't cause a duplicate.
  */
 export function disclaimerToAppend(emitted: string): string | null {
-  if (/consult\s+(?:your|a|with)?\s*(?:health\s*care|healthcare)\s+(?:provider|professional)/i.test(emitted)) {
+  // Match the common phrasings the system prompts themselves instruct, so a
+  // model-supplied disclaimer doesn't get a duplicate appended:
+  //   "consult your healthcare provider", "consult a health care professional",
+  //   "recommend consulting a healthcare provider", "consult with your provider".
+  if (/consult(?:ing)?\s+(?:with\s+)?(?:your|a|the)?\s*(?:health\s*care|healthcare)\s+(?:provider|professional)/i.test(emitted)) {
     return null;
   }
   return `\n\n${AI_DISCLAIMER}`;
