@@ -342,7 +342,10 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       case 'Account Settings':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <AccountSettingsPage onBack={() => handleCategorySelect('Overview')} />
+            <AccountSettingsPage
+              onBack={() => handleCategorySelect('Overview')}
+              onLabSynced={refreshBiomarkers}
+            />
           </Suspense>
         );
       default:

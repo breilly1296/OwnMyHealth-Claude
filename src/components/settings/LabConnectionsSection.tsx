@@ -34,6 +34,9 @@ import { extractErrorMessage } from '../../utils/errorHelpers';
 interface LabConnectionsSectionProps {
   onError?: (message: string) => void;
   onSuccess?: (message: string) => void;
+  /** CF-3: called after a sync that imported results, so the dashboard can
+   *  refresh its biomarkers instead of showing pre-sync numbers until reload. */
+  onSynced?: () => void;
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -100,7 +103,7 @@ function statusBadge(connection: LabConnectionSummary): StatusBadge {
   }
 }
 
-export default function LabConnectionsSection({ onError, onSuccess }: LabConnectionsSectionProps) {
+export default function LabConnectionsSection({ onError, onSuccess, onSynced }: LabConnectionsSectionProps) {
   const [connections, setConnections] = useState<LabConnectionSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -115,6 +118,8 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
   onErrorRef.current = onError;
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
+  const onSyncedRef = useRef(onSynced);
+  onSyncedRef.current = onSynced;
 
   const loadConnections = useCallback(async (): Promise<LabConnectionSummary[]> => {
     const list = await fhirApi.listConnections();
@@ -191,6 +196,11 @@ export default function LabConnectionsSection({ onError, onSuccess }: LabConnect
     try {
       const result = await fhirApi.syncConnection(id);
       await loadConnections();
+
+      // CF-3: pull the freshly-imported readings into the dashboard now, instead
+      // of the user returning to Overview and seeing pre-sync numbers (or "No
+      // biomarkers tracked yet") until a hard reload.
+      if (result.imported > 0) onSyncedRef.current?.();
 
       // Build ONE toast for the whole outcome. The parent has a single toast
       // slot, so firing success + error back-to-back would clobber the success

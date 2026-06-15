@@ -19,6 +19,7 @@ import {
   X,
   Shield,
 } from 'lucide-react';
+import { authApi } from '../../services/api';
 
 interface RegisterPageProps {
   onRegister: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
@@ -46,6 +47,12 @@ export default function RegisterPage({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  // ONB-1: after a successful registration the app used to leave the user on the
+  // same form with cleared passwords and no instruction. Show an explicit
+  // "check your inbox" state with a working resend (the endpoint already exists).
+  const [registered, setRegistered] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   // Password strength validation
   const passwordRequirements: PasswordRequirement[] = useMemo(() => [
@@ -100,8 +107,20 @@ export default function RegisterPage({
       // Clear sensitive state after successful registration
       setPassword('');
       setConfirmPassword('');
+      setRegisteredEmail(email);
+      setRegistered(true);
     } catch {
       // Error is handled by parent component
+    }
+  };
+
+  const handleResend = async () => {
+    setResendState('sending');
+    try {
+      await authApi.resendVerification(registeredEmail);
+      setResendState('sent');
+    } catch {
+      setResendState('error');
     }
   };
 
@@ -127,6 +146,43 @@ export default function RegisterPage({
         <div className="w-full max-w-md">
           {/* Register Card */}
           <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-xl p-8">
+            {registered ? (
+              <div className="text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-wellness-500/10 flex items-center justify-center mb-4">
+                  <Mail className="w-6 h-6 text-wellness-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-white mb-2">Check your inbox</h1>
+                <p className="text-slate-400 mb-6">
+                  We sent a verification link to{' '}
+                  <span className="text-white font-medium">{registeredEmail}</span>. Click it to
+                  activate your account, then sign in.
+                </p>
+                {resendState === 'sent' && (
+                  <p className="mb-4 text-sm text-wellness-400">Verification email re-sent.</p>
+                )}
+                {resendState === 'error' && (
+                  <p className="mb-4 text-sm text-red-400">Couldn&apos;t resend — please try again.</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendState === 'sending'}
+                  className="w-full py-3 px-4 bg-slate-800 text-white font-medium rounded-xl border border-slate-700 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {resendState === 'sending' ? 'Sending…' : "Didn't get it? Resend email"}
+                </button>
+                <p className="mt-6 text-center text-sm text-slate-400">
+                  <button
+                    type="button"
+                    onClick={onSwitchToLogin}
+                    className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+                  >
+                    Back to sign in
+                  </button>
+                </p>
+              </div>
+            ) : (
+            <>
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-white mb-2">Create your account</h1>
               <p className="text-slate-400">Start tracking your health journey today</p>
@@ -341,6 +397,8 @@ export default function RegisterPage({
                 Sign in
               </button>
             </p>
+            </>
+            )}
           </div>
 
           {/* Privacy Notice */}

@@ -63,9 +63,11 @@ function splitDisplayName(displayName: string): { firstName: string; lastName: s
 
 interface AccountSettingsPageProps {
   onBack: () => void;
+  /** CF-3: refresh the dashboard's biomarkers after a lab sync imports results. */
+  onLabSynced?: () => void;
 }
 
-export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps) {
+export default function AccountSettingsPage({ onBack, onLabSynced }: AccountSettingsPageProps) {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
 
@@ -419,6 +421,7 @@ export default function AccountSettingsPage({ onBack }: AccountSettingsPageProps
         <LabConnectionsSection
           onError={(message) => showToast(message, 'error')}
           onSuccess={(message) => showToast(message, 'success')}
+          onSynced={onLabSynced}
         />
 
         {/* Data & Privacy Section */}
