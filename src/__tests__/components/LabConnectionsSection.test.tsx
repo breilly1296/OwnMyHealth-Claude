@@ -101,6 +101,30 @@ describe('LabConnectionsSection', () => {
     );
   });
 
+  it('calls onSynced after a sync that imported results, so the dashboard can refresh (CF-3)', async () => {
+    mockedFhir.listConnections.mockResolvedValue([makeConnection()]);
+    mockedFhir.syncConnection.mockResolvedValue({ imported: 3, skipped: 0, unmappedCodes: [], errors: [] });
+    const onSynced = vi.fn();
+    render(<LabConnectionsSection onSynced={onSynced} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /sync now/i }));
+
+    await waitFor(() => expect(onSynced).toHaveBeenCalledTimes(1));
+  });
+
+  it('does NOT call onSynced when the sync imported nothing (no needless refetch)', async () => {
+    mockedFhir.listConnections.mockResolvedValue([makeConnection()]);
+    mockedFhir.syncConnection.mockResolvedValue({ imported: 0, skipped: 2, unmappedCodes: [], errors: [] });
+    const onSynced = vi.fn();
+    const onSuccess = vi.fn();
+    render(<LabConnectionsSection onSynced={onSynced} onSuccess={onSuccess} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /sync now/i }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled()); // sync completed
+    expect(onSynced).not.toHaveBeenCalled();
+  });
+
   it('reports a partial-failure sync as a single combined toast (no clobbered success)', async () => {
     mockedFhir.listConnections.mockResolvedValue([makeConnection()]);
     mockedFhir.syncConnection.mockResolvedValue({
