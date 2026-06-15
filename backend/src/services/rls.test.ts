@@ -426,4 +426,115 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       expect(res.count).toBe(1);
     });
   });
+
+  // L23 — provider_patients consent columns are patient-owned at the DB layer:
+  // a BEFORE UPDATE trigger reverts the permission booleans on any non-patient,
+  // non-admin write, so a provider session cannot self-grant access even though
+  // the UPDATE policy lets it write the row (for the legitimate re-request).
+  // L40 — audit_logs_insert no longer accepts a forged user_id from a non-admin
+  // user session.
+  describe('consent-column immutability (L23) + audit insert check (L40)', () => {
+    const providerMut = { id: randomUUID(), email: `rls-prov-mut-${Date.now()}@test.local` };
+    let relId = '';
+
+    beforeAll(async () => {
+      await withRLSContext(null, async (tx) => {
+        await tx.user.create({
+          data: { id: providerMut.id, email: providerMut.email, passwordHash: 'test-hash-not-used' },
+        });
+        const rel = await tx.providerPatient.create({
+          data: {
+            providerId: providerMut.id,
+            patientId: userA.id,
+            status: 'ACTIVE',
+            canViewBiomarkers: true,
+            canViewInsurance: false,
+            canViewHealthNeeds: false,
+            canEditData: false,
+          },
+        });
+        relId = rel.id;
+      });
+    });
+
+    afterAll(async () => {
+      await withRLSContext(null, async (tx) => {
+        await tx.providerPatient.deleteMany({ where: { providerId: providerMut.id } });
+        await tx.user.deleteMany({ where: { id: providerMut.id } });
+      });
+    });
+
+    it('a provider session CANNOT change the consent permission columns (trigger reverts)', async () => {
+      // Provider tries to self-escalate to insurance + edit + health-needs access.
+      await withRLSContext(providerMut.id, async (tx) => {
+        await tx.providerPatient.update({
+          where: { id: relId },
+          data: { canViewInsurance: true, canEditData: true, canViewHealthNeeds: true },
+        });
+      });
+      const row = await withRLSContext(null, async (tx) =>
+        tx.providerPatient.findUnique({ where: { id: relId } })
+      );
+      // Every consent boolean is unchanged — the provider cannot grant itself access.
+      expect(row?.canViewInsurance).toBe(false);
+      expect(row?.canEditData).toBe(false);
+      expect(row?.canViewHealthNeeds).toBe(false);
+    });
+
+    it('a provider session CAN still update its re-request fields (status / notes)', async () => {
+      await withRLSContext(providerMut.id, async (tx) => {
+        await tx.providerPatient.update({
+          where: { id: relId },
+          data: { status: 'PENDING', notesEncrypted: 'ct-rerequest' },
+        });
+      });
+      const row = await withRLSContext(null, async (tx) =>
+        tx.providerPatient.findUnique({ where: { id: relId } })
+      );
+      expect(row?.status).toBe('PENDING');
+      expect(row?.notesEncrypted).toBe('ct-rerequest');
+    });
+
+    it('the PATIENT can change the consent columns (ownership preserved)', async () => {
+      await withRLSContext(userA.id, async (tx) => {
+        await tx.providerPatient.update({
+          where: { id: relId },
+          data: { canViewInsurance: true },
+        });
+      });
+      const row = await withRLSContext(null, async (tx) =>
+        tx.providerPatient.findUnique({ where: { id: relId } })
+      );
+      expect(row?.canViewInsurance).toBe(true);
+    });
+
+    it('a non-admin user session CANNOT insert an audit row attributed to another user (L40)', async () => {
+      await expect(
+        withRLSContext(userA.id, async (tx) =>
+          tx.auditLog.create({
+            data: {
+              userId: providerMut.id, // forged — not the session user
+              actorType: 'USER',
+              action: 'READ',
+              resourceType: '__RLS_TEST_AUDIT_FORGE__',
+            },
+          })
+        )
+      ).rejects.toThrow();
+    });
+
+    it('a user session CAN insert an audit row attributed to itself (L40)', async () => {
+      const created = await withRLSContext(userA.id, async (tx) =>
+        tx.auditLog.create({
+          data: {
+            userId: userA.id,
+            actorType: 'USER',
+            action: 'READ',
+            resourceType: '__RLS_TEST_AUDIT_SELF__',
+          },
+        })
+      );
+      expect(created.userId).toBe(userA.id);
+    });
+  });
 });
