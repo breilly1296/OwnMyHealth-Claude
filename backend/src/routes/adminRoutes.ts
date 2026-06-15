@@ -735,7 +735,11 @@ router.patch(
     const prisma = getPrismaClient();
     const { id } = req.params;
     const adminId = req.user!.id;
-    const { status, canViewBiomarkers, canViewInsurance, canViewHealthNeeds, canEditData } = req.body;
+    // L37: canEditData is intentionally not read/persisted (orphaned capability —
+    // no provider route consumes it). The .strict() schema still accepts the key
+    // (so the existing admin UI's PATCH isn't rejected), but it is ignored here so
+    // it can never be flipped true until a provider edit route exists.
+    const { status, canViewBiomarkers, canViewInsurance, canViewHealthNeeds } = req.body;
 
     const auditService = getAuditLogService(prisma);
 
@@ -779,7 +783,7 @@ router.patch(
             ...(canViewBiomarkers !== undefined && { canViewBiomarkers }),
             ...(canViewInsurance !== undefined && { canViewInsurance }),
             ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
-            ...(canEditData !== undefined && { canEditData }),
+            // canEditData deliberately omitted (L37) — never persisted.
           },
         });
         return { found: true as const, blocked: false as const, existing, relationship };

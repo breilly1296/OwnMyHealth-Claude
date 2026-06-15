@@ -189,9 +189,13 @@ router.post(
       canViewBiomarkers = true,
       canViewInsurance = false,
       canViewHealthNeeds = true,
-      canEditData = false,
       consentDurationDays,
     } = req.body;
+    // L37: canEditData is intentionally NOT read/persisted — no provider route
+    // consumes it, so granting it is an orphaned capability / latent-activation
+    // trap. The relationship keeps the schema default (false) until a provider
+    // edit route exists. (The Zod schema still accepts the key for request-shape
+    // back-compat with existing clients; it is simply ignored here.)
 
     const auditService = getAuditLogService(prisma);
 
@@ -227,7 +231,6 @@ router.post(
           canViewBiomarkers,
           canViewInsurance,
           canViewHealthNeeds,
-          canEditData,
           consentGrantedAt: new Date(),
           consentExpiresAt,
         },
@@ -243,7 +246,6 @@ router.post(
         canViewBiomarkers,
         canViewInsurance,
         canViewHealthNeeds,
-        canEditData,
         consentExpiresAt: consentExpiresAt?.toISOString() ?? 'none',
       }, { req, userId: patientId, tx }, {
         operation: 'CONSENT_GRANTED',
@@ -333,7 +335,9 @@ router.patch(
     const prisma = getPrismaClient();
     const patientId = req.user!.id;
     const { id } = req.params;
-    const { canViewBiomarkers, canViewInsurance, canViewHealthNeeds, canEditData } = req.body;
+    // L37: canEditData is intentionally not read/persisted (orphaned capability —
+    // no provider route consumes it). Schema still accepts the key for back-compat.
+    const { canViewBiomarkers, canViewInsurance, canViewHealthNeeds } = req.body;
 
     const auditService = getAuditLogService(prisma);
 
@@ -385,7 +389,7 @@ router.patch(
           ...(canViewBiomarkers !== undefined && { canViewBiomarkers }),
           ...(canViewInsurance !== undefined && { canViewInsurance }),
           ...(canViewHealthNeeds !== undefined && { canViewHealthNeeds }),
-          ...(canEditData !== undefined && { canEditData }),
+          // canEditData deliberately omitted (L37) — never persisted.
         },
       });
 

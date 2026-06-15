@@ -594,6 +594,18 @@ export async function bulkCreateBiomarkers(
           // The last upsert touching a given series returns its final state.
           byId.set(biomarker.id, biomarker);
         }
+        // L41: write the bulk CREATE audit INSIDE the tx with `tx` threaded, so it
+        // commits atomically with the biomarker writes. Previously this ran AFTER
+        // the tx with no tx — a failed (failClosed) audit threw a 500 once the PHI
+        // rows were already committed, leaving persisted biomarkers with no audit
+        // trail. Now an audit failure rolls the whole batch back.
+        await auditService.logCreate(RESOURCE_TYPE, 'BULK', {
+          count: validReadings.length,
+          seriesAffected: byId.size,
+          categories: [...new Set(validReadings.map(r => r.category))],
+          names: validReadings.map(r => r.name),
+          failedCount: failedItems.length,
+        }, { req, userId, tx });
         return byId;
       },
       // Up to ~100 sequential upserts in one tx — extend past Prisma's 5s default.
@@ -634,18 +646,10 @@ export async function bulkCreateBiomarkers(
   }
 
   // One row per affected series (several readings may merge into one series).
+  // The bulk CREATE audit was written inside the transaction above (L41).
   const createdBiomarkers = await Promise.all(
     Array.from(affected.values()).map(b => toResponse(b, userSalt))
   );
-
-  // Batch audit log: CREATE for bulk biomarkers
-  await auditService.logCreate(RESOURCE_TYPE, 'BULK', {
-    count: validReadings.length,
-    seriesAffected: affected.size,
-    categories: [...new Set(validReadings.map(r => r.category))],
-    names: validReadings.map(r => r.name),
-    failedCount: failedItems.length,
-  }, { req, userId });
 
   // Determine response status - partial success returns 207
   const statusCode = failedItems.length > 0 ? 207 : 201;
