@@ -226,9 +226,14 @@ export function CategoryContent({
                     role="button"
                     tabIndex={0}
                     aria-pressed={isSelected}
-                    aria-label={`${biomarker.name} — toggle details and AI guidance`}
+                    aria-label={`${biomarker.name}, ${biomarker.value} ${biomarker.unit}`}
                     onClick={() => onSelectBiomarker(isSelected ? null : biomarker)}
                     onKeyDown={(e) => {
+                      // Only the card itself toggles — a keystroke on a nested
+                      // action button (trend/insurance) must not bubble up and
+                      // also toggle selection (those buttons only stopPropagation
+                      // on click, not keydown).
+                      if (e.target !== e.currentTarget) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         onSelectBiomarker(isSelected ? null : biomarker);
@@ -413,9 +418,12 @@ export function CategoryContent({
                             role="button"
                             tabIndex={0}
                             aria-pressed={isSelected}
-                            aria-label={`${biomarker.name} — toggle details and AI guidance`}
+                            aria-label={`${biomarker.name}, ${biomarker.value} ${biomarker.unit}`}
                             onClick={() => onSelectBiomarker(isSelected ? null : biomarker)}
                             onKeyDown={(e) => {
+                              // Card-only toggle; ignore keystrokes bubbling from
+                              // nested action buttons (see the card above).
+                              if (e.target !== e.currentTarget) return;
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
                                 onSelectBiomarker(isSelected ? null : biomarker);
