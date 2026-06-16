@@ -311,13 +311,15 @@ export class AuditLogService {
         // connection so it commits/rolls back atomically with the operation it
         // records, and we don't grab a second pooled connection mid-transaction
         // (which doubles pool usage and risks connectionTimeout stalls). The
-        // audit_logs_insert policy is WITH CHECK (true), so the user-scoped tx
-        // is allowed to insert. (#17)
+        // audit_logs_insert policy now requires user_id = current_user_id()
+        // (or admin / NULL context) — L40 — and every tx-threaded audit attributes
+        // `userId` to the enclosing session user, so the user-scoped tx satisfies
+        // the check. (#17)
         await entry.tx.auditLog.create({ data });
       } else {
-        // Standalone audit: open an admin context. WITH CHECK (true) means the
-        // wrapping isn't strictly required for RLS, but it keeps the file
-        // uniform and sidesteps any ambient current_user_id affecting SET LOCAL.
+        // Standalone audit: open an admin context so is_admin_session() satisfies
+        // the audit_logs_insert WITH CHECK regardless of the row's user_id (L40);
+        // it also sidesteps any ambient current_user_id affecting SET LOCAL.
         await withRLSContext(
           null,
           async (tx) => {
