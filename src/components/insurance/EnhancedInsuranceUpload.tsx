@@ -305,7 +305,12 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
   const handleImportPlan = (extractedData: ExtractedInsuranceData) => {
     // Convert extracted data to InsurancePlan format
     const plan: InsurancePlan = {
-      id: crypto.randomUUID(),
+      // FB-8: leave the id EMPTY. handleInsurancePlanExtracted treats a truthy
+      // plan.id as "already saved on the server" (the SBC-upload path) and skips
+      // createPlan. A fabricated client UUID here made it skip persistence, so the
+      // plan got a phantom id — same-session delete 404'd and it vanished on
+      // refresh. An empty id routes through createPlan and adopts the server id.
+      id: '',
       planName: extractedData.planInformation?.planName || 'Extracted Plan',
       insurerName: extractedData.planInformation?.insurerName || 'Unknown Insurer',
       planType: mapPlanType(extractedData.planInformation?.planType),

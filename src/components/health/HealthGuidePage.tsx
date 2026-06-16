@@ -13,9 +13,9 @@ import {
   RotateCcw,
   AlertCircle,
   User,
-  Loader2,
   Stethoscope,
   ArrowRight,
+  Square,
 } from 'lucide-react';
 import type { Biomarker, InsurancePlan } from '../../types';
 import {
@@ -248,6 +248,13 @@ export default function HealthGuidePage({
     setPageError(null);
   };
 
+  // FB-7: let the user stop a streaming response. aiApi.chat treats a
+  // caller-initiated abort as a completion (not an error), so the partial answer
+  // is kept and no error toast fires; onComplete flips isStreaming off.
+  const handleStop = () => {
+    abortRef.current?.abort();
+  };
+
   const emptyConversation = messages.length === 0;
 
   return (
@@ -346,14 +353,26 @@ export default function HealthGuidePage({
           className="flex-1 resize-none bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none max-h-32 disabled:opacity-60"
           maxLength={2000}
         />
-        <button
-          type="submit"
-          disabled={isStreaming || !input.trim()}
-          className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          aria-label="Send message"
-        >
-          {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={handleStop}
+            className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            aria-label="Stop generating"
+            title="Stop generating"
+          >
+            <Square className="w-3.5 h-3.5" fill="currentColor" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Send message"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        )}
       </form>
     </div>
   );
