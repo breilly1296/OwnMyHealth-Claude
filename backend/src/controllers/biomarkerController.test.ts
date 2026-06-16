@@ -658,10 +658,11 @@ describe('POST /biomarkers/:id/guidance — F-3 IDOR regression', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      success: true,
-      data: { guidance: 'Canned guidance text.' },
-    });
+    expect(res.body.success).toBe(true);
+    // L33: the model output carries no disclaimer, so the server appends the
+    // canonical educational disclaimer to the returned guidance.
+    expect(res.body.data.guidance).toContain('Canned guidance text.');
+    expect(res.body.data.guidance).toContain('This information is educational only');
 
     // Post-F-29: SDK call shape. messages.create receives the request body
     // directly as the first arg; no fetch URL to assert (the SDK manages
