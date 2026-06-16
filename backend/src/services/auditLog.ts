@@ -109,6 +109,13 @@ interface AuditLogEntry {
 export interface AuditOutcome {
   success?: boolean;
   errorMessage?: string;
+  /**
+   * Opt a READ/access audit into fail-closed behavior (a failed write re-throws).
+   * Access audits are best-effort by default; set this for the rare pre-flight
+   * audit that MUST be durable before an irreversible side effect — e.g. the
+   * CHAT_INITIATED row written before PHI is streamed to an external AI (L42).
+   */
+  failClosed?: boolean;
 }
 
 interface AuditContext {
@@ -377,6 +384,7 @@ export class AuditLogService {
       metadata,
       success: options?.success,
       errorMessage: options?.errorMessage,
+      failClosed: options?.failClosed,
     });
   }
 
