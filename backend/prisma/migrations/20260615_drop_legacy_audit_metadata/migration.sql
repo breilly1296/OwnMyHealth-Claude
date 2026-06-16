@@ -1,0 +1,18 @@
+-- M6 — drop the legacy plaintext audit_logs.metadata column.
+--
+-- Pre-2026-06-06 audit rows stored their metadata JSON as plaintext in this
+-- column; metadata can carry PHI (e.g. uploaded filenames logged on
+-- download/export). Migration 20260606000001 added metadata_encrypted and made
+-- NEW rows write only that, but the legacy plaintext was never backfilled —
+-- audit_logs is immutable by RLS (no UPDATE policy, FORCE-enabled) and SQL can't
+-- reproduce the app's AES-256-GCM ciphertext, so an in-place re-encryption is not
+-- possible without weakening audit-table immutability.
+--
+-- DDL is not gated by RLS, so dropping the column (run by the migration role)
+-- removes the plaintext PHI residue while keeping the audit table strictly
+-- immutable. The legacy metadata CONTENT is lost, but every row's core audit
+-- fields (who/what/when, success, resource_id) are retained — and resource_id
+-- still links each row to its source object (the F-16 "store the id, not the
+-- denormalized name" invariant), so an authorized investigator can rejoin the
+-- name under controlled access where needed.
+ALTER TABLE "audit_logs" DROP COLUMN IF EXISTS "metadata";

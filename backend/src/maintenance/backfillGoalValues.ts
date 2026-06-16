@@ -26,9 +26,10 @@
  *   Local (from backend/, with backend/.env): npm run backfill:goal-values -- [--apply] [--user <uuid>]
  *   Prod  (Cloud Run job): node dist/maintenance/backfillGoalValues.js [--apply] [--user <uuid>]
  *
- * NOTE: this covers goal VALUE columns (per-user-salt encrypted). audit_logs.metadata
- * is also legacy-plaintext but uses a different encryption context and is a
- * separate follow-up.
+ * NOTE: this covers goal VALUE columns (per-user-salt encrypted). The other
+ * legacy-plaintext residue, audit_logs.metadata, could not be re-encrypted in
+ * place (the audit table is immutable by RLS) — its plaintext column was instead
+ * DROPPED in migration 20260615_drop_legacy_audit_metadata (M6).
  */
 
 import {

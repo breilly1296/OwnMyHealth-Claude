@@ -450,7 +450,6 @@ exports.Prisma.AuditLogScalarFieldEnum = {
   resourceId: 'resourceId',
   previousValueEncrypted: 'previousValueEncrypted',
   newValueEncrypted: 'newValueEncrypted',
-  metadata: 'metadata',
   metadataEncrypted: 'metadataEncrypted',
   success: 'success',
   errorMessage: 'errorMessage',

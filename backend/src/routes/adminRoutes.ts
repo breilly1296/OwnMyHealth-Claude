@@ -1010,7 +1010,6 @@ router.get(
               action: true,
               resourceType: true,
               resourceId: true,
-              metadata: true,
               metadataEncrypted: true,
               success: true,
               errorMessage: true,
@@ -1029,7 +1028,7 @@ router.get(
         const auditService = getAuditLogService(prisma);
         const logs = rawLogs.map(({ metadataEncrypted, ...rest }) => ({
           ...rest,
-          metadata: auditService.decryptMetadata({ metadata: rest.metadata, metadataEncrypted }),
+          metadata: auditService.decryptMetadata({ metadataEncrypted }),
         }));
         return { logs, total };
       },

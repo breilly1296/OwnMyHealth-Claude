@@ -264,12 +264,15 @@ export class AuditLogService {
 
   /**
    * Decrypt an audit row's metadata for an authorized viewer (admin audit view /
-   * compliance export). New rows store the metadata JSON in `metadataEncrypted`;
-   * legacy rows kept plaintext JSON in `metadata`. Returns the JSON string (the
-   * caller/UI parses it) or null. A decrypt failure is logged and returns null
-   * rather than leaking ciphertext to the client.
+   * compliance export). Metadata is stored AES-256-GCM-encrypted in
+   * `metadataEncrypted`. The legacy plaintext `metadata` column was dropped in
+   * migration 20260615_drop_legacy_audit_metadata (M6), so pre-2026-06-06 rows
+   * (which only had plaintext) now surface null metadata — their core audit
+   * fields (who/what/when, resource_id) are unaffected. Returns the JSON string
+   * (the caller/UI parses it) or null. A decrypt failure is logged and returns
+   * null rather than leaking ciphertext to the client.
    */
-  decryptMetadata(row: { metadata?: string | null; metadataEncrypted?: string | null }): string | null {
+  decryptMetadata(row: { metadataEncrypted?: string | null }): string | null {
     if (row.metadataEncrypted) {
       try {
         return getEncryptionService().decrypt(row.metadataEncrypted, this.systemSalt);
@@ -281,7 +284,7 @@ export class AuditLogService {
         return null;
       }
     }
-    return row.metadata ?? null;
+    return null;
   }
 
   /**
@@ -596,7 +599,6 @@ export class AuditLogService {
         // ciphertext column so it never leaves the service.
         const logs = rawLogs.map((row) => {
           const r = row as Record<string, unknown> & {
-            metadata?: string | null;
             metadataEncrypted?: string | null;
           };
           const metadata = this.decryptMetadata(r);
