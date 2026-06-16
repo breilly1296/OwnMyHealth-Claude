@@ -90,7 +90,19 @@ export interface LoginAttemptResult {
   success: boolean;
   user?: User;
   remainingAttempts?: number;
+  /**
+   * Set ONLY when the account is locked AND the submitted password is correct —
+   * i.e. the legitimate credential-holder hitting their own lock. The controller
+   * surfaces 423 only on this path (L21). A wrong password against a locked
+   * account never sets this, so it can't be used as an account-existence oracle.
+   */
   lockedUntil?: Date;
+  /**
+   * Set when a WRONG password attempt just tripped the lockout. Lets the
+   * controller AUDIT the lockout server-side while still returning the uniform
+   * 401 (no lockedUntil leaked to the client) — closing the existence oracle.
+   */
+  justLocked?: boolean;
   error?: string;
   emailNotVerified?: boolean;
 }
@@ -1127,34 +1139,46 @@ export async function attemptLogin(
     };
   }
 
-  // Check if account is locked
-  if (isAccountLocked(user)) {
+  // L21: do NOT surface the lockout state before verifying the password. The
+  // previous code returned `lockedUntil` here (pre-password-check), so ANY wrong
+  // password against a locked account produced a distinct 423 — an
+  // account-existence oracle, since an unknown email returns a generic 401. We
+  // now verify the password first and reveal the lock only to the legitimate
+  // credential-holder; a wrong password stays indistinguishable from an unknown
+  // email (both generic 401).
+  const accountLocked = isAccountLocked(user);
+
+  // Verify password (always — keeps response timing uniform regardless of lock
+  // state, same rationale as the dummy-hash path for unknown emails above).
+  const isValid = await verifyPassword(password, user.passwordHash);
+
+  if (!isValid) {
+    if (accountLocked) {
+      // Already locked: don't record another failed attempt (it's locked) and
+      // don't reveal the lock — return the uniform invalid-credentials error.
+      return { success: false, error: 'Invalid email or password' };
+    }
+    const lockoutResult = await recordFailedLogin(user);
+    // A wrong password must not reveal a lock, even when THIS attempt trips it.
+    // The lock still happened server-side (recordFailedLogin persisted it); the
+    // legitimate user learns of it on their next CORRECT-password attempt.
+    // `justLocked` lets the controller audit the lockout without returning 423.
+    return {
+      success: false,
+      remainingAttempts: lockoutResult.remainingAttempts,
+      justLocked: lockoutResult.locked,
+      error: 'Invalid email or password',
+    };
+  }
+
+  // Password is correct. If the account is locked, NOW it's safe to tell the
+  // legitimate credential-holder they're locked out (and how long is left).
+  if (accountLocked) {
     const remainingTime = getLockoutRemainingTime(user);
     return {
       success: false,
       lockedUntil: user.lockedUntil!,
       error: `Account is locked. Try again in ${Math.ceil(remainingTime / 60)} minutes`,
-    };
-  }
-
-  // Verify password
-  const isValid = await verifyPassword(password, user.passwordHash);
-
-  if (!isValid) {
-    const lockoutResult = await recordFailedLogin(user);
-
-    if (lockoutResult.locked) {
-      return {
-        success: false,
-        lockedUntil: lockoutResult.lockedUntil,
-        error: `Account locked due to too many failed attempts. Try again in ${config.security.lockoutDuration / 60000} minutes`,
-      };
-    }
-
-    return {
-      success: false,
-      remainingAttempts: lockoutResult.remainingAttempts,
-      error: `Invalid email or password. ${lockoutResult.remainingAttempts} attempts remaining`,
     };
   }
 

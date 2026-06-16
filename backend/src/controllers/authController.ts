@@ -302,9 +302,11 @@ export async function login(
       return;
     }
 
-    // Include lockout information in response if applicable
+    // L21: a lockout is surfaced (423 + lockedUntil) ONLY when the password was
+    // correct — result.lockedUntil is set only on that path now. This is the
+    // legitimate locked-out user, so telling them is not an oracle.
     if (result.lockedUntil) {
-      // Audit log: account lockout
+      // Audit log: locked account accessed with correct credentials.
       await auditService.logAuth('ACCOUNT_LOCKOUT', { req }, {
         email,
         lockedUntil: result.lockedUntil.toISOString(),
@@ -322,6 +324,17 @@ export async function login(
       };
       res.status(423).json(response); // 423 Locked
       return;
+    }
+
+    // L21: a WRONG password that just tripped the lock. Record the lockout
+    // server-side for the audit trail, but fall through to the SAME uniform 401
+    // below — never reveal the lock to a non-credential-holder (no 423, no
+    // lockedUntil), so a locked account is indistinguishable from an unknown one.
+    if (result.justLocked) {
+      await auditService.logAuth('ACCOUNT_LOCKOUT', { req }, {
+        email,
+        reason: 'TRIPPED_ON_FAILED_ATTEMPT',
+      });
     }
 
     // Invalid credentials for an EXISTING account. Do NOT leak

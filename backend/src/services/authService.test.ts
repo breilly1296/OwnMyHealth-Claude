@@ -957,8 +957,13 @@ describe('authService', () => {
 
         const result = await authService.attemptLogin(MOCK_EMAIL, 'wrong-password');
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Account locked');
-        expect(result.lockedUntil).not.toBeNull();
+        // L21: a WRONG password that trips the lock must NOT reveal the lock —
+        // the response is the uniform invalid-credentials error with NO
+        // lockedUntil. `justLocked` is set so the controller can audit the
+        // lockout server-side. The lock itself still persisted (update below).
+        expect(result.error).toBe('Invalid email or password');
+        expect(result.lockedUntil).toBeUndefined();
+        expect(result.justLocked).toBe(true);
         expect(mockPrisma.user.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
@@ -967,6 +972,21 @@ describe('authService', () => {
                 }),
             })
         );
+    });
+
+    // L21: locked account + WRONG password = the uniform 401, no lockedUntil —
+    // indistinguishable from an unknown email, closing the existence oracle.
+    it('locked account + wrong password does NOT reveal the lock (L21 oracle fix)', async () => {
+        vi.mocked(bcrypt.compare).mockResolvedValueOnce(false);
+        mockPrisma.user.findUnique.mockResolvedValueOnce({
+            ...MOCK_USER,
+            lockedUntil: new Date(Date.now() + config.security.lockoutDuration),
+        });
+        const result = await authService.attemptLogin(MOCK_EMAIL, 'wrong-password');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Invalid email or password');
+        expect(result.lockedUntil).toBeUndefined();
+        expect(result.justLocked).toBeFalsy();
     });
 
     it('should return error if account is locked for regular user', async () => {
