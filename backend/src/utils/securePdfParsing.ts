@@ -20,6 +20,20 @@ const PDF_PARSE_TIMEOUT_MS = 30_000;
 // Maximum allowed memory increase during parsing (100MB)
 const MAX_MEMORY_INCREASE_BYTES = 100 * 1024 * 1024;
 
+// L28: maximum number of pages accepted from a single PDF. Lab reports and SBCs
+// are a handful of pages; a document with dozens-to-hundreds of pages is almost
+// certainly malicious or mis-uploaded, and every page is downstream OCR / Claude
+// cost. Bounded independently of the time/heap guards above.
+export const MAX_PDF_PAGES = 50;
+
+/**
+ * Thrown when a PDF exceeds MAX_PDF_PAGES. A distinct subclass so callers that
+ * normally DEGRADE on parse failure (pdfTextExtraction → OCR fallback) can
+ * instead re-throw this as a hard reject, rather than amplifying cost by routing
+ * an over-long document into the fallback.
+ */
+export class PdfPageLimitError extends BadRequestError {}
+
 // PDF magic bytes - all valid PDFs start with "%PDF-"
 const PDF_MAGIC_BYTES = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2D]); // %PDF-
 
@@ -197,6 +211,20 @@ export async function secureParsePdf(
         hasText: result ? typeof result.text : 'N/A',
       });
       throw new BadRequestError('PDF parsing failed: unable to extract text content');
+    }
+
+    // Step 4b: Reject documents with an unreasonable page count (L28 — DoS /
+    // downstream OCR+Claude cost amplification). numpages comes from the parser;
+    // cap it independently of the time/heap guards above.
+    if (typeof result.numpages === 'number' && result.numpages > MAX_PDF_PAGES) {
+      pdfLogger.warn('PDF rejected: page count exceeds limit', {
+        filename,
+        pages: result.numpages,
+        maxPages: MAX_PDF_PAGES,
+      });
+      throw new PdfPageLimitError(
+        `PDF has too many pages (${result.numpages}). The maximum supported is ${MAX_PDF_PAGES}.`
+      );
     }
 
     // Step 5: Check for suspiciously large text output (possible text bomb)

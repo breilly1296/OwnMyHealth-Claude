@@ -17,7 +17,7 @@
 // Typed via the @types/pdf-parse dev dependency (audit #32) — no @ts-expect-error needed.
 import pdfParse from 'pdf-parse';
 import { logger } from '../utils/logger.js';
-import { secureParsePdf } from '../utils/securePdfParsing.js';
+import { secureParsePdf, PdfPageLimitError } from '../utils/securePdfParsing.js';
 
 const textExtractionLogger = logger.createServiceLogger('PDFTextExtraction');
 
@@ -64,6 +64,12 @@ export async function extractTextFromPDF(
       isLikelyScanned,
     };
   } catch (error) {
+    // L28: an over-long PDF must NOT degrade into the OCR/regex fallback (that
+    // would re-incur the per-page cost this guard exists to prevent). Re-throw
+    // it as a hard reject so the upload fails with a 400.
+    if (error instanceof PdfPageLimitError) {
+      throw error;
+    }
     // secureParsePdf throws for invalid headers, corrupt/encrypted files,
     // parse timeouts, or excessive memory growth (a likely bomb). The
     // resource bound has already been enforced by the time we get here, so

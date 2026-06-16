@@ -34,6 +34,7 @@ vi.mock('../utils/logger.js', () => ({
 
 import { extractTextFromPDF } from './pdfTextExtraction.js';
 import pdfParse from 'pdf-parse';
+import { PdfPageLimitError } from '../utils/securePdfParsing.js';
 
 const mockedPdfParse = vi.mocked(pdfParse);
 
@@ -98,6 +99,21 @@ describe('extractTextFromPDF (C-7)', () => {
     // 500 chars is above the scanned threshold, so this isn't flagged as scanned —
     // just "extracted but not trusted as the sole input."
     expect(result.isLikelyScanned).toBe(false);
+  });
+
+  it('rejects (does NOT degrade to OCR) a PDF whose page count exceeds the limit (L28)', async () => {
+    mockedPdfParse.mockResolvedValue({
+      text: Array.from({ length: 10 }, (_, i) => `Line ${i + 1}: data data`).join('\n') + '\n' + 'x'.repeat(300),
+      numpages: 51, // MAX_PDF_PAGES is 50
+      numrender: 51,
+      info: {},
+      metadata: null,
+      version: '1.10.100',
+    } as Awaited<ReturnType<typeof pdfParse>>);
+
+    // Must hard-reject so the upload fails, NOT fall back to OCR with empty text
+    // (which would re-incur the per-page cost the cap exists to prevent).
+    await expect(extractTextFromPDF(VALID_PDF)).rejects.toBeInstanceOf(PdfPageLimitError);
   });
 
   it('handles pdf-parse errors gracefully without throwing', async () => {

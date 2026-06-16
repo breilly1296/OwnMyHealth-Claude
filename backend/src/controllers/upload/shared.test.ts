@@ -64,6 +64,38 @@ function makeMulterFile(originalname: string): Express.Multer.File {
   };
 }
 
+describe('validateUploadFile — WebP magic bytes (L30)', () => {
+  // RIFF container with a chosen 4-byte form type at bytes 8-11.
+  const riffContainer = (formType: string): Buffer =>
+    Buffer.concat([
+      Buffer.from([0x52, 0x49, 0x46, 0x46]), // "RIFF"
+      Buffer.from([0x00, 0x00, 0x00, 0x00]), // chunk size (ignored)
+      Buffer.from(formType, 'ascii'),        // form type at bytes 8-11
+      Buffer.from([0x00, 0x00, 0x00, 0x00]),
+    ]);
+
+  const makeWebpFile = (buffer: Buffer): Express.Multer.File => ({
+    ...makeMulterFile('image.webp'),
+    mimetype: 'image/webp',
+    size: buffer.length,
+    buffer,
+  });
+
+  it('accepts a real WebP (RIFF + WEBP form type)', () => {
+    expect(() => validateUploadFile(makeWebpFile(riffContainer('WEBP')), 'ocr')).not.toThrow();
+  });
+
+  it('rejects a non-WebP RIFF container (WAV/AVI renamed to image/webp)', () => {
+    expect(() => validateUploadFile(makeWebpFile(riffContainer('WAVE')), 'ocr')).toThrow();
+    expect(() => validateUploadFile(makeWebpFile(riffContainer('AVI ')), 'ocr')).toThrow();
+  });
+
+  it('rejects a RIFF buffer too short to carry the form type', () => {
+    const tiny = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00]); // RIFF + 1 byte
+    expect(() => validateUploadFile(makeWebpFile(tiny), 'ocr')).toThrow();
+  });
+});
+
 describe('validateUploadFile — filename sanitization (F-15)', () => {
   it('strips POSIX path separators (defends against ../ traversal)', () => {
     const file = makeMulterFile('../../etc/passwd');

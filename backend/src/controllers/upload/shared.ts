@@ -93,6 +93,16 @@ function validateMagicBytes(buffer: Buffer, mimetype: string): void {
   if (!matches) {
     throw new ValidationError('File content does not match its declared type');
   }
+  // L30: the 4-byte RIFF prefix is shared by AVI / WAV / ANI and other RIFF
+  // containers, so the prefix match alone lets a non-image (e.g. a .wav renamed
+  // to image/webp) into the OCR pipeline and the bucket. A real WebP carries the
+  // ASCII "WEBP" form-type at bytes 8-11 (bytes 4-7 are the RIFF chunk size).
+  if (mimetype === 'image/webp') {
+    const WEBP_FORM_TYPE = Buffer.from('WEBP', 'ascii');
+    if (buffer.length < 12 || !buffer.subarray(8, 12).equals(WEBP_FORM_TYPE)) {
+      throw new ValidationError('File content does not match its declared type');
+    }
+  }
 }
 
 /**

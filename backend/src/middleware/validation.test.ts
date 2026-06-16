@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { validate, requireJsonContentType, schemas, delimitDocumentForPrompt } from './validation.js';
+import { validate, requireJsonContentType, schemas, delimitDocumentForPrompt, MAX_EXTRACTION_DOCUMENT_CHARS } from './validation.js';
 
 // Mock error handler
 vi.mock('./errorHandler.js', () => ({
@@ -672,6 +672,18 @@ describe('delimitDocumentForPrompt (M10 — prompt-injection defense for extract
     const body = out.slice(out.indexOf('<document>\n') + '<document>\n'.length, out.lastIndexOf('\n</document>'));
     expect(body).not.toMatch(/<\s*\/?\s*document\s*>/i);
     expect(body).toContain('[document]');
+  });
+
+  it('caps the document body at MAX_EXTRACTION_DOCUMENT_CHARS (L29 — AI-cost bound)', () => {
+    const huge = 'a'.repeat(MAX_EXTRACTION_DOCUMENT_CHARS + 5000);
+    const out = delimitDocumentForPrompt(huge);
+    const body = out.slice(out.indexOf('<document>\n') + '<document>\n'.length, out.lastIndexOf('\n</document>'));
+    expect(body.length).toBe(MAX_EXTRACTION_DOCUMENT_CHARS);
+  });
+
+  it('respects an explicit smaller maxLength', () => {
+    const out = delimitDocumentForPrompt('b'.repeat(100), 10);
+    expect(out).toContain('<document>\n' + 'b'.repeat(10) + '\n</document>');
   });
 });
 
