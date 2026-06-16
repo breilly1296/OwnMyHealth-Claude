@@ -492,6 +492,12 @@ export const PHI_FIELDS = {
     'valueEncrypted',
     // Note: BiomarkerHistory does NOT have notesEncrypted in schema
   ],
+  // Uploaded-file PHI — the raw client filename can embed patient identifiers
+  // (e.g. "Jane Doe MRI.pdf"). `filename` is a server-generated non-PHI label
+  // and stays plaintext (L24).
+  UserFile: [
+    'originalFilenameEncrypted',
+  ],
   // Insurance PHI
   InsurancePlan: [
     'memberIdEncrypted',

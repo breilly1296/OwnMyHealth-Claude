@@ -12,6 +12,8 @@ import { ValidationError, NotFoundError } from '../../middleware/errorHandler.js
 import { getPrismaClient, withRLSTransaction } from '../../services/database.js';
 import { getAuditLogService } from '../../services/auditLog.js';
 import { uploadFile as uploadToGCS } from '../../services/storageService.js';
+import { getEncryptionService } from '../../services/encryption.js';
+import { getUserEncryptionSalt } from '../../services/userEncryption.js';
 import { validatePdfHeader } from '../../utils/securePdfParsing.js';
 import { logger } from '../../utils/logger.js';
 import {
@@ -43,6 +45,8 @@ export async function uploadSBC(
 
   const prisma = getPrismaClient();
   const auditService = getAuditLogService(prisma);
+  const encryptionService = getEncryptionService();
+  const userSalt = await getUserEncryptionSalt(userId);
 
   const extractedData = await extractSBCData(file.buffer, file.originalname, userId);
 
@@ -105,7 +109,10 @@ export async function uploadSBC(
               id: fileId,
               userId,
               filename: `${insurerName} SBC - ${effectiveDate.toLocaleDateString()}`,
-              originalFilename: file.originalname,
+              // L24: store the raw client filename encrypted (per-user key); keep
+              // the plaintext column null. `filename` above is a non-PHI label.
+              originalFilename: null,
+              originalFilenameEncrypted: encryptionService.encrypt(file.originalname, userSalt),
               fileType: file.mimetype,
               fileSize: file.size,
               storageKey,

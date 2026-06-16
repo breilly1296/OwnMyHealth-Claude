@@ -103,8 +103,12 @@ export async function uploadLabReport(
               userId,
               filename: labName
                 ? `${labName} - ${reportDate.toLocaleDateString()}`
-                : file.originalname,
-              originalFilename: file.originalname,
+                : `Lab report - ${reportDate.toLocaleDateString()}`,
+              // L24: the raw client filename can embed PHI — store it encrypted
+              // (per-user key) and keep the plaintext column null. `filename`
+              // above stays a non-PHI label.
+              originalFilename: null,
+              originalFilenameEncrypted: encryptionService.encrypt(file.originalname, userSalt),
               fileType: file.mimetype,
               fileSize: file.size,
               storageKey,
@@ -263,8 +267,12 @@ export async function uploadLabResultOCR(
               userId,
               filename: labName
                 ? `${labName} - ${reportDate.toLocaleDateString()}`
-                : file.originalname,
-              originalFilename: file.originalname,
+                : `Lab report - ${reportDate.toLocaleDateString()}`,
+              // L24: the raw client filename can embed PHI — store it encrypted
+              // (per-user key) and keep the plaintext column null. `filename`
+              // above stays a non-PHI label.
+              originalFilename: null,
+              originalFilenameEncrypted: encryptionService.encrypt(file.originalname, userSalt),
               fileType: file.mimetype,
               fileSize: file.size,
               storageKey,

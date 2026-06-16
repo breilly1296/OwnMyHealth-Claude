@@ -9413,6 +9413,7 @@ export namespace Prisma {
     userId: string | null
     filename: string | null
     originalFilename: string | null
+    originalFilenameEncrypted: string | null
     fileType: string | null
     fileSize: number | null
     storageKey: string | null
@@ -9429,6 +9430,7 @@ export namespace Prisma {
     userId: string | null
     filename: string | null
     originalFilename: string | null
+    originalFilenameEncrypted: string | null
     fileType: string | null
     fileSize: number | null
     storageKey: string | null
@@ -9445,6 +9447,7 @@ export namespace Prisma {
     userId: number
     filename: number
     originalFilename: number
+    originalFilenameEncrypted: number
     fileType: number
     fileSize: number
     storageKey: number
@@ -9475,6 +9478,7 @@ export namespace Prisma {
     userId?: true
     filename?: true
     originalFilename?: true
+    originalFilenameEncrypted?: true
     fileType?: true
     fileSize?: true
     storageKey?: true
@@ -9491,6 +9495,7 @@ export namespace Prisma {
     userId?: true
     filename?: true
     originalFilename?: true
+    originalFilenameEncrypted?: true
     fileType?: true
     fileSize?: true
     storageKey?: true
@@ -9507,6 +9512,7 @@ export namespace Prisma {
     userId?: true
     filename?: true
     originalFilename?: true
+    originalFilenameEncrypted?: true
     fileType?: true
     fileSize?: true
     storageKey?: true
@@ -9609,7 +9615,8 @@ export namespace Prisma {
     id: string
     userId: string
     filename: string
-    originalFilename: string
+    originalFilename: string | null
+    originalFilenameEncrypted: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -9645,6 +9652,7 @@ export namespace Prisma {
     userId?: boolean
     filename?: boolean
     originalFilename?: boolean
+    originalFilenameEncrypted?: boolean
     fileType?: boolean
     fileSize?: boolean
     storageKey?: boolean
@@ -9664,6 +9672,7 @@ export namespace Prisma {
     userId?: boolean
     filename?: boolean
     originalFilename?: boolean
+    originalFilenameEncrypted?: boolean
     fileType?: boolean
     fileSize?: boolean
     storageKey?: boolean
@@ -9681,6 +9690,7 @@ export namespace Prisma {
     userId?: boolean
     filename?: boolean
     originalFilename?: boolean
+    originalFilenameEncrypted?: boolean
     fileType?: boolean
     fileSize?: boolean
     storageKey?: boolean
@@ -9698,6 +9708,7 @@ export namespace Prisma {
     userId?: boolean
     filename?: boolean
     originalFilename?: boolean
+    originalFilenameEncrypted?: boolean
     fileType?: boolean
     fileSize?: boolean
     storageKey?: boolean
@@ -9709,7 +9720,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type UserFileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "filename" | "originalFilename" | "fileType" | "fileSize" | "storageKey" | "labName" | "labDate" | "biomarkersExtracted" | "extractionConfidence" | "createdAt" | "updatedAt", ExtArgs["result"]["userFile"]>
+  export type UserFileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "filename" | "originalFilename" | "originalFilenameEncrypted" | "fileType" | "fileSize" | "storageKey" | "labName" | "labDate" | "biomarkersExtracted" | "extractionConfidence" | "createdAt" | "updatedAt", ExtArgs["result"]["userFile"]>
   export type UserFileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     biomarkers?: boolean | UserFile$biomarkersArgs<ExtArgs>
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -9732,7 +9743,8 @@ export namespace Prisma {
       id: string
       userId: string
       filename: string
-      originalFilename: string
+      originalFilename: string | null
+      originalFilenameEncrypted: string | null
       fileType: string
       fileSize: number
       storageKey: string
@@ -10171,6 +10183,7 @@ export namespace Prisma {
     readonly userId: FieldRef<"UserFile", 'String'>
     readonly filename: FieldRef<"UserFile", 'String'>
     readonly originalFilename: FieldRef<"UserFile", 'String'>
+    readonly originalFilenameEncrypted: FieldRef<"UserFile", 'String'>
     readonly fileType: FieldRef<"UserFile", 'String'>
     readonly fileSize: FieldRef<"UserFile", 'Int'>
     readonly storageKey: FieldRef<"UserFile", 'String'>
@@ -28214,6 +28227,7 @@ export namespace Prisma {
     userId: 'userId',
     filename: 'filename',
     originalFilename: 'originalFilename',
+    originalFilenameEncrypted: 'originalFilenameEncrypted',
     fileType: 'fileType',
     fileSize: 'fileSize',
     storageKey: 'storageKey',
@@ -29445,7 +29459,8 @@ export namespace Prisma {
     id?: UuidFilter<"UserFile"> | string
     userId?: UuidFilter<"UserFile"> | string
     filename?: StringFilter<"UserFile"> | string
-    originalFilename?: StringFilter<"UserFile"> | string
+    originalFilename?: StringNullableFilter<"UserFile"> | string | null
+    originalFilenameEncrypted?: StringNullableFilter<"UserFile"> | string | null
     fileType?: StringFilter<"UserFile"> | string
     fileSize?: IntFilter<"UserFile"> | number
     storageKey?: StringFilter<"UserFile"> | string
@@ -29463,7 +29478,8 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     filename?: SortOrder
-    originalFilename?: SortOrder
+    originalFilename?: SortOrderInput | SortOrder
+    originalFilenameEncrypted?: SortOrderInput | SortOrder
     fileType?: SortOrder
     fileSize?: SortOrder
     storageKey?: SortOrder
@@ -29484,7 +29500,8 @@ export namespace Prisma {
     NOT?: UserFileWhereInput | UserFileWhereInput[]
     userId?: UuidFilter<"UserFile"> | string
     filename?: StringFilter<"UserFile"> | string
-    originalFilename?: StringFilter<"UserFile"> | string
+    originalFilename?: StringNullableFilter<"UserFile"> | string | null
+    originalFilenameEncrypted?: StringNullableFilter<"UserFile"> | string | null
     fileType?: StringFilter<"UserFile"> | string
     fileSize?: IntFilter<"UserFile"> | number
     storageKey?: StringFilter<"UserFile"> | string
@@ -29502,7 +29519,8 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     filename?: SortOrder
-    originalFilename?: SortOrder
+    originalFilename?: SortOrderInput | SortOrder
+    originalFilenameEncrypted?: SortOrderInput | SortOrder
     fileType?: SortOrder
     fileSize?: SortOrder
     storageKey?: SortOrder
@@ -29526,7 +29544,8 @@ export namespace Prisma {
     id?: UuidWithAggregatesFilter<"UserFile"> | string
     userId?: UuidWithAggregatesFilter<"UserFile"> | string
     filename?: StringWithAggregatesFilter<"UserFile"> | string
-    originalFilename?: StringWithAggregatesFilter<"UserFile"> | string
+    originalFilename?: StringNullableWithAggregatesFilter<"UserFile"> | string | null
+    originalFilenameEncrypted?: StringNullableWithAggregatesFilter<"UserFile"> | string | null
     fileType?: StringWithAggregatesFilter<"UserFile"> | string
     fileSize?: IntWithAggregatesFilter<"UserFile"> | number
     storageKey?: StringWithAggregatesFilter<"UserFile"> | string
@@ -31985,7 +32004,8 @@ export namespace Prisma {
   export type UserFileCreateInput = {
     id?: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -32003,7 +32023,8 @@ export namespace Prisma {
     id?: string
     userId: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -32019,7 +32040,8 @@ export namespace Prisma {
   export type UserFileUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -32037,7 +32059,8 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -32054,7 +32077,8 @@ export namespace Prisma {
     id?: string
     userId: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -32069,7 +32093,8 @@ export namespace Prisma {
   export type UserFileUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -32085,7 +32110,8 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -35026,6 +35052,7 @@ export namespace Prisma {
     userId?: SortOrder
     filename?: SortOrder
     originalFilename?: SortOrder
+    originalFilenameEncrypted?: SortOrder
     fileType?: SortOrder
     fileSize?: SortOrder
     storageKey?: SortOrder
@@ -35048,6 +35075,7 @@ export namespace Prisma {
     userId?: SortOrder
     filename?: SortOrder
     originalFilename?: SortOrder
+    originalFilenameEncrypted?: SortOrder
     fileType?: SortOrder
     fileSize?: SortOrder
     storageKey?: SortOrder
@@ -35064,6 +35092,7 @@ export namespace Prisma {
     userId?: SortOrder
     filename?: SortOrder
     originalFilename?: SortOrder
+    originalFilenameEncrypted?: SortOrder
     fileType?: SortOrder
     fileSize?: SortOrder
     storageKey?: SortOrder
@@ -39248,7 +39277,8 @@ export namespace Prisma {
   export type UserFileCreateWithoutUserInput = {
     id?: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -39264,7 +39294,8 @@ export namespace Prisma {
   export type UserFileUncheckedCreateWithoutUserInput = {
     id?: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -39906,7 +39937,8 @@ export namespace Prisma {
     id?: UuidFilter<"UserFile"> | string
     userId?: UuidFilter<"UserFile"> | string
     filename?: StringFilter<"UserFile"> | string
-    originalFilename?: StringFilter<"UserFile"> | string
+    originalFilename?: StringNullableFilter<"UserFile"> | string | null
+    originalFilenameEncrypted?: StringNullableFilter<"UserFile"> | string | null
     fileType?: StringFilter<"UserFile"> | string
     fileSize?: IntFilter<"UserFile"> | number
     storageKey?: StringFilter<"UserFile"> | string
@@ -41452,7 +41484,8 @@ export namespace Prisma {
   export type UserFileCreateWithoutBiomarkersInput = {
     id?: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -41469,7 +41502,8 @@ export namespace Prisma {
     id?: string
     userId: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -41632,7 +41666,8 @@ export namespace Prisma {
   export type UserFileUpdateWithoutBiomarkersInput = {
     id?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -41649,7 +41684,8 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -46463,7 +46499,8 @@ export namespace Prisma {
   export type UserFileCreateManyUserInput = {
     id?: string
     filename: string
-    originalFilename: string
+    originalFilename?: string | null
+    originalFilenameEncrypted?: string | null
     fileType: string
     fileSize: number
     storageKey: string
@@ -47317,7 +47354,8 @@ export namespace Prisma {
   export type UserFileUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -47333,7 +47371,8 @@ export namespace Prisma {
   export type UserFileUncheckedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string
@@ -47349,7 +47388,8 @@ export namespace Prisma {
   export type UserFileUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     filename?: StringFieldUpdateOperationsInput | string
-    originalFilename?: StringFieldUpdateOperationsInput | string
+    originalFilename?: NullableStringFieldUpdateOperationsInput | string | null
+    originalFilenameEncrypted?: NullableStringFieldUpdateOperationsInput | string | null
     fileType?: StringFieldUpdateOperationsInput | string
     fileSize?: IntFieldUpdateOperationsInput | number
     storageKey?: StringFieldUpdateOperationsInput | string

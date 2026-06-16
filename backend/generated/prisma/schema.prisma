@@ -148,21 +148,31 @@ model ProviderPatient {
 }
 
 model UserFile {
-  id                   String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId               String      @map("user_id") @db.Uuid
-  filename             String      @db.VarChar(255)
-  originalFilename     String      @map("original_filename") @db.VarChar(255)
-  fileType             String      @map("file_type") @db.VarChar(50)
-  fileSize             Int         @map("file_size")
-  storageKey           String      @map("storage_key") @db.VarChar(500)
-  labName              String?     @map("lab_name") @db.VarChar(255)
-  labDate              DateTime?   @map("lab_date") @db.Date
-  biomarkersExtracted  Int         @default(0) @map("biomarkers_extracted")
-  extractionConfidence Decimal?    @map("extraction_confidence") @db.Decimal(3, 2)
-  createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  biomarkers           Biomarker[]
-  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                    String      @map("user_id") @db.Uuid
+  // `filename` is a server-generated, non-PHI display label (lab/insurer name +
+  // date, or a generic "Lab report - <date>" fallback) — never the raw client
+  // name, so it stays plaintext.
+  filename                  String      @db.VarChar(255)
+  // L24: `originalFilename` held the RAW client filename, which can embed PHI
+  // (e.g. "Jane Doe MRI.pdf"). New rows store AES-256-GCM ciphertext (per-user
+  // key) in originalFilenameEncrypted and null this plaintext column; reads
+  // decrypt the twin and fall back to this column only for not-yet-backfilled
+  // legacy rows. The backfill job (maintenance: backfill-userfile-filenames)
+  // re-encrypts legacy rows, after which a follow-up migration drops this column.
+  originalFilename          String?     @map("original_filename") @db.VarChar(255)
+  originalFilenameEncrypted String?     @map("original_filename_encrypted")
+  fileType                  String      @map("file_type") @db.VarChar(50)
+  fileSize                  Int         @map("file_size")
+  storageKey                String      @map("storage_key") @db.VarChar(500)
+  labName                   String?     @map("lab_name") @db.VarChar(255)
+  labDate                   DateTime?   @map("lab_date") @db.Date
+  biomarkersExtracted       Int         @default(0) @map("biomarkers_extracted")
+  extractionConfidence      Decimal?    @map("extraction_confidence") @db.Decimal(3, 2)
+  createdAt                 DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  biomarkers                Biomarker[]
+  user                      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([labDate])

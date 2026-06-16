@@ -15,6 +15,9 @@ import {
   getFileStream,
   deleteFile as deleteFromStorage,
 } from '../services/storageService.js';
+import { getEncryptionService } from '../services/encryption.js';
+import { getUserEncryptionSalt } from '../services/userEncryption.js';
+import { decryptOriginalFilename } from '../utils/userFileNames.js';
 import { logger } from '../utils/logger.js';
 
 const RESOURCE_TYPE = 'UserFile';
@@ -71,6 +74,10 @@ export async function getFiles(
     return { files: rows, total: count };
   });
 
+  // L24: original filenames are encrypted at rest; decrypt for this owner view.
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
+
   // Transform to response format with computed categories
   const fileResponses: UserFileResponse[] = files.map((file) => {
     // Get unique categories from linked biomarkers
@@ -79,7 +86,7 @@ export async function getFiles(
     return {
       id: file.id,
       filename: file.filename,
-      originalFilename: file.originalFilename,
+      originalFilename: decryptOriginalFilename(file, encryption, userSalt),
       fileType: file.fileType,
       fileSize: file.fileSize,
       storageKey: file.storageKey,
@@ -152,13 +159,17 @@ export async function getFile(
     throw new NotFoundError('File not found');
   }
 
+  // L24: original filename is encrypted at rest; decrypt for this owner view.
+  const userSalt = await getUserEncryptionSalt(userId);
+  const encryption = getEncryptionService();
+
   // Get unique categories from linked biomarkers
   const categories = [...new Set(file.biomarkers.map((b) => b.category))];
 
   const fileResponse: UserFileResponse = {
     id: file.id,
     filename: file.filename,
-    originalFilename: file.originalFilename,
+    originalFilename: decryptOriginalFilename(file, encryption, userSalt),
     fileType: file.fileType,
     fileSize: file.fileSize,
     storageKey: file.storageKey,
@@ -215,6 +226,7 @@ export async function getFileDownloadUrl(
         storageKey: true,
         filename: true,
         originalFilename: true,
+        originalFilenameEncrypted: true,
         fileType: true,
         fileSize: true,
       },
@@ -240,7 +252,11 @@ export async function getFileDownloadUrl(
   // Sanitize filename for Content-Disposition — strip anything that would
   // let an attacker inject header delimiters or make the browser render
   // HTML. The value is wrapped in quotes; strip embedded quotes + CRLF.
-  const rawFilename = file.originalFilename || file.filename || 'download';
+  // L24: the original filename is encrypted at rest; decrypt for the owner's
+  // own download (falls back to the non-PHI `filename` label).
+  const userSalt = await getUserEncryptionSalt(userId);
+  const decryptedOriginal = decryptOriginalFilename(file, getEncryptionService(), userSalt);
+  const rawFilename = decryptedOriginal || file.filename || 'download';
   const safeFilename = rawFilename.replace(/["\r\n\\]/g, '_');
   // RFC 5987/6266: the ASCII `filename` token can only carry ISO-8859-1, so a
   // non-ASCII name (accents, CJK, etc.) gets mangled. Emit `filename*` with a
