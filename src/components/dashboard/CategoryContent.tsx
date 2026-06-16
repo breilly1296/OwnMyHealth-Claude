@@ -220,8 +220,21 @@ export function CategoryContent({
                 return (
                   <div
                     key={biomarker.id}
+                    // A11Y-4: this card toggles biomarker selection (the gateway
+                    // to AI guidance). It nests action buttons, so it can't be a
+                    // <button>; expose it as a keyboard-operable button instead.
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    aria-label={`${biomarker.name} — toggle details and AI guidance`}
                     onClick={() => onSelectBiomarker(isSelected ? null : biomarker)}
-                    className={`bg-white dark:bg-slate-800 rounded-xl border p-4 cursor-pointer transition-all ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectBiomarker(isSelected ? null : biomarker);
+                      }
+                    }}
+                    className={`bg-white dark:bg-slate-800 rounded-xl border p-4 cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${
                       isSelected
                         ? 'border-red-300 dark:border-red-500 ring-2 ring-red-100 dark:ring-red-900/30'
                         : 'border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-600'
@@ -395,8 +408,20 @@ export function CategoryContent({
                         return (
                           <div
                             key={biomarker.id}
+                            // A11Y-4: keyboard-operable selection (see the
+                            // out-of-range card above).
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={isSelected}
+                            aria-label={`${biomarker.name} — toggle details and AI guidance`}
                             onClick={() => onSelectBiomarker(isSelected ? null : biomarker)}
-                            className={`p-4 cursor-pointer transition-colors ${
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onSelectBiomarker(isSelected ? null : biomarker);
+                              }
+                            }}
+                            className={`p-4 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-wellness-400 ${
                               isSelected
                                 ? 'bg-wellness-50/50 dark:bg-wellness-900/20'
                                 : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/50'

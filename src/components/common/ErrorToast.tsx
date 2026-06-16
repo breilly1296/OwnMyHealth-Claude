@@ -29,7 +29,15 @@ export function ErrorToast({ message, isVisible, onDismiss }: ErrorToastProps) {
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 max-w-md animate-slide-in-right">
+    // A11Y-3: errors must reach screen readers. role="alert" (assertive live
+    // region) announces the message on mount; aria-atomic re-reads the whole
+    // toast if the message changes while shown.
+    <div
+      className="fixed top-4 right-4 z-50 max-w-md animate-slide-in-right"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+    >
       <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-xl p-4 shadow-lg backdrop-blur-sm">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">

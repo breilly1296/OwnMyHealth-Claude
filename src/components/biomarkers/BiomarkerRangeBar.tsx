@@ -63,7 +63,11 @@ export default function BiomarkerRangeBar({ value, min, max, className }: Biomar
       height={SVG_HEIGHT}
       className={className}
       role="img"
-      aria-label={`Value ${value} within range ${min} to ${max}`}
+      aria-label={
+        isInRange
+          ? `Value ${value}, within the reference range ${min} to ${max}`
+          : `Value ${value}, outside the reference range ${min} to ${max}`
+      }
     >
       {/* Track (full context window) */}
       <rect
