@@ -11,6 +11,7 @@ import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 import { getPrismaClient, withRLSContext, withRLSTransaction } from '../services/database.js';
 import { getEncryptionService } from '../services/encryption.js';
 import { getUserEncryptionSalt } from '../services/userEncryption.js';
+import { decryptOriginalFilename } from '../utils/userFileNames.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { storageService } from '../services/storageService.js';
 import { toNumber } from '../utils/numberConversion.js';
@@ -646,7 +647,8 @@ export async function exportUserData(
   const exportUserFiles: ExportUserFile[] = userFiles.map((file) => ({
     id: file.id,
     storageKey: file.storageKey,
-    originalFilename: file.originalFilename,
+    // L24: original filename is encrypted at rest; decrypt for the owner's export.
+    originalFilename: decryptOriginalFilename(file, encryptionService, userSalt),
     fileType: file.fileType,
     fileSize: file.fileSize,
     labName: file.labName ?? undefined,

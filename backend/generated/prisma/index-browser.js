@@ -207,6 +207,7 @@ exports.Prisma.UserFileScalarFieldEnum = {
   userId: 'userId',
   filename: 'filename',
   originalFilename: 'originalFilename',
+  originalFilenameEncrypted: 'originalFilenameEncrypted',
   fileType: 'fileType',
   fileSize: 'fileSize',
   storageKey: 'storageKey',
