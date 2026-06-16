@@ -29,7 +29,14 @@ export function SuccessToast({ message, isVisible, onDismiss }: SuccessToastProp
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50 max-w-md animate-slide-in-right">
+    // A11Y-3: success confirmations reach screen readers via a polite status
+    // live region (announced without interrupting whatever the SR is reading).
+    <div
+      className="fixed top-4 right-4 z-50 max-w-md animate-slide-in-right"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <div className="bg-emerald-50 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 shadow-lg backdrop-blur-sm">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
