@@ -17,6 +17,7 @@ import { X, TrendingUp, TrendingDown, Minus, Calendar, Activity, Target } from '
 import { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';
 import { classifyBiomarker, getTrendDisplay } from '../../utils/biomarkers/trendCalculations';
+import { formatDateOnly } from '../../utils/format';
 
 interface TrendModalProps {
   /** Controls modal visibility */
@@ -172,11 +173,7 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
               </div>
             </div>
             <div className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
-              Last updated: {new Date(biomarker.date).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric'
-              })}
+              Last updated: {formatDateOnly(biomarker.date, { month: 'long', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
         </div>

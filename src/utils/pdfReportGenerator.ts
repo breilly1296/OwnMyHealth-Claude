@@ -14,6 +14,7 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas-pro';
 import type { Biomarker } from '../types';
 import { analyzeTrend, detectRisks, generateInsights, type DataPoint } from './analytics';
+import { formatDateOnly } from './format';
 
 export interface ReportOptions {
   patientName?: string;
@@ -321,7 +322,10 @@ export async function generateHealthReport(data: ReportData): Promise<jsPDF> {
 
         return [
           isCurrent,
-          formatDate(entry.date),
+          // entry.date is a biomarker measurement date (date-only) — use the
+          // UTC-pinned formatter. The shared formatDate() stays for reportDate,
+          // which is a "generated now" timestamp that should render in local time.
+          formatDateOnly(entry.date, { year: 'numeric', month: 'long', day: 'numeric' }),
           `${entry.value} ${biomarker.unit}`,
           status,
           changeText,

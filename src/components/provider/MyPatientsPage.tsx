@@ -33,6 +33,7 @@ import type { BiomarkerData } from '../../services/api/biomarkers';
 import type { HealthNeedData } from '../../services/api/healthNeeds';
 import type { InsurancePlanData } from '../../services/api/insurance';
 import { extractErrorMessage } from '../../utils/errorHelpers';
+import { formatDateOnly } from '../../utils/format';
 
 const RELATIONSHIP_TYPES = [
   { value: 'PRIMARY_CARE', label: 'Primary care' },
@@ -253,7 +254,7 @@ export default function MyPatientsPage() {
                           <div>
                             <p className="text-sm font-medium text-slate-900 dark:text-white">{b.name}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {b.category} · {formatDate(b.date)}
+                              {b.category} · {formatDateOnly(b.date, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </p>
                           </div>
                           <div className="text-right">

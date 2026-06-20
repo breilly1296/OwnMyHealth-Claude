@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import type { TooltipContentProps } from 'recharts';
 import type { Biomarker } from '../../types';
+import { formatDateOnly } from '../../utils/format';
 
 interface BiomarkerChartProps {
   /** The biomarker with historical data to chart */
@@ -177,11 +178,7 @@ export default function BiomarkerChart({
       // If no history, show current value as single point
       return [{
         date: biomarker.date,
-        displayDate: new Date(biomarker.date).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        }),
+        displayDate: formatDateOnly(biomarker.date, { month: 'short', day: 'numeric', year: 'numeric' }),
         value: biomarker.value,
         normalMin: biomarker.normalRange.min,
         normalMax: biomarker.normalRange.max
@@ -191,10 +188,7 @@ export default function BiomarkerChart({
     // Combine history with current value if not already included
     const historyData = biomarker.history.map(h => ({
       date: h.date,
-      displayDate: new Date(h.date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      }),
+      displayDate: formatDateOnly(h.date, { month: 'short', day: 'numeric' }),
       value: h.value,
       normalMin: biomarker.normalRange.min,
       normalMax: biomarker.normalRange.max
@@ -207,10 +201,7 @@ export default function BiomarkerChart({
     if (currentDate > lastHistoryDate) {
       historyData.push({
         date: biomarker.date,
-        displayDate: new Date(biomarker.date).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric'
-        }),
+        displayDate: formatDateOnly(biomarker.date, { month: 'short', day: 'numeric' }),
         value: biomarker.value,
         normalMin: biomarker.normalRange.min,
         normalMax: biomarker.normalRange.max
