@@ -40,7 +40,9 @@ const PLAN_TYPE_BADGE: Record<InsurancePlan['planType'], string> = {
 function formatRelativeDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  // effectiveDate is a date-only string (YYYY-MM-DD) → parsed as UTC midnight.
+  // Format in UTC so a negative-offset timezone doesn't shift it back a day.
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
 function ProgressBar({

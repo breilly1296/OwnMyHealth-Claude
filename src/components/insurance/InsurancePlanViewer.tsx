@@ -96,7 +96,7 @@ export default function InsurancePlanViewer({ plans, isOpen, onClose }: Insuranc
                   {plan.planType}
                 </span>
                 <span className="text-sm text-gray-500">
-                  Effective: {new Date(plan.effectiveDate).toLocaleDateString()}
+                  Effective: {new Date(plan.effectiveDate).toLocaleDateString(undefined, { timeZone: 'UTC' })}
                 </span>
                 <span className="text-sm text-gray-500">
                   {Math.round(plan.extractionConfidence * 100)}% confidence

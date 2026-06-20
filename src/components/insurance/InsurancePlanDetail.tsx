@@ -337,7 +337,7 @@ export default function InsurancePlanDetail({ plan, onBack, onPlanUpdated }: Ins
                   </span>
                 )}
                 <span className="text-xs text-slate-400 dark:text-slate-500">
-                  Effective {new Date(plan.effectiveDate).toLocaleDateString()}
+                  Effective {new Date(plan.effectiveDate).toLocaleDateString(undefined, { timeZone: 'UTC' })}
                 </span>
               </div>
             </div>

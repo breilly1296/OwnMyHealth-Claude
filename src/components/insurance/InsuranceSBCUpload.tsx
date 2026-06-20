@@ -352,7 +352,7 @@ export default function InsuranceSBCUpload({ isOpen, onClose, onPlanExtracted }:
                               )}
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Effective Date:</span>
-                                <span className="font-medium">{new Date(plan.effectiveDate).toLocaleDateString()}</span>
+                                <span className="font-medium">{new Date(plan.effectiveDate).toLocaleDateString(undefined, { timeZone: 'UTC' })}</span>
                               </div>
                             </div>
                           </div>
