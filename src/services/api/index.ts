@@ -118,5 +118,4 @@ export type {
   UpdateExpenseActualData,
   ClaimStatus,
   AnalyzeCostsRequest,
-  UpdateCurrentSpendingData,
 } from './expenses';

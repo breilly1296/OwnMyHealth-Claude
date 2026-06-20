@@ -71,11 +71,6 @@ export const biomarkersApi = {
     return response.data;
   },
 
-  async getHistory(id: string): Promise<BiomarkerHistory[]> {
-    const response = await apiFetch<BiomarkerHistory[]>(`/biomarkers/${id}/history`);
-    return response.data;
-  },
-
   async create(data: CreateBiomarkerData): Promise<BiomarkerData> {
     const response = await apiFetch<BiomarkerData>('/biomarkers', {
       method: 'POST',
@@ -106,19 +101,6 @@ export const biomarkersApi = {
 
   async getCategories(): Promise<string[]> {
     const response = await apiFetch<string[]>('/biomarkers/categories');
-    return response.data;
-  },
-
-  async getSummary(): Promise<{
-    total: number;
-    outOfRange: number;
-    byCategory: Record<string, number>;
-  }> {
-    const response = await apiFetch<{
-      total: number;
-      outOfRange: number;
-      byCategory: Record<string, number>;
-    }>('/biomarkers/summary');
     return response.data;
   },
 

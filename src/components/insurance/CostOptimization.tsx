@@ -252,7 +252,6 @@ export default function CostOptimization({ plan, onPlanUpdate }: CostOptimizatio
     try {
       const analysis = await expensesApi.analyzeCosts({
         planId: plan.id,
-        projections,
       });
       setSuccessMessage('Cost analysis complete');
       setExpandedAnalysisId(analysis.id);

@@ -276,14 +276,6 @@ export const settingsApi = {
     return response.data;
   },
 
-  async updateNotifications(prefs: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
-    const response = await apiFetch<NotificationPreferences>('/settings/notifications', {
-      method: 'PATCH',
-      body: JSON.stringify(prefs),
-    });
-    return response.data;
-  },
-
   async getNotificationPreferences(): Promise<NotificationPreferences> {
     const response = await apiFetch<NotificationPreferences>('/settings/notifications');
     return response.data;

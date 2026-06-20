@@ -260,11 +260,6 @@ export const insuranceApi = {
     await apiFetch(`/insurance/plans/${id}`, { method: 'DELETE' });
   },
 
-  async getBenefits(planId: string): Promise<InsuranceBenefitData[]> {
-    const response = await apiFetch<InsuranceBenefitData[]>(`/insurance/plans/${planId}/benefits`);
-    return response.data;
-  },
-
   /**
    * Compare 2–5 of the user's own plans by their extracted benefit rows.
    * Backed by POST /insurance/compare (RLS-scoped, audit-logged). Returns a

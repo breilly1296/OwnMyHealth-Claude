@@ -83,3 +83,20 @@ describe('expensesApi.getActuals pagination', () => {
     expect(result).toHaveLength(120);
   });
 });
+
+describe('expensesApi.analyzeCosts request contract', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('sends only { planId } (the backend ignores any projections payload)', async () => {
+    mockedApiFetch.mockResolvedValue({ success: true, data: { id: 'a1', planId: 'plan-1' } } as never);
+
+    await expensesApi.analyzeCosts({ planId: 'plan-1' });
+
+    expect(mockedApiFetch).toHaveBeenCalledTimes(1);
+    const [url, opts] = mockedApiFetch.mock.calls[0];
+    expect(url).toBe('/expenses/analyze');
+    const body = JSON.parse((opts as { body: string }).body);
+    expect(body).toEqual({ planId: 'plan-1' });
+    expect(body).not.toHaveProperty('projections');
+  });
+});
