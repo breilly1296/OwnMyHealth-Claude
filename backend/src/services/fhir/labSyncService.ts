@@ -276,91 +276,17 @@ export async function syncLabResults(
         },
       });
     });
-    const existingKeys = new Set<string>();
-    // FHIR observation identities already imported, keyed on the STABLE external
-    // id (stored in sourceFile as `fhir:{provider}:{obs.id}`). This — not the
-    // mutable value — is the idempotency key: a re-sync of an already-imported
-    // observation is a true no-op, so it can't clobber the user's later edit of
-    // that reading via upsertBiomarkerReading's same-date "corrected" branch.
-    // sourceFile is not encrypted, so seeding this set needs no decryption.
-    const existingSourceFiles = new Set<string>();
-    for (const b of existing) {
-      if (b.sourceFile) existingSourceFiles.add(b.sourceFile);
-      try {
-        const v = encryption.decrypt(b.valueEncrypted, salt);
-        existingKeys.add(dedupeKey(b.name, b.measurementDate, v));
-      } catch {
-        // skip undecryptable rows — dedupe will err on the side of importing
-      }
-    }
-
-    let imported = 0;
-    let skipped = 0;
-    // M17: names of newly-imported biomarkers, for the batch CREATE audit below.
-    const importedNames: string[] = [];
-
-    for (const obs of observations) {
-      try {
-        const row = mapObservation(obs);
-        if (!row) {
-          // Can't derive a value — skip (qualitative results etc. not yet supported).
-          skipped++;
-          continue;
-        }
-
-        // Idempotency by stable FHIR Observation.id: skip an observation we've
-        // already imported so a re-sync can't reprocess it and overwrite a value
-        // the user has since edited. An amended/corrected result reuses the same
-        // id with a NEW value, so let those through to update (the value-based
-        // check below then no-ops an amendment whose value didn't actually change).
-        const obsIdentity = `fhir:${provider}:${obs.id}`;
-        const isAmendment = obs.status === 'amended' || obs.status === 'corrected';
-        if (existingSourceFiles.has(obsIdentity) && !isAmendment) {
-          skipped++;
-          continue;
-        }
-
-        if (row.unmapped && !unmappedCodes.includes(row.loincCode)) {
-          unmappedCodes.push(row.loincCode);
-        }
-        const key = dedupeKey(row.name, row.measurementDate, String(row.value));
-        if (existingKeys.has(key)) {
-          skipped++;
-          continue;
-        }
-
-        const valueEncrypted = encryption.encrypt(String(row.value), salt);
-        const isOutOfRange =
-          (row.normalRangeMin !== null && row.value < row.normalRangeMin) ||
-          (row.normalRangeMax !== null && row.value > row.normalRangeMax);
-
-        // Merge into the existing series for this metric (instead of inserting
-        // a disconnected single-point row), so synced labs accrue history just
-        // like manual/upload entries and show real trends.
-        await withRLSTransaction(userId, async (tx) => {
-          await upsertBiomarkerReading(tx, userId, {
-            category: row.category,
-            name: row.name,
-            unit: row.unit,
-            valueEncrypted,
-            normalRangeMin: row.normalRangeMin ?? 0,
-            normalRangeMax: row.normalRangeMax ?? 0,
-            normalRangeSource: `${provider.toUpperCase()} FHIR`,
-            measurementDate: row.measurementDate,
-            sourceType: 'API_IMPORT',
-            sourceFile: `fhir:${provider}:${obs.id}`,
-            isOutOfRange,
-          });
-        });
-        existingKeys.add(key);
-        existingSourceFiles.add(obsIdentity);
-        imported++;
-        importedNames.push(row.name);
-      } catch (err) {
-        errors.push(err instanceof Error ? err.message.slice(0, 200) : 'unknown');
-        skipped++;
-      }
-    }
+    const importResult = await importObservations(
+      userId,
+      provider,
+      observations,
+      existing,
+      encryption,
+      salt
+    );
+    const { imported, skipped, importedNames } = importResult;
+    unmappedCodes.push(...importResult.unmappedCodes);
+    errors.push(...importResult.errors);
 
     // M17: FHIR lab imports are PHI WRITES and must be audited as such. The SYNC
     // summary below is action=READ (best-effort); this is the fail-closed CREATE
@@ -495,6 +421,167 @@ export async function revokeAllUserConnections(userId: string): Promise<void> {
 // ============================================
 // Helpers
 // ============================================
+
+/** How many observation upserts to batch into one RLS transaction. Bounds the
+ *  per-sync transaction count (was one txn per observation, up to ~2,000) while
+ *  staying well under the 30s interactive-transaction window. */
+const IMPORT_CHUNK_SIZE = 50;
+
+interface PreparedReading {
+  name: string;
+  payload: Parameters<typeof upsertBiomarkerReading>[2];
+}
+
+/**
+ * Prepare + import mapped FHIR observations into the user's biomarker series.
+ *
+ * Extracted from syncLabResults so the import semantics are unit-testable.
+ * Preserves: value + stable-FHIR-id idempotency dedupe (incl. amendments via
+ * status amended/corrected), unmapped-LOINC tracking, and per-observation error
+ * tolerance — one failing observation must not abort the rest of the sync.
+ *
+ * Writes go through CHUNKED RLS transactions instead of one-per-observation; if
+ * a chunk's transaction fails atomically (any statement aborts the whole tx),
+ * its rows are retried individually so a single bad row only loses itself, not
+ * the entire chunk — keeping the prior per-row failure isolation.
+ */
+export async function importObservations(
+  userId: string,
+  provider: string,
+  observations: FHIRObservation[],
+  existing: Array<{
+    name: string;
+    measurementDate: Date;
+    valueEncrypted: string;
+    sourceFile: string | null;
+  }>,
+  encryption: ReturnType<typeof getEncryptionService>,
+  salt: string
+): Promise<{
+  imported: number;
+  skipped: number;
+  importedNames: string[];
+  unmappedCodes: string[];
+  errors: string[];
+}> {
+  const errors: string[] = [];
+  const unmappedCodes: string[] = [];
+  let skipped = 0;
+
+  // Seed dedupe sets from existing rows. existingSourceFiles holds the STABLE
+  // external FHIR id (`fhir:{provider}:{obs.id}`, stored unencrypted in
+  // sourceFile) — the idempotency key, so a re-sync of an already-imported
+  // observation is a true no-op and can't clobber a user's later edit.
+  const existingKeys = new Set<string>();
+  const existingSourceFiles = new Set<string>();
+  for (const b of existing) {
+    if (b.sourceFile) existingSourceFiles.add(b.sourceFile);
+    try {
+      existingKeys.add(dedupeKey(b.name, b.measurementDate, encryption.decrypt(b.valueEncrypted, salt)));
+    } catch {
+      // skip undecryptable rows — dedupe errs on the side of importing
+    }
+  }
+
+  // PREPARE: map + dedupe + encrypt (no DB writes). Skips/unmapped tracked here.
+  const prepared: PreparedReading[] = [];
+  for (const obs of observations) {
+    try {
+      const row = mapObservation(obs);
+      if (!row) {
+        // Can't derive a value — skip (qualitative results etc. not yet supported).
+        skipped++;
+        continue;
+      }
+
+      // An amended/corrected result reuses the same id with a NEW value, so let
+      // those through; the value-based check below no-ops one that didn't change.
+      const obsIdentity = `fhir:${provider}:${obs.id}`;
+      const isAmendment = obs.status === 'amended' || obs.status === 'corrected';
+      if (existingSourceFiles.has(obsIdentity) && !isAmendment) {
+        skipped++;
+        continue;
+      }
+
+      if (row.unmapped && !unmappedCodes.includes(row.loincCode)) {
+        unmappedCodes.push(row.loincCode);
+      }
+      const key = dedupeKey(row.name, row.measurementDate, String(row.value));
+      if (existingKeys.has(key)) {
+        skipped++;
+        continue;
+      }
+
+      const valueEncrypted = encryption.encrypt(String(row.value), salt);
+      const isOutOfRange =
+        (row.normalRangeMin !== null && row.value < row.normalRangeMin) ||
+        (row.normalRangeMax !== null && row.value > row.normalRangeMax);
+
+      // Mark deduped now so an exact duplicate later in THIS batch is also skipped.
+      existingKeys.add(key);
+      existingSourceFiles.add(obsIdentity);
+
+      prepared.push({
+        name: row.name,
+        payload: {
+          category: row.category,
+          name: row.name,
+          unit: row.unit,
+          valueEncrypted,
+          normalRangeMin: row.normalRangeMin ?? 0,
+          normalRangeMax: row.normalRangeMax ?? 0,
+          normalRangeSource: `${provider.toUpperCase()} FHIR`,
+          measurementDate: row.measurementDate,
+          sourceType: 'API_IMPORT',
+          sourceFile: obsIdentity,
+          isOutOfRange,
+        },
+      });
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message.slice(0, 200) : 'unknown');
+      skipped++;
+    }
+  }
+
+  // IMPORT: chunked transactions, with a per-row fallback so a chunk that fails
+  // atomically doesn't drop every reading in it. Merging into the existing
+  // series (upsertBiomarkerReading) lets synced labs accrue real history.
+  let imported = 0;
+  const importedNames: string[] = [];
+  for (let i = 0; i < prepared.length; i += IMPORT_CHUNK_SIZE) {
+    const chunk = prepared.slice(i, i + IMPORT_CHUNK_SIZE);
+    try {
+      await withRLSTransaction(
+        userId,
+        async (tx) => {
+          for (const item of chunk) {
+            await upsertBiomarkerReading(tx, userId, item.payload);
+          }
+        },
+        { timeout: 30_000, maxWait: 10_000 }
+      );
+      imported += chunk.length;
+      for (const item of chunk) importedNames.push(item.name);
+    } catch {
+      // Chunk tx failed (one bad row aborts the whole tx). Retry each reading in
+      // its own tx so only the genuinely-bad row is dropped, not the chunk.
+      for (const item of chunk) {
+        try {
+          await withRLSTransaction(userId, async (tx) => {
+            await upsertBiomarkerReading(tx, userId, item.payload);
+          });
+          imported++;
+          importedNames.push(item.name);
+        } catch (err) {
+          errors.push(err instanceof Error ? err.message.slice(0, 200) : 'unknown');
+          skipped++;
+        }
+      }
+    }
+  }
+
+  return { imported, skipped, importedNames, unmappedCodes, errors };
+}
 
 interface MappedObservation {
   name: string;
