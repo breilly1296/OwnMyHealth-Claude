@@ -44,6 +44,20 @@ export interface InsurancePlanData {
   copayAdvancedImaging?: number;
   coinsuranceRate?: number;
 
+  // Per-service coinsurance (for "X% after deductible" plans). The backend
+  // toResponse() returns these (insuranceController.ts), but the client type
+  // previously omitted them — so reading e.g. plan.coinsuranceSpecialist off an
+  // InsurancePlanData was a type error and the data silently dropped on the
+  // client. Now the client type matches the actual response contract.
+  coinsurancePrimaryCare?: number;
+  coinsuranceSpecialist?: number;
+  coinsuranceUrgentCare?: number;
+  coinsuranceEmergency?: number;
+  coinsuranceTelehealth?: number;
+  coinsuranceLabWork?: number;
+  coinsuranceXray?: number;
+  coinsuranceAdvancedImaging?: number;
+
   // Inpatient coverage
   inpatientHospitalCopay?: number;
   inpatientHospitalCoinsurance?: number;

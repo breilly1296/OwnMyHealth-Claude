@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import type { InsurancePlan } from '../../types';
 import { insuranceApi } from '../../services/api/insurance';
+import { transformPlanForDisplay } from '../../utils/insurance/insuranceUtils';
 
 interface InsurancePlanDetailProps {
   plan: InsurancePlan;
@@ -281,10 +282,10 @@ export default function InsurancePlanDetail({ plan, onBack, onPlanUpdated }: Ins
     try {
       const updatedPlan = await insuranceApi.reanalyzePlan(plan.id, file);
       setReanalyzeSuccess(true);
-      // Notify parent component of the update
+      // Notify parent — transform the raw API plan into the display InsurancePlan
+      // (builds benefits/costs arrays + defaults the UI-only fields).
       if (onPlanUpdated) {
-        // Convert API response to InsurancePlan type
-        onPlanUpdated(updatedPlan as unknown as InsurancePlan);
+        onPlanUpdated(transformPlanForDisplay(updatedPlan));
       }
       // Auto-hide success message after 5 seconds
       setTimeout(() => setReanalyzeSuccess(false), 5000);
