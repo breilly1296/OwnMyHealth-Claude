@@ -353,6 +353,7 @@ export async function createHealthGoal(
     category,
     targetValue,
     currentValue,
+    startValue,
     unit,
     direction,
     relatedBiomarkerId,
@@ -361,6 +362,12 @@ export async function createHealthGoal(
     milestones,
     reminderFrequency,
   } = req.body;
+
+  // The user's measured value at goal-creation time. The frontend suggestion
+  // flow sends it as `startValue`; the manual/legacy path sends `currentValue`.
+  // At creation start == current, so either field seeds both. Prefer
+  // `currentValue` when both are somehow present.
+  const initialValue = currentValue ?? startValue;
 
   // Validate required fields
   if (!name || !unit || !category || !startDate || !targetDate) {
@@ -374,9 +381,9 @@ export async function createHealthGoal(
     throw new ValidationError('targetValue must be a valid number');
   }
 
-  // Validate currentValue if provided
-  if (currentValue !== undefined && currentValue !== null && !Number.isFinite(currentValue)) {
-    throw new ValidationError('currentValue must be a valid number when provided');
+  // Validate the initial value if provided (accepts `startValue` or `currentValue`)
+  if (initialValue !== undefined && initialValue !== null && !Number.isFinite(initialValue)) {
+    throw new ValidationError('startValue/currentValue must be a valid number when provided');
   }
 
   const prisma = getPrismaClient();
@@ -388,13 +395,16 @@ export async function createHealthGoal(
     ? encryptionService.encrypt(description, userSalt)
     : null;
 
-  // Calculate initial progress. Use a presence check, NOT truthiness — a
-  // currentValue of 0 is a legitimate measurement (e.g. a DECREASE goal
+  // Calculate initial progress. Use a presence check, NOT truthiness — an
+  // initial value of 0 is a legitimate measurement (e.g. a DECREASE goal
   // already at 0 against a positive target should read 100%, not 0%).
-  const hasCurrentValue = currentValue !== undefined && currentValue !== null;
-  const startValue = currentValue ?? targetValue;
-  const progress = hasCurrentValue
-    ? calculateProgress(startValue, currentValue, targetValue, direction || 'DECREASE')
+  const hasInitialValue = initialValue !== undefined && initialValue !== null;
+  // At creation the progress baseline IS the initial value (start == current),
+  // so progress starts at 0% until a later reading moves toward the target.
+  // Fall back to the target as a harmless baseline when no value was supplied.
+  const baselineValue = hasInitialValue ? initialValue : targetValue;
+  const progress = hasInitialValue
+    ? calculateProgress(baselineValue, initialValue, targetValue, direction || 'DECREASE')
     : 0;
 
   // Encrypt all numeric PHI values at rest (M-6 targetValue + M4 current/start).
@@ -402,9 +412,9 @@ export async function createHealthGoal(
   // encrypted columns — no plaintext PHI persisted. Read paths prefer the
   // encrypted column and fall back to the legacy plaintext column for old rows.
   const targetValueEncrypted = encryptionService.encrypt(targetValue.toString(), userSalt);
-  const startValueEncrypted = encryptionService.encrypt(startValue.toString(), userSalt);
-  const currentValueEncrypted = hasCurrentValue
-    ? encryptionService.encrypt(String(currentValue), userSalt)
+  const startValueEncrypted = encryptionService.encrypt(baselineValue.toString(), userSalt);
+  const currentValueEncrypted = hasInitialValue
+    ? encryptionService.encrypt(String(initialValue), userSalt)
     : null;
 
   // Transaction ensures goal and initial history are created atomically
@@ -433,14 +443,14 @@ export async function createHealthGoal(
     });
 
     // Create the initial progress-history entry when an initial value is
-    // present. Guard on hasCurrentValue (a real number) rather than
-    // `!== undefined` so an explicit null currentValue never tries to encrypt
-    // the string "null".
-    if (hasCurrentValue) {
+    // present. Guard on hasInitialValue (a real number) rather than
+    // `!== undefined` so an explicit null value never tries to encrypt the
+    // string "null".
+    if (hasInitialValue) {
       await tx.goalProgressHistory.create({
         data: {
           goalId: newGoal.id,
-          valueEncrypted: encryptionService.encrypt(String(currentValue), userSalt),
+          valueEncrypted: encryptionService.encrypt(String(initialValue), userSalt),
           value: null,
           progress,
           noteEncrypted: encryptionService.encrypt('Initial value', userSalt),

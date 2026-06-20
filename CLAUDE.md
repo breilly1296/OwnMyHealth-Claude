@@ -4,7 +4,7 @@
 Privacy-first HIPAA-compliant health biomarker tracking platform with insurance document management, AI-powered guidance, provider-patient collaboration, and expense tracking. Focused on secure tracking of health metrics with Claude AI educational insights, insurance cost analysis, and provider data sharing via consent-based access control.
 
 ## Tech Stack
-- **Frontend**: React 18 + Vite 7.3 + TypeScript + Tailwind CSS
+- **Frontend**: React 18 + Vite 8.0 + TypeScript + Tailwind CSS
 - **Backend**: Node.js + Express 4.18 + TypeScript
 - **Database**: PostgreSQL (Cloud SQL) + Prisma ORM
 - **Auth**: JWT access tokens + refresh tokens (DB-backed sessions) + CSRF double-submit cookie
@@ -70,16 +70,18 @@ src/
 └── data/               # Sample data, nav config
 
 backend/src/
-├── controllers/        # Route handlers (10 files)
+├── controllers/        # Route handlers (10 top-level + upload/ subdir)
+│   ├── aiChatController.ts
 │   ├── authController.ts
 │   ├── biomarkerController.ts
 │   ├── expenseController.ts
+│   ├── fhirController.ts
 │   ├── fileController.ts
 │   ├── healthGoalsController.ts
 │   ├── healthNeedsController.ts
 │   ├── insuranceController.ts
 │   ├── settingsController.ts
-│   └── uploadController.ts
+│   └── upload/         # labUploadController, sbcUploadController, shared
 ├── middleware/          # Security middleware (8 files)
 │   ├── auth.ts         # JWT verification
 │   ├── csrf.ts         # CSRF double-submit cookie

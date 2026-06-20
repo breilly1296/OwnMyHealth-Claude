@@ -18,7 +18,7 @@
 
 ### 0.1 Know your dev environment
 Run `echo $DATABASE_URL` (or check `backend/.env`). Identify:
-- Host — `localhost`? Cloud SQL? Railway?
+- Host — `localhost`? Cloud SQL?
 - Role — the `user` portion of `postgresql://user:pass@host/db`
 
 **Stop and record the answer.** Everything downstream assumes you know this.

@@ -273,14 +273,14 @@ IMPORTANT: This is for educational purposes only and does not constitute medical
       });
 
       // Audit log: PHI disclosed to external AI API for guidance.
-      // F-16 fix: biomarkerName previously included `biomarker.name` in
-      // plaintext metadata. Even though the audit_logs table has encrypted
-      // previous_value/new_value columns, the metadata column is plain
-      // JSON — and biomarker names like "HIV viral load" or "PSA" can
-      // disclose conditions on their own. The biomarker UUID is already
-      // captured in resourceId (the second positional arg below); ops can
-      // join `audit_logs.resource_id → biomarkers.id → name` under
-      // controlled access if a name is needed for an investigation.
+      // F-16 fix: biomarkerName previously included `biomarker.name` in the
+      // audit metadata. The audit_logs metadata column is now AES-256-GCM-
+      // encrypted at rest (M6), but we still keep biomarker names OUT of it as
+      // defense-in-depth — names like "HIV viral load" or "PSA" can disclose
+      // conditions on their own. The biomarker UUID is already captured in
+      // resourceId (the second positional arg below); ops can join
+      // `audit_logs.resource_id → biomarkers.id → name` under controlled
+      // access if a name is needed for an investigation.
       await auditService.logAccess('biomarker_ai_guidance', id, { req, userId }, {
         operation: 'PHI_ACCESS',
         externalApiCall: true,

@@ -129,7 +129,6 @@ export function validateCsrfToken(
     '/api/v1/auth/reset-password',
     '/api/v1/auth/verify-email',
     '/api/v1/auth/resend-verification',
-    '/api/v1/marketplace/plans/search',
     // Bearer-only streaming route. Intentionally CSRF-exempt because SSE
     // (`EventSource`) can't attach a custom header, so CSRF tokens can't ride
     // along. SAFETY: this route MUST be mounted with `requireBearerAuth`

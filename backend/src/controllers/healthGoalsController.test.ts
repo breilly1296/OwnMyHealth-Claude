@@ -64,6 +64,7 @@ import {
   deleteHealthGoal,
   suggestGoals,
 } from './healthGoalsController.js';
+import { schemas } from '../middleware/validation.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -234,6 +235,59 @@ describe('createHealthGoal', () => {
     expect(data.currentValue).toBeNull();
     expect(data.startValue).toBeNull();
     expect(data.targetValue).toBeUndefined();
+  });
+
+  it('preserves startValue through the real create-schema validation (regression: contract drift)', () => {
+    // The frontend goal-suggestion flow sends the initial value as `startValue`.
+    // Before the fix the create schema only declared `currentValue`, so Zod
+    // silently stripped `startValue` and the goal lost its baseline. Run the
+    // REAL schema the route mounts to lock the contract.
+    const parsed = schemas.healthGoal.create.parse({
+      name: 'Lower BP',
+      category: 'Vital Signs',
+      targetValue: 120,
+      startValue: 140,
+      unit: 'mmHg',
+      direction: 'DECREASE',
+      startDate: '2026-01-01',
+      targetDate: '2026-12-31',
+    });
+    expect(parsed.startValue).toBe(140);
+  });
+
+  it('uses startValue as the initial value when currentValue is absent (regression)', async () => {
+    mockTx.healthGoal.create.mockResolvedValue(goalFixture());
+    mockTx.goalProgressHistory.create.mockResolvedValue({});
+
+    // Body exactly as it arrives after the real validate() middleware for the
+    // suggestion flow: `startValue` present, NO `currentValue`.
+    const body = schemas.healthGoal.create.parse({
+      name: 'Lower BP',
+      category: 'Vital Signs',
+      targetValue: 120,
+      startValue: 140,
+      unit: 'mmHg',
+      direction: 'DECREASE',
+      startDate: '2026-01-01',
+      targetDate: '2026-12-31',
+    });
+    const req = createMockRequest({
+      user: { id: USER_ID, email: 'test@example.com', role: 'PATIENT' },
+      body,
+    });
+    const res = createMockResponse();
+
+    await createHealthGoal(req, res);
+
+    const data = mockTx.healthGoal.create.mock.calls[0][0].data;
+    // The user's start value (140) must survive — not be dropped to null/target.
+    expect(data.currentValueEncrypted).toBe('enc:140');
+    expect(data.startValueEncrypted).toBe('enc:140');
+    expect(data.currentValue).toBeNull();
+    // And the initial progress-history row is seeded from 140.
+    expect(mockTx.goalProgressHistory.create).toHaveBeenCalledTimes(1);
+    const historyData = mockTx.goalProgressHistory.create.mock.calls[0][0].data;
+    expect(historyData.valueEncrypted).toBe('enc:140');
   });
 
   it('decrypts the encrypted current/start values in the response (M4)', async () => {

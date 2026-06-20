@@ -2,7 +2,7 @@
 
 A privacy-first, HIPAA-compliant health biomarker tracking platform with insurance document management. Built for patients managing chronic conditions like osteoporosis.
 
-**Security Audit Status:** `PASS` | **Vulnerabilities:** `0` | **Last Audit:** January 2025
+**Security Audit Status:** `PASS (no open Critical/High)` | **npm audit:** `9 transitive, none app-reachable` | **Last Review:** June 2026
 
 ---
 
@@ -214,7 +214,7 @@ Key Storage: Environment variable (PHI_ENCRYPTION_KEY)
 | Component | Technology | Version |
 |-----------|------------|---------|
 | Framework | React | 18.3 |
-| Build Tool | Vite | 7.3 |
+| Build Tool | Vite | 8.0 |
 | Language | TypeScript | 5.5 |
 | Styling | Tailwind CSS | 3.4 |
 | Charts | Recharts | 3.5 |
@@ -234,7 +234,7 @@ Key Storage: Environment variable (PHI_ENCRYPTION_KEY)
 | Control | Implementation |
 |---------|----------------|
 | PHI Encryption | AES-256-GCM (application layer) |
-| Password Hashing | bcrypt (12 rounds) |
+| Password Hashing | bcrypt (13 rounds) |
 | Authentication | JWT access + refresh tokens |
 | CSRF Protection | Double-submit cookie pattern |
 | Rate Limiting | express-rate-limit |
@@ -336,20 +336,24 @@ ANTHROPIC_API_KEY=<for-ai-features>
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          SECURITY AUDIT RESULTS                              │
-│                            January 2025                                      │
+│                              June 2026                                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-  Overall Status:  PASS
+  Overall Status:  PASS (no open Critical/High)
 
   ┌─────────────────────┬──────────┐
   │ Category            │ Status   │
   ├─────────────────────┼──────────┤
   │ Critical Findings   │    0     │
   │ High Findings       │    0     │
-  │ Medium Findings     │    0     │
-  │ Low Findings        │    0     │
-  │ npm audit           │    0     │
+  │ Medium / Low        │ tracked* │
+  │ npm audit           │   9**    │
   └─────────────────────┴──────────┘
+
+  *  Open Medium/Low items are tracked in New Project Documents/
+     SECURITY_STATUS.md and KNOWN_ISSUES.md (no open Critical/High).
+  ** 9 transitive advisories (1 high / 8 moderate), none app-reachable —
+     see KNOWN_ISSUES.md §8.
 
   Controls Verified:
   [x] PHI encryption (AES-256-GCM)
