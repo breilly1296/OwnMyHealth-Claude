@@ -1,212 +1,153 @@
 # OwnMyHealth Deployment Guide
 
-Deploy OwnMyHealth to **Railway** with your domain **ownmyhealth.io**
+OwnMyHealth runs on **Google Cloud Platform**, deployed automatically by GitHub Actions.
+
+| Tier | Where | Resource |
+|------|-------|----------|
+| Backend API | Cloud Run | `ownmyhealth-backend` (prod), `ownmyhealth-backend-staging` (staging) |
+| Frontend | Cloud Storage (static SPA) | bucket `ownmyhealth-frontend` (prod), `ownmyhealth-frontend-staging` (staging) |
+| Database | Cloud SQL for PostgreSQL | `ownmyhealth-prod:us-central1:ownmyhealth-db` |
+| Migrations | Cloud Run **job** | `ownmyhealth-migrate` (runs as a deploy step — **not** at container boot) |
+| Container images | Artifact Registry | repo `ownmyhealth` (`us-central1`) |
+
+Project: `ownmyhealth-prod` · Region: `us-central1` · Domains: `ownmyhealth.io` (frontend) / `api.ownmyhealth.io` (backend).
+
+> Railway was the original deployment target and has been **retired**. Deployment is GCP-only — there are no `railway.toml` files anymore.
 
 ---
 
-## Prerequisites
+## How deploys happen (the normal path)
 
-- [x] Domain owned: ownmyhealth.io
-- [ ] GitHub account (for connecting to Railway)
-- [ ] Railway account (free at https://railway.app)
+Routine releases are automated by **`.github/workflows/deploy.yml`** (prod) and **`.github/workflows/deploy-staging.yml`** (staging). You do **not** run `gcloud` by hand for a normal release.
+
+- **Prod**: push / merge to `master` → `deploy.yml` runs.
+- **Staging**: push to `staging` → `deploy-staging.yml` runs.
+
+Both are gated on the reusable CI workflow (**`ci.yml`**): frontend lint + test + build, backend lint + test + build, gitleaks secret scan, High/Critical `npm audit`, the RLS-wrapper guard, and the NOBYPASSRLS tenant-isolation suite against a real Postgres. **If CI fails, nothing is built or shipped.**
+
+Prod deploy stages (each fails closed — a failure leaves production untouched):
+
+1. **ci** — the full CI suite must pass.
+2. **build-and-stage** — build the Docker image, push to Artifact Registry, deploy a new Cloud Run revision at **0% traffic** with a tagged URL.
+3. **migrate** — point the `ownmyhealth-migrate` Cloud Run job at the new image SHA and run `prisma migrate deploy` (migrations run here, never at container boot).
+4. **smoke-test** — curl the tagged revision's `/api/v1/health`.
+5. **promote** — shift 100% traffic to the new revision.
+6. **deploy-frontend** — build the SPA and sync it to the `ownmyhealth-frontend` GCS bucket.
 
 ---
 
-## Step 1: Push Code to GitHub
+## One-time setup
 
-First, commit all your changes and push to GitHub:
+### Prerequisites
+- GCP project `ownmyhealth-prod` with billing enabled.
+- APIs enabled: Cloud Run, Artifact Registry / Cloud Build, Cloud SQL Admin, Secret Manager.
+- `gcloud` CLI authenticated (`gcloud auth login`) for any manual / break-glass work.
+- Domain `ownmyhealth.io` with DNS access at your registrar.
+
+### GitHub secret
+The workflows authenticate to GCP with a JSON service-account key:
+
+- **`GCP_SA_KEY`** — JSON key for a deploy service account with Cloud Run Admin, Artifact Registry Writer, Cloud SQL Client, and Storage Admin (on the frontend bucket) roles.
+
+> Infra note: migrating to Workload Identity Federation would replace this long-lived key with short-lived OIDC tokens — see the comment block in `deploy.yml`.
+
+### Backend environment variables / secrets
+Set these on the Cloud Run service (`ownmyhealth-backend`) as env vars or Secret Manager references — **never** in a committed file. The fully annotated list with boot-guard requirements is **`backend/.env.production.example`**. The critical set:
+
+| Variable | Notes |
+|----------|-------|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | Cloud SQL Postgres connection (Secret Manager) |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | `openssl rand -base64 32`, ≥ 32 chars |
+| `JWT_ACCESS_EXPIRES_SECONDS` / `JWT_REFRESH_EXPIRES_SECONDS` | `900` / `604800` (integer **seconds**) |
+| `PHI_ENCRYPTION_KEY` | 64 hex chars (`openssl rand -hex 32`) — **back up securely; data loss if lost** |
+| `AUDIT_LOG_SALT` | ≥ 16 chars; do **not** rotate on an env with historic audit logs |
+| `ANTHROPIC_API_KEY` + `ANTHROPIC_BAA_ACTIVE=true` | required together in prod |
+| `GCS_BUCKET_NAME` | `ownmyhealth-user-files` (boot hard-fails if unset — F-28) |
+| `GCP_PROJECT_ID` | `ownmyhealth-prod` |
+| `SENDGRID_API_KEY` / `EMAIL_FROM` / `FRONTEND_URL` | transactional email |
+| `CORS_ORIGIN` | `https://ownmyhealth.io` |
+
+Optional shared-infra (multi-instance accuracy): `REDIS_URL`, `AUDIT_CLEANUP_TOKEN` — see `backend/.env.production.example`.
+
+### Frontend build-time variable
+- `VITE_API_URL=https://api.ownmyhealth.io/api/v1` — embedded at build time in CI (template: `.env.production.example`).
+
+---
+
+## Database migrations
+
+Migrations run as the **`ownmyhealth-migrate` Cloud Run job** during deploy (stage 3 above). The container CMD is `node dist/app.js` only — there is **no** boot-time `prisma migrate deploy`.
+
+Manual run (break-glass):
 
 ```bash
-cd C:\Users\breil\OneDrive\Desktop\OwnMyHealth
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Prepare for production deployment"
-
-# If you haven't set up a remote yet:
-git remote add origin https://github.com/YOUR_USERNAME/ownmyhealth.git
-
-# Push to GitHub
-git push -u origin master
+gcloud run jobs execute ownmyhealth-migrate \
+  --project ownmyhealth-prod --region us-central1 --wait
 ```
 
 ---
 
-## Step 2: Create Railway Project
+## Manual / break-glass deploy
 
-1. Go to https://railway.app and sign in with GitHub
-2. Click **"New Project"**
-3. Select **"Deploy from GitHub repo"**
-4. Choose your **ownmyhealth** repository
+Routine deploys go through GitHub Actions. If you must deploy by hand (e.g. a CI outage), the equivalent steps:
 
----
+```bash
+PROJECT=ownmyhealth-prod
+REGION=us-central1
+IMAGE="$REGION-docker.pkg.dev/$PROJECT/ownmyhealth/backend:$(git rev-parse --short HEAD)"
 
-## Step 3: Set Up PostgreSQL Database
+# 1. Build + push the backend image
+gcloud builds submit backend --tag "$IMAGE" --project "$PROJECT"
 
-1. In your Railway project, click **"+ New"**
-2. Select **"Database"** → **"Add PostgreSQL"**
-3. Railway will automatically create a PostgreSQL instance
-4. The `DATABASE_URL` will be automatically available to your services
+# 2. Deploy a new revision at 0% traffic
+gcloud run deploy ownmyhealth-backend --image "$IMAGE" \
+  --project "$PROJECT" --region "$REGION" --no-traffic --tag candidate
 
----
+# 3. Run migrations against the new image
+gcloud run jobs update ownmyhealth-migrate --image "$IMAGE" \
+  --project "$PROJECT" --region "$REGION"
+gcloud run jobs execute ownmyhealth-migrate --project "$PROJECT" --region "$REGION" --wait
 
-## Step 4: Deploy Backend Service
+# 4. Smoke-test the candidate revision's /api/v1/health, then promote
+gcloud run services update-traffic ownmyhealth-backend --to-latest \
+  --project "$PROJECT" --region "$REGION"
 
-1. Click **"+ New"** → **"GitHub Repo"**
-2. Select your repository
-3. Click **"Add variables"** and set:
-
-   | Variable | Value |
-   |----------|-------|
-   | `NODE_ENV` | `production` |
-   | `JWT_ACCESS_SECRET` | *(generate: `openssl rand -base64 32`)* |
-   | `JWT_REFRESH_SECRET` | *(generate: `openssl rand -base64 32`)* |
-   | `PHI_ENCRYPTION_KEY` | *(generate: `openssl rand -hex 32`)* |
-   | `CORS_ORIGIN` | `https://ownmyhealth.io` |
-   | `JWT_ACCESS_EXPIRES_IN` | `15m` |
-   | `JWT_REFRESH_EXPIRES_IN` | `7d` |
-
-4. Go to **Settings** → **General**:
-   - Set **Root Directory** to: `backend`
-   - Set **Watch Paths** to: `/backend/**`
-
-5. Go to **Settings** → **Networking**:
-   - Click **"Generate Domain"** (you'll get something like `backend-xxx.railway.app`)
-   - Note this URL for the frontend config
-
-6. Click **"Connect"** next to the PostgreSQL database to link `DATABASE_URL`
-
----
-
-## Step 5: Deploy Frontend Service
-
-1. Click **"+ New"** → **"GitHub Repo"**
-2. Select the same repository
-3. Click **"Add variables"** and set:
-
-   | Variable | Value |
-   |----------|-------|
-   | `VITE_API_URL` | `https://YOUR-BACKEND-URL.railway.app/api/v1` |
-
-   *(Use the backend URL from Step 4)*
-
-4. Go to **Settings** → **General**:
-   - Keep **Root Directory** empty (uses project root)
-   - Ensure it detects the `package.json`
-
-5. Go to **Settings** → **Networking**:
-   - Click **"Generate Domain"**
-
----
-
-## Step 6: Configure Custom Domain
-
-### For Frontend (ownmyhealth.io):
-
-1. In Railway, select your **frontend service**
-2. Go to **Settings** → **Networking**
-3. Click **"Custom Domain"**
-4. Enter: `ownmyhealth.io`
-5. Railway will show you DNS records to add
-
-### For Backend (api.ownmyhealth.io):
-
-1. Select your **backend service**
-2. Go to **Settings** → **Networking**
-3. Click **"Custom Domain"**
-4. Enter: `api.ownmyhealth.io`
-5. Railway will show you DNS records to add
-
-### Add DNS Records at Your Domain Registrar:
-
-Go to your domain registrar (where you bought ownmyhealth.io) and add:
-
-| Type | Name | Value |
-|------|------|-------|
-| CNAME | `@` or blank | `your-frontend.railway.app` |
-| CNAME | `api` | `your-backend.railway.app` |
-
-*Note: Some registrars don't allow CNAME for root domain. Use their "ALIAS" or "ANAME" feature, or use a subdomain like `www.ownmyhealth.io`*
-
----
-
-## Step 7: Update Backend CORS
-
-After setting up the custom domain, update the backend's `CORS_ORIGIN`:
-
-```
-CORS_ORIGIN=https://ownmyhealth.io
+# 5. Build + sync the frontend
+npm ci && npm run build
+gsutil -m rsync -d -r dist gs://ownmyhealth-frontend
 ```
 
----
-
-## Step 8: Run Database Migrations
-
-Railway will automatically run migrations on deploy (configured in `railway.toml`).
-
-To run manually:
-1. Go to your backend service
-2. Open the **"Command"** tab
-3. Run: `npx prisma migrate deploy`
+> Cloud Run env-var updates can stay held at 0% traffic if the service was previously pinned to an explicit revision — follow any env change with `gcloud run services update-traffic ... --to-latest`.
 
 ---
 
-## Step 9: Verify Deployment
+## Custom domain
 
-1. Visit https://ownmyhealth.io - Frontend should load
-2. Visit https://api.ownmyhealth.io/api/v1/health - Should return health check
-3. Try logging in/registering
+- **Frontend `ownmyhealth.io`** — the SPA is synced to the `ownmyhealth-frontend` GCS bucket; serve it via the bucket's static-website config or an HTTPS load balancer / Cloud CDN, and point your apex / `www` DNS at that endpoint.
+- **Backend `api.ownmyhealth.io`** — Cloud Run domain mapping:
 
----
+  ```bash
+  gcloud run domain-mappings create --service ownmyhealth-backend \
+    --domain api.ownmyhealth.io --project ownmyhealth-prod --region us-central1
+  ```
 
-## Security Checklist
-
-- [x] All secrets generated uniquely (not example values)
-- [x] `PHI_ENCRYPTION_KEY` backed up securely (CRITICAL - data loss if lost!)
-- [x] HTTPS enabled (Railway does this automatically)
-- [x] CORS restricted to your domain only
-- [x] Production environment variables set
+  Add the CNAME / A records it returns at your registrar. HTTPS certificates are provisioned automatically.
 
 ---
 
-## Troubleshooting
+## Verify
 
-### Backend not connecting to database
-- Ensure PostgreSQL is connected to the backend service
-- Check `DATABASE_URL` is properly set
-
-### Frontend can't reach backend (CORS error)
-- Verify `CORS_ORIGIN` in backend matches your frontend domain exactly
-- Include `https://` in the CORS_ORIGIN
-
-### 500 errors on backend
-- Check Railway logs: Click on backend service → "Logs"
-- Verify all environment variables are set
-- Ensure PHI_ENCRYPTION_KEY is exactly 64 hex characters
-
-### Domain not working
-- DNS propagation can take up to 48 hours
-- Verify CNAME records are correct
-- Try https://dnschecker.org to verify DNS
+1. `https://ownmyhealth.io` — frontend loads.
+2. `https://api.ownmyhealth.io/api/v1/health` — returns the health check.
+3. Register / log in end-to-end.
 
 ---
 
-## Monthly Cost Estimate
+## Troubleshooting & runbooks
 
-| Service | Estimated Cost |
-|---------|---------------|
-| Frontend | ~$0-5/month |
-| Backend | ~$5-10/month |
-| PostgreSQL | ~$5-10/month |
-| **Total** | **~$10-25/month** |
+- Operational runbook: **`New Project Documents/RUNBOOK.md`**
+- Symptom → root-cause: **`New Project Documents/TROUBLESHOOTING.md`**
+- RLS / NOBYPASSRLS cutover: **`docs/c-8-part-c-runbook.md`**
 
-*Railway offers $5 free credit monthly, so small apps may run free!*
-
----
-
-## Support
-
-- Railway Docs: https://docs.railway.app
-- Railway Discord: https://discord.gg/railway
+A recurring gotcha: a deploy can succeed but the service crash-loop if a required env var is missing (e.g. the `GCS_BUCKET_NAME` F-28 boot guard). Confirm every required variable above is present on the new Cloud Run revision.
