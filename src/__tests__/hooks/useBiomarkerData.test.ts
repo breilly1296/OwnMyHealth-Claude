@@ -24,12 +24,14 @@ vi.mock('../../services/api', () => ({
   },
   insuranceApi: {
     getPlans: vi.fn(),
+    getPlanById: vi.fn(),
+    createPlan: vi.fn(),
   },
 }));
 
 import { fetchAllBiomarkers, mergeBiomarkersById, useBiomarkerData } from '../../hooks/useBiomarkerData';
 import { biomarkersApi, insuranceApi } from '../../services/api';
-import type { Biomarker } from '../../types';
+import type { Biomarker, InsurancePlan } from '../../types';
 
 // Build a fake API page response. Each biomarker gets an id encoding its
 // page so concatenation order can be asserted.
@@ -442,5 +444,91 @@ describe('useBiomarkerData create payload contracts', () => {
     expect(
       result.current.biomarkers.filter((b) => b.id.startsWith('srv-'))
     ).toHaveLength(100);
+  });
+});
+
+// ============================================
+// SBC import: adopt the saved plan, don't duplicate it
+// ============================================
+// The SBC upload endpoint already persists the plan (with its full extracted
+// benefits) and returns its id. A truthy plan.id must therefore re-fetch the
+// authoritative record and NOT call createPlan — calling createPlan again
+// produced a duplicate, benefit-less plan (triage Mediums #1/#4). An empty id
+// (manual/legacy import) still routes through createPlan.
+describe('useBiomarkerData handleInsurancePlanExtracted (SBC import)', () => {
+  const user = { id: 'user-1', email: 'test@example.com', role: 'PATIENT' };
+
+  function renderBiomarkerHook(onError = vi.fn()) {
+    return renderHook(() => useBiomarkerData({ user, initialBiomarkers: [], onError }));
+  }
+
+  // Minimal record transformPlanForDisplay accepts (it guards every optional field).
+  const apiPlan = (id: string) => ({
+    id,
+    planName: 'Gold PPO',
+    insurerName: 'Acme Health',
+    planType: 'PPO',
+    effectiveDate: '2026-01-01',
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(biomarkersApi.getAll).mockResolvedValue({
+      biomarkers: [],
+      pagination: { total: 0, page: 1, limit: 100, totalPages: 1 },
+    } as never);
+    vi.mocked(insuranceApi.getPlans).mockResolvedValue([] as never);
+  });
+
+  it('adopts an already-saved SBC plan: re-fetches by id and never calls createPlan (no duplicate)', async () => {
+    vi.mocked(insuranceApi.getPlanById).mockResolvedValue(apiPlan('srv-plan-1') as never);
+
+    const { result } = renderBiomarkerHook();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleInsurancePlanExtracted(
+        { id: 'srv-plan-1', planName: 'Gold PPO' } as unknown as InsurancePlan
+      );
+    });
+
+    // uploadSBC already saved it — a second createPlan would duplicate it.
+    expect(insuranceApi.createPlan).not.toHaveBeenCalled();
+    expect(insuranceApi.getPlanById).toHaveBeenCalledTimes(1);
+    expect(insuranceApi.getPlanById).toHaveBeenCalledWith('srv-plan-1');
+    expect(result.current.insurancePlans.map((p) => p.id)).toContain('srv-plan-1');
+  });
+
+  it('falls back to the local copy when the re-fetch fails (still no createPlan)', async () => {
+    vi.mocked(insuranceApi.getPlanById).mockRejectedValue(new Error('network'));
+
+    const { result } = renderBiomarkerHook();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleInsurancePlanExtracted(
+        { id: 'srv-plan-2', planName: 'Silver HMO' } as unknown as InsurancePlan
+      );
+    });
+
+    expect(insuranceApi.createPlan).not.toHaveBeenCalled();
+    expect(result.current.insurancePlans.map((p) => p.id)).toContain('srv-plan-2');
+  });
+
+  it('creates the plan for a manual import with no server id', async () => {
+    vi.mocked(insuranceApi.createPlan).mockResolvedValue(apiPlan('created-1') as never);
+
+    const { result } = renderBiomarkerHook();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleInsurancePlanExtracted(
+        { id: '', planName: 'Manual Plan' } as unknown as InsurancePlan
+      );
+    });
+
+    expect(insuranceApi.createPlan).toHaveBeenCalledTimes(1);
+    expect(insuranceApi.getPlanById).not.toHaveBeenCalled();
+    expect(result.current.insurancePlans.map((p) => p.id)).toContain('created-1');
   });
 });

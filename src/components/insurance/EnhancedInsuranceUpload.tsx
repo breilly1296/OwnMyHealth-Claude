@@ -189,6 +189,9 @@ interface ProcessedFile {
   file: File;
   result?: DocumentParsingResult;
   isProcessing: boolean;
+  /** The plan id assigned by the server when uploadSBC persisted this plan.
+   *  Threaded into the import so we adopt the saved plan instead of re-creating it. */
+  serverPlanId?: string;
 }
 
 export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtracted }: EnhancedInsuranceUploadProps) {
@@ -266,7 +269,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
 
         setUploadedFiles(prev => prev.map(pf =>
           pf.id === processedFile.id
-            ? { ...pf, result, isProcessing: false }
+            ? { ...pf, result, serverPlanId: planData.id, isProcessing: false }
             : pf
         ));
 
@@ -302,15 +305,17 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
     }
   };
 
-  const handleImportPlan = (extractedData: ExtractedInsuranceData) => {
+  const handleImportPlan = (extractedData: ExtractedInsuranceData, serverPlanId?: string) => {
     // Convert extracted data to InsurancePlan format
     const plan: InsurancePlan = {
-      // FB-8: leave the id EMPTY. handleInsurancePlanExtracted treats a truthy
-      // plan.id as "already saved on the server" (the SBC-upload path) and skips
-      // createPlan. A fabricated client UUID here made it skip persistence, so the
-      // plan got a phantom id — same-session delete 404'd and it vanished on
-      // refresh. An empty id routes through createPlan and adopts the server id.
-      id: '',
+      // uploadSBC ALREADY persisted this plan server-side (with its full extracted
+      // benefits/coverage) and returned its id; thread that id through so
+      // handleInsurancePlanExtracted adopts the existing record instead of calling
+      // createPlan again — the re-create produced a DUPLICATE plan and dropped the
+      // benefits. Fall back to an empty id for any path without a server id
+      // (manual/legacy), which still routes through createPlan. A truthy id is also
+      // required so a same-session delete targets the real server row (FB-8).
+      id: serverPlanId ?? '',
       planName: extractedData.planInformation?.planName || 'Extracted Plan',
       insurerName: extractedData.planInformation?.insurerName || 'Unknown Insurer',
       planType: mapPlanType(extractedData.planInformation?.planType),
@@ -720,7 +725,7 @@ export default function EnhancedInsuranceUpload({ isOpen, onClose, onPlanExtract
                         {/* Import Button */}
                         <div className="mt-6 flex justify-end">
                           <button
-                            onClick={() => handleImportPlan(result.extractedData)}
+                            onClick={() => handleImportPlan(result.extractedData, processedFile.serverPlanId)}
                             className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center"
                           >
                             <Shield className="w-4 h-4 mr-2" />
