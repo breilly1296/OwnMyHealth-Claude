@@ -126,23 +126,6 @@ export function useBiomarker(id: string | null) {
   });
 }
 
-export function useBiomarkerHistory(id: string | null) {
-  const fetcher = useCallback(async () => {
-    if (!id) return [];
-    return biomarkersApi.getHistory(id);
-  }, [id]);
-
-  return useApiFetch(fetcher, {
-    immediate: !!id,
-    clearOnUnmount: true,
-  });
-}
-
-export function useBiomarkerSummary() {
-  const fetcher = useCallback(() => biomarkersApi.getSummary(), []);
-  return useApiFetch(fetcher, { clearOnUnmount: false });
-}
-
 export function useBiomarkerCategories() {
   const fetcher = useCallback(() => biomarkersApi.getCategories(), []);
   return useApiFetch<string[]>(fetcher, { clearOnUnmount: false });
@@ -165,18 +148,6 @@ export function useInsurancePlan(id: string | null) {
 
   return useApiFetch<InsurancePlanData | null>(fetcher, {
     immediate: !!id,
-    clearOnUnmount: true,
-  });
-}
-
-export function useInsuranceBenefits(planId: string | null) {
-  const fetcher = useCallback(async () => {
-    if (!planId) return [];
-    return insuranceApi.getBenefits(planId);
-  }, [planId]);
-
-  return useApiFetch(fetcher, {
-    immediate: !!planId,
     clearOnUnmount: true,
   });
 }

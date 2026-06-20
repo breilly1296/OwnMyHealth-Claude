@@ -102,14 +102,6 @@ export interface UpdateExpenseProjectionData {
 
 export interface AnalyzeCostsRequest {
   planId: string;
-  projections?: ExpenseProjectionData[];
-}
-
-export interface UpdateCurrentSpendingData {
-  deductibleMetIndividual: number;
-  oopMetIndividual: number;
-  deductibleMetFamily?: number;
-  oopMetFamily?: number;
 }
 
 /**
@@ -257,16 +249,4 @@ export const expensesApi = {
     return response.data;
   },
 
-  /**
-   * Update current deductible and OOP spending for a plan
-   */
-  async updateCurrentSpending(
-    planId: string,
-    data: UpdateCurrentSpendingData
-  ): Promise<void> {
-    await apiFetch(`/insurance/plans/${planId}/spending`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
 };

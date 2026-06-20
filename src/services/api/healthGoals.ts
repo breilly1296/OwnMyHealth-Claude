@@ -44,14 +44,14 @@ export interface CreateHealthGoalData {
 export interface UpdateHealthGoalData {
   name?: string;
   description?: string;
-  category?: string;
   targetValue?: number;
-  unit?: string;
-  direction?: 'INCREASE' | 'DECREASE' | 'MAINTAIN';
   targetDate?: string;
   milestones?: { value: number; label: string }[];
   reminderFrequency?: string;
   status?: 'ACTIVE' | 'PAUSED' | 'ACHIEVED' | 'FAILED' | 'CANCELLED';
+  // NOTE: category/unit/direction are intentionally omitted — the backend update
+  // schema (schemas.healthGoal.update) strips them, so the client must not imply
+  // they're editable here. They are set at create time only.
 }
 
 export interface GoalProgressUpdate {
