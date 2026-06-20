@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   findRel: vi.fn(),
   findPatient: vi.fn(),
   findPlans: vi.fn(),
+  countPlans: vi.fn(),
 }));
 
 vi.mock('../config/index.js', () => ({
@@ -28,7 +29,7 @@ vi.mock('../services/database.js', () => ({
     fn({
       providerPatient: { findUnique: mocks.findRel },
       user: { findFirst: mocks.findPatient },
-      insurancePlan: { findMany: mocks.findPlans },
+      insurancePlan: { findMany: mocks.findPlans, count: mocks.countPlans },
     })
   ),
   withRLSTransaction: vi.fn(),
@@ -150,6 +151,7 @@ describe('GET /provider/patients/:id/insurance — canViewInsurance is load-bear
     mocks.findRel.mockReset();
     mocks.findPatient.mockReset().mockResolvedValue({ id: PATIENT_ID });
     mocks.findPlans.mockReset().mockResolvedValue([planRow()]);
+    mocks.countPlans.mockReset().mockResolvedValue(1);
   });
 
   afterEach(() => vi.clearAllMocks());
