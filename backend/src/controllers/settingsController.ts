@@ -870,7 +870,7 @@ export async function deleteAllData(
   // tokens are revoked just above via revokeAllUserConnections (best-effort,
   // mirrors deleteAccount) before these local rows are severed, so a
   // data-wipe no longer leaves valid tokens dangling at the upstream provider.
-  const counts = await withRLSTransaction(userId, async (tx) => {
+  await withRLSTransaction(userId, async (tx) => {
     const costAnalysisCount = (await tx.costAnalysis.deleteMany({ where: { userId } })).count;
     const expenseActualCount = (await tx.expenseActual.deleteMany({ where: { userId } })).count;
     const expenseProjectionCount = (await tx.expenseProjection.deleteMany({ where: { userId } })).count;
@@ -896,34 +896,25 @@ export async function deleteAllData(
       tx.labConnection.deleteMany({ where: { userId } }).then((r) => r.count),
     ]);
 
-    return {
-      biomarkerCount,
-      insurancePlanCount,
-      healthNeedCount,
-      healthGoalCount,
-      userFileCount,
-      costAnalysisCount,
-      expenseActualCount,
-      expenseProjectionCount,
-      providerRelationshipCount,
-      labConnectionCount,
-    };
+    // Audit the success INSIDE the deletion transaction (tx-threaded) so the
+    // durable HIPAA 164.312(b) delete record commits atomically with the wipe.
+    // If this audit insert fails, the deletes roll back rather than leaving PHI
+    // permanently gone with no record — mirrors deleteAccount (the audit row and
+    // the user.delete commit together there too).
+    await auditService.logDelete('UserData', userId, {
+      deletedBiomarkers: biomarkerCount,
+      deletedInsurancePlans: insurancePlanCount,
+      deletedHealthNeeds: healthNeedCount,
+      deletedHealthGoals: healthGoalCount,
+      deletedUserFiles: userFileCount,
+      deletedCostAnalyses: costAnalysisCount,
+      deletedExpenseActuals: expenseActualCount,
+      deletedExpenseProjections: expenseProjectionCount,
+      deletedProviderRelationships: providerRelationshipCount,
+      deletedLabConnections: labConnectionCount,
+      deletedGcsObjects: gcsResults.length,
+    }, { req, userId, tx });
   });
-
-  // Phase 4 — audit the success with the actual deletion counts per category.
-  await auditService.logDelete('UserData', userId, {
-    deletedBiomarkers: counts.biomarkerCount,
-    deletedInsurancePlans: counts.insurancePlanCount,
-    deletedHealthNeeds: counts.healthNeedCount,
-    deletedHealthGoals: counts.healthGoalCount,
-    deletedUserFiles: counts.userFileCount,
-    deletedCostAnalyses: counts.costAnalysisCount,
-    deletedExpenseActuals: counts.expenseActualCount,
-    deletedExpenseProjections: counts.expenseProjectionCount,
-    deletedProviderRelationships: counts.providerRelationshipCount,
-    deletedLabConnections: counts.labConnectionCount,
-    deletedGcsObjects: gcsResults.length,
-  }, { req, userId });
 
   const response: ApiResponse = {
     success: true,

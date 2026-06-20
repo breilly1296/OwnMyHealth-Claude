@@ -913,8 +913,26 @@ describe('deleteAllData — full table cascade', () => {
         deletedLabConnections: 10,
         deletedGcsObjects: 1,
       }),
-      expect.any(Object)
+      // Threaded onto the deletion tx so the audit row commits atomically with
+      // the wipe (mirrors deleteAccount — no PHI gone with no durable record).
+      expect.objectContaining({ userId: 'user-123', tx: mockTx })
     );
+  });
+
+  it('does NOT report success when the in-tx delete audit fails (failClosed)', async () => {
+    vi.mocked(storageService.deleteFiles).mockResolvedValue([
+      { storageKey: 'user-123/f1.pdf', ok: true },
+    ]);
+    mockAuditService.logDelete.mockRejectedValueOnce(new Error('audit insert failed'));
+
+    const req = mockReq('user-123', { password: 'correct-horse' });
+    const res = mockRes();
+
+    // The failClosed re-throw propagates out of the deletion tx callback; in a
+    // real DB that rolls the deletes back, so PHI is never wiped without a
+    // durable delete record. No success response is sent.
+    await expect(deleteAllData(req, res)).rejects.toThrow(/audit insert failed/);
+    expect(res.json).not.toHaveBeenCalled();
   });
 });
 
