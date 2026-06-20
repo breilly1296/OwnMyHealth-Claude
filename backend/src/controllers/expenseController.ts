@@ -97,6 +97,26 @@ function tryDecrypt(
   }
 }
 
+/**
+ * Decrypt a numeric PHI field for a NON-nullable consumer (projected
+ * estimatedCost, deductible/OOP applied amounts). A corrupt/key-mismatched row
+ * or an unparseable value coerces to 0 rather than NaN — NaN would otherwise
+ * poison summed totals, the persisted cost-analysis snapshot, and the Claude
+ * prompt, and a raw decrypt would throw and abort the surrounding request/tx.
+ * (Use tryDecrypt directly when null is the correct typed value.)
+ */
+export function decryptNumberOrZero(
+  encryption: ReturnType<typeof getEncryptionService>,
+  value: string | null | undefined,
+  userSalt: string,
+  field: string
+): number {
+  const dec = tryDecrypt(encryption, value ?? null, userSalt, field);
+  if (dec === null) return 0;
+  const n = parseFloat(dec);
+  return Number.isFinite(n) ? n : 0;
+}
+
 // ============================================
 // EXPENSE PROJECTIONS (Planned Expenses)
 // ============================================
@@ -201,7 +221,7 @@ export async function getProjections(req: AuthenticatedRequest, res: Response): 
   const decrypted = projections.map((p) => ({
     ...p,
     serviceType: tryDecrypt(encryption, p.serviceTypeEncrypted, userSalt, 'serviceTypeEncrypted'),
-    estimatedCost: parseFloat(tryDecrypt(encryption, p.estimatedCostEncrypted, userSalt, 'estimatedCostEncrypted') ?? ''),
+    estimatedCost: decryptNumberOrZero(encryption, p.estimatedCostEncrypted, userSalt, 'estimatedCostEncrypted'),
     notes: tryDecrypt(encryption, p.notesEncrypted, userSalt, 'notesEncrypted'),
   }));
 
@@ -378,16 +398,15 @@ async function recomputePlanSpending(
     where: { userId, planId },
     select: { appliedToDeductibleEncrypted: true, appliedToOopEncrypted: true },
   });
-  const dec = (v: string | null) => {
-    if (!v) return 0;
-    const n = parseFloat(encryption.decrypt(v, userSalt));
-    return Number.isFinite(n) ? n : 0;
-  };
+  // M-7: route through tryDecrypt (not raw decrypt) so one corrupt/key-mismatched
+  // claim row contributes 0 + logs at warn instead of throwing. A throw here
+  // aborts the surrounding tx and 500s createActual/updateActual/deleteActual —
+  // the user couldn't even DELETE the offending claim.
   let deductibleMet = 0;
   let oopMet = 0;
   for (const a of actuals) {
-    deductibleMet += dec(a.appliedToDeductibleEncrypted);
-    oopMet += dec(a.appliedToOopEncrypted);
+    deductibleMet += decryptNumberOrZero(encryption, a.appliedToDeductibleEncrypted, userSalt, 'appliedToDeductibleEncrypted');
+    oopMet += decryptNumberOrZero(encryption, a.appliedToOopEncrypted, userSalt, 'appliedToOopEncrypted');
   }
   await tx.insurancePlan.updateMany({
     where: { id: planId, userId },
@@ -723,7 +742,7 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       return {
       id: p.id,
       serviceType: sanitizeForPrompt(tryDecrypt(encryption, p.serviceTypeEncrypted, userSalt, 'serviceTypeEncrypted') ?? ''),
-      estimatedCost: parseFloat(tryDecrypt(encryption, p.estimatedCostEncrypted, userSalt, 'estimatedCostEncrypted') ?? ''),
+      estimatedCost: decryptNumberOrZero(encryption, p.estimatedCostEncrypted, userSalt, 'estimatedCostEncrypted'),
       frequencyPerYear: p.frequencyPerYear,
       isInNetwork: p.isInNetwork,
       notes: notes !== null ? sanitizeForPrompt(notes) : null,
