@@ -916,7 +916,21 @@ function GoalDetailModal({
           <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-200 dark:border-slate-700 flex-wrap">
             <select
               value={goal.status}
-              onChange={(e) => onStatusChange(e.target.value as GoalStatus)}
+              onChange={(e) => {
+                const next = e.target.value as GoalStatus;
+                // Terminal states drop the goal out of the active list with no
+                // undo — confirm before applying. The select is controlled by
+                // goal.status, so cancelling snaps it back automatically.
+                if (
+                  (next === 'FAILED' || next === 'CANCELLED') &&
+                  !window.confirm(
+                    `Mark this goal as ${next === 'FAILED' ? 'failed' : 'cancelled'}? It will move out of your active goals.`
+                  )
+                ) {
+                  return;
+                }
+                onStatusChange(next);
+              }}
               disabled={isMutating}
               className="px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:bg-slate-700 dark:text-white text-sm"
             >

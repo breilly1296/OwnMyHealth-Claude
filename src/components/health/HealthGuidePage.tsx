@@ -303,6 +303,14 @@ export default function HealthGuidePage({
         </button>
       )}
 
+      {/* Screen-reader status for the streaming AI response — sighted users see
+          the streamed text + spinner; SR users would otherwise get only silence.
+          role="status" implies aria-live="polite" so it announces when streaming
+          starts/stops without reading every partial token. */}
+      <p className="sr-only" role="status">
+        {isStreaming ? 'Generating response, please wait…' : ''}
+      </p>
+
       {/* Messages area */}
       <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-4 mb-4 overflow-y-auto min-h-[60vh] max-h-[70vh]">
         {emptyConversation ? (
