@@ -50,6 +50,7 @@ vi.mock('./smartAuth.js', () => ({
   revokeToken: vi.fn(),
 }));
 vi.mock('./fhirClient.js', () => ({ FHIRClient: class {} }));
+vi.mock('../notificationService.js', () => ({ notifyNewResults: vi.fn(), notifyOutOfRange: vi.fn() }));
 
 import { importObservations } from './labSyncService.js';
 

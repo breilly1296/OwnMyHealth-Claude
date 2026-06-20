@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   upsert: vi.fn(async () => ({ id: 'b-new' })),
   logCreate: vi.fn(),
   logAccess: vi.fn(),
+  notifyNewResults: vi.fn(),
+  notifyOutOfRange: vi.fn(),
   tx: {
     labConnection: { findUnique: vi.fn(), update: vi.fn() },
     biomarker: { findMany: vi.fn(), create: vi.fn() },
@@ -41,6 +43,10 @@ vi.mock('../auditLog.js', () => ({
   getAuditLogService: () => ({ logCreate: mocks.logCreate, logAccess: mocks.logAccess }),
 }));
 vi.mock('../biomarkerSeries.js', () => ({ upsertBiomarkerReading: mocks.upsert }));
+vi.mock('../notificationService.js', () => ({
+  notifyNewResults: mocks.notifyNewResults,
+  notifyOutOfRange: mocks.notifyOutOfRange,
+}));
 vi.mock('../../config/index.js', () => ({
   config: {
     quest: {
@@ -177,5 +183,55 @@ describe('syncLabResults — FHIR Observation.id idempotency', () => {
     expect(mocks.upsert).not.toHaveBeenCalled();
     expect(result.imported).toBe(0);
     expect(result.skipped).toBe(1);
+  });
+});
+
+describe('syncLabResults — engagement notifications (FHIR parity with PDF upload)', () => {
+  // A Cholesterol obs carrying a reference range; mapObservation reads it, so a
+  // value above the high is imported AND flagged out-of-range.
+  const cholWithRange = (id: string, value: number, low: number, high: number) => ({
+    ...chol(id, 'final', value),
+    referenceRange: [{ low: { value: low }, high: { value: high } }],
+  });
+
+  it('emails new-results + out-of-range when an out-of-range reading is imported', async () => {
+    mocks.existingBiomarkers = [];
+    mocks.observations = [cholWithRange('obs-hi', 240, 0, 200)]; // 240 > 200 → high
+
+    const result = await syncLabResults('u1', 'quest');
+
+    expect(result.imported).toBe(1);
+    expect(mocks.notifyNewResults).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ biomarkerCount: 1, outOfRangeCount: 1, labName: 'QUEST FHIR' })
+    );
+    expect(mocks.notifyOutOfRange).toHaveBeenCalledWith('u1', {
+      biomarkers: [{ name: 'Total Cholesterol', status: 'high' }],
+    });
+  });
+
+  it('fires new-results but NOT out-of-range for an in-range import', async () => {
+    mocks.existingBiomarkers = [];
+    mocks.observations = [cholWithRange('obs-ok', 150, 0, 200)]; // within range
+
+    const result = await syncLabResults('u1', 'quest');
+
+    expect(result.imported).toBe(1);
+    expect(mocks.notifyNewResults).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ biomarkerCount: 1, outOfRangeCount: 0 })
+    );
+    expect(mocks.notifyOutOfRange).not.toHaveBeenCalled();
+  });
+
+  it('sends no emails when nothing is imported', async () => {
+    mocks.existingBiomarkers = [];
+    mocks.observations = [];
+
+    const result = await syncLabResults('u1', 'quest');
+
+    expect(result.imported).toBe(0);
+    expect(mocks.notifyNewResults).not.toHaveBeenCalled();
+    expect(mocks.notifyOutOfRange).not.toHaveBeenCalled();
   });
 });
