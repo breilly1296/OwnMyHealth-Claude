@@ -10,9 +10,36 @@
 import { describe, it, expect } from 'vitest';
 import {
   extractProjectedOOP,
+  decryptNumberOrZero,
   type DecryptedProjection,
   type PlanForAnalysis,
 } from './expenseController.js';
+
+// Minimal encryption stub — decryptNumberOrZero only calls encryption.decrypt.
+const encStub = (impl: (v: string, salt: string) => string) =>
+  ({ decrypt: impl }) as unknown as Parameters<typeof decryptNumberOrZero>[0];
+
+describe('decryptNumberOrZero', () => {
+  it('returns the parsed number for a valid encrypted value', () => {
+    expect(decryptNumberOrZero(encStub(() => '123.45'), 'cipher', 'salt', 'estimatedCostEncrypted')).toBe(123.45);
+  });
+
+  it('coerces a corrupt/key-mismatched row (decrypt throws) to 0, not NaN', () => {
+    const enc = encStub(() => { throw new Error('bad auth tag'); });
+    expect(decryptNumberOrZero(enc, 'cipher', 'salt', 'estimatedCostEncrypted')).toBe(0);
+  });
+
+  it('coerces an unparseable plaintext to 0', () => {
+    expect(decryptNumberOrZero(encStub(() => 'not-a-number'), 'cipher', 'salt', 'estimatedCostEncrypted')).toBe(0);
+  });
+
+  it('returns 0 for a null value without decrypting', () => {
+    let called = false;
+    const enc = encStub(() => { called = true; return '5'; });
+    expect(decryptNumberOrZero(enc, null, 'salt', 'estimatedCostEncrypted')).toBe(0);
+    expect(called).toBe(false);
+  });
+});
 
 function plan(overrides: Partial<Record<keyof PlanForAnalysis, unknown>> = {}): PlanForAnalysis {
   return {
