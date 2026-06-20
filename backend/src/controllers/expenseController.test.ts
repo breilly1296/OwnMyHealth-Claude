@@ -215,6 +215,47 @@ describe('analyzeCosts (C-7)', () => {
       expect(promptText).toContain('2,000');
     });
   });
+
+  describe('disclaimer enforcement (L33)', () => {
+    function primeForResponse(text: string) {
+      const { plan, projections } = cannedPlanAndProjections();
+      mocks.withRLSTransaction
+        .mockImplementationOnce(async () => ({ plan, projections }))
+        .mockImplementationOnce(async () => ({
+          id: 'analysis-1',
+          planId: 'plan-1',
+          analysisDate: new Date(),
+        }));
+      mocks.messagesCreate.mockResolvedValue({
+        model: 'claude-sonnet-4-5-20250929',
+        content: [{ type: 'text', text }],
+        usage: { input_tokens: 100, output_tokens: 200 },
+      });
+    }
+
+    it('appends the educational disclaimer when the model omits it', async () => {
+      primeForResponse('Your projected out-of-pocket cost is about $1,200 this year.');
+
+      const res = mockRes();
+      await analyzeCosts(mockReq('user-1', { planId: 'plan-1' }), res);
+
+      const payload = res.json.mock.calls[0][0];
+      expect(payload.data.claudeResponse).toContain('consult your healthcare provider');
+    });
+
+    it('does not double-append when the model already supplied a disclaimer', async () => {
+      primeForResponse(
+        'Your projected cost is about $1,200. Always consult your healthcare provider for medical advice.'
+      );
+
+      const res = mockRes();
+      await analyzeCosts(mockReq('user-1', { planId: 'plan-1' }), res);
+
+      const payload = res.json.mock.calls[0][0];
+      const matches = payload.data.claudeResponse.match(/consult your healthcare provider/gi) || [];
+      expect(matches.length).toBe(1);
+    });
+  });
 });
 
 // L-4: a user must not be able to attach a projection/actual to a plan they

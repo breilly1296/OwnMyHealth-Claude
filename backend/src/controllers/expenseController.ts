@@ -34,6 +34,7 @@ import { trackAIUsage } from '../services/aiCostTracker.js';
 import { getAnthropicClient } from '../services/anthropicClient.js';
 import { config } from '../config/index.js';
 import { stripPHIFromText } from '../utils/phiRedaction.js';
+import { disclaimerToAppend } from '../utils/aiDisclaimer.js';
 
 const RESOURCE_TYPE_PROJECTION = 'expense_projection';
 const RESOURCE_TYPE_ACTUAL = 'expense_actual';
@@ -790,9 +791,18 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     const rawClaudeResponse = textBlock?.type === 'text' ? textBlock.text : '';
     const claudeResponse = stripPHIFromText(rawClaudeResponse);
 
-    // Extract projected OOP from response (simple parsing)
+    // Extract projected OOP from response (simple parsing). Parse the clean
+    // narrative BEFORE appending the disclaimer (the disclaimer carries no
+    // OOP / deductible-month data).
     const totalProjectedOop = extractProjectedOOP(claudeResponse, decryptedProjections, plan);
     const deductibleMetMonth = extractDeductibleMonth(claudeResponse);
+
+    // L33: guarantee the educational/medical disclaimer regardless of model
+    // output. The cost-analysis prose carries financial + health guidance, so
+    // the same server-side enforcement used on the chat/biomarker AI paths must
+    // apply here too — append after PHI-stripping, before BOTH sinks (DB + client).
+    const disclaimerTail = disclaimerToAppend(claudeResponse);
+    const finalResponse = disclaimerTail ? claudeResponse + disclaimerTail : claudeResponse;
 
     // Save analysis to database within RLS transaction
     const analysis = await withRLSTransaction(userId, async (tx) => {
@@ -802,9 +812,9 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
           planId,
           // Column was renamed `claude_response` → `claude_response_encrypted`
           // in migration `20260424_align_uuid_defaults_and_rename_claude_response`.
-          // The local `claudeResponse` variable is the post-stripPHIFromText
-          // plaintext narrative; the column stores its AES-256-GCM ciphertext.
-          claudeResponseEncrypted: encryption.encrypt(claudeResponse, userSalt),
+          // `finalResponse` is the post-stripPHIFromText, disclaimer-enforced
+          // narrative; the column stores its AES-256-GCM ciphertext.
+          claudeResponseEncrypted: encryption.encrypt(finalResponse, userSalt),
           totalProjectedOopEncrypted: totalProjectedOop
             ? encryption.encrypt(totalProjectedOop.toString(), userSalt)
             : null,
@@ -830,7 +840,7 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       // `analysisDate`. Expose it as createdAt so the UI doesn't render
       // "Invalid Date".
       createdAt: analysis.analysisDate,
-      claudeResponse,
+      claudeResponse: finalResponse,
       totalProjectedOop,
       deductibleMetMonth,
     },
