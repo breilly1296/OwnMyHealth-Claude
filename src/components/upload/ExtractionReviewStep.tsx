@@ -322,7 +322,7 @@ export default function ExtractionReviewStep({
                         className="group inline-flex items-center gap-1 text-left font-medium text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         <span className="truncate">{row.name}</span>
-                        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex-shrink-0" />
                       </button>
                     )}
                     <div className="flex items-center gap-2 mt-0.5">
