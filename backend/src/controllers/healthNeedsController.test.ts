@@ -357,7 +357,10 @@ describe('updateHealthNeedStatus', () => {
     expect(updateArgs.data.resolvedAt).toBeInstanceOf(Date);
   });
 
-  it('does NOT set resolvedAt when the new status is IN_PROGRESS', async () => {
+  it('clears resolvedAt when reopening to IN_PROGRESS (regression: stale resolution stamp)', async () => {
+    // Reopening a previously-COMPLETED need must clear its resolvedAt so it no
+    // longer shows as resolved while active (mirrors updateHealthGoal's
+    // completedAt-clear for ACTIVE/PAUSED).
     mockTx.healthNeed.findFirst.mockResolvedValue(existingNeed());
     mockTx.healthNeed.update.mockImplementation(async (args: { data: Record<string, unknown> }) => ({
       ...existingNeed(),
@@ -377,7 +380,7 @@ describe('updateHealthNeedStatus', () => {
       data: Record<string, unknown>;
     };
     expect(updateArgs.data.status).toBe('IN_PROGRESS');
-    expect(updateArgs.data).not.toHaveProperty('resolvedAt');
+    expect(updateArgs.data.resolvedAt).toBeNull();
   });
 
   it('does NOT set resolvedAt when the new status is DISMISSED', async () => {

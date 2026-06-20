@@ -769,13 +769,9 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
     throw error;
   }
 
-    // Defense-in-depth: strip any PHI Claude may have reflected back into
-    // its cost-analysis narrative (e.g., a quoted service-type note or a
-    // provider name). The response is both persisted to DB (encrypted) and
-    // returned to the client — scrub before both sinks.
-    const rawClaudeResponse = message.content[0].type === 'text' ? message.content[0].text : '';
-    const claudeResponse = stripPHIFromText(rawClaudeResponse);
-
+    // Record the billed call FIRST — even if response parsing below were to
+    // throw, the usage (and dollar cost) must still be accounted against the
+    // AI budget. Mirrors the 3 sibling Anthropic call sites.
     trackAIUsage({
       endpoint: 'cost-analysis',
       model: message.model,
@@ -783,6 +779,16 @@ export async function analyzeCosts(req: AuthenticatedRequest, res: Response): Pr
       outputTokens: message.usage?.output_tokens ?? 0,
       userId,
     });
+
+    // Defense-in-depth: strip any PHI Claude may have reflected back into
+    // its cost-analysis narrative (e.g., a quoted service-type note or a
+    // provider name). The response is both persisted to DB (encrypted) and
+    // returned to the client — scrub before both sinks.
+    // Guard the content array — an empty `content[]` would make
+    // `content[0].type` throw a TypeError; `.find` yields '' instead.
+    const textBlock = message.content.find((block) => block.type === 'text');
+    const rawClaudeResponse = textBlock?.type === 'text' ? textBlock.text : '';
+    const claudeResponse = stripPHIFromText(rawClaudeResponse);
 
     // Extract projected OOP from response (simple parsing)
     const totalProjectedOop = extractProjectedOOP(claudeResponse, decryptedProjections, plan);

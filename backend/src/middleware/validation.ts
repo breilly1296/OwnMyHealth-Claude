@@ -616,6 +616,11 @@ export const schemas = {
       // 999999.9999. Reject NaN/Infinity and over-range values at the boundary.
       targetValue: finiteNumber.pipe(z.number().max(999999.9999)),
       currentValue: finiteNumber.pipe(z.number().max(999999.9999)).optional(),
+      // The frontend goal-suggestion flow sends the user's value-at-creation as
+      // `startValue` (manual/legacy callers send `currentValue`). Accept both so
+      // Zod does not silently strip `startValue` and lose the goal's baseline —
+      // the controller maps `currentValue ?? startValue` to the initial value.
+      startValue: finiteNumber.pipe(z.number().max(999999.9999)).optional(),
       unit: sanitizedString(1, 50),
       direction: z.enum(['INCREASE', 'DECREASE', 'MAINTAIN']),
       relatedBiomarkerId: uuid.optional(),

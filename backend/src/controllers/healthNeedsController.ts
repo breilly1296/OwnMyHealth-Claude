@@ -307,12 +307,19 @@ export async function updateHealthNeedStatus(
   const prisma = getPrismaClient();
   const userSalt = await getUserEncryptionSalt(userId);
 
-  const updateData: { status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'; resolvedAt?: Date } = {
+  const updateData: { status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'; resolvedAt?: Date | null } = {
     status: status as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED'
   };
 
   if (status === 'COMPLETED') {
     updateData.resolvedAt = new Date();
+  } else if (status === 'PENDING' || status === 'IN_PROGRESS') {
+    // Reopening a need from a closed state clears the stale resolution stamp so
+    // it no longer shows as resolved while active. Mirrors the completedAt-clear
+    // for ACTIVE/PAUSED in updateHealthGoal. DISMISSED is intentionally left
+    // untouched — a dismissed need is not "resolved", and prior behavior
+    // neither stamped nor cleared resolvedAt for it.
+    updateData.resolvedAt = null;
   }
 
   const { existing, updated } = await withRLSTransaction(userId, async (tx) => {

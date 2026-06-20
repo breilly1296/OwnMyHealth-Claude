@@ -119,6 +119,11 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
     setProgressMessage('Preparing upload...');
     setUploadProgress(10);
 
+    // Declared outside the try so the catch/finally can clear it — otherwise an
+    // OCR/upload error leaves this interval running, mutating state after the
+    // modal has closed.
+    let progressInterval: ReturnType<typeof setInterval> | undefined;
+
     try {
       const validTypes = [
         'application/pdf',
@@ -140,7 +145,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
       setProgressMessage('Uploading file...');
       setUploadProgress(30);
 
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress((prev) => (prev < 80 ? prev + 5 : prev));
       }, 500);
 
@@ -155,7 +160,6 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
         }
       );
 
-      clearInterval(progressInterval);
       setUploadProgress(100);
       setProgressMessage('Processing complete!');
 
@@ -166,6 +170,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
       setUploadProgress(0);
       setProgressMessage('');
     } finally {
+      if (progressInterval) clearInterval(progressInterval);
       setIsProcessing(false);
     }
   }, []);
