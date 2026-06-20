@@ -508,11 +508,22 @@ export function useBiomarkerData({
       return;
     }
 
-    // If the plan already has an ID, it was already created by the SBC upload endpoint.
-    // Just add it to local state without calling createPlan again.
+    // If the plan already has an ID, it was already persisted by the SBC upload
+    // endpoint (with its full benefits/coverage). The client-built `plan` only
+    // carries the handful of fields the upload response echoed back, so adding it
+    // verbatim would render an incomplete plan (missing benefits) until the next
+    // list refresh. Re-fetch the authoritative record so it shows complete
+    // immediately; fall back to the local copy if the fetch fails.
     if (plan.id) {
-      dashboardLogger.info('Plan already saved to server, adding to local state', { planId: plan.id });
-      setInsurancePlans(prev => [...prev, transformedPlan]);
+      dashboardLogger.info('Plan already saved to server, re-fetching full record', { planId: plan.id });
+      try {
+        const fullPlan = await insuranceApi.getPlanById(plan.id);
+        setInsurancePlans(prev => [...prev, transformPlanForDisplay(fullPlan)]);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'unknown';
+        dashboardLogger.error('Could not re-fetch saved plan; using local copy', { planId: plan.id, error: errorMsg });
+        setInsurancePlans(prev => [...prev, transformedPlan]);
+      }
       return;
     }
 
