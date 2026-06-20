@@ -158,9 +158,12 @@ export interface InsurancePlan {
   planIdNumber?: string;
   effectiveDate: string;
   terminationDate?: string;
-  uploadDate: string;
-  sourceFile: string;
-  extractionConfidence: number;
+  // Optional: only locally SBC-parsed plans carry these; API-fetched plans
+  // (InsurancePlanData) don't. Previously required, which forced
+  // `as unknown as InsurancePlan` casts on every API-sourced plan.
+  uploadDate?: string;
+  sourceFile?: string;
+  extractionConfidence?: number;
 
   // Core financial fields
   deductibleIndividual?: number;

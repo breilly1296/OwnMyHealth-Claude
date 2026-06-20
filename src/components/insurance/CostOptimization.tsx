@@ -39,8 +39,8 @@ import {
   ExpenseProjectionData,
   ExpenseActualData,
   CostAnalysisData,
-  InsurancePlanData,
 } from '../../services/api';
+import type { InsurancePlan } from '../../types';
 import ExpenseProjectionModal from './ExpenseProjectionModal';
 import DeductibleProgressBar from './DeductibleProgressBar';
 import ExpenseActualsList from './ExpenseActualsList';
@@ -140,7 +140,10 @@ function parseAnalysisSections(markdown: string): AnalysisSection[] {
 }
 
 interface CostOptimizationProps {
-  plan: InsurancePlanData;
+  // The active plan is the display InsurancePlan (deductible/OOP fields are
+  // optional — not every extracted plan has them). Numeric reads below default
+  // to 0 / hide the reference line when absent.
+  plan: InsurancePlan;
   onPlanUpdate?: () => void;
 }
 
@@ -430,9 +433,9 @@ export default function CostOptimization({ plan, onPlanUpdate }: CostOptimizatio
                       connectNulls={false}
                     />
                   )}
-                  {plan.deductibleIndividual > 0 && (
+                  {(plan.deductibleIndividual ?? 0) > 0 && (
                     <ReferenceLine
-                      y={plan.deductibleIndividual}
+                      y={plan.deductibleIndividual ?? 0}
                       stroke="#f59e0b"
                       strokeDasharray="4 4"
                       label={{
@@ -443,9 +446,9 @@ export default function CostOptimization({ plan, onPlanUpdate }: CostOptimizatio
                       }}
                     />
                   )}
-                  {plan.oopMaxIndividual > 0 && (
+                  {(plan.oopMaxIndividual ?? 0) > 0 && (
                     <ReferenceLine
-                      y={plan.oopMaxIndividual}
+                      y={plan.oopMaxIndividual ?? 0}
                       stroke="#ef4444"
                       strokeDasharray="4 4"
                       label={{
@@ -481,13 +484,13 @@ export default function CostOptimization({ plan, onPlanUpdate }: CostOptimizatio
           <DeductibleProgressBar
             label="Individual Deductible"
             current={plan.deductibleMetIndividual || 0}
-            total={plan.deductibleIndividual}
+            total={plan.deductibleIndividual ?? 0}
             type="deductible"
           />
           <DeductibleProgressBar
             label="Individual Out-of-Pocket Max"
             current={plan.oopMetIndividual || 0}
-            total={plan.oopMaxIndividual}
+            total={plan.oopMaxIndividual ?? 0}
             type="oop"
           />
         </div>

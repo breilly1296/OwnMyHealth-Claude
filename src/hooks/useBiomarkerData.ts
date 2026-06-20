@@ -247,7 +247,7 @@ export function useBiomarkerData({
         }
 
         // Transform flat API fields to benefits/costs arrays for UI display
-        const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
+        const transformedPlans = plans.map(transformPlanForDisplay);
         dashboardLogger.debug('Insurance plans loaded', { count: transformedPlans.length });
         setInsurancePlans(transformedPlans);
       } catch (error) {
@@ -310,7 +310,7 @@ export function useBiomarkerData({
     }
     try {
       const plans = await insuranceApi.getPlans();
-      const transformedPlans = (plans as unknown as InsurancePlan[]).map(transformPlanForDisplay);
+      const transformedPlans = plans.map(transformPlanForDisplay);
       setInsurancePlans(transformedPlans);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to refresh insurance plans';
@@ -543,7 +543,7 @@ export function useBiomarkerData({
         outOfPocketMaxFamily: oopMaxFamily,
       });
       // Transform the created plan for UI display
-      const transformedCreated = transformPlanForDisplay(created as unknown as InsurancePlan);
+      const transformedCreated = transformPlanForDisplay(created);
       setInsurancePlans(prev => [...prev, transformedCreated]);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to save insurance plan';

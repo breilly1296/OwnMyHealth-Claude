@@ -26,7 +26,6 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
-import type { InsurancePlanData } from '../../services/api';
 import { SuccessToast } from '../common';
 import AddInsurancePlanModal from './AddInsurancePlanModal';
 import InsurancePlanDetail from './InsurancePlanDetail';
@@ -442,7 +441,7 @@ function CostsTab({ plans, activePlan, onAddPlan, onRefresh }: CostsTabProps) {
   return (
     <div className="space-y-6">
       <CostSummary plan={activePlan} />
-      <CostOptimization plan={activePlan as unknown as InsurancePlanData} onPlanUpdate={onRefresh} />
+      <CostOptimization plan={activePlan} onPlanUpdate={onRefresh} />
       {/*
         CostOptimization renders its own empty/no-projections state; if
         that surface needs its own guided CTA later it can be added there,

@@ -12,10 +12,29 @@ import type { InsurancePlan, InsuranceBenefit, InsuranceCost, CoverageDetails } 
  * The backend returns flat fields (e.g., copaySpecialist, physicalTherapyCopay),
  * but the UI components expect nested arrays (benefits[], costs[]).
  */
-export function transformPlanForDisplay(plan: InsurancePlan): InsurancePlan {
-  // If benefits/costs are already populated, don't overwrite
+/**
+ * Input accepts either a UI `InsurancePlan` or a raw API `InsurancePlanData` —
+ * both carry the flat copay/coinsurance/limit fields this function reads. The
+ * UI-only arrays (benefits/costs/network/limitations) are optional here and
+ * (re)built below. Defined off InsurancePlan so each field keeps its real type;
+ * `servicesWithLimits` is omitted because the API's ServiceLimitData[] differs
+ * from the UI's ServiceLimit[] and this function never reads it.
+ */
+export type TransformablePlan = Partial<Omit<InsurancePlan, 'servicesWithLimits'>> &
+  Pick<InsurancePlan, 'id' | 'planName' | 'insurerName' | 'planType' | 'effectiveDate'>;
+
+export function transformPlanForDisplay(plan: TransformablePlan): InsurancePlan {
+  // If benefits are already populated (an already-transformed UI plan, or an
+  // SBC-parsed plan), keep them — but still guarantee the other required UI
+  // arrays so the return is a complete InsurancePlan.
   if (plan.benefits && plan.benefits.length > 0) {
-    return plan;
+    return {
+      ...plan,
+      benefits: plan.benefits,
+      costs: plan.costs ?? [],
+      limitations: plan.limitations ?? [],
+      network: plan.network ?? { geographicCoverage: [] },
+    };
   }
 
   const benefits: InsuranceBenefit[] = [];
