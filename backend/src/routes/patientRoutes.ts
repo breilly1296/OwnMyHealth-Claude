@@ -407,9 +407,40 @@ router.patch(
       return updatedRel;
     });
 
-    const response: ApiResponse<typeof updated> = {
+    // Shape the response to match GET /providers — return the documented
+    // PatientProviderRelationship, NOT the raw Prisma row, which would leak the
+    // notesEncrypted ciphertext + raw consent columns and breaks the FE type.
+    // Provider display info needs a cross-tenant lookup, same as the list endpoint.
+    const provider = await withRLSContext(
+      null,
+      async (tx) =>
+        tx.user.findUnique({
+          where: { id: updated.providerId },
+          select: { id: true, email: true },
+        }),
+      { isAdmin: true },
+    );
+
+    const shaped = {
+      relationshipId: updated.id,
+      providerId: updated.providerId,
+      provider: provider ? { id: provider.id, email: provider.email } : null,
+      permissions: {
+        canViewBiomarkers: updated.canViewBiomarkers,
+        canViewInsurance: updated.canViewInsurance,
+        canViewHealthNeeds: updated.canViewHealthNeeds,
+        canEditData: updated.canEditData,
+      },
+      relationshipType: updated.relationshipType,
+      status: updated.status,
+      consentGrantedAt: updated.consentGrantedAt,
+      consentExpiresAt: updated.consentExpiresAt,
+      createdAt: updated.createdAt,
+    };
+
+    const response: ApiResponse<typeof shaped> = {
       success: true,
-      data: updated,
+      data: shaped,
     };
     res.json(response);
   })
