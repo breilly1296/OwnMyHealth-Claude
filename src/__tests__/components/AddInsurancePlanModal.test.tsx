@@ -6,13 +6,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('../../services/api/insurance', () => ({
   insuranceApi: { uploadSBC: vi.fn(), createPlan: vi.fn() },
 }));
 
 import AddInsurancePlanModal from '../../components/insurance/AddInsurancePlanModal';
+import { insuranceApi } from '../../services/api/insurance';
 
 describe('AddInsurancePlanModal accessibility', () => {
   const onClose = vi.fn();
@@ -66,5 +67,44 @@ describe('AddInsurancePlanModal accessibility', () => {
     );
     expect(nowSelected).toHaveLength(1);
     expect(nowSelected[0]).not.toBe(initiallySelected);
+  });
+
+  // Regression: the SBC-upload success preview must actually paint. Previously
+  // handleUpload called onPlanAdded() on success, which the parent uses to close
+  // (unmount) the modal in the same render — so the green "Plan extracted
+  // successfully!" summary + Done button were dead UI. The upload path now calls
+  // onRefresh() (which does NOT close), leaving the summary visible until Done.
+  it('keeps the success preview visible after a successful SBC upload', async () => {
+    (insuranceApi.uploadSBC as ReturnType<typeof vi.fn>).mockResolvedValue({
+      planName: 'Gold PPO',
+      insurerName: 'Acme Health',
+      planType: 'PPO',
+      deductibleIndividual: 1500,
+      oopMaxIndividual: 6000,
+    });
+
+    // onPlanAdded is a no-op vi.fn here: if the upload path wrongly called it,
+    // the real parent would close the modal — but since it must NOT be on this
+    // path, the success preview should render regardless.
+    render(<AddInsurancePlanModal isOpen onClose={onClose} onPlanAdded={onPlanAdded} />);
+
+    // Switch to the Upload SBC tab.
+    fireEvent.click(screen.getByRole('tab', { name: /Upload SBC/i }));
+
+    // Select a PDF file via the hidden file input.
+    const fileInput = document.getElementById('sbc-upload') as HTMLInputElement;
+    const file = new File(['%PDF-1.4'], 'sbc.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Drive the Upload & Extract flow.
+    fireEvent.click(screen.getByRole('button', { name: /Upload & Extract/i }));
+
+    expect(await screen.findByText('Plan extracted successfully!')).toBeInTheDocument();
+    // Extracted summary fields render and the Done button replaces Cancel.
+    expect(screen.getByText('Plan: Gold PPO')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Done/i })).toBeInTheDocument();
+    // onPlanAdded must NOT be called on the upload path (that would close the modal).
+    await waitFor(() => expect(insuranceApi.uploadSBC).toHaveBeenCalledTimes(1));
+    expect(onPlanAdded).not.toHaveBeenCalled();
   });
 });

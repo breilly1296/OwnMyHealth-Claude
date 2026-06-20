@@ -391,6 +391,7 @@ export default function InsuranceHub({
         isOpen={isAddPlanModalOpen}
         onClose={() => setIsAddPlanModalOpen(false)}
         onPlanAdded={handlePlanAdded}
+        onRefresh={onRefresh}
       />
 
       {deleteConfirmPlan && (

@@ -9,13 +9,14 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
  * @property isOpen - Controls modal visibility
  * @property onClose - Callback to close the modal
  * @property category - The health category for filtering available biomarkers
- * @property onAdd - Callback fired when a new measurement is submitted
+ * @property onAdd - Async callback fired when a new measurement is submitted;
+ *   resolves once the measurement has been persisted (or rejects on failure)
  */
 interface AddMeasurementModalProps {
   isOpen: boolean;
   onClose: () => void;
   category: string;
-  onAdd: (measurement: Partial<Biomarker>) => void;
+  onAdd: (measurement: Partial<Biomarker>) => Promise<void>;
 }
 
 /**
@@ -42,8 +43,10 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
   const [notes, setNotes] = useState('');
   const [isEditingRange, setIsEditingRange] = useState(false);
   // Guard against double-click duplicates. The parent's onAdd triggers an
-  // async save; without this a fast double-click creates two biomarker rows.
+  // async save; isSubmitting stays true across the await so the disabled
+  // 'Adding…' state renders and a fast second click is blocked.
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [normalRange, setNormalRange] = useState<NormalRange>({
     min: 0,
     max: 0,
@@ -64,13 +67,18 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     const biomarker = categoryBiomarkers.find(b => b.name === selectedBiomarker);
-    if (biomarker && value) {
-      setIsSubmitting(true);
-      onAdd({
+    if (!biomarker || !value) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      // Keep the modal open and isSubmitting=true until the async save resolves
+      // so the disabled 'Adding…' state renders and a second click is blocked.
+      await onAdd({
         id: crypto.randomUUID(),
         name: biomarker.name,
         value: parseFloat(value),
@@ -81,6 +89,7 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
         normalRange: isEditingRange ? normalRange : biomarker.normalRange,
         description: biomarker.description
       });
+      // Success: reset the form and close.
       onClose();
       setSelectedBiomarker('');
       setValue('');
@@ -88,6 +97,10 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
       setNotes('');
       setIsEditingRange(false);
       setNormalRange({ min: 0, max: 0, source: normalRangeSources[0] });
+    } catch {
+      // Failure: keep the modal open and surface an inline error.
+      setError('Failed to add measurement. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -225,6 +238,11 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
               placeholder="Add any relevant notes about this measurement..."
             />
           </div>
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
+              {error}
+            </p>
+          )}
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-6">
             <button
               type="button"
