@@ -7,6 +7,13 @@ interface AddInsurancePlanModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPlanAdded: () => void;
+  /**
+   * Refresh the plan list WITHOUT closing the modal. Used by the SBC-upload
+   * path so the extraction summary + Done button stay visible after a
+   * successful upload (onPlanAdded closes the modal immediately, which would
+   * unmount the success preview before it ever paints).
+   */
+  onRefresh?: () => void;
 }
 
 type TabType = 'manual' | 'upload';
@@ -62,6 +69,7 @@ export default function AddInsurancePlanModal({
   isOpen,
   onClose,
   onPlanAdded,
+  onRefresh,
 }: AddInsurancePlanModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('manual');
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -208,7 +216,11 @@ export default function AddInsurancePlanModal({
         benefitsCount: 0, // Will be populated from full response
         extractionConfidence: 0.85, // Default confidence
       });
-      onPlanAdded();
+      // Refresh the plan list but keep the modal open so the extraction
+      // summary + Done button render. (onPlanAdded would close immediately,
+      // unmounting the success preview before it paints.) The Done button
+      // calls handleClose to dismiss.
+      onRefresh?.();
     } catch (err) {
       setUploadStatus('error');
       setError(err instanceof Error ? err.message : 'Failed to upload SBC document');

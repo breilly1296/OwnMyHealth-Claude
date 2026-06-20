@@ -122,4 +122,22 @@ describe('CareTeamPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: /revoke access/i }));
     await waitFor(() => expect(mocked.revokeProvider).toHaveBeenCalledWith('rel-1'));
   });
+
+  it('renders a back control that calls onBack when the prop is provided', async () => {
+    const onBack = vi.fn();
+    render(<CareTeamPage onBack={onBack} />);
+
+    const backButton = await screen.findByRole('button', { name: /back to dashboard/i });
+    fireEvent.click(backButton);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the back control when onBack is not provided', async () => {
+    render(<CareTeamPage />);
+
+    expect(await screen.findByText(/no pending provider requests/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /back to dashboard/i })
+    ).not.toBeInTheDocument();
+  });
 });

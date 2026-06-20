@@ -19,6 +19,7 @@ import {
   Trash2,
   AlertTriangle,
   RefreshCw,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   patientApi,
@@ -102,7 +103,7 @@ function PermissionToggles({
   );
 }
 
-export default function CareTeamPage({ onBack: _onBack }: CareTeamPageProps) {
+export default function CareTeamPage({ onBack }: CareTeamPageProps) {
   const [pending, setPending] = useState<PendingProviderRequest[]>([]);
   const [providers, setProviders] = useState<PatientProviderRelationship[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -232,6 +233,15 @@ export default function CareTeamPage({ onBack: _onBack }: CareTeamPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex items-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-2"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+            </button>
+          )}
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Users className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             Care Team

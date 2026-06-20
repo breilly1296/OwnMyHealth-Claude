@@ -291,6 +291,55 @@ describe('AddMeasurementModal', () => {
       });
     });
 
+    it('blocks a second click and shows the loading state while the async save is pending', async () => {
+      // onAdd never resolves: simulates an in-flight create.
+      const deferredOnAdd = vi.fn(() => new Promise<void>(() => { /* never resolves */ }));
+
+      render(<AddMeasurementModal {...defaultProps} onAdd={deferredOnAdd} />);
+
+      const dropdown = screen.getByRole('combobox');
+      fireEvent.change(dropdown, { target: { value: 'Glucose' } });
+
+      const valueInput = screen.getByRole('spinbutton');
+      await userEvent.type(valueInput, '95');
+
+      const submitButton = screen.getByRole('button', { name: /add measurement/i });
+      fireEvent.click(submitButton);
+
+      // While pending: button shows 'Adding…' and is disabled.
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /adding/i })).toBeDisabled();
+      });
+
+      // A second click while pending must NOT trigger another create.
+      fireEvent.click(screen.getByRole('button', { name: /adding/i }));
+
+      expect(deferredOnAdd).toHaveBeenCalledTimes(1);
+      // Modal stays open (close is deferred until the save resolves).
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it('keeps the modal open and shows an inline error when the save fails', async () => {
+      const failingOnAdd = vi.fn(() => Promise.reject(new Error('boom')));
+
+      render(<AddMeasurementModal {...defaultProps} onAdd={failingOnAdd} />);
+
+      const dropdown = screen.getByRole('combobox');
+      fireEvent.change(dropdown, { target: { value: 'Glucose' } });
+
+      const valueInput = screen.getByRole('spinbutton');
+      await userEvent.type(valueInput, '95');
+
+      fireEvent.click(screen.getByRole('button', { name: /add measurement/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/failed to add measurement/i);
+      });
+      // Failure path: modal not closed, button re-enabled for a retry.
+      expect(mockOnClose).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /add measurement/i })).not.toBeDisabled();
+    });
+
     it('should reset form after submission', async () => {
       const { rerender } = render(<AddMeasurementModal {...defaultProps} />);
 
@@ -305,6 +354,11 @@ describe('AddMeasurementModal', () => {
       // Submit
       const submitButton = screen.getByRole('button', { name: /add measurement/i });
       fireEvent.click(submitButton);
+
+      // The form resets only after the async onAdd save resolves.
+      await waitFor(() => {
+        expect(mockOnClose).toHaveBeenCalled();
+      });
 
       // Reopen modal (simulate)
       rerender(<AddMeasurementModal {...defaultProps} isOpen={true} />);

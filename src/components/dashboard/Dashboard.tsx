@@ -312,7 +312,13 @@ export function Dashboard({ isDemoMode = false }: DashboardProps) {
       case 'Goals':
         return (
           <Suspense fallback={<PageLoadSpinner />}>
-            <GoalTrackerPanel biomarkers={biomarkers} />
+            <GoalTrackerPanel
+              biomarkers={biomarkers}
+              onBiomarkerClick={(b) => {
+                setTrendBiomarker(b);
+                modals.open('trend');
+              }}
+            />
           </Suspense>
         );
       case 'Needs':
