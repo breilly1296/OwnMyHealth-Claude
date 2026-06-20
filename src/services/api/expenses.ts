@@ -112,15 +112,44 @@ export interface UpdateCurrentSpendingData {
   oopMetFamily?: number;
 }
 
+/**
+ * Page through a paginated list endpoint and return the COMPLETE set.
+ *
+ * `CostOptimization` computes plan-wide totals (projected annual cost,
+ * patient-paid) and a per-projection breakdown entirely client-side, so a single
+ * truncated page (these endpoints default to 20 rows) would understate the
+ * headline figures AND hide line items. We request the server's max page size
+ * and follow `pagination.totalPages` to fetch everything — this is NOT "just
+ * raise the limit", which would only move the truncation threshold. A hard page
+ * cap guards against a runaway loop if the server ever reports a bad totalPages.
+ */
+async function fetchAllPages<T>(baseUrl: string): Promise<T[]> {
+  const PAGE_SIZE = 100; // the server's max `limit`
+  const MAX_PAGES = 50; // 50 × 100 = 5,000 rows — far beyond any realistic plan
+  const sep = baseUrl.includes('?') ? '&' : '?';
+  const fetchPage = (page: number) =>
+    apiFetch<T[]>(`${baseUrl}${sep}page=${page}&limit=${PAGE_SIZE}`);
+
+  const first = await fetchPage(1);
+  const all: T[] = [...(first.data ?? [])];
+  const totalPages = Math.min(first.pagination?.totalPages ?? 1, MAX_PAGES);
+  for (let page = 2; page <= totalPages; page++) {
+    const next = await fetchPage(page);
+    all.push(...(next.data ?? []));
+  }
+  return all;
+}
+
 export const expensesApi = {
   /**
    * Get all expense projections for a plan
    */
   async getProjections(planId: string): Promise<ExpenseProjectionData[]> {
-    const response = await apiFetch<ExpenseProjectionData[]>(
-      `/expenses/projections?planId=${planId}`
+    // Fetch the COMPLETE set (all pages) — CostOptimization sums these into the
+    // plan's projected annual cost, so a truncated first page understates it.
+    return fetchAllPages<ExpenseProjectionData>(
+      `/expenses/projections?planId=${encodeURIComponent(planId)}`
     );
-    return response.data;
   },
 
   /**
@@ -165,10 +194,12 @@ export const expensesApi = {
    * List all expense actuals for a plan (sorted by service date desc).
    */
   async getActuals(planId: string): Promise<ExpenseActualData[]> {
-    const response = await apiFetch<ExpenseActualData[]>(
+    // Fetch the COMPLETE set (all pages) — CostOptimization sums patientPaid and
+    // matches claims to projections across the full set, and ExpenseActualsList
+    // renders every claim; a truncated first page would drop both.
+    return fetchAllPages<ExpenseActualData>(
       `/expenses/actuals?planId=${encodeURIComponent(planId)}`
     );
-    return response.data;
   },
 
   /**

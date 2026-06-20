@@ -88,6 +88,15 @@ interface BiomarkerResponse {
 /**
  * Converts a Prisma Biomarker to response format with decrypted values
  */
+/**
+ * How many of the most-recent history points to embed per biomarker in the
+ * LIST / category view. The TrendSparkline only renders a recent window; the
+ * full series is served by the dedicated date-bounded history endpoint. Bounding
+ * this caps the per-request AES-decrypt + payload at ~N points per biomarker
+ * instead of every historical reading (read-amplification for long-tenured users).
+ */
+const BIOMARKER_LIST_HISTORY_WINDOW = 30;
+
 async function toResponse(
   biomarker: PrismaBiomarker & { history?: { measurementDate: Date; valueEncrypted: string }[] },
   userSalt: string
@@ -170,12 +179,23 @@ export async function getBiomarkers(
     const total = await tx.biomarker.count({ where });
     const biomarkers = await tx.biomarker.findMany({
       where,
-      // Oldest-first so trend math (history[0] = oldest) is order-independent.
-      include: { history: { orderBy: { measurementDate: 'asc' } } },
+      // Window each series to the most recent N points — embedding EVERY
+      // historical reading per biomarker and AES-decrypting each one is the
+      // dominant cost of this list endpoint for long-tenured users, and the
+      // category-view TrendSparkline only needs a recent window. Full series are
+      // served by the dedicated date-bounded history endpoint. Fetch newest-first
+      // + take, then re-sort ascending below so trend math (history[0] = oldest)
+      // stays order-independent.
+      include: { history: { orderBy: { measurementDate: 'desc' }, take: BIOMARKER_LIST_HISTORY_WINDOW } },
       skip: pagination.skip,
       take: pagination.take,
       orderBy: { measurementDate: 'desc' },
     });
+    // Re-sort each windowed history ascending (we fetched newest-first to grab
+    // the most recent N). toResponse + the frontend expect oldest-first.
+    for (const b of biomarkers) {
+      if (b.history) b.history.reverse();
+    }
     return { total, biomarkers };
   });
   const queryTime = Date.now() - countStart;

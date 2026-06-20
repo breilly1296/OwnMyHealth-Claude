@@ -215,6 +215,42 @@ describe('getBiomarkers', () => {
     expect(payload.data).toHaveLength(3);
   });
 
+  it('windows each series history to the most recent N (desc + take) and returns it oldest-first', async () => {
+    tx.biomarker.count.mockResolvedValue(1);
+    // Under the windowed include Prisma returns history newest-first; the handler
+    // re-sorts ascending before responding so trend math (history[0] = oldest) holds.
+    tx.biomarker.findMany.mockResolvedValue([
+      makeBiomarkerRow({
+        id: 'b1',
+        valueEncrypted: 'enc:120',
+        history: [
+          { measurementDate: new Date('2026-03-01'), valueEncrypted: 'enc:140' },
+          { measurementDate: new Date('2026-02-01'), valueEncrypted: 'enc:130' },
+          { measurementDate: new Date('2026-01-01'), valueEncrypted: 'enc:120' },
+        ],
+      }),
+    ]);
+
+    const req = createMockRequest({
+      user: { id: 'user-A', email: 'a@example.com', role: 'PATIENT' },
+    });
+    const res = createMockResponse();
+
+    await getBiomarkers(req, res);
+
+    // The include bounds per-series history to the most recent N, newest-first.
+    const findManyArg = tx.biomarker.findMany.mock.calls[0][0];
+    expect(findManyArg.include.history).toEqual({
+      orderBy: { measurementDate: 'desc' },
+      take: 30,
+    });
+
+    // Response history is re-sorted ascending (oldest-first) for trend math.
+    const payload = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const dates = payload.data[0].history.map((h: { date: string }) => h.date);
+    expect(dates).toEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
+  });
+
   it('returns decrypted values (parsed as numbers) in the response', async () => {
     tx.biomarker.count.mockResolvedValue(1);
     tx.biomarker.findMany.mockResolvedValue([
