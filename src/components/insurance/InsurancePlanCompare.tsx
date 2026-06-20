@@ -273,10 +273,11 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="compare-plan-types" className="block text-sm font-medium text-gray-700 mb-2">
                       Plan Types
                     </label>
                     <select
+                      id="compare-plan-types"
                       multiple
                       value={searchCriteria.preferredPlanTypes || []}
                       onChange={(e) => setSearchCriteria(prev => ({
@@ -294,10 +295,11 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="compare-max-premium" className="block text-sm font-medium text-gray-700 mb-2">
                       Max Monthly Premium
                     </label>
                     <input
+                      id="compare-max-premium"
                       type="number"
                       value={searchCriteria.maxPremium || ''}
                       onChange={(e) => setSearchCriteria(prev => ({
@@ -310,10 +312,11 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="compare-expected-usage" className="block text-sm font-medium text-gray-700 mb-2">
                       Expected Usage
                     </label>
                     <select
+                      id="compare-expected-usage"
                       value={searchCriteria.expectedUsage || ''}
                       onChange={(e) => setSearchCriteria(prev => ({
                         ...prev,
@@ -386,6 +389,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                           <div className="flex items-center space-x-2">
                             <input
                               type="checkbox"
+                              aria-label={`Select ${result.plan.planName} to compare`}
                               checked={selectedPlans.includes(result.plan.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -639,11 +643,12 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
 
               {/* Search box — queries the user's real extracted benefits */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="benefit-search" className="block text-sm font-medium text-gray-700 mb-2">
                   Search your plans&apos; covered services
                 </label>
                 <div className="flex items-center space-x-3">
                   <input
+                    id="benefit-search"
                     type="text"
                     value={benefitQuery}
                     onChange={(e) => setBenefitQuery(e.target.value)}
