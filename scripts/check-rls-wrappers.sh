@@ -8,9 +8,14 @@
 # ignores SET LOCAL app.current_user_id — bypassing RLS.
 #
 # The grep below flags bare `prisma.<model>.<verb>(` calls in controllers
-# and services. Lines containing `tx.` or `// RLS-exempt` (intentional
-# migration/infra paths) are excluded. Test files are excluded because
-# mocks frequently reference the bare client.
+# and services. Lines annotated `// RLS-exempt` (intentional migration/infra
+# paths) are excluded. Test files are excluded because mocks frequently
+# reference the bare client.
+#
+# NOTE: there is deliberately NO `grep -v 'tx.'` filter. The pattern is anchored
+# on `prisma.`, so a legitimate `tx.<model>.<verb>(` call never matches it in the
+# first place — filtering on the substring `tx.` only dropped REAL bare-prisma
+# bypasses that happened to also mention `tx.` on the same line (false negatives).
 #
 # To allow a specific call, append `// RLS-exempt: <reason>` on the same line.
 
@@ -64,7 +69,6 @@ RAW_HITS=$(grep -rnE "$PATTERN" "${TARGETS[@]}" \
   --exclude='*.spec.ts' \
   --exclude-dir='__tests__' \
   2>/dev/null \
-  | grep -v 'tx\.' \
   | grep -v '// RLS-exempt' \
   || true)
 

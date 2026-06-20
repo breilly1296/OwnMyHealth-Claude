@@ -13,7 +13,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, createHash } from 'node:crypto';
 import { config } from '../config/index.js';
 import { getPrismaClient } from '../services/database.js';
 import { getAuditLogService } from '../services/auditLog.js';
@@ -23,12 +23,16 @@ import type { ApiResponse } from '../types/index.js';
 
 const router = Router();
 
-/** Constant-time compare; false if expected is empty or lengths differ. */
+/**
+ * Constant-time secret compare. SHA-256-hash both inputs to a fixed 32 bytes
+ * before timingSafeEqual, so a wrong-length guess isn't distinguishable from a
+ * right-length one by timing — the previous `a.length !== b.length` early return
+ * leaked the secret's exact byte length. Mirrors the CSRF double-submit check.
+ */
 function tokenMatches(provided: string, expected: string): boolean {
   if (!expected) return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
+  const a = createHash('sha256').update(provided).digest();
+  const b = createHash('sha256').update(expected).digest();
   return timingSafeEqual(a, b);
 }
 

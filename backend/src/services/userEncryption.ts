@@ -20,55 +20,92 @@ import { withRLSContext } from './database.js';
 
 const KEY_TYPE = 'phi_encryption';
 
+/** True for a Prisma unique-constraint violation (P2002). Matched by name+code
+ *  to avoid importing the Prisma error class (mirrors errorHandler). */
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    err.name === 'PrismaClientKnownRequestError' &&
+    (err as { code?: string }).code === 'P2002'
+  );
+}
+
 /**
  * Gets or creates the user's encryption salt for PHI encryption.
+ *
+ * Concurrency: find-then-create is not atomic, so a brand-new user's first two
+ * PHI operations can both find no key and both attempt to create version 1. The
+ * `@@unique(userId, keyType, version)` constraint makes the loser throw P2002
+ * (which aborts its transaction). We catch that, re-read in a FRESH transaction,
+ * and return the WINNER's persisted salt — never our locally generated one, or
+ * the two callers would encrypt with divergent salts and corrupt each other's
+ * PHI. The constraint guarantees there is exactly one active version-1 key.
  *
  * @param userId - The user's ID
  * @returns The user's encryption salt (hex string)
  */
 export async function getUserEncryptionSalt(userId: string): Promise<string> {
-  return withRLSContext(
-    null,
-    async (tx) => {
-      const encryptionService = getEncryptionService();
+  try {
+    return await withRLSContext(
+      null,
+      async (tx) => {
+        const encryptionService = getEncryptionService();
 
-      // Try to find existing active encryption key
-      const existingKey = await tx.userEncryptionKey.findFirst({
-        where: {
-          userId,
-          keyType: KEY_TYPE,
-          isActive: true,
-        },
-        orderBy: {
-          version: 'desc',
-        },
-      });
+        // Try to find existing active encryption key
+        const existingKey = await tx.userEncryptionKey.findFirst({
+          where: {
+            userId,
+            keyType: KEY_TYPE,
+            isActive: true,
+          },
+          orderBy: {
+            version: 'desc',
+          },
+        });
 
-      if (existingKey) {
-        // The encryptedKey field stores the salt encrypted with master key
-        return encryptionService.decryptWithMasterKey(existingKey.encryptedKey);
-      }
+        if (existingKey) {
+          // The encryptedKey field stores the salt encrypted with master key
+          return encryptionService.decryptWithMasterKey(existingKey.encryptedKey);
+        }
 
-      // No key exists - create a new one
-      const newSalt = encryptionService.generateUserSalt();
-      const keyHash = newSalt.substring(0, 64);
-      const encryptedSalt = encryptionService.encryptWithMasterKey(newSalt);
+        // No key exists - create a new one
+        const newSalt = encryptionService.generateUserSalt();
+        const keyHash = newSalt.substring(0, 64);
+        const encryptedSalt = encryptionService.encryptWithMasterKey(newSalt);
 
-      await tx.userEncryptionKey.create({
-        data: {
-          userId,
-          keyType: KEY_TYPE,
-          keyHash,
-          encryptedKey: encryptedSalt,
-          version: 1,
-          isActive: true,
-        },
-      });
+        await tx.userEncryptionKey.create({
+          data: {
+            userId,
+            keyType: KEY_TYPE,
+            keyHash,
+            encryptedKey: encryptedSalt,
+            version: 1,
+            isActive: true,
+          },
+        });
 
-      return newSalt;
-    },
-    { isAdmin: true }
-  );
+        return newSalt;
+      },
+      { isAdmin: true }
+    );
+  } catch (err) {
+    // A concurrent first-write won the create; our create lost the unique race.
+    // Re-read in a fresh admin tx and return the winner's persisted salt.
+    if (!isUniqueViolation(err)) throw err;
+    return withRLSContext(
+      null,
+      async (tx) => {
+        const encryptionService = getEncryptionService();
+        const winner = await tx.userEncryptionKey.findFirst({
+          where: { userId, keyType: KEY_TYPE, isActive: true },
+          orderBy: { version: 'desc' },
+        });
+        if (!winner) throw err;
+        return encryptionService.decryptWithMasterKey(winner.encryptedKey);
+      },
+      { isAdmin: true }
+    );
+  }
 }
 
 // NOTE: A key-rotation helper used to live here. It rotated the key VERSION
