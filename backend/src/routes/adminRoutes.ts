@@ -686,6 +686,7 @@ router.patch(
  */
 router.get(
   '/provider-relationships',
+  validate(schemas.admin.listProviderRelationshipsQuery, 'query'),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const prisma = getPrismaClient();
     const status = req.query.status as string;
@@ -735,27 +736,17 @@ router.patch(
     const prisma = getPrismaClient();
     const { id } = req.params;
     const adminId = req.user!.id;
-    // L37: canEditData is intentionally not read/persisted (orphaned capability —
-    // no provider route consumes it). The .strict() schema still accepts the key
-    // (so the existing admin UI's PATCH isn't rejected), but it is ignored here so
-    // it can never be flipped true until a provider edit route exists.
+    // L37: canEditData is not a real capability — no provider route consumes it.
+    // It is no longer accepted (removed from the .strict() schema) or read here.
     const { status, canViewBiomarkers, canViewInsurance, canViewHealthNeeds } = req.body;
 
     const auditService = getAuditLogService(prisma);
 
-    // M-3: re-activating a REVOKED relationship is a consent-bearing action.
-    // A patient who revoked provider access must re-consent before an admin
-    // flips it back to ACTIVE/PENDING — otherwise an admin could silently
-    // restore data sharing the patient explicitly withdrew. Require an
-    // explicit reConsent=true flag to do so.
-    //
-    // NOTE: schemas.admin.updateProviderRelationship is .strict() (it rejects
-    // unknown keys). For this escape hatch to be reachable, that schema must
-    // also declare `reConsent: z.boolean().optional()` (owned by the
-    // validation partition). Until it does, this guard fails closed: an admin
-    // cannot reactivate a REVOKED relationship at all — the safe default for
-    // a consent gate.
-    const reConsent = (req.body as { reConsent?: boolean }).reConsent === true;
+    // M-3: re-activating a REVOKED relationship is a consent decision the patient
+    // explicitly made, so an admin may NOT silently restore it. REVOKED is
+    // terminal here — moving it back to ACTIVE/PENDING/etc. is always rejected;
+    // the patient must initiate a fresh share. The admin UI also disables that
+    // transition, and this is the server-side backstop.
 
     // Fetch + update inside a single admin transaction.
     const result = await withRLSContext(
@@ -765,16 +756,15 @@ router.patch(
         if (!existing) {
           return { found: false as const };
         }
-        // Block reactivation of a REVOKED relationship without re-consent.
+        // Block reactivation of a REVOKED relationship (consent was withdrawn).
         // Done inside the tx so the guard and the update see the same row;
         // returning a discriminated case keeps the audit-failure log outside.
         if (
           existing.status === 'REVOKED' &&
           status !== undefined &&
-          status !== 'REVOKED' &&
-          !reConsent
+          status !== 'REVOKED'
         ) {
-          return { found: true as const, blocked: 'reactivation_requires_reconsent' as const, existing };
+          return { found: true as const, blocked: 'reactivation_not_permitted' as const, existing };
         }
         const relationship = await tx.providerPatient.update({
           where: { id },
@@ -803,20 +793,20 @@ router.patch(
       throw new NotFoundError('Provider-patient relationship not found');
     }
 
-    // M-3: blocked reactivation of a REVOKED relationship without re-consent.
+    // M-3: blocked reactivation of a REVOKED relationship.
     // Per the AUDIT SUCCESS contract, surface success:false + errorMessage.
     if (result.blocked) {
       await auditService.logAccess('admin_provider_relationship', id, { req, userId: adminId }, {
         operation: 'UPDATE',
         actorType: 'ADMIN',
         success: false,
-        errorMessage: 'Cannot reactivate a REVOKED relationship without explicit re-consent',
+        errorMessage: 'Cannot reactivate a REVOKED relationship — the patient withdrew consent',
         reason: result.blocked,
         providerId: result.existing.providerId,
         patientId: result.existing.patientId,
       });
       throw new ForbiddenError(
-        'Cannot reactivate a revoked relationship without explicit patient re-consent (reConsent=true)'
+        'Cannot reactivate a revoked relationship — the patient withdrew consent and must initiate a new share'
       );
     }
     const { existing, relationship } = result;
