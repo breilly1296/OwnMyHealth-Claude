@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Biomarker } from '../../types';
+import { formatDateOnly } from '../format';
 
 /**
  * Escape a single value for safe inclusion in a CSV cell. Two protections:
@@ -33,7 +34,7 @@ export const buildBiomarkerCsv = (biomarkers: Biomarker[]): string => {
     biomarker.value.toString(),
     biomarker.unit,
     `${biomarker.normalRange.min} - ${biomarker.normalRange.max}`,
-    new Date(biomarker.date).toLocaleDateString(),
+    formatDateOnly(biomarker.date, {}),
     biomarker.description || ''
   ]);
 
@@ -62,7 +63,7 @@ export const exportToPDF = (biomarkers: Biomarker[]) => {
     biomarker.name,
     `${biomarker.value} ${biomarker.unit}`,
     `${biomarker.normalRange.min} - ${biomarker.normalRange.max} ${biomarker.unit}`,
-    new Date(biomarker.date).toLocaleDateString(),
+    formatDateOnly(biomarker.date, {}),
     biomarker.description || ''
   ]);
 

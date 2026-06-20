@@ -20,6 +20,7 @@ import type { Biomarker } from '../../types';
 import { BiomarkerChart } from '../biomarkers';
 import BiomarkerAIGuidance from './BiomarkerAIGuidance';
 import { classifyBiomarker } from '../../utils/biomarkers/trendCalculations';
+import { formatDateOnly } from '../../utils/format';
 
 interface TrendDetailModalProps {
   /** Controls modal visibility */
@@ -291,11 +292,7 @@ export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDe
                         className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors"
                       >
                         <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                          {new Date(entry.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
+                          {formatDateOnly(entry.date, { month: 'short', day: 'numeric', year: 'numeric' })}
                           {idx === 0 && (
                             <span className="ml-2 text-xs px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
                               Latest

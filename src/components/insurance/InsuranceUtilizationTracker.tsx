@@ -33,6 +33,7 @@ import {
   Tag
 } from 'lucide-react';
 import type { Biomarker, InsurancePlan, InsuranceBenefit } from '../../types';
+import { formatDateOnly } from '../../utils/format';
 
 // Type for benefit with plan name
 interface BenefitWithPlan {
@@ -229,7 +230,7 @@ export default function InsuranceUtilizationTracker({ biomarkers, insurancePlans
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(service.date).toLocaleDateString()}
+                        {formatDateOnly(service.date, {})}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         ${service.originalCost.toLocaleString()}

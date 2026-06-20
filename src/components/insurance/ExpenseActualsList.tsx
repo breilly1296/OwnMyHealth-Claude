@@ -54,7 +54,9 @@ function formatDate(iso: string | null): string {
   if (!iso) return '--';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // serviceDate is a date-only value; pin UTC so it never renders the prior
+  // calendar day in negative-UTC locales.
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
 export default function ExpenseActualsList({

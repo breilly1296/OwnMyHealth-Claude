@@ -23,6 +23,7 @@ import TrendSparkline from './TrendSparkline';
 import TrendDetailModal from './TrendDetailModal';
 import ExportMenu from './ExportMenu';
 import { calculateTrend, type TrendInfo } from '../../utils/biomarkers/trendCalculations';
+import { formatDateOnly } from '../../utils/format';
 
 interface TrendsPageProps {
   /** Array of all biomarkers to display */
@@ -442,10 +443,7 @@ function BiomarkerTrendCard({ biomarker, trend, hasEnoughData, isOutOfRange, onC
         <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
           <Calendar className="w-3 h-3" />
           <span>
-            {new Date(biomarker.date).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            })}
+            {formatDateOnly(biomarker.date, { month: 'short', day: 'numeric' })}
           </span>
         </div>
       </div>

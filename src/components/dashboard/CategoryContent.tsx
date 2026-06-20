@@ -64,7 +64,9 @@ function distanceFromMidpoint(b: Biomarker): number {
 function formatDateHeader(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  // group.date is a biomarker measurement date (date-only); pin UTC so it never
+  // renders the prior calendar day in negative-UTC locales.
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
 function sortBiomarkers(list: Biomarker[], key: SortKey): Biomarker[] {
