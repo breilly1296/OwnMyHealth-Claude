@@ -123,6 +123,38 @@ describe('userEncryption (C-8 Part 2b-i)', () => {
         { isAdmin: true }
       );
     });
+
+    it('on a concurrent create race (P2002), re-reads and returns the winner salt, not the local one', async () => {
+      mockPrisma.userEncryptionKey.findFirst
+        .mockResolvedValueOnce(null) // first attempt: no key yet
+        .mockResolvedValueOnce({ // fresh-tx re-read: the winner's row
+          id: 'k1',
+          userId: USER_ID,
+          keyType: 'phi_encryption',
+          isActive: true,
+          version: 1,
+          encryptedKey: 'master-encrypted:winner-salt',
+        });
+      const p2002 = Object.assign(new Error('Unique constraint failed'), {
+        name: 'PrismaClientKnownRequestError',
+        code: 'P2002',
+      });
+      mockPrisma.userEncryptionKey.create.mockRejectedValue(p2002);
+
+      const salt = await getUserEncryptionSalt(USER_ID);
+
+      // Winner's persisted salt — NOT the locally generated 'a'.repeat(64).
+      expect(salt).toBe('winner-salt');
+      // First (aborted) tx + a fresh re-read tx.
+      expect(mocks.withRLSContext).toHaveBeenCalledTimes(2);
+    });
+
+    it('rethrows a non-unique error from the create (no silent retry)', async () => {
+      mockPrisma.userEncryptionKey.findFirst.mockResolvedValue(null);
+      mockPrisma.userEncryptionKey.create.mockRejectedValue(new Error('db down'));
+      await expect(getUserEncryptionSalt(USER_ID)).rejects.toThrow('db down');
+      expect(mocks.withRLSContext).toHaveBeenCalledTimes(1);
+    });
   });
 
   // The rotateUserEncryptionKey tests were removed alongside the function — it
