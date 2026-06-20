@@ -16,7 +16,7 @@
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Activity, Target } from 'lucide-react';
 import { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';
-import { classifyBiomarker, getTrendDisplay } from '../../utils/biomarkers/trendCalculations';
+import { classifyBiomarker, getTrendDisplay, computeBiomarkerStats } from '../../utils/biomarkers/trendCalculations';
 import { formatDateOnly } from '../../utils/format';
 
 interface TrendModalProps {
@@ -31,20 +31,7 @@ interface TrendModalProps {
 export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalProps) {
   if (!isOpen) return null;
 
-  // Statistics over history (min/max/avg are directional-agnostic).
-  const getStats = () => {
-    if (!biomarker.history || biomarker.history.length === 0) {
-      return { min: biomarker.value, max: biomarker.value, avg: biomarker.value };
-    }
-    const values = biomarker.history.map((h) => h.value);
-    return {
-      min: Math.min(...values),
-      max: Math.max(...values),
-      avg: values.reduce((a, b) => a + b, 0) / values.length,
-    };
-  };
-
-  const stats = getStats();
+  const stats = computeBiomarkerStats(biomarker);
   // DV-3/JC-2: direction-aware trend — a rising HDL is improving (green), a
   // rising LDL is worsening (red); color follows clinical status, not the arrow.
   const trend = classifyBiomarker(biomarker);

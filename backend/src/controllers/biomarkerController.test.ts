@@ -157,6 +157,7 @@ import {
   createBiomarker,
   bulkCreateBiomarkers,
   deleteBiomarker,
+  getHistory,
 } from './biomarkerController.js';
 import { NotFoundError } from '../middleware/errorHandler.js';
 
@@ -729,6 +730,64 @@ describe('POST /biomarkers/:id/guidance — F-3 IDOR regression', () => {
       expect.any(Object),
       expect.objectContaining({ operation: 'PHI_ACCESS' })
     );
+  });
+});
+
+// ============================================================================
+// getHistory
+// ============================================================================
+describe('getHistory', () => {
+  let tx: MockPrismaTx;
+  let audit: MockAuditService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tx = createMockPrismaTransaction();
+    audit = createMockAuditService();
+    mocks.tx = tx;
+    mocks.auditService = audit;
+    mocks.encryptionService = createMockEncryptionService();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('windows to the most recent N (desc + take) and returns history oldest-first', async () => {
+    // Under the desc include, Prisma returns history newest-first; the handler
+    // must re-sort ascending so the current-value append + trend math line up.
+    tx.biomarker.findFirst.mockResolvedValue(
+      makeBiomarkerRow({
+        id: 'b1',
+        valueEncrypted: 'enc:150',
+        measurementDate: new Date('2026-04-01'),
+        history: [
+          { measurementDate: new Date('2026-03-01'), valueEncrypted: 'enc:140' },
+          { measurementDate: new Date('2026-02-01'), valueEncrypted: 'enc:130' },
+          { measurementDate: new Date('2026-01-01'), valueEncrypted: 'enc:120' },
+        ],
+      })
+    );
+
+    const req = createMockRequest({
+      user: { id: 'user-A', email: 'a@example.com', role: 'PATIENT' },
+      params: { id: 'b1' },
+      query: { startDate: '2025-01-01', endDate: '2027-01-01' },
+    });
+    const res = createMockResponse();
+
+    await getHistory(req, res);
+
+    // Fetch newest-first so `take` keeps the most RECENT points (asc + take
+    // would keep the oldest and drop recent readings for a dense series).
+    const arg = tx.biomarker.findFirst.mock.calls[0][0];
+    expect(arg.include.history.orderBy).toEqual({ measurementDate: 'desc' });
+    expect(arg.include.history.take).toBeGreaterThan(0);
+
+    // Response is oldest-first: the 3 history points, then the current reading.
+    const payload = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const dates = payload.data.history.map((h: { date: string }) => h.date);
+    expect(dates).toEqual(['2026-01-01', '2026-02-01', '2026-03-01', '2026-04-01']);
   });
 });
 

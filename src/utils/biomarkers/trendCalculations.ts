@@ -214,3 +214,35 @@ export function classifyRangeStatusChange(biomarker: Biomarker): RangeStatusChan
       return 'none';
   }
 }
+
+/**
+ * Min/max/avg over a biomarker's full visible series: its history PLUS the
+ * current reading. The current value is stored separately from history (the
+ * backend never folds it into the history rows), so computing over history
+ * alone dropped the latest — and most clinically relevant — point from the
+ * Range/Average shown in the trend modal and disagreed with the chart in that
+ * same modal. Mirrors BiomarkerChart: include the current value when there is
+ * no history or when it is newer than the last history point, so the stats
+ * match the points actually plotted.
+ */
+export function computeBiomarkerStats(
+  biomarker: Biomarker
+): { min: number; max: number; avg: number } {
+  const history = biomarker.history ?? [];
+  const values = history.map((h) => h.value);
+  const lastHistory = history[history.length - 1];
+  const includeCurrent =
+    history.length === 0 ||
+    (!!lastHistory &&
+      new Date(biomarker.date).getTime() > new Date(lastHistory.date).getTime());
+  if (includeCurrent) values.push(biomarker.value);
+  const finite = values.filter((v) => Number.isFinite(v));
+  if (finite.length === 0) {
+    return { min: biomarker.value, max: biomarker.value, avg: biomarker.value };
+  }
+  return {
+    min: Math.min(...finite),
+    max: Math.max(...finite),
+    avg: finite.reduce((a, b) => a + b, 0) / finite.length,
+  };
+}

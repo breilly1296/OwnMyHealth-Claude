@@ -45,6 +45,7 @@ import {
 } from '../../services/api';
 import { extractErrorMessage } from '../../utils/errorHelpers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { progressTrend, toChronologicalProgress } from '../../utils/goals/progressTrend';
 
 interface GoalTrackerPanelProps {
   biomarkers: Biomarker[];
@@ -103,28 +104,6 @@ function formatDaysRemaining(days: number): string {
   if (days > 0) return `${days} day${days === 1 ? '' : 's'} remaining`;
   if (days === 0) return 'Due today';
   return `Overdue by ${Math.abs(days)} day${days === -1 ? '' : 's'}`;
-}
-
-/** Trend classifier for the progress chart fill color. */
-function progressTrend(
-  history: ProgressEntry[] | undefined,
-  direction: GoalDirection
-): 'positive' | 'stagnant' | 'negative' {
-  if (!history || history.length < 2) return 'stagnant';
-  const first = history[0].value;
-  const last = history[history.length - 1].value;
-  if (direction === 'INCREASE') {
-    if (last > first) return 'positive';
-    if (last < first) return 'negative';
-    return 'stagnant';
-  }
-  if (direction === 'DECREASE') {
-    if (last < first) return 'positive';
-    if (last > first) return 'negative';
-    return 'stagnant';
-  }
-  // MAINTAIN: stagnant is positive, movement is negative
-  return first === last ? 'positive' : 'stagnant';
 }
 
 const TREND_COLORS = {
@@ -586,9 +565,10 @@ function GoalCard({ goal, biomarker, onClick, onBiomarkerClick }: GoalCardProps)
   const status = STATUS_BADGE[goal.status];
   const days = daysRemaining(goal.targetDate);
   const daysOverdue = days < 0;
-  const trend = progressTrend(goal.progressHistory, goal.direction);
+  const chronoHistory = toChronologicalProgress(goal.progressHistory);
+  const trend = progressTrend(chronoHistory, goal.direction);
   const trendColor = TREND_COLORS[trend];
-  const hasHistory = (goal.progressHistory?.length ?? 0) >= 2;
+  const hasHistory = chronoHistory.length >= 2;
 
   return (
     <div
@@ -609,7 +589,7 @@ function GoalCard({ goal, biomarker, onClick, onBiomarkerClick }: GoalCardProps)
           <div className="flex-shrink-0 hidden sm:block" style={{ width: 200, height: 80 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={goal.progressHistory!.map((h) => ({
+                data={chronoHistory.map((h) => ({
                   date: new Date(h.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                   value: h.value,
                 }))}
@@ -741,7 +721,7 @@ function GoalDetailModal({
   const [progressNote, setProgressNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const history = goal.progressHistory ?? [];
+  const history = toChronologicalProgress(goal.progressHistory);
   const hasHistory = history.length >= 1;
   const trend = progressTrend(history, goal.direction);
   const trendColor = TREND_COLORS[trend];

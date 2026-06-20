@@ -854,7 +854,10 @@ export async function getHistory(
               lte: dateEnd,
             },
           },
-          orderBy: { measurementDate: 'asc' },
+          // Fetch newest-first so `take` retains the most RECENT limitNum points
+          // within the window (asc + take would keep the OLDEST and silently drop
+          // the most recent ones for a dense series). Re-sorted ascending below.
+          orderBy: { measurementDate: 'desc' },
           take: limitNum,
         },
       },
@@ -871,6 +874,13 @@ export async function getHistory(
   // Decrypt current value (null-on-failure so a single bad row can't 500 the request)
   const currentValue = parseFloat(
     tryDecrypt(encryptionService, biomarker.valueEncrypted, userSalt, 'valueEncrypted') ?? ''
+  );
+
+  // The query fetched newest-first (desc + take); re-sort ascending so the
+  // response stays oldest-first — the current-value append below and downstream
+  // trend math both assume chronological order.
+  biomarker.history.sort(
+    (a, b) => a.measurementDate.getTime() - b.measurementDate.getTime()
   );
 
   // Build history entries from historical records
