@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Upload, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { insuranceApi } from '../../services/api/insurance';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface AddInsurancePlanModalProps {
   isOpen: boolean;
@@ -66,6 +67,28 @@ export default function AddInsurancePlanModal({
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Ordered list of tab ids for ARIA keyboard navigation (Arrow/Home/End).
+  const tabOrder: TabType[] = ['manual', 'upload'];
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const currentIndex = tabOrder.indexOf(activeTab);
+    let newIndex: number | null = null;
+    if (e.key === 'ArrowRight') {
+      newIndex = (currentIndex + 1) % tabOrder.length;
+    } else if (e.key === 'ArrowLeft') {
+      newIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+    } else if (e.key === 'Home') {
+      newIndex = 0;
+    } else if (e.key === 'End') {
+      newIndex = tabOrder.length - 1;
+    }
+    if (newIndex === null) return;
+    e.preventDefault();
+    const newTab = tabOrder[newIndex];
+    setActiveTab(newTab);
+    document.getElementById(`addplan-tab-${newTab}`)?.focus();
+  };
 
   // Upload state
   const [isDragging, setIsDragging] = useState(false);
@@ -202,14 +225,30 @@ export default function AddInsurancePlanModal({
     onClose();
   };
 
+  // Dialog a11y (Escape / focus trap / focus restore / scroll lock). Wire Escape
+  // through handleClose — not the raw onClose — so an Escape-close resets the
+  // form / active tab / upload state exactly like the X and Cancel buttons
+  // (otherwise stale state reappears the next time the modal opens).
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, handleClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg w-full md:max-w-2xl max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="addplan-modal-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg w-full md:max-w-2xl max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+          <h2
+            id="addplan-modal-title"
+            className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white"
+          >
             Add Insurance Plan
           </h2>
           <button
@@ -221,9 +260,19 @@ export default function AddInsurancePlanModal({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700 px-4 md:px-6">
+        <div
+          role="tablist"
+          aria-label="Add insurance plan method"
+          className="flex border-b border-gray-200 dark:border-gray-700 px-4 md:px-6"
+        >
           <button
+            role="tab"
+            id="addplan-tab-manual"
+            aria-selected={activeTab === 'manual'}
+            aria-controls="addplan-panel-manual"
+            tabIndex={activeTab === 'manual' ? 0 : -1}
             onClick={() => setActiveTab('manual')}
+            onKeyDown={handleTabKeyDown}
             className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
               activeTab === 'manual'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
@@ -234,7 +283,13 @@ export default function AddInsurancePlanModal({
             Manual Entry
           </button>
           <button
+            role="tab"
+            id="addplan-tab-upload"
+            aria-selected={activeTab === 'upload'}
+            aria-controls="addplan-panel-upload"
+            tabIndex={activeTab === 'upload' ? 0 : -1}
             onClick={() => setActiveTab('upload')}
+            onKeyDown={handleTabKeyDown}
             className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px ${
               activeTab === 'upload'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
@@ -255,7 +310,14 @@ export default function AddInsurancePlanModal({
           )}
 
           {activeTab === 'manual' ? (
-            <form onSubmit={handleManualSubmit} className="space-y-6">
+            <form
+              role="tabpanel"
+              id="addplan-panel-manual"
+              aria-labelledby="addplan-tab-manual"
+              tabIndex={0}
+              onSubmit={handleManualSubmit}
+              className="space-y-6"
+            >
               {/* Plan Details */}
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
@@ -574,7 +636,13 @@ export default function AddInsurancePlanModal({
               </div>
             </form>
           ) : (
-            <div className="space-y-6">
+            <div
+              role="tabpanel"
+              id="addplan-panel-upload"
+              aria-labelledby="addplan-tab-upload"
+              tabIndex={0}
+              className="space-y-6"
+            >
               {/* Upload Area */}
               <div
                 onDragOver={handleDragOver}

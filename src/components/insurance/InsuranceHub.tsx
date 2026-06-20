@@ -13,7 +13,7 @@
  * When a plan is selected, the hub swaps to InsurancePlanDetail.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Shield,
   CreditCard,
@@ -243,6 +243,31 @@ export default function InsuranceHub({
     { id: 'learn', label: 'Learn & Save', icon: Lightbulb },
   ];
 
+  // WAI-ARIA tabs keyboard nav: Arrow keys wrap through the ordered tab list,
+  // Home/End jump to the first/last tab, and focus follows the new selection.
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const ids = tabs.map((t) => t.id);
+    const currentIndex = ids.indexOf(activeTab);
+    let nextIndex: number | null = null;
+
+    if (e.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % ids.length;
+    } else if (e.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + ids.length) % ids.length;
+    } else if (e.key === 'Home') {
+      nextIndex = 0;
+    } else if (e.key === 'End') {
+      nextIndex = ids.length - 1;
+    }
+
+    if (nextIndex === null) return;
+
+    e.preventDefault();
+    const nextId = ids[nextIndex];
+    setActiveTab(nextId);
+    document.getElementById(`hub-tab-${nextId}`)?.focus();
+  };
+
   if (selectedPlan) {
     return <InsurancePlanDetail plan={selectedPlan} onBack={() => setSelectedPlan(null)} />;
   }
@@ -261,11 +286,21 @@ export default function InsuranceHub({
       {insurancePlans.length > 0 && <InsuranceStatsGrid plans={insurancePlans} guide={guide} />}
 
       {/* Tabs */}
-      <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 inline-flex mb-6">
+      <div
+        role="tablist"
+        aria-label="Insurance views"
+        className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 inline-flex mb-6"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            id={`hub-tab-${tab.id}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`hub-panel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={handleTabKeyDown}
             className={`px-5 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === tab.id
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
@@ -279,7 +314,13 @@ export default function InsuranceHub({
 
       <div className="min-h-[400px]">
         {activeTab === 'plans' && (
-          <div className="space-y-6">
+          <div
+            role="tabpanel"
+            id="hub-panel-plans"
+            aria-labelledby="hub-tab-plans"
+            tabIndex={0}
+            className="space-y-6"
+          >
             {insurancePlans.length === 0 ? (
               <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700">
                 <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -330,15 +371,21 @@ export default function InsuranceHub({
         )}
 
         {activeTab === 'costs' && (
-          <CostsTab
-            plans={insurancePlans}
-            activePlan={activePlan}
-            onAddPlan={() => setIsAddPlanModalOpen(true)}
-            onRefresh={onRefresh}
-          />
+          <div role="tabpanel" id="hub-panel-costs" aria-labelledby="hub-tab-costs" tabIndex={0}>
+            <CostsTab
+              plans={insurancePlans}
+              activePlan={activePlan}
+              onAddPlan={() => setIsAddPlanModalOpen(true)}
+              onRefresh={onRefresh}
+            />
+          </div>
         )}
 
-        {activeTab === 'learn' && <InsuranceLearnTab plans={insurancePlans} guide={guide} />}
+        {activeTab === 'learn' && (
+          <div role="tabpanel" id="hub-panel-learn" aria-labelledby="hub-tab-learn" tabIndex={0}>
+            <InsuranceLearnTab plans={insurancePlans} guide={guide} />
+          </div>
+        )}
       </div>
 
       <AddInsurancePlanModal
