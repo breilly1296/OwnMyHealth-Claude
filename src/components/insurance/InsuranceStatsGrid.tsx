@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 import { Shield, CheckCircle, DollarSign, TrendingDown } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
-import { formatCurrency } from './InsurancePlanCard';
+import { formatCurrency } from './planFormatters';
 
 interface InsuranceStatsGridProps {
   plans: InsurancePlan[];

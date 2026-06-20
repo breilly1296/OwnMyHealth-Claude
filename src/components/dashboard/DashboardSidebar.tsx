@@ -9,6 +9,7 @@ import { Heart, Zap, X, Shield, AlertCircle, TrendingUp, FileUp, Settings } from
 import CollapsibleNavGroup from './CollapsibleNavGroup';
 import CategoryTab from './CategoryTab';
 import { categoryToPathMap } from './categoryRouting';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { BiomarkerCategory, Biomarker, InsurancePlan, NavGroup } from '../../types';
 
 interface SidebarStats {
@@ -120,6 +121,11 @@ export function DashboardSidebar({
   stats,
 }: DashboardSidebarProps) {
   const proTip = getProTip(biomarkers, insurancePlans, stats);
+  // A11Y: treat the mobile drawer as a modal dialog — Escape-to-close, Tab focus
+  // trap, initial focus into the panel, focus restoration to the opener, and body
+  // scroll-lock. The hook owns all of those, so the panel only needs the dialog ref
+  // + ARIA attributes below.
+  const drawerRef = useFocusTrap<HTMLElement>(showMobileSidebar, onCloseMobileSidebar);
   const handleMobileCategorySelect = (category: string) => {
     onCategorySelect(category);
     onCloseMobileSidebar();
@@ -168,7 +174,14 @@ export function DashboardSidebar({
             onClick={onCloseMobileSidebar}
           />
           {/* Drawer */}
-          <aside className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white dark:bg-slate-900 shadow-xl animate-slide-in-left overflow-y-auto">
+          <aside
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            tabIndex={-1}
+            className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white dark:bg-slate-900 shadow-xl animate-slide-in-left overflow-y-auto"
+          >
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center">

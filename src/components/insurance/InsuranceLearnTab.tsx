@@ -20,7 +20,7 @@ import {
   Shield,
 } from 'lucide-react';
 import type { InsurancePlan, PersonalizedInsuranceGuide } from '../../types';
-import { formatCurrency } from './InsurancePlanCard';
+import { formatCurrency } from './planFormatters';
 
 interface InsuranceLearnTabProps {
   guide: PersonalizedInsuranceGuide;
