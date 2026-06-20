@@ -1,5 +1,6 @@
 import { FileText, Image, Download, Eye, Trash2, Calendar, Building2, FlaskConical } from 'lucide-react';
 import type { UserFile } from '../../types';
+import { formatDateOnly } from '../../utils/format';
 
 interface FileCardProps {
   file: UserFile;
@@ -31,11 +32,11 @@ export default function FileCard({ file, onView, onDownload, onDelete }: FileCar
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Format date
+  // Format date (date-only: labDate is an @db.Date column — render in UTC to
+  // avoid the off-by-one in negative-UTC locales).
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return 'Unknown date';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
+    return formatDateOnly(dateStr, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

@@ -18,6 +18,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, Loader2, AlertTriangle, FileText, Image, Building2, Calendar, CheckCircle } from 'lucide-react';
 import { uploadFile } from '../../services/uploadUtils';
+import { formatDateOnly } from '../../utils/format';
 import { biomarkersApi } from '../../services/api';
 import { planExtractionReview } from '../../utils/extractionReview';
 import ExtractionReviewStep, {
@@ -267,7 +268,7 @@ export default function LabUploadModal({ isOpen, onClose, onSuccess }: LabUpload
                 {result.reportDate && (
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
-                    {new Date(result.reportDate).toLocaleDateString()}
+                    {formatDateOnly(result.reportDate, {})}
                   </div>
                 )}
               </div>

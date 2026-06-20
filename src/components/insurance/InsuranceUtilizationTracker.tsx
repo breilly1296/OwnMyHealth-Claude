@@ -622,6 +622,9 @@ function getEstimatedCost(type: string, name: string): number {
 // Adjust date by adding days
 function adjustDate(dateString: string, daysToAdd: number): string {
   const date = new Date(dateString);
-  date.setDate(date.getDate() + daysToAdd);
+  // Use UTC getters/setters: dateString is a date-only value parsed as UTC
+  // midnight and re-serialized via toISOString (UTC). Doing the day arithmetic
+  // in local time would drift by a day when the window crosses a DST boundary.
+  date.setUTCDate(date.getUTCDate() + daysToAdd);
   return date.toISOString().split('T')[0];
 }

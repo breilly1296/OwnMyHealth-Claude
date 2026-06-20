@@ -82,7 +82,10 @@ function buildTimeline(
     if (!a.serviceDate || a.patientPaid === null) continue;
     const d = new Date(a.serviceDate);
     if (Number.isNaN(d.getTime())) continue;
-    const m = d.getMonth();
+    // serviceDate is date-only (YYYY-MM-DD parsed as UTC midnight); read the
+    // month in UTC so a month-boundary date isn't bucketed into the prior month
+    // in negative-UTC locales.
+    const m = d.getUTCMonth();
     monthlyActual[m] += a.patientPaid;
     if (m > latestMonthWithActual) latestMonthWithActual = m;
   }

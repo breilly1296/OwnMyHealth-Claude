@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatDateOnly } from '../../utils/format';
 import {
   AlertTriangle,
   Building2,
@@ -179,7 +180,7 @@ export default function ExtractionReviewStep({
           {reportDate && (
             <div className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-slate-400" />
-              <span>{new Date(reportDate).toLocaleDateString()}</span>
+              <span>{formatDateOnly(reportDate, {})}</span>
             </div>
           )}
           <div className="flex items-center gap-1.5 ml-auto">
