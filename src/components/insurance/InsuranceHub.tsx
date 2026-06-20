@@ -31,7 +31,8 @@ import { SuccessToast } from '../common';
 import AddInsurancePlanModal from './AddInsurancePlanModal';
 import InsurancePlanDetail from './InsurancePlanDetail';
 import CostOptimization from './CostOptimization';
-import InsurancePlanCard, { formatCurrency } from './InsurancePlanCard';
+import InsurancePlanCard from './InsurancePlanCard';
+import { formatCurrency } from './planFormatters';
 import InsuranceStatsGrid from './InsuranceStatsGrid';
 import InsuranceLearnTab from './InsuranceLearnTab';
 

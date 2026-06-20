@@ -26,12 +26,9 @@
  * @module components/common/Modal
  */
 
-import { ReactNode, useEffect, useId, useRef } from 'react';
+import { ReactNode, useId } from 'react';
 import { X } from 'lucide-react';
-
-// Selector for tabbable elements used by the focus trap.
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ModalProps {
   isOpen: boolean;
@@ -62,67 +59,11 @@ export default function Modal({
   size = 'md',
   showCloseButton = true,
 }: ModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  // Dialog a11y (Escape, focus trap, initial focus, focus restoration, scroll
+  // lock) is shared with bespoke overlays via this hook — see useFocusTrap.
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
   const titleId = useId();
   const subtitleId = useId();
-
-  // Keep onClose in a ref so the effect depends only on `isOpen` — otherwise a
-  // new onClose identity each render would re-run the effect and run its
-  // cleanup (which restores focus) while the modal is still open.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
-  // Dialog a11y: Escape to close, focus trap, initial focus into the dialog,
-  // and focus restoration to the opener on close (WAI-ARIA dialog pattern).
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    document.body.style.overflow = 'hidden';
-
-    const dialog = dialogRef.current;
-    // Move focus into the dialog so screen readers announce it (via
-    // aria-labelledby) and keyboard focus is inside the trap.
-    dialog?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== 'Tab' || !dialog) return;
-
-      const focusables = Array.from(
-        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      ).filter((el) => el.offsetParent !== null);
-      if (focusables.length === 0) {
-        // Nothing tabbable — keep focus on the dialog container.
-        e.preventDefault();
-        dialog.focus();
-        return;
-      }
-
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey && (active === first || active === dialog)) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-      // Restore focus to whatever opened the modal.
-      previouslyFocused?.focus?.();
-    };
-  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -19,6 +19,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { InsurancePlan } from '../../types';
+import { formatCurrency, formatCopay, formatPercent } from './planFormatters';
 
 interface InsurancePlanCardProps {
   plan: InsurancePlan;
@@ -35,26 +36,6 @@ const PLAN_TYPE_BADGE: Record<InsurancePlan['planType'], string> = {
   HDHP: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   Other: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200',
 };
-
-export function formatCurrency(amount: number | undefined | null): string {
-  if (amount === undefined || amount === null || !Number.isFinite(amount)) return '--';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-export function formatCopay(amount: number | undefined | null): string {
-  if (amount === undefined || amount === null || !Number.isFinite(amount)) return '--';
-  return `$${amount}`;
-}
-
-export function formatPercent(value: number | undefined | null): string {
-  if (value === undefined || value === null || !Number.isFinite(value)) return '--';
-  return `${value}%`;
-}
 
 function formatRelativeDate(iso: string): string {
   const d = new Date(iso);
@@ -117,8 +98,24 @@ export default function InsurancePlanCard({
 
   return (
     <div
+      // A11Y-4: this card opens plan details on click. It nests action buttons
+      // (delete) and inline triggers, so it can't be a <button>; expose it as a
+      // keyboard-operable button instead.
+      role="button"
+      tabIndex={0}
+      aria-label={`${plan.planName}, ${plan.insurerName}`}
       onClick={handleCardClick}
-      className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-6 hover:border-blue-200 dark:hover:border-blue-500 transition-all cursor-pointer group"
+      onKeyDown={(e) => {
+        // Only the card itself opens details — a keystroke on a nested button
+        // (delete / update link) must not bubble up and also open details
+        // (those only stopPropagation on click, not keydown).
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-6 hover:border-blue-200 dark:hover:border-blue-500 transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
@@ -146,7 +143,7 @@ export default function InsurancePlanCard({
             <button
               onClick={handleDeleteClick}
               disabled={isDeleting}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-50"
               title="Delete plan"
               aria-label="Delete plan"
             >
@@ -181,15 +178,16 @@ export default function InsurancePlanCard({
         ) : (
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Not tracking spending —{' '}
-            <span
+            <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelect(plan);
               }}
-              className="underline cursor-pointer hover:text-brand-500 dark:hover:text-brand-400"
+              className="underline cursor-pointer hover:text-brand-500 dark:hover:text-brand-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
             >
               update in plan details
-            </span>
+            </button>
           </p>
         )}
       </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Edit2 } from 'lucide-react';
 import type { Biomarker, NormalRange } from '../../types';
 import { measurementOptions, normalRangeSources } from '../../data/measurementOptions';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 /**
  * Props for the AddMeasurementModal component.
@@ -49,6 +50,9 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
     source: normalRangeSources[0]
   });
 
+  // WAI-ARIA dialog behavior (Escape, focus trap, focus restore, scroll-lock).
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+
   const categoryBiomarkers = measurementOptions[category] || [];
 
   const handleBiomarkerChange = (name: string) => {
@@ -92,9 +96,16 @@ export default function AddMeasurementModal({ isOpen, onClose, category, onAdd }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg p-4 md:p-6 w-full md:max-w-md max-h-[90vh] md:max-h-[85vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-measurement-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-lg p-4 md:p-6 w-full md:max-w-md max-h-[90vh] md:max-h-[85vh] overflow-y-auto"
+      >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Add New Measurement</h2>
+          <h2 id="add-measurement-title" className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Add New Measurement</h2>
           <button onClick={onClose} className="p-2 -mr-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
             <X className="w-5 h-5" />
           </button>

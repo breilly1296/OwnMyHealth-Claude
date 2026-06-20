@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { settingsApi, authApi } from '../../services/api';
 import { logger } from '../../utils/logger';
 import { extractErrorMessage } from '../../utils/errorHelpers';
@@ -95,6 +96,18 @@ export default function AccountSettingsPage({ onBack, onLabSynced }: AccountSett
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Dismiss the delete-confirmation modal and clear its transient state. Shared
+  // by the Cancel button and the focus trap's Escape handler.
+  const closeDeleteModal = useCallback(() => {
+    setDeleteType(null);
+    setDeletePassword('');
+    setDeleteError(null);
+  }, []);
+
+  // A11Y: WAI-ARIA dialog behavior (focus trap, Escape-to-close, scroll lock,
+  // focus restoration) for the bespoke delete-confirmation overlay.
+  const deleteDialogRef = useFocusTrap<HTMLDivElement>(deleteType !== null, closeDeleteModal);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -529,14 +542,24 @@ export default function AccountSettingsPage({ onBack, onLabSynced }: AccountSett
       {/* Delete Confirmation Modal */}
       {deleteType && (
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[95vh] md:max-h-[90vh] shadow-xl overflow-y-auto">
+          <div
+            ref={deleteDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirm-heading"
+            tabIndex={-1}
+            className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[95vh] md:max-h-[90vh] shadow-xl overflow-y-auto focus:outline-none"
+          >
             <div className="p-4 md:p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  <h3
+                    id="delete-confirm-heading"
+                    className="text-lg font-semibold text-slate-900 dark:text-white"
+                  >
                     {deleteType === 'account' ? 'Delete Account' : 'Delete All Health Data'}
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400">This action cannot be undone</p>
@@ -580,11 +603,7 @@ export default function AccountSettingsPage({ onBack, onLabSynced }: AccountSett
 
               <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
                 <button
-                  onClick={() => {
-                    setDeleteType(null);
-                    setDeletePassword('');
-                    setDeleteError(null);
-                  }}
+                  onClick={closeDeleteModal}
                   className="flex-1 px-4 py-3 sm:py-2.5 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
                 >
                   Cancel
@@ -614,7 +633,12 @@ export default function AccountSettingsPage({ onBack, onLabSynced }: AccountSett
 
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+        <div
+          className="fixed bottom-4 right-4 z-50 animate-fade-in"
+          role={toast.type === 'success' ? 'status' : 'alert'}
+          aria-live={toast.type === 'success' ? 'polite' : 'assertive'}
+          aria-atomic="true"
+        >
           <div
             className={`flex items-center space-x-3 px-4 py-3 rounded-xl shadow-lg ${
               toast.type === 'success'

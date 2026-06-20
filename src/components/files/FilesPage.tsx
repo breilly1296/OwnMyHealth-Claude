@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Upload, Loader2, AlertCircle, FileText } from 'lucide-react';
 import FileCard from './FileCard';
 import { filesApi } from '../../services/api';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { UserFile } from '../../types';
 
 interface FilesPageProps {
@@ -116,6 +117,17 @@ export default function FilesPage({ onUploadClick }: FilesPageProps) {
     setFileToDelete(null);
   }, []);
 
+  // Delete-confirmation dialog a11y (Escape, focus trap, initial focus, focus
+  // restoration, scroll lock) shared with the Modal via this hook. The returned
+  // ref is attached to the dialog container; Escape routes through cancelDelete.
+  // Called unconditionally (before the early returns below) to satisfy the
+  // Rules of Hooks.
+  const deleteDialogTitleId = useId();
+  const deleteDialogRef = useFocusTrap<HTMLDivElement>(
+    fileToDelete !== null,
+    cancelDelete
+  );
+
   // Loading state
   if (isLoading) {
     return (
@@ -204,8 +216,15 @@ export default function FilesPage({ onUploadClick }: FilesPageProps) {
       {/* Delete Confirmation Modal */}
       {fileToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+          <div
+            ref={deleteDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={deleteDialogTitleId}
+            tabIndex={-1}
+            className="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full shadow-xl focus:outline-none"
+          >
+            <h3 id={deleteDialogTitleId} className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
               Delete File?
             </h3>
             <p className="text-slate-600 dark:text-slate-400 mb-4">

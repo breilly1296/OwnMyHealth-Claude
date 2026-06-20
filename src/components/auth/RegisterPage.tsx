@@ -158,10 +158,10 @@ export default function RegisterPage({
                   activate your account, then sign in.
                 </p>
                 {resendState === 'sent' && (
-                  <p className="mb-4 text-sm text-wellness-400">Verification email re-sent.</p>
+                  <p role="status" aria-live="polite" className="mb-4 text-sm text-wellness-400">Verification email re-sent.</p>
                 )}
                 {resendState === 'error' && (
-                  <p className="mb-4 text-sm text-red-400">Couldn&apos;t resend — please try again.</p>
+                  <p role="alert" aria-live="assertive" aria-atomic="true" className="mb-4 text-sm text-red-400">Couldn&apos;t resend — please try again.</p>
                 )}
                 <button
                   type="button"
@@ -190,7 +190,12 @@ export default function RegisterPage({
 
             {/* Error Message */}
             {displayError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+              <div
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true"
+                className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3"
+              >
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-400">{displayError}</p>
               </div>

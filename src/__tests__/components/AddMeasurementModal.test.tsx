@@ -68,6 +68,23 @@ describe('AddMeasurementModal', () => {
       expect(screen.queryByText('Add New Measurement')).not.toBeInTheDocument();
     });
 
+    // A11Y wave: the modal must be an accessible dialog driven by the shared
+    // useFocusTrap hook (role/aria-modal + Escape-to-close + focus management).
+    it('exposes the overlay as an accessible dialog (role=dialog, aria-modal)', () => {
+      render(<AddMeasurementModal {...defaultProps} />);
+
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+    });
+
+    it('closes on Escape via the shared focus-trap hook', () => {
+      render(<AddMeasurementModal {...defaultProps} />);
+
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
     it('should render biomarker dropdown', () => {
       render(<AddMeasurementModal {...defaultProps} />);
 
