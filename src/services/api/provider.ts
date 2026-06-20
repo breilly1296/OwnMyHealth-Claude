@@ -3,6 +3,7 @@
  */
 
 import { apiFetch } from './client';
+import { fetchAllPages } from './pagination';
 import { BiomarkerData } from './biomarkers';
 import { HealthNeedData } from './healthNeeds';
 import type { InsurancePlanData } from './insurance';
@@ -67,20 +68,19 @@ export const providerApi = {
     return response.data;
   },
 
+  // Page through the complete set — the patient detail view shows the full
+  // record; the endpoint paginates server-side to bound per-request decrypt.
   async getPatientBiomarkers(patientId: string): Promise<BiomarkerData[]> {
-    const response = await apiFetch<BiomarkerData[]>(`/provider/patients/${patientId}/biomarkers`);
-    return response.data;
+    return fetchAllPages<BiomarkerData>(`/provider/patients/${patientId}/biomarkers`);
   },
 
   async getPatientHealthNeeds(patientId: string): Promise<HealthNeedData[]> {
-    const response = await apiFetch<HealthNeedData[]>(`/provider/patients/${patientId}/health-needs`);
-    return response.data;
+    return fetchAllPages<HealthNeedData>(`/provider/patients/${patientId}/health-needs`);
   },
 
   // M3: gated on the patient's canViewInsurance consent flag, server-side.
   async getPatientInsurance(patientId: string): Promise<InsurancePlanData[]> {
-    const response = await apiFetch<InsurancePlanData[]>(`/provider/patients/${patientId}/insurance`);
-    return response.data;
+    return fetchAllPages<InsurancePlanData>(`/provider/patients/${patientId}/insurance`);
   },
 
   async removePatient(patientId: string): Promise<void> {

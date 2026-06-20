@@ -19,6 +19,7 @@ import { getUserEncryptionSalt } from '../services/userEncryption.js';
 import { getAuditLogService } from '../services/auditLog.js';
 import { resolveProviderAccess, providerAccessError } from '../services/providerAccess.js';
 import { insurancePlanToResponse } from '../controllers/insuranceController.js';
+import { parsePagination, createPaginationMeta } from '../utils/queryHelpers.js';
 import type { AuthenticatedRequest, ApiResponse } from '../types/index.js';
 
 const router = Router();
@@ -452,14 +453,23 @@ router.get(
     // provider's session the DB returns biomarker rows ONLY for an ACTIVE,
     // unexpired, can_view_biomarkers relationship — a true backstop matching the
     // app-layer checks below (which remain the primary gate + audit driver).
-    const { access, biomarkers } = await withRLSContext(providerId, async (tx) => {
+    // Bound the per-request decrypt + payload. The client pages through to
+    // assemble the full set for the clinician, but no single request fetches an
+    // unbounded number of a long-tenured patient's biomarkers.
+    const pagination = parsePagination(req.query.page, req.query.limit, { defaultLimit: 100 });
+    const { access, biomarkers, total } = await withRLSContext(providerId, async (tx) => {
       const access = await resolveProviderAccess(tx, providerId, patientId, 'canViewBiomarkers');
-      if (!access.ok) return { access, biomarkers: [] };
-      const rows = await tx.biomarker.findMany({
-        where: { userId: patientId },
-        orderBy: { measurementDate: 'desc' },
-      });
-      return { access, biomarkers: rows };
+      if (!access.ok) return { access, biomarkers: [], total: 0 };
+      const [rows, total] = await Promise.all([
+        tx.biomarker.findMany({
+          where: { userId: patientId },
+          orderBy: { measurementDate: 'desc' },
+          skip: pagination.skip,
+          take: pagination.take,
+        }),
+        tx.biomarker.count({ where: { userId: patientId } }),
+      ]);
+      return { access, biomarkers: rows, total };
     });
 
     const auditService = getAuditLogService(prisma);
@@ -508,12 +518,14 @@ router.get(
       operation: 'PHI_ACCESS',
       patientId,
       count: decryptedBiomarkers.length,
+      total,
       accessedFields: ['biomarkers'],
     });
 
     const response: ApiResponse<typeof decryptedBiomarkers> = {
       success: true,
       data: decryptedBiomarkers,
+      pagination: createPaginationMeta(total, pagination),
     };
     res.json(response);
   })
@@ -535,14 +547,20 @@ router.get(
     // `OR has_provider_access(user_id, 'view_health_needs')` branch, so the DB
     // returns rows only for an ACTIVE, unexpired, can_view_health_needs
     // relationship. App-layer checks below stay the primary gate + audit driver.
-    const { access, healthNeeds } = await withRLSContext(providerId, async (tx) => {
+    const pagination = parsePagination(req.query.page, req.query.limit, { defaultLimit: 100 });
+    const { access, healthNeeds, total } = await withRLSContext(providerId, async (tx) => {
       const access = await resolveProviderAccess(tx, providerId, patientId, 'canViewHealthNeeds');
-      if (!access.ok) return { access, healthNeeds: [] };
-      const rows = await tx.healthNeed.findMany({
-        where: { userId: patientId },
-        orderBy: { createdAt: 'desc' },
-      });
-      return { access, healthNeeds: rows };
+      if (!access.ok) return { access, healthNeeds: [], total: 0 };
+      const [rows, total] = await Promise.all([
+        tx.healthNeed.findMany({
+          where: { userId: patientId },
+          orderBy: { createdAt: 'desc' },
+          skip: pagination.skip,
+          take: pagination.take,
+        }),
+        tx.healthNeed.count({ where: { userId: patientId } }),
+      ]);
+      return { access, healthNeeds: rows, total };
     });
 
     const auditService = getAuditLogService(prisma);
@@ -582,12 +600,14 @@ router.get(
       operation: 'PHI_ACCESS',
       patientId,
       count: decryptedHealthNeeds.length,
+      total,
       accessedFields: ['healthNeeds'],
     });
 
     const response: ApiResponse<typeof decryptedHealthNeeds> = {
       success: true,
       data: decryptedHealthNeeds,
+      pagination: createPaginationMeta(total, pagination),
     };
     res.json(response);
   })
@@ -607,15 +627,21 @@ router.get(
     const providerId = req.user!.id;
     const { patientId } = req.params;
 
-    const { access, plans } = await withRLSContext(providerId, async (tx) => {
+    const pagination = parsePagination(req.query.page, req.query.limit, { defaultLimit: 100 });
+    const { access, plans, total } = await withRLSContext(providerId, async (tx) => {
       const access = await resolveProviderAccess(tx, providerId, patientId, 'canViewInsurance');
-      if (!access.ok) return { access, plans: [] };
-      const rows = await tx.insurancePlan.findMany({
-        where: { userId: patientId },
-        include: { benefits: true },
-        orderBy: [{ isPrimary: 'desc' }, { isActive: 'desc' }, { effectiveDate: 'desc' }],
-      });
-      return { access, plans: rows };
+      if (!access.ok) return { access, plans: [], total: 0 };
+      const [rows, total] = await Promise.all([
+        tx.insurancePlan.findMany({
+          where: { userId: patientId },
+          include: { benefits: true },
+          orderBy: [{ isPrimary: 'desc' }, { isActive: 'desc' }, { effectiveDate: 'desc' }],
+          skip: pagination.skip,
+          take: pagination.take,
+        }),
+        tx.insurancePlan.count({ where: { userId: patientId } }),
+      ]);
+      return { access, plans: rows, total };
     });
 
     const auditService = getAuditLogService(prisma);
@@ -641,12 +667,14 @@ router.get(
       operation: 'PHI_ACCESS',
       patientId,
       count: decryptedPlans.length,
+      total,
       accessedFields: ['insurance'],
     });
 
     const response: ApiResponse<typeof decryptedPlans> = {
       success: true,
       data: decryptedPlans,
+      pagination: createPaginationMeta(total, pagination),
     };
     res.json(response);
   })
