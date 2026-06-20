@@ -1,5 +1,6 @@
 import { Shield, AlertCircle, CheckCircle, DollarSign, Calendar, Clock, FileText, ExternalLink } from 'lucide-react';
 import type { Biomarker, InsurancePlan, CoverageDetails } from '../../types';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 // Local type for recommended services
 interface RecommendedServiceInfo {
@@ -41,6 +42,7 @@ interface BiomarkerInsurancePanelProps {
  * @returns A modal dialog with coverage information
  */
 export default function BiomarkerInsurancePanel({ biomarker, insurancePlans, onClose }: BiomarkerInsurancePanelProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
   const isOutOfRange = biomarker.value < biomarker.normalRange.min || biomarker.value > biomarker.normalRange.max;
   const isHigh = biomarker.value > biomarker.normalRange.max;
   const isLow = biomarker.value < biomarker.normalRange.min;
@@ -53,13 +55,20 @@ export default function BiomarkerInsurancePanel({ biomarker, insurancePlans, onC
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="biomarker-insurance-panel-title"
+        tabIndex={-1}
+        className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center">
             <Shield className="w-6 h-6 text-blue-600 mr-3" />
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Insurance Coverage for {biomarker.name}</h2>
+              <h2 id="biomarker-insurance-panel-title" className="text-xl font-semibold text-gray-900">Insurance Coverage for {biomarker.name}</h2>
               <p className="text-sm text-gray-600">
                 Based on your current value: {biomarker.value} {biomarker.unit}
                 {isOutOfRange ? (
@@ -74,8 +83,9 @@ export default function BiomarkerInsurancePanel({ biomarker, insurancePlans, onC
               </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
+            aria-label="Close"
             className="text-gray-500 hover:text-gray-700"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
