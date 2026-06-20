@@ -429,14 +429,19 @@ function RelationshipsTab({ onError, notify }: { onError: Notify; notify: Notify
                       onChange={(e) => patch(r.id, { status: e.target.value }, 'Status updated')}
                       className="ml-1 px-2 py-1 border border-slate-200 dark:border-slate-600 rounded dark:bg-slate-700 dark:text-white text-xs"
                     >
-                      {REL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {/* REVOKED is terminal: the patient withdrew consent, so an
+                          admin can't reactivate it (the server rejects it too). */}
+                      {REL_STATUSES.map((s) => (
+                        <option key={s} value={s} disabled={r.status === 'REVOKED' && s !== 'REVOKED'}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   {([
                     ['canViewBiomarkers', 'Biomarkers'],
                     ['canViewInsurance', 'Insurance'],
                     ['canViewHealthNeeds', 'Needs'],
-                    ['canEditData', 'Edit'],
                   ] as const).map(([key, label]) => (
                     <label key={key} className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
                       <input

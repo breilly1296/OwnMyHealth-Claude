@@ -194,7 +194,6 @@ export const adminApi = {
       canViewBiomarkers?: boolean;
       canViewInsurance?: boolean;
       canViewHealthNeeds?: boolean;
-      canEditData?: boolean;
     }
   ): Promise<AdminProviderRelationship> {
     const response = await apiFetch<AdminProviderRelationship>(`/admin/provider-relationships/${id}`, {

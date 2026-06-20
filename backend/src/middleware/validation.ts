@@ -913,16 +913,23 @@ export const schemas = {
       confirmEmail: z.string().email('Valid email required for confirmation'),
     }),
 
+    // GET filter for provider-patient relationships. Validates the status enum
+    // so a bad value returns 400 instead of a Prisma 500 (parity with the other
+    // admin list queries).
+    listProviderRelationshipsQuery: z.object({
+      status: z.nativeEnum(ProviderPatientStatus).optional(),
+    }),
+
     // Admin edit of a provider-patient relationship. Status uses the Prisma
-    // ProviderPatientStatus enum; the four permission booleans are optional.
-    // .strict() rejects unknown keys so an admin can't smuggle in unvetted
-    // fields (e.g. consentExpiresAt) through this endpoint.
+    // ProviderPatientStatus enum; the three view-permission booleans are
+    // optional. .strict() rejects unknown keys so an admin can't smuggle in
+    // unvetted fields (e.g. consentExpiresAt, or the removed canEditData /
+    // reConsent) through this endpoint.
     updateProviderRelationship: z.object({
       status: z.nativeEnum(ProviderPatientStatus).optional(),
       canViewBiomarkers: z.boolean().optional(),
       canViewInsurance: z.boolean().optional(),
       canViewHealthNeeds: z.boolean().optional(),
-      canEditData: z.boolean().optional(),
     }).strict(),
   },
 };
