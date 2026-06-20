@@ -572,8 +572,21 @@ function GoalCard({ goal, biomarker, onClick, onBiomarkerClick }: GoalCardProps)
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${goal.name}, ${status.label}`}
       onClick={onClick}
-      className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-brand-200 dark:hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-900/10 cursor-pointer transition-all"
+      onKeyDown={(e) => {
+        // Only the card root opens the goal — a keystroke on the nested
+        // "View biomarker" button (which only stopPropagation()s on click)
+        // must not bubble up and also open the goal detail.
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-brand-200 dark:hover:border-brand-500 hover:bg-brand-50/30 dark:hover:bg-brand-900/10 cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
     >
       <div className="flex items-start justify-between mb-3 gap-3">
         <div className="flex-1 min-w-0">

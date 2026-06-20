@@ -33,18 +33,30 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // Close user menu when clicking outside
+  // Close the user menu on outside click or Escape. On Escape, return focus to
+  // the trigger so keyboard users aren't dumped at the top of the document.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showUserMenu) {
+        setShowUserMenu(false);
+        userMenuTriggerRef.current?.focus();
+      }
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showUserMenu]);
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/60">
@@ -98,7 +110,10 @@ export function DashboardHeader({
           {user ? (
             <div className="relative" ref={userMenuRef}>
               <button
+                ref={userMenuTriggerRef}
                 onClick={() => setShowUserMenu(!showUserMenu)}
+                aria-haspopup="menu"
+                aria-expanded={showUserMenu}
                 className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-br from-brand-400 to-brand-600 rounded-lg flex items-center justify-center">
@@ -116,7 +131,7 @@ export function DashboardHeader({
 
               {/* Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 animate-fade-in">
+                <div role="menu" aria-label="Account menu" className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 animate-fade-in">
                   <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
                     <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                       {user.email}
@@ -127,6 +142,7 @@ export function DashboardHeader({
                   </div>
 
                   <button
+                    role="menuitem"
                     onClick={() => {
                       setShowUserMenu(false);
                       onOpenAccountSettings();
@@ -138,6 +154,7 @@ export function DashboardHeader({
                   </button>
 
                   <button
+                    role="menuitem"
                     onClick={() => {
                       setShowUserMenu(false);
                       onLogout();

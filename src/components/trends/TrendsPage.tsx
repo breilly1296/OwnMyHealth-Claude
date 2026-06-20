@@ -366,8 +366,18 @@ function BiomarkerTrendCard({ biomarker, trend, hasEnoughData, isOutOfRange, onC
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${biomarker.name}, ${biomarker.value} ${biomarker.unit}`}
       onClick={onClick}
-      className={`bg-white dark:bg-slate-800 rounded-2xl border p-4 cursor-pointer transition-all hover:shadow-md ${
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`bg-white dark:bg-slate-800 rounded-2xl border p-4 cursor-pointer transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
         hasEnoughData
           ? isOutOfRange
             ? 'border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700'
