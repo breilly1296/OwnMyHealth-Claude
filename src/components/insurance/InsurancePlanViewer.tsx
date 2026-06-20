@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { Shield, DollarSign, FileText, AlertCircle, CheckCircle, X, Eye, Search, Filter } from 'lucide-react';
 import type { InsurancePlan, InsuranceBenefit } from '../../types';
 import { getKeyPlanFeatures, formatCoverageDisplay } from '../../utils/insurance/insuranceUtils';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface InsurancePlanViewerProps {
   plans: InsurancePlan[];
@@ -52,6 +53,7 @@ export default function InsurancePlanViewer({ plans, isOpen, onClose }: Insuranc
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -106,6 +108,8 @@ export default function InsurancePlanViewer({ plans, isOpen, onClose }: Insuranc
             <button
               onClick={() => setSelectedPlan(isExpanded ? null : plan.id)}
               className="text-blue-600 hover:text-blue-800"
+              aria-label={isExpanded ? "Hide plan details" : "Show plan details"}
+              aria-expanded={isExpanded}
             >
               <Eye className="w-5 h-5" />
             </button>
@@ -288,16 +292,23 @@ export default function InsurancePlanViewer({ plans, isOpen, onClose }: Insuranc
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="insurance-plan-viewer-title"
+        tabIndex={-1}
+        className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900">Insurance Plans</h2>
+            <h2 id="insurance-plan-viewer-title" className="text-2xl font-semibold text-gray-900">Insurance Plans</h2>
             <p className="text-sm text-gray-600 mt-1">
               View and compare your insurance plan benefits and coverage details
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close">
             <X className="w-6 h-6" />
           </button>
         </div>

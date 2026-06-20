@@ -14,6 +14,7 @@
  */
 
 import { X, TrendingUp, TrendingDown, Minus, Calendar, Activity, Target } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { Biomarker } from '../../types';
 import BiomarkerChart from './BiomarkerChart';
 import { classifyBiomarker, getTrendDisplay, computeBiomarkerStats } from '../../utils/biomarkers/trendCalculations';
@@ -29,6 +30,8 @@ interface TrendModalProps {
 }
 
 export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const stats = computeBiomarkerStats(biomarker);
@@ -49,12 +52,19 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trend-modal-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in"
+      >
         {/* Header */}
         <div className="px-4 md:px-6 py-4 md:py-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
-              <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{biomarker.name}</h2>
+              <h2 id="trend-modal-title" className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">{biomarker.name}</h2>
               <span className={`px-2.5 py-1 text-xs font-medium rounded-lg ${
                 isInRange
                   ? 'bg-wellness-50 dark:bg-wellness-900/30 text-wellness-700 dark:text-wellness-400 border border-wellness-200 dark:border-wellness-800'
@@ -67,6 +77,7 @@ export default function TrendModal({ isOpen, onClose, biomarker }: TrendModalPro
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all"
           >
             <X className="w-5 h-5" />

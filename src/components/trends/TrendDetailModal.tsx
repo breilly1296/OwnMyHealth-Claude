@@ -21,6 +21,7 @@ import { BiomarkerChart } from '../biomarkers';
 import BiomarkerAIGuidance from './BiomarkerAIGuidance';
 import { classifyBiomarker } from '../../utils/biomarkers/trendCalculations';
 import { formatDateOnly } from '../../utils/format';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface TrendDetailModalProps {
   /** Controls modal visibility */
@@ -42,6 +43,8 @@ interface TrendStats {
 }
 
 export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDetailModalProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
+
   // Calculate comprehensive statistics
   const stats = useMemo<TrendStats>(() => {
     const history = biomarker.history || [];
@@ -122,12 +125,19 @@ export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDe
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-5xl max-h-[95vh] md:max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trend-detail-modal-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-5xl max-h-[95vh] md:max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in flex flex-col"
+      >
         {/* Header */}
         <div className="px-4 md:px-6 py-4 md:py-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between flex-shrink-0">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
-              <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">
+              <h2 id="trend-detail-modal-title" className="text-lg md:text-xl font-bold text-slate-900 dark:text-white truncate">
                 {biomarker.name}
               </h2>
               <span
@@ -146,6 +156,7 @@ export default function TrendDetailModal({ isOpen, onClose, biomarker }: TrendDe
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all flex-shrink-0"
           >
             <X className="w-5 h-5" />

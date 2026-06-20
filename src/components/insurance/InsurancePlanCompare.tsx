@@ -34,6 +34,7 @@ import {
   type BenefitSearchResult,
   type PlanComparisonResult,
 } from '../../services/api/insurance';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface InsuranceKnowledgePanelProps {
   plans: InsurancePlan[];
@@ -123,6 +124,7 @@ function TagList({ items, colorScheme }: TagListProps) {
 }
 
 export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: InsuranceKnowledgePanelProps) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
   const [normalizedPlans, setNormalizedPlans] = useState<NormalizedInsurancePlan[]>([]);
   const [searchCriteria, setSearchCriteria] = useState<PlanSearchCriteria>({});
   const [searchResults, setSearchResults] = useState<PlanSearchResult[]>([]);
@@ -210,19 +212,26 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="insurance-plan-compare-title"
+        tabIndex={-1}
+        className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div className="flex items-center">
             <Database className="w-6 h-6 text-purple-600 mr-3" />
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Insurance Knowledge Base</h2>
+              <h2 id="insurance-plan-compare-title" className="text-xl font-semibold text-gray-900">Insurance Knowledge Base</h2>
               <p className="text-sm text-gray-600">
                 Intelligent analysis of {normalizedPlans.length} normalized insurance plans
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-700">
             <XCircle className="w-6 h-6" />
           </button>
         </div>
@@ -387,7 +396,7 @@ export default function InsuranceKnowledgePanel({ plans, isOpen, onClose }: Insu
                               }}
                               className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                             />
-                            <button className="text-purple-600 hover:text-purple-800">
+                            <button aria-label="View plan details" className="text-purple-600 hover:text-purple-800">
                               <Eye className="w-4 h-4" />
                             </button>
                           </div>

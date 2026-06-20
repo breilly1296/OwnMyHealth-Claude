@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { X, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { settingsApi } from '../../services/api';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     resetForm();
     onClose();
   };
+
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen, handleClose);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 12) {
@@ -95,6 +98,11 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0 md:p-4">
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="change-password-title"
+        tabIndex={-1}
         className="bg-white dark:bg-slate-800 rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[95vh] md:max-h-[90vh] overflow-hidden shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -104,10 +112,11 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-xl flex items-center justify-center">
               <Lock className="w-5 h-5 text-brand-600 dark:text-brand-400" />
             </div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Change Password</h2>
+            <h2 id="change-password-title" className="text-lg font-semibold text-slate-900 dark:text-white">Change Password</h2>
           </div>
           <button
             onClick={handleClose}
+            aria-label="Close"
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5 text-slate-500" />
@@ -149,6 +158,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   >
                     {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -172,6 +182,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   >
                     {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -198,6 +209,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
