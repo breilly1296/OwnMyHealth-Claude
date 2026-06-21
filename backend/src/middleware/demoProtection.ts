@@ -1,13 +1,13 @@
 /**
  * Demo Account Protection Middleware
  *
- * Prevents demo account from performing privileged operations:
- * - Role escalation (changing role to ADMIN)
- * - Modifying other user accounts
- * - Accessing admin-only features
+ * Prevents the demo account from performing privileged operations: admin
+ * access, profile/notification mutations, and AI features. Applied per-route
+ * via blockDemoAdminAccess / blockDemoProfileUpdate / blockDemoAI. (Demo
+ * role-change and cross-user modification are already covered by those guards
+ * plus the PATIENT-only role gate, so no standalone middleware is needed.)
  *
- * SECURITY: This is a critical security control to prevent demo accounts
- * from being used for unauthorized access.
+ * SECURITY: a critical control preventing demo accounts from unauthorized use.
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -36,30 +36,6 @@ export function isDemoAccount(req: AuthenticatedRequest): boolean {
 }
 
 /**
- * Middleware: Block demo users from role changes
- *
- * Apply to any route that could modify user roles.
- */
-export function blockDemoRoleChange(
-  req: AuthenticatedRequest,
-  _res: Response,
-  next: NextFunction
-): void {
-  if (!isDemoAccount(req)) {
-    return next();
-  }
-
-  // Check if request body contains role change attempt
-  if (req.body?.role && req.body.role !== 'PATIENT') {
-    throw new ForbiddenError(
-      'Demo account cannot change roles. Please create a real account for full access.'
-    );
-  }
-
-  next();
-}
-
-/**
  * Middleware: Block demo users from admin actions
  *
  * Apply to admin-only routes.
@@ -74,65 +50,6 @@ export function blockDemoAdminAccess(
       'Demo account does not have admin access. Please create a real account.'
     );
   }
-  next();
-}
-
-/**
- * Middleware: Block demo users from modifying other users
- *
- * Apply to user management routes.
- */
-export function blockDemoUserModification(
-  req: AuthenticatedRequest,
-  _res: Response,
-  next: NextFunction
-): void {
-  if (!isDemoAccount(req)) {
-    return next();
-  }
-
-  // Get target user ID from params or body
-  const targetUserId = req.params.userId || req.params.id || req.body?.userId;
-
-  // Demo users can only modify their own data
-  if (targetUserId && targetUserId !== req.user?.id) {
-    throw new ForbiddenError(
-      'Demo account cannot modify other users. Please create a real account.'
-    );
-  }
-
-  next();
-}
-
-/**
- * Middleware: Apply all demo protections
- *
- * Combines all demo account restrictions into a single middleware.
- */
-export function demoProtection(
-  req: AuthenticatedRequest,
-  _res: Response,
-  next: NextFunction
-): void {
-  if (!isDemoAccount(req)) {
-    return next();
-  }
-
-  // Block role changes
-  if (req.body?.role && req.body.role !== 'PATIENT') {
-    throw new ForbiddenError(
-      'Demo account cannot change roles. Please create a real account for full access.'
-    );
-  }
-
-  // Block modifying other users
-  const targetUserId = req.params.userId || req.params.id || req.body?.userId;
-  if (targetUserId && targetUserId !== req.user?.id) {
-    throw new ForbiddenError(
-      'Demo account cannot modify other users. Please create a real account.'
-    );
-  }
-
   next();
 }
 
@@ -173,5 +90,3 @@ export function blockDemoAI(
   }
   next();
 }
-
-export default demoProtection;

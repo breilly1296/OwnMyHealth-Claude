@@ -20,6 +20,7 @@ import { withRLSContext, withRLSTransaction } from '../database.js';
 import { getEncryptionService } from '../encryption.js';
 import { getUserEncryptionSalt } from '../userEncryption.js';
 import { getAuditLogService, type AuditMetadata } from '../auditLog.js';
+import { notifyNewResults, notifyOutOfRange } from '../notificationService.js';
 import { getPrismaClient } from '../database.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
@@ -284,7 +285,7 @@ export async function syncLabResults(
       encryption,
       salt
     );
-    const { imported, skipped, importedNames } = importResult;
+    const { imported, skipped, importedNames, importedOutOfRange } = importResult;
     unmappedCodes.push(...importResult.unmappedCodes);
     errors.push(...importResult.errors);
 
@@ -305,6 +306,19 @@ export async function syncLabResults(
         },
         { userId }
       );
+
+      // Fire-and-forget engagement emails, mirroring the PDF lab-upload path
+      // (labUploadController). Each notifier is gated internally on the user's
+      // email prefs (newResults / outOfRangeAlerts), so a synced Quest import now
+      // emails the same as a PDF upload instead of going silent.
+      void notifyNewResults(userId, {
+        biomarkerCount: imported,
+        outOfRangeCount: importedOutOfRange.length,
+        labName: `${provider.toUpperCase()} FHIR`,
+      });
+      if (importedOutOfRange.length > 0) {
+        void notifyOutOfRange(userId, { biomarkers: importedOutOfRange });
+      }
     }
 
     await withRLSContext(userId, async (tx) => {
@@ -429,6 +443,8 @@ const IMPORT_CHUNK_SIZE = 50;
 
 interface PreparedReading {
   name: string;
+  /** Direction for the out-of-range alert email; null when in range. */
+  outOfRangeStatus: 'high' | 'low' | null;
   payload: Parameters<typeof upsertBiomarkerReading>[2];
 }
 
@@ -461,6 +477,7 @@ export async function importObservations(
   imported: number;
   skipped: number;
   importedNames: string[];
+  importedOutOfRange: Array<{ name: string; status: 'high' | 'low' }>;
   unmappedCodes: string[];
   errors: string[];
 }> {
@@ -516,6 +533,10 @@ export async function importObservations(
       const isOutOfRange =
         (row.normalRangeMin !== null && row.value < row.normalRangeMin) ||
         (row.normalRangeMax !== null && row.value > row.normalRangeMax);
+      // Direction for the out-of-range alert email: above max = high, else low.
+      const outOfRangeStatus: 'high' | 'low' | null = isOutOfRange
+        ? (row.normalRangeMax !== null && row.value > row.normalRangeMax ? 'high' : 'low')
+        : null;
 
       // Mark deduped now so an exact duplicate later in THIS batch is also skipped.
       existingKeys.add(key);
@@ -523,6 +544,7 @@ export async function importObservations(
 
       prepared.push({
         name: row.name,
+        outOfRangeStatus,
         payload: {
           category: row.category,
           name: row.name,
@@ -548,6 +570,12 @@ export async function importObservations(
   // series (upsertBiomarkerReading) lets synced labs accrue real history.
   let imported = 0;
   const importedNames: string[] = [];
+  const importedOutOfRange: Array<{ name: string; status: 'high' | 'low' }> = [];
+  const collectOutOfRange = (item: PreparedReading) => {
+    if (item.outOfRangeStatus) {
+      importedOutOfRange.push({ name: item.name, status: item.outOfRangeStatus });
+    }
+  };
   for (let i = 0; i < prepared.length; i += IMPORT_CHUNK_SIZE) {
     const chunk = prepared.slice(i, i + IMPORT_CHUNK_SIZE);
     try {
@@ -561,7 +589,10 @@ export async function importObservations(
         { timeout: 30_000, maxWait: 10_000 }
       );
       imported += chunk.length;
-      for (const item of chunk) importedNames.push(item.name);
+      for (const item of chunk) {
+        importedNames.push(item.name);
+        collectOutOfRange(item);
+      }
     } catch {
       // Chunk tx failed (one bad row aborts the whole tx). Retry each reading in
       // its own tx so only the genuinely-bad row is dropped, not the chunk.
@@ -572,6 +603,7 @@ export async function importObservations(
           });
           imported++;
           importedNames.push(item.name);
+          collectOutOfRange(item);
         } catch (err) {
           errors.push(err instanceof Error ? err.message.slice(0, 200) : 'unknown');
           skipped++;
@@ -580,7 +612,7 @@ export async function importObservations(
     }
   }
 
-  return { imported, skipped, importedNames, unmappedCodes, errors };
+  return { imported, skipped, importedNames, importedOutOfRange, unmappedCodes, errors };
 }
 
 interface MappedObservation {
