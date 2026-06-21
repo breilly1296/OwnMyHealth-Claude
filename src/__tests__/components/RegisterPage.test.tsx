@@ -40,6 +40,8 @@ describe('RegisterPage — registration → verification funnel (ONB-1)', () => 
     fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: email } });
     fireEvent.change(screen.getByPlaceholderText('Create a strong password'), { target: { value: pw } });
     fireEvent.change(screen.getByPlaceholderText('Confirm your password'), { target: { value: pw } });
+    // OMH-L04: must accept Terms + Privacy before the submit button enables.
+    fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
   };
 
@@ -68,5 +70,23 @@ describe('RegisterPage — registration → verification funnel (ONB-1)', () => 
     renderPage();
     expect(screen.queryByText(/check your inbox/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+  });
+
+  it('blocks registration until Terms/Privacy consent is checked (OMH-L04)', () => {
+    renderPage();
+    const pw = 'Abcdef123456!';
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'jane@user.io' } });
+    fireEvent.change(screen.getByPlaceholderText('Create a strong password'), { target: { value: pw } });
+    fireEvent.change(screen.getByPlaceholderText('Confirm your password'), { target: { value: pw } });
+
+    // Without consent the submit button is disabled and clicking does nothing.
+    const submit = screen.getByRole('button', { name: /create account/i });
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
+    expect(onRegister).not.toHaveBeenCalled();
+
+    // Checking consent enables submission.
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(submit).toBeEnabled();
   });
 });

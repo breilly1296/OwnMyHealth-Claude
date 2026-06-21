@@ -124,7 +124,10 @@ gsutil -m rsync -d -r dist gs://ownmyhealth-frontend
 
 ## Custom domain
 
-- **Frontend `ownmyhealth.io`** — the SPA is synced to the `ownmyhealth-frontend` GCS bucket; serve it via the bucket's static-website config or an HTTPS load balancer / Cloud CDN, and point your apex / `www` DNS at that endpoint.
+- **Frontend `ownmyhealth.io`** — the SPA is synced to the `ownmyhealth-frontend` GCS bucket. **Serve it only via an external HTTPS load balancer (or Cloud CDN) — never the bucket's static-website config**, which answers over cleartext HTTP and has no way to emit `Strict-Transport-Security` (OMH-M01 / L-M16: the SPA renders the login form and all PHI views, so a plaintext first-navigation is an SSL-strip window). Point apex / `www` DNS at the load balancer, and at that edge:
+  - Provision a Google-managed TLS cert and an **HTTP(:80) → HTTPS(:443) redirect** (a redirect URL map).
+  - Attach a custom-response-headers policy that adds **`Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`** (and ideally `X-Content-Type-Options: nosniff` + a CSP) — GCS object metadata cannot set these, so they MUST come from the load balancer / CDN edge.
+  - Consider submitting `ownmyhealth.io` to the HSTS preload list once the redirect + header are verified.
 - **Backend `api.ownmyhealth.io`** — Cloud Run domain mapping:
 
   ```bash

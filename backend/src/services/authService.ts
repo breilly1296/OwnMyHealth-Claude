@@ -19,6 +19,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
 import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
+import { CURRENT_TERMS_VERSION } from '../config/legal.js';
 import { withRLSContext, withRLSTransaction, getPrismaClient } from './database.js';
 import { getAuditLogService } from './auditLog.js';
 import { logger } from '../utils/logger.js';
@@ -975,6 +976,11 @@ export async function createUser(
           emailVerified: false,
           emailVerificationToken: verificationTokenHash,
           emailVerificationExpires: verificationExpires,
+          // OMH-L04: record consent at registration. The UI gates "Create account"
+          // on an explicit Terms + Privacy checkbox, so completing registration is
+          // an affirmative acceptance of the current policy version.
+          termsAcceptedAt: new Date(),
+          termsVersion: CURRENT_TERMS_VERSION,
         },
       });
     },
