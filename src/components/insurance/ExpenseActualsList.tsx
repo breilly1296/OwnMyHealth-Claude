@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Receipt, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Receipt, Trash2, Pencil } from 'lucide-react';
 import { expensesApi, type ExpenseActualData, type ClaimStatus } from '../../services/api';
 import ExpenseActualModal from './ExpenseActualModal';
 
@@ -69,6 +69,7 @@ export default function ExpenseActualsList({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingActual, setEditingActual] = useState<ExpenseActualData | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -120,6 +121,7 @@ export default function ExpenseActualsList({
     if (openExternalModal) {
       openExternalModal();
     } else {
+      setEditingActual(null); // create mode
       setIsModalOpen(true);
     }
   };
@@ -217,6 +219,22 @@ export default function ExpenseActualsList({
                 </span>
               </div>
               <div className="flex items-center gap-1 justify-end">
+                {/* Edit reuses the self-owned modal in edit mode. The external
+                    (parent) modal is create-only, so editing is offered only on
+                    the self-owned path. */}
+                {!openExternalModal && (
+                  <button
+                    onClick={() => {
+                      setEditingActual(a);
+                      setIsModalOpen(true);
+                    }}
+                    disabled={deletingId === a.id}
+                    className="p-1.5 text-gray-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-slate-600 rounded transition-colors disabled:opacity-50"
+                    aria-label="Edit claim"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => handleDelete(a.id)}
                   disabled={deletingId === a.id}
@@ -249,9 +267,14 @@ export default function ExpenseActualsList({
       {!openExternalModal && (
         <ExpenseActualModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          actual={editingActual}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingActual(null);
+          }}
           onSuccess={() => {
             setIsModalOpen(false);
+            setEditingActual(null);
             load();
             onMutated?.();
           }}
