@@ -321,3 +321,39 @@ export function trackAIUsage(record: AIUsageInput): void {
     userId: record.userId,
   });
 }
+
+interface DocumentAIUsageInput {
+  endpoint: string;
+  pages: number;
+  userId: string;
+}
+
+/**
+ * OF-02 (was H-3): log Google Document AI OCR usage AND add its per-page dollar
+ * cost to the SAME rolling daily accumulator trackAIUsage feeds. Because the
+ * OCR entry points already sit behind aiSpendGuard, accruing the real cost here
+ * is what makes the 503 fail-closed breaker actually bound OCR spend — before
+ * this, only Claude tokens counted against AI_DAILY_BUDGET_USD. Call after
+ * every successful processDocument response (the cost is incurred once Google
+ * returns, even if downstream extraction later fails). Same fire-and-forget
+ * store-write semantics as trackAIUsage.
+ */
+export function trackDocumentAIUsage(record: DocumentAIUsageInput): void {
+  const costUsd = record.pages * config.ai.documentAiCostPerPageUsd;
+
+  void getStore()
+    .record(record.userId, costUsd)
+    .catch((err) => {
+      aiCostLogger.error('Failed to record Document AI spend', {
+        userId: record.userId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
+  aiCostLogger.info('Document AI usage', {
+    endpoint: record.endpoint,
+    pages: record.pages,
+    estimatedCostUsd: costUsd.toFixed(6),
+    userId: record.userId,
+  });
+}

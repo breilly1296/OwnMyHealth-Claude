@@ -255,6 +255,16 @@ export const config = {
   ai: {
     dailyBudgetUsd: parseBudget(process.env.AI_DAILY_BUDGET_USD, 50, 'AI_DAILY_BUDGET_USD'),
     userDailyBudgetUsd: parseBudget(process.env.AI_USER_DAILY_BUDGET_USD, 5, 'AI_USER_DAILY_BUDGET_USD'),
+    // OF-02 (was H-3): Document AI OCR bills per page; its real cost must accrue
+    // into the SAME daily accumulator the aiSpendGuard breaker checks, or the
+    // dollar cap only bounds Claude. $0.0015/page is the Document AI OCR-processor
+    // rate — override if the configured processor is priced differently (e.g.
+    // Form Parser bills $0.03/page). 0 disables OCR accrual (not recommended).
+    documentAiCostPerPageUsd: parseBudget(
+      process.env.DOCUMENT_AI_COST_PER_PAGE_USD,
+      0.0015,
+      'DOCUMENT_AI_COST_PER_PAGE_USD'
+    ),
   },
 
   // Quest Diagnostics SMART on FHIR integration.
