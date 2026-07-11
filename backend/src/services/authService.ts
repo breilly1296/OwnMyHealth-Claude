@@ -19,6 +19,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
 import { JWT_SIGN_OPTIONS, JWT_VERIFY_OPTIONS } from '../config/jwtOptions.js';
+import { CURRENT_TERMS_VERSION } from '../config/legal.js';
 import { withRLSContext, withRLSTransaction, getPrismaClient } from './database.js';
 import { getAuditLogService } from './auditLog.js';
 import { logger } from '../utils/logger.js';
@@ -975,6 +976,13 @@ export async function createUser(
           emailVerified: false,
           emailVerificationToken: verificationTokenHash,
           emailVerificationExpires: verificationExpires,
+          // OMH-L03/L04: record consent at registration. The public /auth/register
+          // path now requires a validated `acceptedTerms: true` flag at the API
+          // boundary (schemas.auth.register), and the UI gates the submit on the
+          // same Terms + Privacy checkbox — so a stamp here reflects an affirmative,
+          // request-asserted acceptance of the current policy version, not a UI-only gate.
+          termsAcceptedAt: new Date(),
+          termsVersion: CURRENT_TERMS_VERSION,
         },
       });
     },

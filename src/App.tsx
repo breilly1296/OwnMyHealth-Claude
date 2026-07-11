@@ -41,6 +41,8 @@ const VerifyEmailPage = lazy(() => import('./components/auth/VerifyEmailPage'));
 const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
 const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
 const ConfirmEmailChangePage = lazy(() => import('./components/auth/ConfirmEmailChangePage'));
+const PrivacyPolicy = lazy(() => import('./components/legal/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./components/legal/TermsOfService'));
 
 /** Loading fallback for lazy-loaded components */
 function LoadingFallback() {
@@ -62,7 +64,8 @@ type AuthView = 'login' | 'register' | 'forgot-password';
 
 /** URL-based routes that should be handled regardless of auth state */
 interface SpecialRoute {
-  type: 'verify-email' | 'reset-password' | 'confirm-email-change';
+  type: 'verify-email' | 'reset-password' | 'confirm-email-change' | 'privacy' | 'terms';
+  /** Empty for static legal pages (privacy/terms); set for token-bearing routes. */
   token: string;
 }
 
@@ -84,6 +87,15 @@ function getSpecialRoute(): SpecialRoute | null {
 
   if (path === '/confirm-email-change' && token) {
     return { type: 'confirm-email-change', token };
+  }
+
+  // Static, public legal pages (no token). Linked from the registration consent (OMH-L05).
+  if (path === '/privacy') {
+    return { type: 'privacy', token: '' };
+  }
+
+  if (path === '/terms') {
+    return { type: 'terms', token: '' };
   }
 
   return null;
@@ -177,6 +189,22 @@ function AppContent() {
               setSpecialRoute(null);
             }}
           />
+        </Suspense>
+      );
+    }
+
+    if (specialRoute.type === 'privacy') {
+      return (
+        <Suspense fallback={<LoadingFallback />}>
+          <PrivacyPolicy onBack={() => { navigateToLogin(); setSpecialRoute(null); }} />
+        </Suspense>
+      );
+    }
+
+    if (specialRoute.type === 'terms') {
+      return (
+        <Suspense fallback={<LoadingFallback />}>
+          <TermsOfService onBack={() => { navigateToLogin(); setSpecialRoute(null); }} />
         </Suspense>
       );
     }

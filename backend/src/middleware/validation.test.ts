@@ -269,6 +269,7 @@ describe('validation middleware', () => {
         body: {
           email: 'test@example.com',
           password: 'StrongP@ss123!',
+          acceptedTerms: true,
         },
       });
       const res = createMockResponse();
@@ -353,6 +354,7 @@ describe('validation middleware', () => {
         body: {
           email: 'test@example.com',
           password: 'Str0ngP@ss1!',
+          acceptedTerms: true,
         },
       });
       const res = createMockResponse();
@@ -360,6 +362,36 @@ describe('validation middleware', () => {
       validate(schemas.auth.register)(req, res, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('rejects registration when Terms/Privacy consent (acceptedTerms) is missing (OMH-L03)', () => {
+      const req = createMockRequest({
+        body: {
+          email: 'test@example.com',
+          password: 'Cons3ntP@ss1!',
+          // acceptedTerms omitted — must be rejected even with a valid password
+        },
+      });
+      const res = createMockResponse();
+
+      validate(schemas.auth.register)(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('rejects registration when acceptedTerms is false (OMH-L03)', () => {
+      const req = createMockRequest({
+        body: {
+          email: 'test@example.com',
+          password: 'Cons3ntP@ss1!',
+          acceptedTerms: false,
+        },
+      });
+      const res = createMockResponse();
+
+      validate(schemas.auth.register)(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 

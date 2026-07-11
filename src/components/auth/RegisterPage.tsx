@@ -46,6 +46,8 @@ export default function RegisterPage({
   const [lastName, setLastName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // OMH-L04: explicit consent to Terms + Privacy, gating registration.
+  const [consentChecked, setConsentChecked] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   // ONB-1: after a successful registration the app used to leave the user on the
   // same form with cleared passwords and no instruction. Show an explicit
@@ -94,6 +96,11 @@ export default function RegisterPage({
 
     if (password !== confirmPassword) {
       setLocalError('Passwords do not match');
+      return;
+    }
+
+    if (!consentChecked) {
+      setLocalError('Please accept the Terms of Service and Privacy Policy to continue');
       return;
     }
 
@@ -374,10 +381,30 @@ export default function RegisterPage({
                 )}
               </div>
 
+              {/* Consent (OMH-L04): explicit Terms + Privacy acceptance, required to register */}
+              <div className="flex items-start gap-3">
+                <input
+                  id="consent"
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(e) => setConsentChecked(e.target.checked)}
+                  disabled={isLoading}
+                  className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-brand-500 focus:ring-2 focus:ring-brand-500"
+                  required
+                />
+                <label htmlFor="consent" className="text-xs text-slate-400 leading-relaxed">
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">Terms of Service</a>
+                  {' '}and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">Privacy Policy</a>,
+                  including the processing of my health data as described there.
+                </label>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading || !allRequirementsMet || !passwordsMatch}
+                disabled={isLoading || !allRequirementsMet || !passwordsMatch || !consentChecked}
                 className="w-full py-3.5 px-4 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl hover:from-brand-600 hover:to-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25"
               >
                 {isLoading ? (
@@ -406,18 +433,12 @@ export default function RegisterPage({
             )}
           </div>
 
-          {/* Privacy Notice */}
+          {/* Privacy Notice (agreement now captured via the consent checkbox above) */}
           <div className="mt-6 text-center">
             <div className="flex items-center justify-center gap-2 text-slate-500 text-xs">
               <Shield className="w-4 h-4" />
-              <span>
-                By creating an account, you agree to our{' '}
-                <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">Terms of Service</a>
-                {' '}and{' '}
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">Privacy Policy</a>.
-              </span>
+              <span>Your health data is encrypted at rest and in transit.</span>
             </div>
-            <p className="mt-2 text-xs text-slate-600">Your health data is encrypted and secure.</p>
           </div>
         </div>
       </main>

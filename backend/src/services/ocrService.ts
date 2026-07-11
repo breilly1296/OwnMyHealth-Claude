@@ -32,6 +32,7 @@ import {
   isClaudeExtractionConfigured,
   type ClaudeExtractedBiomarker,
 } from './claudeExtraction.js';
+import { trackDocumentAIUsage } from './aiCostTracker.js';
 
 // Create OCR-specific logger
 const ocrLogger = logger.createServiceLogger('OCR');
@@ -266,7 +267,8 @@ async function processPDFWithClaude(
 async function processImageWithDocumentAI(
   buffer: Buffer,
   mimeType: string,
-  startTime: number
+  startTime: number,
+  userId: string
 ): Promise<OCRResult> {
   // BAA gate — refuse before any image bytes leave the box. Unlike PDF text
   // (which is locally extracted + PHI-redacted before any AI call), image OCR
@@ -306,6 +308,16 @@ async function processImageWithDocumentAI(
 
   const extractedText = document.text || '';
   const pageCount = document.pages?.length || 1;
+
+  // OF-02 (was H-3): accrue the real per-page OCR dollars into the same daily
+  // spend accumulator the aiSpendGuard breaker checks. Recorded here — the
+  // moment Google returns — because the cost is incurred regardless of whether
+  // downstream biomarker extraction succeeds.
+  trackDocumentAIUsage({
+    endpoint: 'ocr.processDocument',
+    pages: pageCount,
+    userId,
+  });
 
   ocrLogger.info('Document AI OCR complete', {
     textLength: extractedText.length,
@@ -423,7 +435,7 @@ export async function processDocument(
             error: errorMessage,
           });
           // processImageWithDocumentAI still enforces the BAA gate internally.
-          return await processImageWithDocumentAI(buffer, mimeType, startTime);
+          return await processImageWithDocumentAI(buffer, mimeType, startTime, userId);
         }
 
         // No OCR fallback available (BAA not active). Return a clear,
@@ -447,7 +459,7 @@ export async function processDocument(
 
   // For images, use Document AI OCR
   try {
-    return await processImageWithDocumentAI(buffer, mimeType, startTime);
+    return await processImageWithDocumentAI(buffer, mimeType, startTime, userId);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 

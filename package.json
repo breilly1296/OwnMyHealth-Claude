@@ -63,7 +63,8 @@
     "@rollup/rollup-win32-x64-msvc": "^4.53.3"
   },
   "overrides": {
-    "rollup": "npm:@rollup/wasm-node@^4.53.3"
+    "rollup": "npm:@rollup/wasm-node@^4.53.3",
+    "dompurify": "^3.4.11"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [

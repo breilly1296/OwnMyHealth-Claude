@@ -113,6 +113,12 @@ jobs:
           # Non-fatal — staging has no traffic-split safety net to roll back to.
 
   deploy-frontend:
+    # OMH-L03: gate the static-frontend publish on CI (lint / typecheck / tests /
+    # npm-audit / gitleaks secret-scan / live-PG RLS) AND on the backend deploy,
+    # mirroring prod's `needs: [ci, promote]`. Previously this job had no `needs:`
+    # and published to the public bucket even when CI failed — e.g. a gitleaks hit
+    # on an inadvertently-embedded VITE_* secret would still ship.
+    needs: [ci, build-and-deploy]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

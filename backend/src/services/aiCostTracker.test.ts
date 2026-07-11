@@ -15,6 +15,7 @@ import type { RedisLike } from '../middleware/rateLimitStore.js';
 import {
   admitAISpend,
   trackAIUsage,
+  trackDocumentAIUsage,
   __resetAISpendForTests,
   InMemorySpendStore,
   RedisSpendStore,
@@ -22,6 +23,7 @@ import {
 
 const USER_CAP = config.ai.userDailyBudgetUsd;
 const GLOBAL_CAP = config.ai.dailyBudgetUsd;
+const OCR_RATE = config.ai.documentAiCostPerPageUsd;
 const RES = 0.05; // RESERVATION_USD
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -211,5 +213,44 @@ describe('module wiring (admitAISpend / trackAIUsage on the default store)', () 
     const a = await admitAISpend('whale');
     expect(a.admitted).toBe(false);
     expect(a.scope).toBe('global');
+  });
+
+  // OF-02 (was H-3): Document AI OCR dollars must trip the SAME breaker Claude
+  // spend does — the whole point of the fix is that aiSpendGuard's 503 now
+  // bounds OCR cost too.
+  it.runIf(GLOBAL_CAP > 0 && OCR_RATE > 0)(
+    'trackDocumentAIUsage feeds the same cap so the gate refuses (global scope)',
+    async () => {
+      const pagesOverGlobal = Math.ceil((GLOBAL_CAP + 1) / OCR_RATE);
+      trackDocumentAIUsage({ endpoint: 'test-ocr', pages: pagesOverGlobal, userId: 'ocr-whale' });
+      await flush(); // fire-and-forget store write
+      const a = await admitAISpend('ocr-whale');
+      expect(a.admitted).toBe(false);
+      expect(a.scope).toBe('global');
+    }
+  );
+
+  it.runIf(USER_CAP > 0 && GLOBAL_CAP > USER_CAP && OCR_RATE > 0)(
+    'trackDocumentAIUsage trips the per-user cap without blocking other users',
+    async () => {
+      // Over the user cap but well under the global cap.
+      const pagesOverUser = Math.ceil((USER_CAP + 0.1) / OCR_RATE);
+      trackDocumentAIUsage({ endpoint: 'test-ocr', pages: pagesOverUser, userId: 'ocr-user' });
+      await flush();
+      const blocked = await admitAISpend('ocr-user');
+      expect(blocked.admitted).toBe(false);
+      expect(blocked.scope).toBe('user');
+      const other = await admitAISpend('other-user');
+      expect(other.admitted).toBe(true);
+      other.settle();
+    }
+  );
+
+  it.runIf(OCR_RATE > 0)('a small OCR job accrues cost but does not block an under-budget user', async () => {
+    trackDocumentAIUsage({ endpoint: 'test-ocr', pages: 3, userId: 'small-fry' });
+    await flush();
+    const a = await admitAISpend('small-fry');
+    expect(a.admitted).toBe(true);
+    a.settle();
   });
 });

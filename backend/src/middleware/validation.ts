@@ -362,6 +362,12 @@ export const schemas = {
       password: strongPassword,
       firstName: optionalSanitizedString(100),
       lastName: optionalSanitizedString(100),
+      // OMH-L03: consent must be an affirmative, validated flag at the API
+      // boundary — not just a UI checkbox. z.literal(true) rejects registration
+      // unless the request explicitly accepts the current Terms + Privacy Policy.
+      acceptedTerms: z.literal(true, {
+        errorMap: () => ({ message: 'You must accept the Terms of Service and Privacy Policy' }),
+      }),
     }),
 
     changePassword: z.object({

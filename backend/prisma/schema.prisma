@@ -46,6 +46,12 @@ model User {
   // PHI (not encrypted, not in PHI_FIELDS). Goal reminders reuse HealthGoal.lastReminderSent.
   lastWeeklySummarySent    DateTime?           @map("last_weekly_summary_sent") @db.Timestamptz(6)
   lastPlanExpiringSent     DateTime?           @map("last_plan_expiring_sent") @db.Timestamptz(6)
+  // OMH-L04: consent record at registration (Terms + Privacy acceptance). Captures
+  // proof of consent to the stated data practices / AI processing (FTC HBNR). Not PHI —
+  // a timestamp + policy version, not encrypted. Nullable: pre-existing users (registered
+  // before this column) carry NULL; every new registration stamps both.
+  termsAcceptedAt          DateTime?           @map("terms_accepted_at") @db.Timestamptz(6)
+  termsVersion             String?             @map("terms_version") @db.VarChar(20)
   createdAt                DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastLoginAt              DateTime?           @map("last_login_at") @db.Timestamptz(6)

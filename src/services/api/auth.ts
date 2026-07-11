@@ -14,6 +14,9 @@ export interface RegisterData {
   password: string;
   firstName?: string;
   lastName?: string;
+  // OMH-L03: the API requires an affirmative consent flag; the register form
+  // only submits after the required Terms + Privacy checkbox is checked.
+  acceptedTerms: boolean;
 }
 
 export interface AuthResponse {

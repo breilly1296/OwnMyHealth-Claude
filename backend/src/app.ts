@@ -148,7 +148,15 @@ app.use(helmet({
 const allowedOrigins = getSafeCorsOrigins();
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    // Requests with no Origin header (GET /health Docker/Cloud Run probes, the
+    // /internal Cloud Scheduler routes, and other server-to-server callers) are
+    // allowed: per the Fetch spec a browser ALWAYS attaches Origin on cross-origin
+    // and on all credentialed/non-simple requests, so a malicious web page can never
+    // reach this branch — it is not a browser CORS/CSRF bypass (OMH-I01, assessed
+    // Info). State-changing requests are independently gated by the CSRF double-submit
+    // cookie + JWT auth, so a no-Origin curl/Postman client cannot mutate data. This
+    // allowance is therefore an accepted, defense-in-depth-backed residual; rejecting
+    // it would break health checks and the internal scheduler endpoints.
     if (!origin) {
       return callback(null, true);
     }
