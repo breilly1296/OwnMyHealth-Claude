@@ -2,7 +2,7 @@
 
 > **Scope**: the open-issue, tech-debt, and code-marker ledger for OwnMyHealth at HEAD `fb2cd32` (2026-06-15).
 > **Audience**: a Claude Project reader who has only the `New Project Documents/` doc set (no repo access). Every non-trivial claim cites `file:line`. Use this doc to answer: *"is this a known issue? what's the workaround? where's the fix tracked?"*
-> **Authoritative security source (updated 2026-07-11)**: open findings and their severities are owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) — the single reconciled ledger (1 Critical / 4 High / 8 Medium / 8 Low at 2026-07-11). This doc's H-1/H-2/H-3 etc. severity labels predate the reconciliation; each entry below notes its canonical OF-nn id. Where this doc and `SECURITY_STATUS.md` disagreed, `OPEN_FINDINGS.md` resolves it.
+> **Authoritative security source (updated 2026-07-11)**: open findings and their severities are owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) — the single reconciled ledger (1 Critical / 3 High / 8 Medium / 8 Low at 2026-07-11; OF-02 closed same day). This doc's H-1/H-2/H-3 etc. severity labels predate the reconciliation; each entry below notes its canonical OF-nn id. Where this doc and `SECURITY_STATUS.md` disagreed, `OPEN_FINDINGS.md` resolves it.
 
 This doc was generated against live code per [`prompts/20-known-issues-doc.md`](../prompts/20-known-issues-doc.md) and the [`_doc-quality.md`](../prompts/_doc-quality.md) protocol.
 
@@ -33,7 +33,7 @@ The historical runtime Critical, **C-8 (runtime BYPASSRLS)**, remains **RESOLVED
 
 ## 2. High
 
-> **Reconciled 2026-07-11**: the canonical High set is **OF-02 (OCR $ cap — H-3 below), OF-03 (plaintext filename residue — raised from L-3 below), OF-04 (no MFA — was in no ledger), OF-05 (FHIR PKCE — H-2 below)**. H-1 (TOCTOU) is reconciled to **Medium-accepted (OF-06)** while billing is not live, escalating to High when plan limits guard paid entitlements. See [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md).
+> **Reconciled 2026-07-11**: the canonical High set is **OF-03 (plaintext filename residue — raised from L-3 below), OF-04 (no MFA — was in no ledger), OF-05 (FHIR PKCE — H-2 below)**. H-1 (TOCTOU) is reconciled to **Medium-accepted (OF-06)** while billing is not live, escalating to High when plan limits guard paid entitlements. **H-3 (OCR $ cap, OF-02) was CLOSED the same day** by `1047506` — OCR cost now accrues into the fail-closed AI budget. See [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md).
 
 ### H-1 — Plan-limit enforcement has a documented check-then-allow TOCTOU race
 - **Canonical**: [`OPEN_FINDINGS.md` OF-06](./OPEN_FINDINGS.md) — reconciled to **Medium (accepted)** with an escalation trigger (becomes High when billing ships).
@@ -74,9 +74,9 @@ The historical runtime Critical, **C-8 (runtime BYPASSRLS)**, remains **RESOLVED
 - **Tracked in**: memory `ownmyhealth-feature-map.md` (FHIR/Quest as an undocumented real feature); deferred infra item (shared Redis/Memorystore — same dependency as `REDIS_URL` rate-limit / spend-store sharing).
 - **Files**: `backend/src/services/fhir/smartAuth.ts:361-414` (in-memory challenge store + TTL), `:374-386` (the limitation), `backend/src/services/fhir/labSyncService.ts:96-138` (connect orchestration). FHIR controller/service are **untested** — see [§9 Missing test coverage](#9-missing-test-coverage).
 
-### H-3 — Document AI (Google OCR) dollar cost is never recorded against the AI budget
-- **Canonical**: [`OPEN_FINDINGS.md` OF-02](./OPEN_FINDINGS.md) — confirmed **High**.
-- **Severity**: High (cost governance gap; not a correctness/PHI gap).
+### H-3 — Document AI (Google OCR) dollar cost is never recorded against the AI budget — **RESOLVED 2026-07-11**
+- **Canonical**: [`OPEN_FINDINGS.md` OF-02](./OPEN_FINDINGS.md) — **CLOSED** by `1047506`: `trackDocumentAIUsage()` accrues per-page OCR cost (`DOCUMENT_AI_COST_PER_PAGE_USD`) into the same daily accumulator as Claude spend, so the existing `aiSpendGuard` 503 breaker now bounds OCR dollars. The description below is preserved as the historical finding.
+- **Severity**: ~~High~~ Resolved (cost governance gap; not a correctness/PHI gap).
 - **Symptom**: The AI dollar circuit-breaker (`AI_DAILY_BUDGET_USD`, default 50) meaningfully bounds only **Claude** token spend. Real **Document AI** OCR dollar cost never accrues into the accumulator, so it does not count against the daily budget.
 - **Root cause**: the paid Document AI call has no `trackAIUsage` / Document-AI-specific cost tracking. The upload routes that reach it carry `aiSpendGuard`, but the guard only reserves/refunds the fixed `$0.05` Claude *estimate* (`backend/src/services/aiCostTracker.ts:67`) — the actual OCR cost is dropped.
 - **Evidence**:

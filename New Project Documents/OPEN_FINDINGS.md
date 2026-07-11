@@ -10,7 +10,7 @@
 | **Last updated** | 2026-07-11 |
 | **Code state** | HEAD `762ce62` + working tree (uncommitted OMH-L03 consent validation + `secret-history-scan.yml`) |
 | **Sources reconciled** | `SECURITY_STATUS.md` (fb2cd32), `KNOWN_ISSUES.md` (fb2cd32), `security/assessment-2026-06-20/`, `security/assessment-2026-06-21/`, `analysis/codebase-scrutiny-2026-07/` |
-| **Open counts** | **1 Critical · 4 High · 8 Medium · 8 Low** (21 findings) |
+| **Open counts** | **1 Critical · 3 High · 8 Medium · 8 Low** (20 open; OF-02 closed 2026-07-11) |
 
 ---
 
@@ -45,12 +45,6 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 ---
 
 ## High
-
-### OF-02 — Document AI OCR spend has no dollar cap
-- **Class**: cost governance · **Status**: Open · **Aliases**: H-3 (KNOWN_ISSUES), "Document AI dollar accounting 🟡" (SECURITY_STATUS §5), scrutiny P0-2
-- **Fact**: the paid `client.processDocument` call in `backend/src/services/ocrService.ts` records nothing into the AI dollar accumulator (re-verified 2026-07-11: no `trackAIUsage` in the file); `aiSpendGuard` only reserves the fixed $0.05 Claude estimate (`backend/src/services/aiCostTracker.ts`). Bounded by count-based `pdfUploadsPerMonth` + `aiLimiter` only.
-- **Why High**: Claude is dollar-capped, OCR is not — a public launch invites a self-inflicted billing incident (cost-DoS).
-- **Done when**: OCR cost accrues into the same fail-closed daily/per-user budget; 503 when over.
 
 ### OF-03 — Legacy plaintext filenames still in production rows
 - **Class**: compliance / ops · **Status**: Open (External-ops) · **Aliases**: L-3 (KNOWN_ISSUES — was rated Low), L24 ops follow-up (SECURITY_STATUS §3), scrutiny P0-1
@@ -151,7 +145,7 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 | Old ID (doc) | This ledger | Severity change |
 |---|---|---|
 | — (in no ledger; OMH-C01, 2026-06-21 assessment) | **OF-01** | **new Critical** |
-| H-3 (KNOWN_ISSUES) / 🟡 controls note (SECURITY_STATUS) | OF-02 | High (STATUS had no numbered finding) |
+| H-3 (KNOWN_ISSUES) / 🟡 controls note (SECURITY_STATUS) | OF-02 | High (STATUS had no numbered finding) — **CLOSED 2026-07-11**, `1047506` |
 | L-3 (KNOWN_ISSUES) / L24 ops note (SECURITY_STATUS) | OF-03 | **Low → High** |
 | — (in no ledger; scrutiny P0-4) | OF-04 | **new High** |
 | H-2 (KNOWN_ISSUES) / L-39 (SECURITY_STATUS) | OF-05 | Low → High (KNOWN_ISSUES was right) |
@@ -166,6 +160,14 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 | M-2 (KNOWN_ISSUES) | OF-14 | Medium → Low |
 | L-1, L-2, L-4 (KNOWN_ISSUES); L-13, L-40 (SECURITY_STATUS); OMH-L02 (06-21) | OF-15..20 | unchanged Low |
 | M-5 (KNOWN_ISSUES) | OF-21 | Medium → Low |
+
+## Closed findings
+
+### OF-02 — Document AI OCR spend has no dollar cap (CLOSED 2026-07-11)
+- **Was**: High · cost governance · **Aliases**: H-3 (KNOWN_ISSUES), "Document AI dollar accounting 🟡" (SECURITY_STATUS §5), scrutiny P0-2
+- **Closing commit**: `1047506` — `trackDocumentAIUsage()` accrues per-page OCR cost (`DOCUMENT_AI_COST_PER_PAGE_USD`, default $0.0015) into the same daily global + per-user accumulator as Claude spend, recorded the moment Google returns; the existing `aiSpendGuard` 503 fail-closed gate on every OCR entry route now bounds OCR dollars too.
+- **Verification**: tests prove OCR spend trips the global cap (refuse, scope `global`), trips the per-user cap without blocking other users, and small jobs accrue without blocking (`backend/src/services/aiCostTracker.test.ts`); backend tsc clean.
+- **Residual**: the accumulator remains per-process without `REDIS_URL` — that ceiling-inflation is OF-07, unchanged.
 
 ## Closed since the fb2cd32 ledgers (for the avoidance of doubt)
 

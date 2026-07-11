@@ -8,10 +8,10 @@
 | **Code state** | HEAD `fb2cd32` (2026-06-15) |
 | **Last audit** | 2026-06-13 full 16-dimension multi-agent teardown (per [`prompts/24-full-security-audit.md`](../prompts/24-full-security-audit.md) orchestration) + 2026-06-15 security long-tail remediation cycle |
 | **Audit tool** | Multi-agent static review (105 agents, per-finding adversarial verification) + hands-on live-PG pentest (throwaway Docker Postgres 16) |
-| **Security grade** | ~~B+ → A-~~ **Superseded** — the 2026-06-21 assessment graded **D** on discovery of OF-01 (prod key in git history, unremediated). The A- reflects the *engineering core* (encryption/RLS/auth), which remains strong; the open-findings picture is owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) (1 C / 4 H / 8 M / 8 L at 2026-07-11) |
+| **Security grade** | ~~B+ → A-~~ **Superseded** — the 2026-06-21 assessment graded **D** on discovery of OF-01 (prod key in git history, unremediated). The A- reflects the *engineering core* (encryption/RLS/auth), which remains strong; the open-findings picture is owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) (1 C / 3 H / 8 M / 8 L at 2026-07-11) |
 | **Production deploy** | Live; deploy gated on full CI (`needs: ci`, [`deploy.yml`](#infrastructure--deploy)); migrations run as a Cloud Run job, not at boot |
 
-> **⚠️ RECONCILIATION NOTICE (2026-07-11)** — open-finding severities and counts in this document are **superseded by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md)**, the single authoritative ledger. The "0 open Critical / 0 open High" claims below reflect this doc's fb2cd32-era rubric and **predate the 2026-06-21 assessment**, which found a Critical (OF-01: production GCP service-account key recoverable from git history). Posture at 2026-07-11: **1 Critical, 4 High, 8 Medium, 8 Low open** — see the ledger for the list, the unified rubric, and the legacy-ID crosswalk (this doc's L-39/L-M11/L34-L36 map to OF-05/OF-07/OF-06). The controls tables in §5 remain accurate as verified at fb2cd32.
+> **⚠️ RECONCILIATION NOTICE (2026-07-11)** — open-finding severities and counts in this document are **superseded by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md)**, the single authoritative ledger. The "0 open Critical / 0 open High" claims below reflect this doc's fb2cd32-era rubric and **predate the 2026-06-21 assessment**, which found a Critical (OF-01: production GCP service-account key recoverable from git history). Posture at 2026-07-11: **1 Critical, 3 High, 8 Medium, 8 Low open** (OF-02, the OCR dollar cap, closed same day by `1047506`) — see the ledger for the list, the unified rubric, and the legacy-ID crosswalk (this doc's L-39/L-M11/L34-L36 map to OF-05/OF-07/OF-06). The controls tables in §5 remain accurate as verified at fb2cd32.
 
 ---
 
@@ -35,11 +35,12 @@ This cycle (HEAD `fb2cd32`) closed the entire security long-tail from the 2026-0
 Posture at 2026-07-11 (per OPEN_FINDINGS.md — authoritative)
 ┌────────────────────────────────────────────────────────────────┐
 │  Critical: 1 open   OF-01 prod GCP key in git history           │
-│  High:     4 open   OCR $ cap · plaintext filename residue ·    │
-│                     no MFA · FHIR PKCE per-process              │
+│  High:     3 open   plaintext filename residue · no MFA ·       │
+│                     FHIR PKCE per-process                       │
 │  Medium:   8 open   incl. TOCTOU (accepted), Redis, HSTS,       │
 │                     breach detection, SendGrid BAA              │
 │  Low:      8 open   accepted residuals + debt                   │
+│  Closed:   OF-02 OCR $ cap (1047506, 2026-07-11)                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -61,7 +62,7 @@ This doc synthesizes findings under the standard severity rubric ([`prompts/_rev
 
 ## 3. Open findings
 
-> **Superseded** — the authoritative open set lives in [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) (1 Critical / 4 High / 8 Medium / 8 Low at 2026-07-11). The entries below are kept as evidence detail for the findings this doc originally tracked; their severity labels are the old rubric's (crosswalk: L34/L36→OF-06 Medium-accepted, L-M11→OF-07 Medium, L-M16→OF-08 Medium, L-13→OF-18 Low, L-39→OF-05 **High**, L-40→OF-19 Low, L24 ops→OF-03 **High**). Findings this doc missed entirely: OF-01 (Critical, key in git history), OF-02 (High, OCR $), OF-04 (High, no MFA), OF-11/12/13 (Medium).
+> **Superseded** — the authoritative open set lives in [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) (1 Critical / 3 High / 8 Medium / 8 Low at 2026-07-11). The entries below are kept as evidence detail for the findings this doc originally tracked; their severity labels are the old rubric's (crosswalk: L34/L36→OF-06 Medium-accepted, L-M11→OF-07 Medium, L-M16→OF-08 Medium, L-13→OF-18 Low, L-39→OF-05 **High**, L-40→OF-19 Low, L24 ops→OF-03 **High**). Findings this doc missed entirely: OF-01 (Critical, key in git history), OF-02 (was High, OCR $ — closed `1047506`), OF-04 (High, no MFA), OF-11/12/13 (Medium).
 
 ### M-L34/L36 — AI-quota / plan-limit TOCTOU race (Medium → documented & accepted)
 
