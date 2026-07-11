@@ -20,8 +20,9 @@ export default mergeConfig(baseConfig, {
     exclude: [
       'node_modules',
       'dist',
-      // Live-Postgres suite — runs in the dedicated `rls` CI job instead.
+      // Live-Postgres suites — run in the dedicated `rls` CI job instead.
       'src/services/rls.test.ts',
+      'src/services/accountDeletionCascade.test.ts',
     ],
   },
 });
