@@ -39,9 +39,14 @@ nul
 cookies.txt
 
 # Service account keys
+# OMH-M01: patterns broadened — the leaked prod key (gcp-ocr-key.json.json)
+# matched none of the original three because of its double extension.
 *-key.json
+*key*.json
 *-credentials.json
 service-account*.json
+gcp-*.json
+*.json.json
 
 # Certificate files
 *.pem
