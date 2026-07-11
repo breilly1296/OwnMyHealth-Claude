@@ -976,9 +976,11 @@ export async function createUser(
           emailVerified: false,
           emailVerificationToken: verificationTokenHash,
           emailVerificationExpires: verificationExpires,
-          // OMH-L04: record consent at registration. The UI gates "Create account"
-          // on an explicit Terms + Privacy checkbox, so completing registration is
-          // an affirmative acceptance of the current policy version.
+          // OMH-L03/L04: record consent at registration. The public /auth/register
+          // path now requires a validated `acceptedTerms: true` flag at the API
+          // boundary (schemas.auth.register), and the UI gates the submit on the
+          // same Terms + Privacy checkbox — so a stamp here reflects an affirmative,
+          // request-asserted acceptance of the current policy version, not a UI-only gate.
           termsAcceptedAt: new Date(),
           termsVersion: CURRENT_TERMS_VERSION,
         },

@@ -210,6 +210,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
           firstName,
           lastName,
+          // OMH-L03: RegisterPage validates the required Terms + Privacy consent
+          // checkbox before calling register(), so reaching here means the user
+          // affirmatively accepted. Send it explicitly — the API now requires it.
+          acceptedTerms: true,
         });
         // User is NOT authenticated until they verify email and login
         // The response contains user info but we don't set it to avoid

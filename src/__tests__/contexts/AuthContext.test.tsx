@@ -300,6 +300,8 @@ describe('AuthContext', () => {
         password: 'password123',
         firstName: 'John',
         lastName: 'Doe',
+        // OMH-L03: consent flag is now sent with every registration.
+        acceptedTerms: true,
       });
     });
 
