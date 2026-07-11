@@ -20,8 +20,11 @@ test.describe('Account Settings', () => {
   });
 
   test('settings page shows the signed-in user email', async ({ page }) => {
-    // Email is displayed in a read-only field in the Profile section.
-    await expect(page.getByText(TEST_USER.email)).toBeVisible({ timeout: 10_000 });
+    // Email is displayed in a read-only field in the Profile section. Scope
+    // to the main content — the header user-menu button also carries it.
+    await expect(page.locator('#main-content').getByText(TEST_USER.email)).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('change-password dialog requires the current password', async ({ page }) => {

@@ -16,11 +16,11 @@ test.describe('Data export', () => {
     await loginAsTestUser(page);
     await openAccountSettings(page);
 
-    // The export button lives in the "Data & Privacy" section. Button copy
-    // is just "Export" (icon + label); scope to the containing row to
-    // avoid matching an unrelated button elsewhere on the page.
-    const exportRow = page.locator('text=Export All My Data').locator('xpath=ancestor::div[1]');
-    const exportButton = exportRow.getByRole('button', { name: /^export/i });
+    // The export button lives in the "Data & Privacy" section. Its
+    // accessible name is exactly "Export" — unique on this page (other
+    // buttons are "Delete Data", "Delete Account", "Change Password", …).
+    await expect(page.getByText('Export All My Data')).toBeVisible();
+    const exportButton = page.getByRole('button', { name: /^export$/i });
 
     const downloadPromise = page.waitForEvent('download', { timeout: 15_000 });
     await exportButton.click();

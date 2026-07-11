@@ -48,10 +48,15 @@ export async function loginAsTestUser(page: Page): Promise<void> {
  * Open the user menu in the header. The menu button shows the user's email
  * on >=sm screens. Returns when the dropdown is open so callers can click
  * menu items immediately.
+ *
+ * The dropdown is a semantic menu since the a11y wave (#198): items are
+ * `menuitem`s inside a `menu` named "Account menu", not buttons.
  */
 export async function openUserMenu(page: Page): Promise<void> {
   await page.getByRole('button', { name: new RegExp(TEST_USER.email, 'i') }).first().click();
-  await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible();
+  await expect(
+    page.getByRole('menu', { name: /account menu/i }).getByRole('menuitem', { name: /sign out/i })
+  ).toBeVisible();
 }
 
 /**
@@ -59,7 +64,7 @@ export async function openUserMenu(page: Page): Promise<void> {
  */
 export async function logout(page: Page): Promise<void> {
   await openUserMenu(page);
-  await page.getByRole('button', { name: /sign out/i }).click();
+  await page.getByRole('menuitem', { name: /sign out/i }).click();
   await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible({ timeout: 10_000 });
 }
 
@@ -68,6 +73,6 @@ export async function logout(page: Page): Promise<void> {
  */
 export async function openAccountSettings(page: Page): Promise<void> {
   await openUserMenu(page);
-  await page.getByRole('button', { name: /account settings/i }).click();
+  await page.getByRole('menuitem', { name: /account settings/i }).click();
   await expect(page.getByRole('heading', { name: /account settings/i })).toBeVisible();
 }
