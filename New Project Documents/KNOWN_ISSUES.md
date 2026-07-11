@@ -292,8 +292,8 @@ Computed by comparing `Glob backend/src/controllers/*.ts` against `*.test.ts` (a
 | `settingsController.ts` | ✅ | `settingsController.test.ts`, `settingsController.updateProfile.test.ts` |
 | `insuranceController.ts` | ✅ | `insuranceController.updatePlan.test.ts` |
 | `aiChatController.ts` | ✅ (added 2026-07-11) | `aiChatController.test.ts` — BAA gate, L42 fail-closed audit, SSE PHI scrub (incl. chunk-boundary), L33 disclaimer, history cap, stream-failure quota semantics |
-| **`fhirController.ts`** | ❌ | **none** |
-| **`fileController.ts`** | ❌ | **none** |
+| `fhirController.ts` | ✅ (added 2026-07-11) | `fhirController.test.ts` — feature gate, redirect-only callback error hygiene, CONNECT_FAILED audit, token-column non-leak, sync IDOR scoping, generic ExternalServiceError |
+| `fileController.ts` | ✅ (added 2026-07-11) | `fileController.test.ts` — L24 decrypt read path + legacy fallback, audit-before-stream download proxy, Content-Disposition injection guard, F-22 GCS-first delete ordering |
 
 ### Controllers (`controllers/upload/`)
 
@@ -301,10 +301,10 @@ Computed by comparing `Glob backend/src/controllers/*.ts` against `*.test.ts` (a
 |---|---|---|
 | `shared.ts` | ✅ | `shared.test.ts` |
 | `labUploadController.ts` | ✅ (added 2026-07-11) | `labUploadController.test.ts` — L24 encrypted-filename invariant, PARSE_FAILED audit, GCS-outage tolerance, M8/M25 orphan cleanup, out-of-range notify, spoofed-PDF rejection (both routes) |
-| **`sbcUploadController.ts`** | ❌ | **none** |
+| `sbcUploadController.ts` | ✅ (added 2026-07-11) | `sbcUploadController.test.ts` — L24 invariant, empty-extraction audits, L32 safeDate fallback, M8/M25 orphan cleanup, reanalyze ownership-before-extraction + user-field preservation |
 | `index.ts` | ❌ (re-export barrel) | n/a |
 
-**Controllers with zero coverage** (updated 2026-07-11): `fhirController`, `fileController`, `sbcUploadController` (3 remaining). `aiChatController` and `labUploadController` — the two highest-traffic PHI paths — gained dedicated suites on 2026-07-11 (scrutiny P1-6, partial). `insuranceController` **is** covered (`insuranceController.updatePlan.test.ts`) — not a gap.
+**Controllers with zero coverage** (updated 2026-07-11): **none** — scrutiny P1-6 is closed. All five formerly untested PHI controllers (`aiChatController`, `labUploadController`, `fhirController`, `fileController`, `sbcUploadController`) gained dedicated suites on 2026-07-11. `insuranceController` **is** covered (`insuranceController.updatePlan.test.ts`) — not a gap. Remaining test debt lives in services (`ocrService`, `storageService`, `emailService`, FHIR services) and the frontend skew — see [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md).
 
 ### Routes — `backend/src/routes/*.test.ts`
 
