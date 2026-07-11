@@ -291,7 +291,7 @@ Computed by comparing `Glob backend/src/controllers/*.ts` against `*.test.ts` (a
 | `healthNeedsController.ts` | ✅ | `healthNeedsController.test.ts` |
 | `settingsController.ts` | ✅ | `settingsController.test.ts`, `settingsController.updateProfile.test.ts` |
 | `insuranceController.ts` | ✅ | `insuranceController.updatePlan.test.ts` |
-| **`aiChatController.ts`** | ❌ | **none** |
+| `aiChatController.ts` | ✅ (added 2026-07-11) | `aiChatController.test.ts` — BAA gate, L42 fail-closed audit, SSE PHI scrub (incl. chunk-boundary), L33 disclaimer, history cap, stream-failure quota semantics |
 | **`fhirController.ts`** | ❌ | **none** |
 | **`fileController.ts`** | ❌ | **none** |
 
@@ -300,11 +300,11 @@ Computed by comparing `Glob backend/src/controllers/*.ts` against `*.test.ts` (a
 | Controller | Has `*.test.ts`? | Test file |
 |---|---|---|
 | `shared.ts` | ✅ | `shared.test.ts` |
-| **`labUploadController.ts`** | ❌ | **none** |
+| `labUploadController.ts` | ✅ (added 2026-07-11) | `labUploadController.test.ts` — L24 encrypted-filename invariant, PARSE_FAILED audit, GCS-outage tolerance, M8/M25 orphan cleanup, out-of-range notify, spoofed-PDF rejection (both routes) |
 | **`sbcUploadController.ts`** | ❌ | **none** |
 | `index.ts` | ❌ (re-export barrel) | n/a |
 
-**Controllers with zero coverage**: `aiChatController`, `fhirController`, `fileController`, `labUploadController`, `sbcUploadController` (5 total). These are exactly the newer subsystems flagged as thin/untested surfaces (AI chat, SMART-on-FHIR, file/GCS handling, lab/SBC upload). `insuranceController` **is** covered (`insuranceController.updatePlan.test.ts`) — not a gap.
+**Controllers with zero coverage** (updated 2026-07-11): `fhirController`, `fileController`, `sbcUploadController` (3 remaining). `aiChatController` and `labUploadController` — the two highest-traffic PHI paths — gained dedicated suites on 2026-07-11 (scrutiny P1-6, partial). `insuranceController` **is** covered (`insuranceController.updatePlan.test.ts`) — not a gap.
 
 ### Routes — `backend/src/routes/*.test.ts`
 
