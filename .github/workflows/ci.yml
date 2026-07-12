@@ -249,6 +249,12 @@ jobs:
       JWT_ACCESS_SECRET: 'e2e-ci-access-0123456789abcdef0123456789abcdef'
       JWT_REFRESH_SECRET: 'e2e-ci-refresh-0123456789abcdef0123456789abcdef'
       AUDIT_LOG_SALT: 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899'
+      # index.html ships a meta CSP whose connect-src allows only the PROD API
+      # origin; the csp-connect-src plugin in vite.config.ts rewrites it to the
+      # origin of VITE_API_URL. Locally the repo-root .env provides this; CI has
+      # no .env, and without it the browser CSP blocks every localhost:3001
+      # call ("Unable to connect to the server" on login).
+      VITE_API_URL: 'http://localhost:3001/api/v1'
 
     steps:
       - name: Checkout code
