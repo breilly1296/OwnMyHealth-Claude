@@ -46,6 +46,12 @@ model User {
   // PHI (not encrypted, not in PHI_FIELDS). Goal reminders reuse HealthGoal.lastReminderSent.
   lastWeeklySummarySent    DateTime?            @map("last_weekly_summary_sent") @db.Timestamptz(6)
   lastPlanExpiringSent     DateTime?            @map("last_plan_expiring_sent") @db.Timestamptz(6)
+  // OMH-L04: consent record at registration (Terms + Privacy acceptance). Captures
+  // proof of consent to the stated data practices / AI processing (FTC HBNR). Not PHI —
+  // a timestamp + policy version, not encrypted. Nullable: pre-existing users (registered
+  // before this column) carry NULL; every new registration stamps both.
+  termsAcceptedAt          DateTime?            @map("terms_accepted_at") @db.Timestamptz(6)
+  termsVersion             String?              @map("terms_version") @db.VarChar(20)
   createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastLoginAt              DateTime?            @map("last_login_at") @db.Timestamptz(6)
@@ -154,13 +160,11 @@ model UserFile {
   // date, or a generic "Lab report - <date>" fallback) — never the raw client
   // name, so it stays plaintext.
   filename                  String      @db.VarChar(255)
-  // L24: `originalFilename` held the RAW client filename, which can embed PHI
-  // (e.g. "Jane Doe MRI.pdf"). New rows store AES-256-GCM ciphertext (per-user
-  // key) in originalFilenameEncrypted and null this plaintext column; reads
-  // decrypt the twin and fall back to this column only for not-yet-backfilled
-  // legacy rows. The backfill job (maintenance: backfill-userfile-filenames)
-  // re-encrypts legacy rows, after which a follow-up migration drops this column.
-  originalFilename          String?     @map("original_filename") @db.VarChar(255)
+  // L24 / OF-03: the RAW client filename (can embed PHI, e.g. "Jane Doe
+  // MRI.pdf") is stored ONLY as AES-256-GCM ciphertext (per-user key). The
+  // legacy plaintext twin `original_filename` was dropped by migration
+  // 20260711_drop_userfile_plaintext_filename after the
+  // backfill-userfile-filenames maintenance job re-encrypted legacy rows.
   originalFilenameEncrypted String?     @map("original_filename_encrypted")
   fileType                  String      @map("file_type") @db.VarChar(50)
   fileSize                  Int         @map("file_size")

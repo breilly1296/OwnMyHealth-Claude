@@ -14,8 +14,7 @@
     "test:ci": "vitest run --config vitest.config.ci.ts",
     "test:rls": "vitest run src/services/rls.test.ts src/services/accountDeletionCascade.test.ts",
     "consolidate:biomarkers": "tsx src/maintenance/consolidateBiomarkerSeries.ts",
-    "backfill:goal-values": "tsx src/maintenance/backfillGoalValues.ts",
-    "backfill:userfile-names": "tsx src/maintenance/backfillUserFileNames.ts"
+    "backfill:goal-values": "tsx src/maintenance/backfillGoalValues.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
