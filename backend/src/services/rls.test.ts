@@ -537,4 +537,64 @@ describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
       expect(created.userId).toBe(userA.id);
     });
   });
+
+  describe('sessions row lock (refresh rotation regression)', () => {
+    // Regression for the missing sessions UPDATE policy: PostgreSQL applies
+    // UPDATE-policy checks to SELECT ... FOR UPDATE, so without
+    // sessions_update_own (migration 20260712) the refresh-rotation lock in
+    // authService.refreshTokens() saw ZERO rows under FORCE RLS — every prod
+    // refresh 401'd and misfired the M-1 reuse detector into a full family
+    // revoke. Dev's BYPASSRLS role masked it; this pins it against a real
+    // NOBYPASSRLS role.
+    it('an admin-context SELECT ... FOR UPDATE can see and lock a session row', async () => {
+      const sessionId = randomUUID();
+      await withRLSContext(null, async (tx) => {
+        await tx.session.create({
+          data: {
+            id: sessionId,
+            userId: userA.id,
+            token: `__RLS_TEST_SESSION_${sessionId}__`,
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+        });
+      });
+
+      // The exact lock shape refreshTokens() uses.
+      const locked = await withRLSContext(null, async (tx) =>
+        tx.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM sessions WHERE id = ${sessionId}::uuid FOR UPDATE
+        `
+      );
+      expect(locked).toHaveLength(1);
+
+      await withRLSContext(null, async (tx) =>
+        tx.session.delete({ where: { id: sessionId } })
+      );
+    });
+
+    it("a user's own context can also lock its own session row", async () => {
+      const sessionId = randomUUID();
+      await withRLSContext(null, async (tx) => {
+        await tx.session.create({
+          data: {
+            id: sessionId,
+            userId: userA.id,
+            token: `__RLS_TEST_SESSION_OWN_${sessionId}__`,
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+        });
+      });
+
+      const locked = await withRLSContext(userA.id, async (tx) =>
+        tx.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM sessions WHERE id = ${sessionId}::uuid FOR UPDATE
+        `
+      );
+      expect(locked).toHaveLength(1);
+
+      await withRLSContext(null, async (tx) =>
+        tx.session.delete({ where: { id: sessionId } })
+      );
+    });
+  });
 });

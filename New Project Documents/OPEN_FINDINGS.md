@@ -163,6 +163,13 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 
 ## Closed findings
 
+### OF-22 — Refresh-token rotation broken under enforced RLS (FOUND & FIXED 2026-07-12)
+- **Was**: Critical · production availability + spurious mass session revocation · **Found by**: the e2e CI job's first real run (PR #226) — the suite passed locally against a BYPASSRLS dev role and failed in CI against the NOBYPASSRLS role, i.e. the PRODUCTION posture.
+- **Fact**: `sessions` had SELECT/INSERT/DELETE policies but no UPDATE policy. PostgreSQL applies UPDATE-policy checks to `SELECT … FOR UPDATE` row locks, so under FORCE RLS the refresh-rotation lock in `authService.refreshTokens()` saw ZERO rows. Confirmed with psql as `omh_app`: plain SELECT sees the session row, `FOR UPDATE` returns nothing.
+- **Impact**: since the omh_app NOBYPASSRLS cutover, every production token refresh (a) 401'd — logging the user out when the 15-minute access token expired — and (b) was misclassified as token REUSE, firing the M-1 compromise detector: `revokeAllUserTokens()` destroyed ALL the user's sessions and stamped `tokens_valid_after`, killing in-flight access tokens across devices.
+- **Fix**: migration `20260712_add_sessions_update_policy` (+ two live-PG regression tests in `rls.test.ts` pinning the exact lock shape in admin and user contexts); companion frontend fix single-flights `authApi.refreshToken` so parallel boot refreshes (React StrictMode, multi-tab) can't race the single-use rotation.
+- **Deploy note**: prod carries this bug until the next successful deploy (currently blocked on GCP billing). Verify post-deploy: log in, wait >15 min, confirm the session silently renews.
+
 ### OF-02 — Document AI OCR spend has no dollar cap (CLOSED 2026-07-11)
 - **Was**: High · cost governance · **Aliases**: H-3 (KNOWN_ISSUES), "Document AI dollar accounting 🟡" (SECURITY_STATUS §5), scrutiny P0-2
 - **Closing commit**: `1047506` — `trackDocumentAIUsage()` accrues per-page OCR cost (`DOCUMENT_AI_COST_PER_PAGE_USD`, default $0.0015) into the same daily global + per-user accumulator as Claude spend, recorded the moment Google returns; the existing `aiSpendGuard` 503 fail-closed gate on every OCR entry route now bounds OCR dollars too.

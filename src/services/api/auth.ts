@@ -2,7 +2,13 @@
  * Authentication API
  */
 
-import { apiFetch, setAuthToken, clearAuthToken } from './client';
+import {
+  apiFetch,
+  setAuthToken,
+  clearAuthToken,
+  attemptTokenRefresh,
+  getAuthToken,
+} from './client';
 
 export interface LoginCredentials {
   email: string;
@@ -87,11 +93,18 @@ export const authApi = {
   },
 
   async refreshToken(): Promise<{ token?: string }> {
-    const response = await apiFetch<{ token?: string }>('/auth/refresh', { method: 'POST' });
-    if (response.data.token) {
-      setAuthToken(response.data.token);
+    // Single-flighted through the client's shared refresh promise. The refresh
+    // token is SINGLE-USE (server-side rotation): two parallel raw POSTs — e.g.
+    // React StrictMode double-mounting the AuthContext boot effect, or two tabs
+    // restoring at once — race the rotation, and the loser lands in the
+    // server's reuse branch and 401s, flakily logging the user out on reload.
+    // attemptTokenRefresh dedupes concurrent callers onto one request and
+    // stores the new access token itself.
+    const refreshed = await attemptTokenRefresh();
+    if (!refreshed) {
+      throw new Error('Refresh token invalid or expired');
     }
-    return response.data;
+    return { token: getAuthToken() ?? undefined };
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
