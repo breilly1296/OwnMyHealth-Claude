@@ -78,7 +78,9 @@ test.describe('Export + delete journey (P0-3)', () => {
       // category, so navigate to Diabetes first (home of "Glucose (Fasting)").
       // The category lives in the collapsible "Biomarkers" sidebar group —
       // expand it when the direct click is intercepted by the collapsed group.
-      const diabetes = page.getByRole('button', { name: /^diabetes$/i });
+      // The accessible name grows a count badge once the category has data
+      // ("Diabetes 1") — match with or without it.
+      const diabetes = page.getByRole('button', { name: /^diabetes( \d+)?$/i });
       const directlyClickable = await diabetes
         .click({ trial: true, timeout: 3_000 })
         .then(() => true)
@@ -87,7 +89,7 @@ test.describe('Export + delete journey (P0-3)', () => {
         await page.getByRole('button', { name: /^biomarkers$/i }).click();
       }
       await diabetes.click();
-      await page.getByRole('button', { name: /add (data manual|measurement|manually)/i }).first().click();
+      await page.getByRole('button', { name: /add (data|measurement|manually)/i }).first().click();
 
       const dialog = page.getByRole('dialog', { name: /add new measurement/i });
       await expect(dialog.getByRole('heading', { name: /add (new )?measurement/i })).toBeVisible();

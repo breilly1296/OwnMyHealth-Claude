@@ -88,7 +88,7 @@ export const standardLimiter = rateLimit({
 export const authLimiter = rateLimit({
   store: createRateLimitStore('auth'),
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 attempts per window
+  max: config.rateLimit.authMaxAttempts, // default 20 per window (env-tunable for e2e only)
   message: {
     success: false,
     error: {
@@ -105,7 +105,7 @@ export const authLimiter = rateLimit({
 export const strictAuthLimiter = rateLimit({
   store: createRateLimitStore('strict-auth'),
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Only 5 login attempts per window
+  max: config.rateLimit.strictAuthMaxAttempts, // default 5 per window (env-tunable for e2e only)
   message: {
     success: false,
     error: {
@@ -151,7 +151,7 @@ export const uploadLimiter = rateLimit({
 export const sensitiveLimiter = rateLimit({
   store: createRateLimitStore('sensitive'),
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 requests per hour
+  max: config.rateLimit.sensitiveMaxAttempts, // default 10 per hour (env-tunable for e2e only)
   message: {
     success: false,
     error: {

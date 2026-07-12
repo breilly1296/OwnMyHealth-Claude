@@ -20,8 +20,9 @@ test.describe('Health Guide', () => {
   });
 
   test('navigate to Health Guide → page loads with composer', async ({ page }) => {
-    // The sidebar nav item is labeled "Health Guide".
-    await page.getByRole('button', { name: /health guide/i }).first().click();
+    // The sidebar nav item became a real LINK (/health-guide) with the
+    // client-router work — it was a button when this spec was written.
+    await page.getByRole('link', { name: /health guide/i }).first().click();
 
     await expect(page.getByRole('heading', { name: /health guide/i })).toBeVisible();
     // Composer textarea (placeholder copy varies by streaming state — match
@@ -32,7 +33,7 @@ test.describe('Health Guide', () => {
   });
 
   test('send a message → user bubble appears and UI does not crash', async ({ page }) => {
-    await page.getByRole('button', { name: /health guide/i }).first().click();
+    await page.getByRole('link', { name: /health guide/i }).first().click();
     const composer = page.locator('textarea').first();
     await composer.waitFor();
 

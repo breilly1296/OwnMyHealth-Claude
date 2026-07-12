@@ -52,13 +52,27 @@ export default defineConfig({
       command: 'npm run dev',
       cwd: 'backend',
       port: 3001,
-      timeout: 45_000,
+      // 90s covers a cold CI runner (tsx compile + DB connect); local cold
+      // starts are well under it.
+      timeout: 90_000,
       reuseExistingServer: true,
+      // A full serial e2e run makes 250+ API calls and 10+ logins in
+      // minutes (every spec logs in and mounts the dashboard); the default
+      // limits (100 req + 5 logins per 15 min) would 429 later specs.
+      // Raised for the e2e-launched server only — a dev server already
+      // running keeps its own env (reuseExistingServer). These knobs exist
+      // solely for e2e; never raise them in a real deployment.
+      env: {
+        RATE_LIMIT_MAX_REQUESTS: '2000',
+        AUTH_RATE_LIMIT_MAX: '200',
+        STRICT_AUTH_RATE_LIMIT_MAX: '200',
+        SENSITIVE_RATE_LIMIT_MAX: '200',
+      },
     },
     {
       command: 'npm run dev',
       port: 5173,
-      timeout: 45_000,
+      timeout: 90_000,
       reuseExistingServer: true,
     },
   ],
