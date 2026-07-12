@@ -120,9 +120,8 @@ export async function uploadSBC(
               id: fileId,
               userId,
               filename: `${insurerName} SBC - ${effectiveDate.toLocaleDateString()}`,
-              // L24: store the raw client filename encrypted (per-user key); keep
-              // the plaintext column null. `filename` above is a non-PHI label.
-              originalFilename: null,
+              // L24: the raw client filename can embed PHI — stored ONLY as
+              // ciphertext (per-user key); `filename` above is a non-PHI label.
               originalFilenameEncrypted: encryptionService.encrypt(file.originalname, userSalt),
               fileType: file.mimetype,
               fileSize: file.size,

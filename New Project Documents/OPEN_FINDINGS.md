@@ -50,7 +50,8 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 - **Class**: compliance / ops · **Status**: Open (External-ops) · **Aliases**: L-3 (KNOWN_ISSUES — was rated Low), L24 ops follow-up (SECURITY_STATUS §3), scrutiny P0-1
 - **Fact**: new uploads encrypt `user_files.original_filename`; legacy prod rows remain plaintext until the `backfill-userfile-filenames` maintenance job runs (DRY RUN → `--apply`) and a DROP migration lands. Re-verified 2026-07-11: latest migration is `20260620_add_registration_consent` — no drop migration exists.
 - **Why High** (raised from Low): this is known plaintext PHI residue in production while docs and marketing say "encrypted at rest" — a compliance/honesty exposure, not a minor annoyance.
-- **Done when**: prod dry-run → apply completed; DROP migration applied; run evidence recorded in `RUNBOOK.md`.
+- **Prep complete (2026-07-11)**: the drop-side changeset is staged in **PR #227** (self-guarded migration `20260711_drop_userfile_plaintext_filename` — refuses to apply while un-backfilled rows exist; rehearsed both ways on a throwaway Postgres). The run procedure + fill-in evidence record is `RUNBOOK.md` §7.3.1.
+- **Done when**: RUNBOOK §7.3.1 steps 1–6 completed — prod dry-run → apply → 0-rows verification → PR #227 merged (DROP applied) → post-deploy column check → this entry moved to Closed with the evidence table.
 
 ### OF-04 — No MFA
 - **Class**: product security · **Status**: Open · **Aliases**: scrutiny P0-4, GTM readiness checklist (absent from both prior ledgers)

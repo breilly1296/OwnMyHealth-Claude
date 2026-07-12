@@ -225,7 +225,6 @@ export async function getFileDownloadUrl(
         id: true,
         storageKey: true,
         filename: true,
-        originalFilename: true,
         originalFilenameEncrypted: true,
         fileType: true,
         fileSize: true,

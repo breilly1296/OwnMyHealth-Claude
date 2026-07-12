@@ -245,7 +245,7 @@ describe('labUploadController', () => {
 
       expect(txHarness.createdFiles).toHaveLength(1);
       const fileRow = txHarness.createdFiles[0];
-      expect(fileRow.originalFilename).toBeNull();
+      expect(fileRow).not.toHaveProperty('originalFilename'); // column dropped (OF-03)
       // createMockEncryptionService tags with `enc:` — proves the value went
       // through encrypt() and the raw name is not what got stored.
       expect(fileRow.originalFilenameEncrypted).toBe('enc:Jane Doe 1990-01-01 labs.pdf');
@@ -337,7 +337,7 @@ describe('labUploadController', () => {
 
       // Same L24 invariant on the OCR path.
       const fileRow = txHarness.createdFiles[0];
-      expect(fileRow.originalFilename).toBeNull();
+      expect(fileRow).not.toHaveProperty('originalFilename'); // column dropped (OF-03)
       expect(fileRow.originalFilenameEncrypted).toBe('enc:scan.png');
 
       expect(auditService.logCreate).toHaveBeenCalledWith(

@@ -267,7 +267,7 @@ describe('sbcUploadController', () => {
 
       expect(txHarness.createdFiles).toHaveLength(1);
       const fileRow = txHarness.createdFiles[0];
-      expect(fileRow.originalFilename).toBeNull();
+      expect(fileRow).not.toHaveProperty('originalFilename'); // column dropped (OF-03)
       expect(fileRow.originalFilenameEncrypted).toBe('enc:Doe Family 2026 SBC.pdf');
       expect(fileRow.filename).not.toContain('Doe Family');
     });

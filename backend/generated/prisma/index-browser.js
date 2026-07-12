@@ -151,6 +151,8 @@ exports.Prisma.UserScalarFieldEnum = {
   onboardingCompletedAt: 'onboardingCompletedAt',
   lastWeeklySummarySent: 'lastWeeklySummarySent',
   lastPlanExpiringSent: 'lastPlanExpiringSent',
+  termsAcceptedAt: 'termsAcceptedAt',
+  termsVersion: 'termsVersion',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   lastLoginAt: 'lastLoginAt'
@@ -206,7 +208,6 @@ exports.Prisma.UserFileScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   filename: 'filename',
-  originalFilename: 'originalFilename',
   originalFilenameEncrypted: 'originalFilenameEncrypted',
   fileType: 'fileType',
   fileSize: 'fileSize',

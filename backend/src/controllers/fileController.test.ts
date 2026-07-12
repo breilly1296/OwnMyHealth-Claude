@@ -98,7 +98,6 @@ function makeDbFile(overrides: Record<string, unknown> = {}) {
   return {
     id: 'file-1',
     filename: 'Quest Diagnostics - 1/15/2026',
-    originalFilename: null,
     originalFilenameEncrypted: 'enc:jane-doe-labs.pdf', // mock decrypt → jane-doe-labs.pdf
     fileType: 'application/pdf',
     fileSize: 1234,
@@ -167,15 +166,17 @@ describe('fileController', () => {
       );
     });
 
-    it('falls back to the legacy plaintext filename for a pre-backfill row', async () => {
+    it('tolerates a row with no encrypted filename (returns empty string, not a crash)', async () => {
+      // The plaintext twin column is dropped (OF-03); a null ciphertext row
+      // resolves to '' rather than throwing and failing the whole list.
       tx().userFile.findMany.mockResolvedValue([
-        makeDbFile({ originalFilenameEncrypted: null, originalFilename: 'legacy-plain.pdf' }),
+        makeDbFile({ originalFilenameEncrypted: null }),
       ]);
 
       await getFiles(createMockRequest(), res);
 
       const body = vi.mocked(res.json).mock.calls[0][0] as { data: Array<Record<string, unknown>> };
-      expect(body.data[0].originalFilename).toBe('legacy-plain.pdf');
+      expect(body.data[0].originalFilename).toBe('');
     });
 
     it('clamps the requested page size to 100', async () => {

@@ -26,7 +26,6 @@ on:
         options:
           - consolidate-biomarkers
           - backfill-goal-values
-          - backfill-userfile-filenames
       apply:
         description: 'Perform the migration (false = dry run, logs counts only)'
         required: true
@@ -80,7 +79,6 @@ jobs:
           case "$TASK" in
             consolidate-biomarkers)       ENTRY="dist/maintenance/consolidateBiomarkerSeries.js" ;;
             backfill-goal-values)         ENTRY="dist/maintenance/backfillGoalValues.js" ;;
-            backfill-userfile-filenames)  ENTRY="dist/maintenance/backfillUserFileNames.js" ;;
             *) echo "Unknown task: $TASK" >&2; exit 1 ;;
           esac
 
