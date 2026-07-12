@@ -212,11 +212,102 @@ jobs:
       - name: Run RLS regression suite (as omh_app, RLS enforced)
         run: npm run test:rls
 
-  # TODO: Add E2E test job once staging DB is available in CI.
-  # The Playwright specs under /e2e/*.spec.ts exercise the full auth +
-  # biomarker + health-guide + export + settings flows against a running
-  # dev stack. They need a Postgres instance, seeded test user
-  # (e2e/setup/seed-test-user.ts), and both dev servers running concurrently.
+  # E2E — the full Playwright suite (auth, biomarker entry, export, settings,
+  # health guide, and the P0-3 export/delete journey) against a real running
+  # stack: Vite + Express + a service Postgres with all migrations applied and
+  # the app connecting as the NOBYPASSRLS role (RLS enforced, like prod).
+  # Playwright's webServer config boots both dev servers; its env overlay
+  # raises the rate-limiter knobs for the e2e-launched backend only.
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: omh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d omh"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: development
+      SUPERUSER_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/omh
+      # The app connects as the NOBYPASSRLS role so the journeys run with RLS
+      # actually enforced (same role provisioning as the rls job).
+      DATABASE_URL: postgresql://omh_app:test@localhost:5432/omh
+      # Test-only secrets — never used outside this job. Formats must satisfy
+      # the universal config validation (64-hex PHI key, >=32-char JWT secrets,
+      # >=16-char audit salt; placeholder values are rejected).
+      PHI_ENCRYPTION_KEY: '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff'
+      JWT_ACCESS_SECRET: 'e2e-ci-access-0123456789abcdef0123456789abcdef'
+      JWT_REFRESH_SECRET: 'e2e-ci-refresh-0123456789abcdef0123456789abcdef'
+      AUDIT_LOG_SALT: 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899'
+      # index.html ships a meta CSP whose connect-src allows only the PROD API
+      # origin; the csp-connect-src plugin in vite.config.ts rewrites it to the
+      # origin of VITE_API_URL. Locally the repo-root .env provides this; CI has
+      # no .env, and without it the browser CSP blocks every localhost:3001
+      # call ("Unable to connect to the server" on login).
+      VITE_API_URL: 'http://localhost:3001/api/v1'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      - name: Apply migrations (as superuser)
+        working-directory: backend
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ env.SUPERUSER_DATABASE_URL }}
+
+      - name: Provision NOBYPASSRLS app role
+        working-directory: backend
+        run: psql "$SUPERUSER_DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/rls-test-role.sql
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Seed standing e2e user
+        run: npm run test:e2e:setup
+
+      - name: Run Playwright suite
+        run: npx playwright test --project=chromium
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
   # Defer this to the staging infra rollout (see docs/STAGING.md).
   #
   # e2e-tests:

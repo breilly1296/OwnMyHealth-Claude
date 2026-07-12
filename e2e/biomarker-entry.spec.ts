@@ -3,9 +3,13 @@
  * or won't upload a lab PDF. If this breaks, the app's core value prop
  * (tracking a number over time) dies silently.
  *
- * SELECTOR FRAGILITY: The modal's inputs don't have stable `data-testid`s
- * yet; this spec uses visible labels and placeholder hints. If the modal
- * copy changes, `AddMeasurementModal.tsx` is the source of truth to update.
+ * The measurement modal filters its biomarker list by the ACTIVE category
+ * (`measurementOptions[category]`), so the spec navigates to a category
+ * first — Diabetes, home of "Glucose (Fasting)". Selector notes:
+ *   - Categories live in the collapsible "Biomarkers" sidebar group.
+ *   - The dialog is named "Add New Measurement" with a native <select>
+ *     biomarker picker and a spinbutton value input.
+ * Source of truth on copy changes: `AddMeasurementModal.tsx`.
  */
 
 import { test, expect } from '@playwright/test';
@@ -17,40 +21,43 @@ test.describe('Biomarker manual entry', () => {
   });
 
   test('add a biomarker manually and confirm it appears on the dashboard', async ({ page }) => {
-    // The "Add Measurement" button appears in CategoryContent and the
-    // dashboard empty state. On the Overview page the quick-action card
-    // is labeled "Add manually" (empty state) or "Add Measurement" (chip).
+    // Navigate to the Diabetes category — expand the collapsible
+    // "Biomarkers" sidebar group when the direct click is intercepted.
+    // The accessible name grows a count badge once the category has data
+    // ("Diabetes 1") — match with or without it.
+    const diabetes = page.getByRole('button', { name: /^diabetes( \d+)?$/i });
+    const directlyClickable = await diabetes
+      .click({ trial: true, timeout: 3_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!directlyClickable) {
+      await page.getByRole('button', { name: /^biomarkers$/i }).click();
+    }
+    await diabetes.click();
+
     await page
-      .getByRole('button', { name: /add (measurement|manually)/i })
+      .getByRole('button', { name: /add (data|measurement|manually)/i })
       .first()
       .click();
 
-    await expect(page.getByRole('heading', { name: /add measurement/i })).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: /add new measurement/i });
+    await expect(dialog.getByRole('heading', { name: /add (new )?measurement/i })).toBeVisible();
 
-    // The modal's category select — labeled visibly. Default value is one
-    // of the sample categories; switching isn't strictly necessary, so
-    // just pick Glucose from the biomarker name list.
-    // Pick a well-known biomarker name that exists in the sample catalog.
-    await page.getByRole('option', { name: /glucose/i }).first().click().catch(async () => {
-      // If it's a combobox / button list, fall back to a text click.
-      await page.getByText(/glucose/i).first().click();
-    });
+    // Native <select> biomarker picker — resolve the Glucose option's value.
+    const combo = dialog.getByRole('combobox').first();
+    const glucoseValue = await combo
+      .locator('option', { hasText: /^glucose/i })
+      .first()
+      .getAttribute('value');
+    expect(glucoseValue).toBeTruthy();
+    await combo.selectOption(glucoseValue!);
 
-    // Value input — numeric. The modal usually uses an <input type="number">
-    // with a placeholder like "Enter value".
-    await page.locator('input[type="number"]').first().fill('95');
+    await dialog.getByRole('spinbutton').first().fill('95');
+    // Date defaults to today; leave it.
+    await dialog.getByRole('button', { name: /^add measurement$/i }).click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
 
-    // Date input — default is today, but set explicitly for determinism.
-    const today = new Date().toISOString().slice(0, 10);
-    await page.locator('input[type="date"]').first().fill(today).catch(() => {
-      /* some date inputs are auto-populated — skip if fill fails */
-    });
-
-    await page.getByRole('button', { name: /^(save|add measurement|add)$/i }).last().click();
-
-    // Modal closes and the new value shows up on the dashboard. Use a
-    // lenient match because the biomarker card may render the name in
-    // various spots (category card count, filtered list, recent activity).
+    // The new value shows up in the category view.
     await expect(page.getByText(/glucose/i).first()).toBeVisible({ timeout: 10_000 });
   });
 });

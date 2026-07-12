@@ -176,6 +176,13 @@ export const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+    // Auth limiter bounds. Defaults are the production brute-force posture;
+    // overridable ONLY so e2e runs (which log in once per spec) don't 429
+    // themselves — playwright.config.ts / ci.yml set these for the servers
+    // they launch. Never raise these in a real deployment.
+    authMaxAttempts: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10),
+    strictAuthMaxAttempts: parseInt(process.env.STRICT_AUTH_RATE_LIMIT_MAX || '5', 10),
+    sensitiveMaxAttempts: parseInt(process.env.SENSITIVE_RATE_LIMIT_MAX || '10', 10),
   },
 
   // Redis (optional). When set, the rate limiters use a shared Redis store
