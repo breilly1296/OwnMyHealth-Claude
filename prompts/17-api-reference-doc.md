@@ -4,7 +4,7 @@ tags:
   - api
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate API_REFERENCE.md
@@ -15,7 +15,7 @@ Before writing a single line, read:
 
 1. [`_doc-quality.md`](./_doc-quality.md) — self-containedness, citation, TBD, cross-link, and format rules.
 2. [`_verification-tools.md`](./_verification-tools.md) — Grep/Glob/Read cheat sheet.
-3. [`_phi-inventory.md`](./_phi-inventory.md) — identify endpoints that expose PHI.
+3. [`_phi-inventory.md`](./_phi-inventory.md) — identify endpoints that expose PHI. Note `PHI_FIELDS` now has 14 models / 39 fields (see `encryption.ts:476`); the Files endpoints return a decrypted `originalFilename` (PHI as of L24) — don't miss the Files group.
 
 This doc must pass the five tests in `_doc-quality.md` before you stop.
 
@@ -34,7 +34,7 @@ Produce `New Project Documents/API_REFERENCE.md` — the **contract-facing refer
 | `backend/src/routes/*.ts` (all 18 non-test, incl `index.ts`) | Endpoint enumeration + middleware chain. Note `internalRoutes.ts` is mounted in `backend/src/app.ts`, NOT in `routes/index.ts`. |
 | `backend/src/routes/index.ts` | Base mount paths for the user-facing modules. |
 | `backend/src/app.ts` | Where `/internal` is mounted (`app.use('/api/${config.apiVersion}/internal', internalRoutes)` ~L269) + global middleware order. |
-| `backend/src/controllers/*.ts` (10 non-test + `index.ts`; `testHelpers.ts` is not a controller) and `backend/src/controllers/upload/*.ts` (the old monolithic `uploadController.ts` is GONE — upload handlers now live in `controllers/upload/`: `labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`, re-exported via `controllers/upload/index.ts`). | Handler bodies — request parsing, response shape, `auditLog.log(...)` calls, thrown errors. |
+| `backend/src/controllers/*.ts` (10 non-test + `index.ts`; `testHelpers.ts` is not a controller) and `backend/src/controllers/upload/*.ts` (the old monolithic `uploadController.ts` is GONE — upload handlers now live in `controllers/upload/`: `labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`, re-exported via `controllers/upload/index.ts`). | Handler bodies — request parsing, response shape, `auditService.logCreate/logRead/logUpdate/logDelete/logAuth/logExport(...)` calls (controllers do NOT call `auditLog.log(...)` directly — `.log()` is the internal method behind the typed wrappers), thrown errors. |
 | `backend/src/middleware/validation.ts` + controller-local schemas | Zod schemas for requests (`schemas.*`). |
 | `backend/src/middleware/errorHandler.ts` | Error envelope format + all `AppError` subclass `code` values + Prisma/JWT/Multer error mapping. |
 | `backend/src/middleware/rateLimiter.ts` | Rate limiter definitions (8 total), backed by `rateLimitStore.ts` (Redis via `REDIS_URL`, in-memory fallback). |
@@ -42,8 +42,8 @@ Produce `New Project Documents/API_REFERENCE.md` — the **contract-facing refer
 | `backend/src/middleware/aiSpendGuard.ts` | Daily AI budget guard on `POST /ai/chat`. |
 | `backend/src/middleware/rbac.ts` | Role hierarchy (PATIENT < PROVIDER < ADMIN). |
 | `backend/src/middleware/demoProtection.ts` | Demo-blocked routes (`blockDemoAI`, `blockDemoRoleChange`, `blockDemoAdminAccess`, `blockDemoUserModification`, `blockDemoProfileUpdate`, `demoProtection`). |
-| `backend/src/services/auditLog.ts` | `AuditAction` enum — what `action` values exist. |
-| `backend/src/services/encryption.ts` | Which fields are encrypted (`PHI_FIELDS` ~L410) and thus decrypted in responses. |
+| `backend/src/services/auditLog.ts` | `AuditAction` enum (generic verbs — `LOGIN`, `LOGOUT`, `READ`, `VIEW`, `CREATE`, `UPDATE`, `DELETE`, `EXPORT`, `PHI_ACCESS`, …; defined in `schema.prisma:652-671`) + the typed wrappers (`logCreate`/`logRead`/`logUpdate`/`logDelete`/`logAuth`/`logExport`) and `logAuth`'s `AUTH_ACTION_MAP`. There are NO domain-specific actions like `BIOMARKER_CREATE`/`LOGIN_SUCCESS`. |
+| `backend/src/services/encryption.ts` | Which fields are encrypted (`PHI_FIELDS` declared at `encryption.ts:476` — 14 models / 39 fields, incl. `UserFile.originalFilenameEncrypted`, `HealthGoal.target/current/startValueEncrypted`, `GoalProgressHistory.valueEncrypted`, `AuditLog.metadataEncrypted`) and thus decrypted in responses. |
 
 ---
 
@@ -61,7 +61,7 @@ Produce `New Project Documents/API_REFERENCE.md` — the **contract-facing refer
    - Health goals (`healthGoalsRoutes.ts`)
    - Health needs (`healthNeedsRoutes.ts`)
    - Uploads (`uploadRoutes.ts`) — handlers in `controllers/upload/` (`uploadLabReport`, `uploadSBC`, `uploadLabResultOCR`), gated by `uploadLimiter` + `aiLimiter` + `blockDemoAI` + `requirePlanLimit('pdfUploadsPerMonth')`. Endpoints: `POST /lab-report`, `POST /insurance-sbc`, `POST /lab-results-ocr` (PDF + image OCR via Document AI).
-   - Files (`fileRoutes.ts`)
+   - Files (`fileRoutes.ts`) — **PHI returned**: the file's `originalFilename` is now encrypted at rest (`UserFile.originalFilenameEncrypted`, L24) and decrypted on every response via `decryptOriginalFilename(file, encryption, userSalt)` (`fileController.ts:20,89,172,258`; also `settingsController.ts:651`), so `GET /files`, file-detail, and the settings data-export expose decrypted PHI (the raw client filename) — mark the Files group as PHI-returning.
    - Provider (`providerRoutes.ts`)
    - Patient (`patientRoutes.ts`)
    - Settings (`settingsRoutes.ts`)
@@ -85,8 +85,8 @@ Produce `New Project Documents/API_REFERENCE.md` — the **contract-facing refer
 
 | Method | Path | Auth | CSRF | Rate limiter | RBAC role | RLS wrap | Controller (`file:fn:line`) | Audit event | PHI returned? |
 |---|---|---|---|---|---|---|---|---|---|
-| POST | `/api/v1/auth/login` | public | yes | `authLimiter` + `strictAuthLimiter` | — | — | `authController.login:L257` | `LOGIN_SUCCESS` / `LOGIN_FAIL` | none |
-| GET | `/api/v1/biomarkers` | yes | no (GET) | `standardLimiter` | — | `withRLSContext` | `biomarkerController.list:L22` | `BIOMARKER_LIST` | yes — see `PHI_TAXONOMY.md` |
+| POST | `/api/v1/auth/login` | public | yes | `authLimiter` + `strictAuthLimiter` | — | — | `authController.login:L270` | `LOGIN` (via `logAuth`) | none |
+| GET | `/api/v1/biomarkers` | yes | no (GET) | `standardLimiter` | — | `withRLSContext` | `biomarkerController.getBiomarkers:L143` | `READ`/`VIEW` (via `logRead`) | yes — see `PHI_TAXONOMY.md` |
 | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
 
 ### Per-endpoint entry (the 10 required fields per entry)
@@ -94,36 +94,25 @@ Produce `New Project Documents/API_REFERENCE.md` — the **contract-facing refer
 ````markdown
 #### `POST /api/v1/biomarkers`
 
-Create a new biomarker reading for the authenticated user.
+Create a new biomarker reading for the authenticated user. Writes now go through the time-series merge service (see step 9) — a reading APPENDS to a single per-name series rather than creating a disconnected one-shot row, so the response carries a `history` array.
 
-1. **Route**: `backend/src/routes/biomarkerRoutes.ts:L18`
-2. **Middleware** (in order): `authenticate`, `standardLimiter`, `validate(createBiomarkerSchema)`, `blockDemoAI`. (Illustrative — list the ACTUAL chain from the route file; demo guards are exported as `blockDemoAI` / `blockDemoRoleChange` / `blockDemoAdminAccess` / `blockDemoUserModification` / `blockDemoProfileUpdate` / `demoProtection`, there is no bare `blockDemo`.)
-3. **Controller**: `biomarkerController.create` (`backend/src/controllers/biomarkerController.ts:L52`).
-4. **RLS wrap**: `withRLSTransaction(userId, async (tx) => { ... })` — `...:L58-L90`.
-5. **Request (Zod schema)**:
-
-    ```ts
-    // Source: backend/src/controllers/biomarkerController.ts:L42-L48
-    const createBiomarkerSchema = z.object({
-      name: z.string().min(1).max(100),
-      value: z.number(),
-      unit: z.string().min(1).max(20),
-      measuredAt: z.string().datetime(),
-      notes: z.string().max(2000).optional(),
-    });
-    ```
-
-6. **Response (201)**:
+1. **Route**: `backend/src/routes/biomarkerRoutes.ts:L85`
+2. **Middleware** (in order): `authenticate`, `standardLimiter`, `validate(...)`, `blockDemoAI`. (Illustrative — list the ACTUAL chain from the route file; demo guards are exported as `blockDemoAI` / `blockDemoRoleChange` / `blockDemoAdminAccess` / `blockDemoUserModification` / `blockDemoProfileUpdate` / `demoProtection`, there is no bare `blockDemo`.)
+3. **Controller**: `biomarkerController.createBiomarker` (`backend/src/controllers/biomarkerController.ts:260`).
+4. **RLS wrap**: `withRLSTransaction(userId, async (tx) => { ... })` — confirm the exact line span from the handler body.
+5. **Request (Zod schema)**: the request type `BiomarkerCreateInput` is imported from `middleware/validation.js` (`biomarkerController.ts:12`); there is no longer an inline `createBiomarkerSchema` in the controller — follow the import to `middleware/validation.ts` and quote the real schema from there.
+6. **Response (201)**: the controller returns a `BiomarkerResponse` (`biomarkerController.ts:62-86`) which includes a `history: { date; value }[]` array (the appended series), e.g.:
 
     ```json
     {
       "success": true,
       "data": {
-        "id": "cuid...",
+        "id": "uuid...",
         "name": "...",
         "value": 5.4,
         "unit": "mg/dL",
-        "measuredAt": "2026-04-24T10:00:00.000Z"
+        "date": "2026-04-24T10:00:00.000Z",
+        "history": [{ "date": "2026-01-10T00:00:00.000Z", "value": 5.1 }]
       }
     }
     ```
@@ -149,7 +138,7 @@ Create a new biomarker reading for the authenticated user.
       -d '{"name":"LDL","value":120,"unit":"mg/dL","measuredAt":"2026-04-24T10:00:00Z"}'
     ```
 
-9. **Audit log**: `auditLog.log({ action: 'BIOMARKER_CREATE', resourceType: 'Biomarker', resourceId: id, newValues: {...} })` — `biomarkerController.ts:L85`.
+9. **Audit log**: `auditService.logCreate(RESOURCE_TYPE, biomarker.id, { ... })` — `biomarkerController.ts:305` (this resolves to the generic `CREATE` action; controllers call the typed wrappers, NOT `auditLog.log(...)`). Note the create path routes through `upsertBiomarkerReading` (`services/biomarkerSeries.ts`, imported at `biomarkerController.ts:17-21`), which appends to the series (anchor = newest row, `BiomarkerHistory` = older points) — so document the series/history semantics, not a one-shot insert.
 10. **PHI exposure**: write of encrypted `valueEncrypted`, `notesEncrypted` (per `PHI_FIELDS.Biomarker` in `encryption.ts` — `unit` is NOT encrypted). Response decrypts. See [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md#biomarker).
 
 **Related**: [`ROUTING_TABLE.md#biomarkerroutes`](./ROUTING_TABLE.md), [`DATA_MODEL.md#biomarker`](./DATA_MODEL.md).
@@ -209,7 +198,7 @@ After writing the doc, self-answer each **using only the doc + siblings**:
 9. Which endpoint returns a signed GCS URL, and how long is it valid for?
 10. What PHI is returned by `GET /api/v1/biomarkers` and what's the decryption path?
 11. How does the refresh-token flow work end-to-end? (sequence of calls)
-12. Which endpoint produces a `BIOMARKER_CREATE` audit event?
+12. Which endpoint produces a biomarker `CREATE` audit event (via `auditService.logCreate`), and what generic `AuditAction` does it map to? (There is no `BIOMARKER_CREATE` action — the enum is generic.)
 13. What body does `POST /api/v1/insurance/upload-sbc` accept, and what's the max size? (also reachable at `POST /api/v1/upload/insurance-sbc`)
 14. What response does `DELETE /api/v1/settings/account` return on success?
 15. Which endpoint is used by a provider to request access to a patient, and what's the resulting state transition?
@@ -231,7 +220,7 @@ Before marking anything TBD:
 - **Response shape**: read the controller return; the response body is whatever `res.json({...})` ships. Upload handlers are in `controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`), not a single `uploadController.ts`.
 - **Errors**: `Grep pattern: "new AppError\\(|throw new "` over `backend/src/**` plus the limiter `code:` strings in `rateLimiter.ts`, cross-checked against the `AppError` subclasses + Prisma/JWT/Multer maps in `errorHandler.ts`.
 - **Rate limiter membership**: read each route file for `aiLimiter`, `uploadLimiter`, `sensitiveLimiter`, `providerAccessRequestLimiter`, etc. and the `rateLimiter.ts` definitions (8 limiters).
-- **Audit events**: `Grep pattern: "auditLog\\.log\\("` in the relevant controller.
+- **Audit events**: `Grep pattern: "auditService\\.log(Create|Read|Update|Delete|Auth|Export)?\\("` in the relevant controller. Controllers call the typed wrappers (`logCreate`/`logRead`/`logUpdate`/`logDelete`/`logAuth`/`logExport`), NOT `auditLog.log(` — grepping the bare `.log(` returns nothing and would falsely conclude "no audit events". Map each wrapper to its generic `AuditAction` (e.g. `logCreate`→`CREATE`, `logAuth('login',...)`→`LOGIN` via `AUTH_ACTION_MAP`); there are no domain-specific action strings.
 - **PHI exposure**: cross-check `encryption.ts` `PHI_FIELDS` against the controller's decrypt path.
 - **Base URL**: check `backend/railway.toml`, `deploy.yml` `env:`, `CORS_ORIGIN` / `FRONTEND_URL` in `config/index.ts`. If prod URL is not in repo, mark `TBD (external: Cloud Run service URL, check `gcloud run services describe`)`.
 
@@ -259,7 +248,7 @@ The generated `API_REFERENCE.md` must link to:
 | Enumerate endpoints | Grep | `pattern: "router\\.(get|post|put|patch|delete)\\("` |
 | Find Zod schemas | Grep | `pattern: "z\\.object\\(\|schemas\\."` over `backend/src/**` |
 | Find throws | Grep | `pattern: "new AppError\\(|throw new "` over `backend/src/**` |
-| Find audit events | Grep | `pattern: "auditLog\\.log\\("` over `backend/src/controllers/**` |
+| Find audit events | Grep | `pattern: "auditService\\.log(Create\|Read\|Update\|Delete\|Auth\|Export)?\\("` over `backend/src/controllers/**` (NOT `auditLog\.log\(` — that internal method is not called from controllers) |
 | Read error handler | Read | `backend/src/middleware/errorHandler.ts` |
 | Read rate limiters | Read | `backend/src/middleware/rateLimiter.ts` (8 limiters) + `rateLimitStore.ts` |
 | Read plan gating | Read | `backend/src/middleware/planGating.ts` + `config/plans.ts` |

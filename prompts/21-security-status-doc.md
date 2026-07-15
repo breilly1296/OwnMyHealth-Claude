@@ -4,7 +4,7 @@ tags:
   - security
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate SECURITY_STATUS.md
@@ -45,7 +45,7 @@ A Claude Project reader must be able to answer "what's open? what's critical? wh
 | `New Project Documents/HIPAA_CHECKLIST.md` | Compliance posture. |
 | Project memory (PR #30 → C-1/F-14/F-15, BYPASSRLS C-8 plan, Anthropic BAA) | Status cross-checks. |
 | Git log PRs since last audit | Closing-PR map. |
-| `backend/src/middleware/*.ts` (incl. `aiSpendGuard.ts`, `rateLimiter.ts` (8 limiters), `rateLimitStore.ts`, `planGating.ts`), `backend/src/services/encryption.ts`, `auditLog.ts`, `database.ts` (`assertNoBypassRLS`), `config/index.ts` (BAA gates), `services/fhir/urlSafety.ts` (SSRF), `utils/phiRedaction.ts` | Spot-check current controls before declaring ✅. |
+| `backend/src/middleware/*.ts` (incl. `aiSpendGuard.ts`, `rateLimiter.ts` (8 limiters), `rateLimitStore.ts`, `planGating.ts`, `auth.ts` (`isAccessTokenStale`, `requireBearerAuth`)), `backend/src/services/encryption.ts`, `auditLog.ts`, `database.ts` (`assertNoBypassRLS`, `assertRLSForced`), `authService.ts` (`revokeAccessTokenCrossInstance`, `revokeAllUserTokens`), `config/index.ts` (BAA gates), `services/fhir/urlSafety.ts` (SSRF), `utils/phiRedaction.ts` (note: `utils/pdfRedaction.ts` was deleted) | Spot-check current controls before declaring ✅. |
 
 ---
 
@@ -55,7 +55,20 @@ A Claude Project reader must be able to answer "what's open? what's critical? wh
 2. **Posture summary** — severity counts (Critical / High / Medium / Low / Info), open vs fixed.
 3. **Open findings** — per finding: ID (C-N, H-N, M-N), title, area, severity, evidence (file:line), remediation plan, ETA, owner.
 4. **Closed in current cycle** — per finding: ID, closing PR, commit, verification note.
-5. **Controls status** — one table per area: Auth, CSRF, RBAC, Encryption, PHI handling, RLS, Audit logging, Rate limiting (8 named limiters in `rateLimiter.ts`, backed by `rateLimitStore.ts`), Input validation, External APIs, File storage, Logging & observability (PHI redaction in `utils/phiRedaction.ts` / `utils/pdfRedaction.ts`), Error handling, Data portability, Admin, Provider collaboration, AI integration (BAA gate + `aiSpendGuard` budget circuit breaker), Quest FHIR / lab connections (SMART-on-FHIR OAuth, encrypted `LabConnection` tokens, `fhir/urlSafety` SSRF guard), Plan gating / billing tiers (`planGating`, `config/plans.ts`).
+5. **Controls status** — one table per area:
+   - **Auth** — JWT access+refresh, DB-backed sessions, plus the post-06-01 **cross-instance access-token revocation** controls: `users.tokens_valid_after` (migration `20260606000002_add_tokens_valid_after`) checked on every request via `auth.ts` `isAccessTokenStale`; the `revoked_access_tokens` table (migration `20260613_revoked_access_tokens`) for single-device cross-instance logout via `authService.revokeAccessTokenCrossInstance`; `requireBearerAuth` middleware; and **refresh-token-reuse full-family revocation** via `authService.revokeAllUserTokens`. Surface these as controls — they are not BYPASSRLS-adjacent and the older guidance missed them.
+   - **CSRF**, **RBAC**.
+   - **Encryption** — AES-256-GCM PHI at rest; per-user PBKDF2-SHA512 keys; PHI_FIELDS (14 models / 39 fields) guarded by `phiFieldsCoverage.test.ts`. Reflect the post-06-01 expansion: `UserFile.original_filename` now encrypted (L24, migration `20260615_encrypt_userfile_original_filename`, `encryption.ts:499`); `HealthGoal` current/start/target + `GoalProgressHistory.value` now encrypted (M4, migration `20260613_encrypt_goal_values`, `encryption.ts:517-520,524`).
+   - **PHI handling**.
+   - **RLS** — must now cover **FORCE ROW LEVEL SECURITY on all 19 RLS tables** (migration `20260613_force_rls_and_audit_retention`) closing the table-owner bypass, plus the new `assertRLSForced()` boot check that hard-exits prod (`process.exit(1)`) if any RLS table is not FORCE-protected (`database.ts:270-312`). This is in addition to the existing `assertNoBypassRLS()`.
+   - **Audit logging** — note the metadata lifecycle: `AuditLog` plaintext `metadata` column **dropped irreversibly** (M6, migration `20260615_drop_legacy_audit_metadata`) and replaced by `metadataEncrypted` (`encryption.ts:530`); DB-enforced **7-year retention** in the `audit_logs_delete` RLS policy (migration `20260613_force_rls_and_audit_retention`); tightened `audit_logs_insert` WITH CHECK (migration `20260615_provider_consent_immutable_audit_insert_check`).
+   - **Rate limiting** (8 named limiters in `rateLimiter.ts`, backed by `rateLimitStore.ts`), **Input validation**, **External APIs**, **File storage**.
+   - **Logging & observability** — PHI redaction in `utils/phiRedaction.ts` (note: `utils/pdfRedaction.ts` / `redactPatientBanner` was **deleted** post-06-01; `pdf-lib` now unused — do not reference it).
+   - **Error handling**, **Data portability**, **Admin**, **Provider collaboration**.
+   - **AI integration** (BAA gate + `aiSpendGuard` budget circuit breaker — `admitAISpend()` reserve/settle across 8 mount points in 5 route files; 503 fail-closed).
+   - **Quest FHIR / lab connections** (SMART-on-FHIR OAuth PKCE in `smartAuth.ts`, encrypted `LabConnection` tokens `accessTokenEncrypted`/`refreshTokenEncrypted` in PHI_FIELDS (`encryption.ts:559-560`), `fhir/urlSafety.ts` `assertAllowedFhirUrl` SSRF allowlist (`urlSafety.ts:64-99`)). No drift here — still accurate.
+   - **Plan gating / billing tiers** (`planGating`, `config/plans.ts`).
+   - **Infrastructure / deploy** — migrations no longer run at container boot (`Dockerfile` CMD is `node dist/app.js`, `Dockerfile:86-93`); they run as the dedicated **`ownmyhealth-migrate` Cloud Run job**; deploy is gated on full **CI** (`needs: ci` — lint+test+build+gitleaks+`npm audit` high + RLS regression; `deploy.yml:57-66,106-161`, `ci.yml:106-149,155-213`).
 6. **BAA inventory** — table (vendor, service, status, date).
 7. **Incidents** — any security incidents since prior cycle + what was learned.
 8. **Compliance status** — GCP / Anthropic BAA, HIPAA technical safeguards, SOC 2 roadmap.
@@ -127,7 +140,7 @@ After writing the doc, self-answer each **using only the doc + siblings**:
 1. What's the current security grade, and what changed this cycle?
 2. What critical findings are open today? What's the plan for each?
 3. Which closed this cycle, and in which PR?
-4. What's the status of C-7 (PHI-to-Claude minimization) and C-8 (BYPASSRLS runtime)?
+4. What's the status of C-7 (PHI-to-Claude minimization) and C-8 (BYPASSRLS runtime — now also covered by `assertRLSForced()` + FORCE RLS on all 19 tables)? Does the doc surface the post-06-01 cross-instance token-revocation controls (`tokens_valid_after`, `revoked_access_tokens`, `revokeAllUserTokens`)?
 5. Which controls are ✅ vs 🟡 vs ⚠️ today?
 6. Which BAAs are signed, and which are pending?
 7. When was the last audit, and what triggered the next one?
@@ -144,7 +157,7 @@ Before marking anything TBD:
 - **Existing audits**: read `SECURITY_AUDIT_core.md`, `SECURITY_AUDIT_domain.md`, `SECURITY_AUDIT_infrastructure.md`, `SECURITY_AUDIT_periphery.md`. These files *are* the findings set — do not re-enumerate.
 - **Closing PRs**: project memory + `git log --grep='C-N\|F-N\|H-N\|M-N'` to connect finding IDs to commits.
 - **Control statuses**: spot-check the live code; `✅` means you verified in the last read, not just inherited from an older doc.
-- **BAA status**: project memory + env gates (`ANTHROPIC_BAA_ACTIVE` for Claude, `GOOGLE_BAA_ACTIVE` for Document AI OCR). Both gates are read in `backend/src/config/index.ts` (~L176, ~L185) and enforced at runtime: production startup throws if a key is configured without its BAA flag (~L300-330); the Claude gate is re-checked per-call in `biomarkerRoutes`, `aiChatController`, `claudeExtraction`, `sbcExtraction`, and `expenseController`, and the OCR gate in `ocrService`.
+- **BAA status**: project memory + env gates (`ANTHROPIC_BAA_ACTIVE` for Claude, `GOOGLE_BAA_ACTIVE` for Document AI OCR). The gate flags are read in `backend/src/config/index.ts` at `:245` (`ANTHROPIC_BAA_ACTIVE` → `baaActive`) and `:236` (`GOOGLE_BAA_ACTIVE` → `documentAiBaaActive`), and enforced at runtime: production startup throws if a key is configured without its BAA flag — Anthropic at `:381-394`, Google at `:401-414`; the Claude gate is re-checked per-call in `biomarkerRoutes`, `aiChatController`, `claudeExtraction`, `sbcExtraction`, and `expenseController`, and the OCR gate in `ocrService`.
 
 Unresolvable external:
 

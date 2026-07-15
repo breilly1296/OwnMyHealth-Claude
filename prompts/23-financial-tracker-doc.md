@@ -5,7 +5,7 @@ tags:
   - business
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate FINANCIAL_TRACKER.md
@@ -19,7 +19,7 @@ Before writing a single line, read:
 
 This doc must pass the five tests in `_doc-quality.md` before you stop.
 
-Note: Financials have the highest density of legitimately external facts (personal savings, actual billing-console numbers, runway). The No-TBD rule still applies — derive the code-adjacent skeleton (which paid services the app uses, rate-limit-inferred quotas, the **in-code AI dollar budgets** in `backend/src/config/index.ts` `ai` block + `aiCostTracker.ts`, the **in-code pricing tiers** in `backend/src/config/plans.ts`, instance sizing from the deploy workflows) first, then mark the rest with clear external resolution paths.
+Note: Financials have the highest density of legitimately external facts (personal savings, actual billing-console numbers, runway). The No-TBD rule still applies — derive the code-adjacent skeleton (which paid services the app uses, rate-limit-inferred quotas, the **in-code AI dollar budgets** in `backend/src/config/index.ts` `ai` block (`config/index.ts:255-258`) + `aiCostTracker.ts`, the **in-code pricing tiers** in `backend/src/config/plans.ts`, instance sizing from the deploy workflows) first, then mark the rest with clear external resolution paths.
 
 Note (instance sizing moved): the prompt previously pointed at `backend/railway.toml` for CPU/memory/max-instances. As of HEAD that file holds only build/deploy/healthcheck settings — no sizing. Cloud Run sizing now lives in `.github/workflows/deploy.yml` and `deploy-staging.yml` (`--max-instances=3`; no explicit `--cpu`/`--memory`, so the Cloud Run defaults of 1 vCPU / 512 MiB apply unless overridden). Read those workflows, not `railway.toml`, for sizing.
 
@@ -39,25 +39,25 @@ Produce `New Project Documents/FINANCIAL_TRACKER.md` — the **unit-economics + 
 | `.github/workflows/deploy.yml`, `deploy-staging.yml` | Cloud Run deploy parameters — the only place instance sizing lives (`--max-instances=3`; no `--cpu`/`--memory` flags, so defaults apply). |
 | `backend/railway.toml` | Build/deploy/healthcheck only — does NOT carry CPU/memory/max-instances anymore. Do not cite it for sizing. |
 | `backend/src/middleware/rateLimiter.ts` | Eight rate limiters act as request-count cost ceilings — each limiter bounds a cost. Backed by `rateLimitStore.ts` (in-memory by default, shared Redis when `REDIS_URL` set). |
-| `backend/src/services/aiCostTracker.ts` | **Hardcoded per-token pricing per model** (`PRICING`, ~L16-19) and the rolling daily spend accumulator — the per-call cost math lives here, not in the call sites. |
-| `backend/src/middleware/aiSpendGuard.ts` + `backend/src/config/index.ts` (`ai` block, ~L195-198) | **Dollar-based circuit breaker**: `AI_DAILY_BUDGET_USD` (global, default $50/day) and `AI_USER_DAILY_BUDGET_USD` (per-user, default $5/day). This is the true cost ceiling, tighter than the rate limiters. |
+| `backend/src/services/aiCostTracker.ts` | **Hardcoded per-token pricing per model** (`PRICING`, `aiCostTracker.ts:33-36`) and the rolling daily spend accumulator — the per-call cost math lives here, not in the call sites. Storage is **pluggable (M11/L33)**: an in-memory per-process accumulator by default, OR a **shared `RedisSpendStore` (Cloud Memorystore)** when `REDIS_URL` is set (`aiCostTracker.ts:9-21`). The API is `admitAISpend()` (reserve+check) / `settle()` with a fixed $0.05 per-request reservation (`aiCostTracker.ts:67`) — the old single-accumulator `isAISpendExceeded` was deleted. PRICING covers **only the two Claude models**; Document AI is not priced here. |
+| `backend/src/middleware/aiSpendGuard.ts` + `backend/src/config/index.ts` (`ai` block, `config/index.ts:255-258`) | **Dollar-based circuit breaker over Claude token spend only**: `AI_DAILY_BUDGET_USD` (global, default $50/day) and `AI_USER_DAILY_BUDGET_USD` (per-user, default $5/day). Calls `admitAISpend()` before each Claude call and registers `settle()` on response completion; **fails closed with 503** both when the budget is reached and when the shared store errors (`aiSpendGuard.ts:9-12`). This is the true cost ceiling for Claude, tighter than the rate limiters — but note it does **not** bound Document AI dollars (see section 4). |
 | `backend/src/config/plans.ts` | **In-code pricing tiers** (FREE $0, PRO $9.99/mo · $99/yr, TEAM $19.99/mo · $199/yr) and per-tier usage limits (AI chats/day, PDF uploads/month, etc.). Prices are display-only — no billing processor wired yet. Real input for the break-even table. |
 | `backend/src/services/usageTracker.ts` + `backend/src/middleware/planGating.ts` | Per-user usage counters enforced against `plans.ts` limits — maps tier → consumable resource caps that drive per-tier variable cost. |
 | `backend/src/services/claudeExtraction.ts`, `sbcExtraction.ts`, `controllers/expenseController.ts`, `controllers/aiChatController.ts` | Anthropic model name(s) + input/output size → unit cost per call. NOTE: two models in use — `claude-haiku-4-5-20251001` (biomarker guidance, doc extraction, AI chat) and `claude-sonnet-4-5-20250929` (SBC extraction, expense cost analysis). |
-| `backend/src/services/ocrService.ts` | Google Document AI processor — units metered per page (also has a `claude-api` extraction path, ~L252). |
+| `backend/src/services/ocrService.ts` | Google Document AI processor — units metered per page (also has a Claude PDF-extraction path `processPDFWithClaude` at `ocrService.ts:205`, routed via `processDocument` and tagged `processorType: 'claude-api'` at `ocrService.ts:254`). **Document AI cost is NOT tracked**: `processDocument` makes the paid `client.processDocument` call with no `trackAIUsage`, so Document AI dollars never accrue against `AI_DAILY_BUDGET_USD` (see section 4). |
 | `backend/src/services/storageService.ts` | GCS read/write/storage metered unit. |
 | `backend/src/services/emailService.ts` | SendGrid tier. |
 | `backend/src/services/fhir/*` | Quest SMART-on-FHIR lab sync — external API calls (no in-repo dollar cost, but a future metered integration to flag). |
-| `backend/prisma/schema.prisma` | DB size footprint drivers (18 models). |
+| `backend/prisma/schema.prisma` | DB size footprint drivers (19 models). |
 
 ---
 
 ## Required sections
 
-1. **Cost structure** — derived from code. Every service the app pays for, metered unit, code entry point, governing rate limit.
+1. **Cost structure** — derived from code. Every service the app pays for, metered unit, code entry point, governing rate limit. **Flag explicitly which paid services are bounded by the AI dollar circuit breaker (only Claude token spend) vs. only by count-based ceilings (Document AI, GCS, SendGrid).**
 2. **Fixed costs** — Cloud Run idle (sizing from the deploy workflows, not `railway.toml`), Cloud SQL, Redis/Memorystore (when `REDIS_URL` set), domain, monitoring subscriptions.
-3. **Variable costs (per call)** — Anthropic call (per-token cost per model, from `aiCostTracker.ts`), Document AI page, SendGrid email, GCS operation.
-4. **AI dollar-budget circuit breaker** — the `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD` hard caps (defaults $50/day global, $5/day per user) enforced by `aiSpendGuard` + `aiCostTracker`. This is the tightest cost ceiling and bounds worst-case Anthropic spend in dollars, not just request counts. Note the in-memory/per-instance caveat (effective ceiling is N×budget under autoscale; bounded by `--max-instances=3`).
+3. **Variable costs (per call)** — Anthropic call (per-token cost per model, from `aiCostTracker.ts`), Document AI page, SendGrid email, GCS operation. **For Document AI, state that it is the paid per-page OCR service (`client.processDocument` in `ocrService.ts`) but has NO cost tracking — it is metered only by the count-based `uploadLimiter` and the `pdfUploadsPerMonth` plan quota, never by the dollar circuit breaker.**
+4. **AI dollar-budget circuit breaker** — the `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD` hard caps (defaults $50/day global, $5/day per user) enforced by `aiSpendGuard` + `aiCostTracker`. **Scope it precisely: this bounds ONLY Claude token spend.** `aiCostTracker.ts` `PRICING` lists only the two Claude models (`aiCostTracker.ts:33-36`), and `ocrService.ts`'s `processDocument` records no `trackAIUsage`, so **Google Document AI dollars never accrue against `AI_DAILY_BUDGET_USD`**. A finance doc that claims the dollar cap bounds worst-case *AI* spend would overstate the protection — flag this gap: Document AI worst-case spend is governed only by the count-based `uploadLimiter` (20/hr) and the `pdfUploadsPerMonth` plan quota. Within Claude, this is the tightest cost ceiling and bounds worst-case Claude spend in dollars, not just request counts. Note the in-memory/per-instance caveat for the **default** store (effective ceiling is N×budget under autoscale; bounded by `--max-instances=3`) — but when `REDIS_URL` is set the shared `RedisSpendStore` makes the cap exact across instances and removes the N×budget caveat (`aiCostTracker.ts:9-21`).
 5. **Per-user cost model** — assume N calls/user/month (mark assumptions), multiply out. Provide formula, not a guess.
 6. **Break-even table** — use the in-code pricing tiers (`plans.ts`: PRO $9.99/mo, TEAM $19.99/mo) — how many users until revenue ≥ cost? Flag that no billing processor is wired yet (prices are display-only).
 7. **Rate-limit cost ceilings** — for each AI / email / upload endpoint, the per-user monthly max cost if they hit the limit every window. Cross-reference against the dollar budget cap from section 4.
@@ -79,7 +79,7 @@ Produce `New Project Documents/FINANCIAL_TRACKER.md` — the **unit-economics + 
 |---|---|---|---|---|
 | Anthropic Claude API (Haiku) | input + output tokens | `backend/src/services/claudeExtraction.ts:Lxx`, `controllers/aiChatController.ts:Lxx`, `routes/biomarkerRoutes.ts:Lxx` (model = `claude-haiku-4-5-20251001`) | `aiLimiter` (10/hr/user) + `aiSpendGuard` dollar cap | `aiCostTracker.ts` `PRICING` ($0.80/$4.00 per 1M in/out) |
 | Anthropic Claude API (Sonnet) | input + output tokens | `backend/src/services/sbcExtraction.ts:Lxx`, `controllers/expenseController.ts:Lxx` (model = `claude-sonnet-4-5-20250929`) | `aiLimiter` + `aiSpendGuard` dollar cap | `aiCostTracker.ts` `PRICING` ($3.00/$15.00 per 1M in/out) |
-| Google Document AI | pages processed | `backend/src/services/ocrService.ts:Lxx` | `uploadLimiter` (20/hr) | GCP pricing page |
+| Google Document AI | pages processed | `backend/src/services/ocrService.ts:Lxx` (`client.processDocument`) | `uploadLimiter` (20/hr) + `pdfUploadsPerMonth` plan quota — **NOT** the AI dollar cap (no `trackAIUsage`) | GCP pricing page |
 | Google Cloud Storage | GB-months stored + ops | `backend/src/services/storageService.ts:Lxx` | `uploadLimiter` | GCP pricing page |
 | SendGrid | emails sent | `backend/src/services/emailService.ts:Lxx` | n/a | SendGrid tier |
 | Cloud Run | vCPU-seconds + requests | `.github/workflows/deploy.yml:Lxx` (`--max-instances=3`; defaults 1 vCPU / 512 MiB) | global + per-route | GCP pricing |

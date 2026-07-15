@@ -4,7 +4,7 @@ tags:
   - tools
 type: shared
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Verification Tools (shared)
@@ -91,7 +91,13 @@ The `-L` flag (files *without* match) isn't a `Grep` output mode. Two-step inste
 
 ## Review integration
 
-Every prompt under `01-13` and `26-32` has a **Verification Commands** section (or should). When you run that prompt:
+Verification sections are **not** uniform across the library:
+
+- Among the security prompts `01-13`, only [02-encryption.md](./02-encryption.md) (`## Verification (Claude Code tools)`, ~line 101) actually carries one — `01` and `03-13` have none.
+- The `26-32` security prompts each have a verification section, but the title varies: `26-30` use `## Verification Commands` while `31`/`32` use `## Verification (Claude Code tools)`.
+- Most doc prompts (`14-46` range) use `## Verification (tool usage)`.
+
+When a prompt has a verification section (under any of those titles), or whenever a finding needs confirming:
 
 1. Read the intended command.
 2. Translate to the equivalent Claude Code tool (using this cheat sheet).

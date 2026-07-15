@@ -1,48 +1,49 @@
-# HIPAA_CHECKLIST.md
+# HIPAA Compliance Checklist — OwnMyHealth
 
-> Current-state HIPAA Security Rule compliance reference for **OwnMyHealth**. Each safeguard maps to **code evidence** (`file:path:line`) and a **status**. Read this to answer "how does this app satisfy §164.312(b) audit controls?" with a code pointer, not a paragraph.
+> **Audit date:** 2026-06-16
+> **Codebase:** HEAD `fb2cd32` (2026-06-15)
+> **Compliance officer:** TBD (external: no named Security/Privacy Officer in repo — assign per §164.308(a)(2); record in `New Project Documents/RUNBOOK.md` when designated)
+> **Maturity phase:** pre-beta (production infrastructure live on GCP Cloud Run; no public beta cohort; formal policy set not yet authored)
+> **Scope:** maps each HIPAA Security Rule safeguard (§164.308 / §164.310 / §164.312) and the Breach Notification Rule (§164.400–414) to **code evidence** (`file:line`) and a **status**.
 
-**Audit date:** 2026-06-01
-**Maturity phase:** pre-beta / pre-production (no real patient PHI in live use yet; production deploy target is GCP Cloud Run + Cloud SQL — see [Transmission security](#transmission-security-164312e)).
-**Compliance officer / Privacy & Security Officer (§164.308(a)(2)):** TBD (external: no named officer captured in repo; assign before beta — flag to project owner `breilly1296@pm.me`).
-**Scope:** Backend at `backend/src/`, Prisma schema/migrations at `backend/prisma/`, CI/CD at `.github/workflows/`. This is a Security Rule (§164.3xx) checklist; Privacy Rule policy documents are tracked under [Required documentation](#required-documentation).
+This document is a reference, not a narrative. Every non-trivial claim cites `file:line`. It is generated against the live code per [`22-hipaa-checklist-doc.md`](../prompts/22-hipaa-checklist-doc.md) and the [`_doc-quality.md`](../prompts/_doc-quality.md) protocol.
 
-Status legend: ✅ shipped • 🟡 partial • ⚠️ gap / open finding • ⏳ TBD / pending
-
----
-
-## Table of contents
-
-1. [Business Associate Agreements (BAAs)](#business-associate-agreements-baas)
-2. [Technical Safeguards (§164.312)](#technical-safeguards-164312)
-3. [Administrative Safeguards (§164.308)](#administrative-safeguards-164308)
-4. [Physical Safeguards (§164.310)](#physical-safeguards-164310)
-5. [Breach Notification (§164.400-414)](#breach-notification-164400-414)
-6. [Required documentation](#required-documentation)
-7. [Minimum necessary + PHI access](#minimum-necessary--phi-access)
-8. [Roadmap](#roadmap)
-9. [Acceptance questions](#acceptance-questions-self-answered)
-10. [Related Documents](#related-documents)
-11. [Prompt drift log](#prompt-drift-log)
+**Status legend:** ✅ shipped • 🟡 partial • ⚠️ gap / open finding • ⏳ TBD / pending (external)
 
 ---
 
-## Business Associate Agreements (BAAs)
+## 1. Business Associate Agreements (BAAs)
 
-Every third party that receives PHI must be under a signed BAA before that disclosure is lawful (§164.308(b), §164.502(e)). OwnMyHealth gates the two AI/OCR disclosure paths behind explicit runtime flags so PHI cannot leave the box until a BAA is acknowledged.
+Every vendor that touches ePHI must have a signed BAA before production PHI flows. Code-side BAA gates (`config/index.ts`) refuse to boot in production when a PHI-bearing integration is enabled without its BAA flag asserted.
 
-| Vendor | Service | BAA status | Date (ISO) | Runtime gate / Source |
+| Vendor | Service | BAA status | Date (ISO) | Source / gate |
 |---|---|---|---|---|
-| Anthropic | Claude API — biomarker guidance, SBC/lab document extraction, cost analysis | ✅ Signed | 2026-04-16 | `config.anthropic.baaActive` from `ANTHROPIC_BAA_ACTIVE` (`backend/src/config/index.ts:185`); enforced in `claudeExtraction.ts:106`, `sbcExtraction.ts:767`; flip postmortem in project memory `cloud-run-env-update-pinning.md` (2026-04-17 `ANTHROPIC_BAA_ACTIVE` flip) |
-| Google Cloud | Document AI (image OCR of scanned lab reports) | ⏳ TBD (external: confirm Google Cloud BAA covers Document AI in the billing account) | TBD | `config.gcp.documentAiBaaActive` from `GOOGLE_BAA_ACTIVE` (`backend/src/config/index.ts:176`); enforced in `ocrService.ts:274` |
-| Google Cloud | Infra — Cloud Run, Cloud SQL, GCS (PHI at rest in DB + file storage) | ⏳ TBD (external: confirm GCP BAA signed for project `ownmyhealth-prod`; resolve in GCP Console → IAM & Admin → billing/legal) | TBD | Deploy target `ownmyhealth-prod` (`.github/workflows/deploy.yml:21`) |
-| Quest Diagnostics | SMART-on-FHIR lab connection (OAuth, lab result sync) | ⏳ TBD (external: Quest developer/partner agreement) — OAuth tokens stored encrypted (see [OAuth token encryption](#oauth-token-encryption-lab-connections)) | TBD | `QUEST_FHIR_*` env vars (`backend/src/config/index.ts:205-224`); tokens in `LabConnection.*TokenEncrypted` |
-| SendGrid (Twilio) | Transactional email — verification, password reset, email-change | ⏳ TBD (external: Twilio/SendGrid BAA) — email body carries no PHI beyond the address; address alone is not classed PHI here (see [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md)) | TBD | `config.email` (`backend/src/config/index.ts:148-159`) |
+| Anthropic | Claude API — biomarker guidance, SBC/lab extraction, cost analysis, AI chat | ✅ Signed | 2026-04-16 | Project memory; runtime gate `ANTHROPIC_BAA_ACTIVE` — prod boot **throws** if `ANTHROPIC_API_KEY` set and flag unset (`backend/src/config/index.ts:381-394`) |
+| Google Cloud | Document AI OCR (scanned lab/SBC images) | ⏳ TBD (external: confirm GCP BAA covers Document AI in GCP Console) — **runtime-gated** | TBD | `GOOGLE_BAA_ACTIVE` / `documentAiBaaActive` gate — prod boot **throws** if `GCP_PROCESSOR_ID` set and flag unset (`backend/src/config/index.ts:401-414`) |
+| Google Cloud | Core infra — Cloud Run (compute), Cloud SQL (Postgres), Cloud Storage (lab/SBC files) | ⏳ TBD (external: confirm GCP BAA on file; resolve in GCP Console project `ownmyhealth-prod`, billing/legal contact) | TBD | Deploy target `backend/.github/workflows/deploy.yml` (`gcloud run deploy` at `.github/workflows/deploy.yml:183`; Cloud SQL `ownmyhealth-prod:us-central1:ownmyhealth-db` at `.github/workflows/deploy.yml:46`) |
+| Quest Diagnostics | SMART-on-FHIR lab connection (OAuth, lab-result sync) | ⏳ TBD (external) — OAuth tokens stored encrypted at rest | TBD | `backend/src/services/fhir/smartAuth.ts`; `QUEST_FHIR_*` env vars (`backend/src/config/index.ts:266-280`); tokens in `LabConnection.accessTokenEncrypted/refreshTokenEncrypted` (`backend/prisma/schema.prisma:763-764`) |
+| SendGrid | Transactional email (verification, password reset, notifications) | ⏳ TBD (external: confirm Twilio/SendGrid BAA; email content avoids PHI) | TBD | `SENDGRID_API_KEY` (`backend/src/config/index.ts:209-210`); `backend/src/services/emailService.ts` |
 
-**Key fact:** Production *refuses to boot* if an AI/OCR key is configured without its BAA flag.
+### BAA runtime-gate flow
+
+```
+                 boot: config/index.ts module load
+                            │
+        ┌───────────────────┴───────────────────┐
+        ▼                                        ▼
+  ANTHROPIC_API_KEY set?                   GCP_PROCESSOR_ID set?
+        │ yes                                    │ yes
+        ▼                                        ▼
+  ANTHROPIC_BAA_ACTIVE !== 'true'?         GOOGLE_BAA_ACTIVE !== 'true'?
+        │ yes                                    │ yes
+        ▼                                        ▼
+  isProduction → throw (refuse boot)       isProduction → throw (refuse boot)
+  dev/staging  → stderr warn               dev/staging  → stderr warn
+  (config/index.ts:381-394)                (config/index.ts:401-414)
+```
 
 ```ts
-// Source: backend/src/config/index.ts:L300-L306
+// Source: backend/src/config/index.ts:381-388
 if (config.anthropic.apiKey && !config.anthropic.baaActive) {
   if (config.isProduction) {
     throw new Error(
@@ -50,107 +51,108 @@ if (config.anthropic.apiKey && !config.anthropic.baaActive) {
       'This flag asserts that a signed Business Associate Agreement is in effect. ' +
       'If no BAA is in place, unset ANTHROPIC_API_KEY to disable AI features.'
     );
+  } else {
 ```
 
-The identical pattern guards Document AI image OCR (`GCP_PROCESSOR_ID` + `GOOGLE_BAA_ACTIVE`) at `backend/src/config/index.ts:320-333`. See [`ENV_VARS.md`](./ENV_VARS.md) for the full gate variable list.
+BAA gate env vars are documented in [`ENV_VARS.md`](./ENV_VARS.md) (`ANTHROPIC_BAA_ACTIVE` at `backend/src/config/index.ts:245`, `GOOGLE_BAA_ACTIVE` at `backend/src/config/index.ts:236`).
 
 ---
 
-## Technical Safeguards (§164.312)
-
-This is the load-bearing artifact. Each row maps a Security Rule technical-safeguard implementation specification to code.
+## 2. Technical Safeguards (§164.312) — the load-bearing artifact
 
 | Requirement | Standard | Status | Evidence (file:line) | Notes |
 |---|---|---|---|---|
-| Unique user identification | §164.312(a)(2)(i) | ✅ | `backend/prisma/schema.prisma:11` — `User.id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid` | DB-generated UUID; aligned to `gen_random_uuid()` in migration `20260424_align_uuid_defaults_and_rename_claude_response` |
-| Emergency access procedure | §164.312(a)(2)(ii) | 🟡 | Admin role + `is_admin_session()` RLS bypass (`backend/prisma/migrations/20260107_add_rls_policies/migration.sql:28-36`); audit-logged via `actorType=ADMIN` (`backend/src/services/auditLog.ts:205-209`) | No formal break-glass SOP doc — see [Required documentation](#required-documentation) |
-| Automatic logoff | §164.312(a)(2)(iii) | ✅ | Access token 900s (`backend/src/config/index.ts:62`), `JWT_ACCESS_EXPIRES_SECONDS` default `900`; expiry enforced at `backend/src/middleware/auth.ts:112` | See [Automatic logoff](#automatic-logoff-164312a2iii) |
-| Encryption / decryption at rest | §164.312(a)(2)(iv) | ✅ | AES-256-GCM in `backend/src/services/encryption.ts:57` (`ALGORITHM = 'aes-256-gcm'`), `encrypt()` at `:262`; per-user PBKDF2-SHA512 keys at `:192-200` | See [Encryption at rest](#encryption-at-rest-164312a2iv); per-field matrix in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) |
-| OAuth token encryption (lab connections) | §164.312(a)(2)(iv) | ✅ | `PHI_FIELDS.LabConnection` = `accessTokenEncrypted`, `refreshTokenEncrypted` (`backend/src/services/encryption.ts:482-485`); encrypt/decrypt in `backend/src/services/fhir/labSyncService.ts:142-143,213-215` | See [OAuth token encryption](#oauth-token-encryption-lab-connections); migration `20260418_add_lab_connections` |
-| Access control (technical, RLS) | §164.312(a)(1) | ✅ prod / 🟡 dev-staging | Policies in `backend/prisma/migrations/20260107_add_rls_policies/migration.sql`; `withRLSContext`/`withRLSTransaction` + `assertNoBypassRLS()` in `backend/src/services/database.ts:218-261,447-474` | See [Access control / RLS](#access-control--rls-164312a1) |
-| Audit controls | §164.312(b) | ✅ | `RETENTION_DAYS = 2555` (`backend/src/services/auditLog.ts:10`); `log()`/`logCreate`/`logUpdate`/`logDelete` at `:237-395`; scheduler `startAuditCleanup` at `:582-613` | See [Audit controls](#audit-controls-164312b); read-audit coverage partial — [`PHI_TAXONOMY.md#audit-log-coverage`](./PHI_TAXONOMY.md#audit-log-coverage) |
-| Integrity (ePHI not altered/destroyed) | §164.312(c)(1) | 🟡 | AES-256-GCM AEAD auth tag verified on every decrypt (`backend/src/services/encryption.ts:317-323`, `setAuthTag` + `final()` throws on tamper); audit logs immutable (no UPDATE policy, `migration.sql:524`) | No higher-level chain-of-custody / record signing |
-| Person / entity authentication | §164.312(d) | ✅ | JWT verify at `backend/src/middleware/auth.ts:92`; bcrypt password hashing at `backend/src/services/authService.ts:194-195`, cost `config.security.bcryptRounds` default 13 (`backend/src/config/index.ts:100`) | See [Authentication](#person--entity-authentication-164312d); MFA not implemented — [Roadmap](#roadmap) |
-| Transmission security (encryption) | §164.312(e)(2)(ii) | ✅ | TLS terminated by Cloud Run edge (HTTPS-only managed platform), `gcloud run deploy` at `.github/workflows/deploy.yml:82-89`; prod base `https://api.ownmyhealth.io` (`deploy.yml:176`) | See [Transmission security](#transmission-security-164312e) |
-| Transmission integrity controls | §164.312(e)(2)(i) | ✅ | TLS provides in-transit integrity; CSRF double-submit cookie on mutations (`backend/src/middleware/csrf.ts`); cookies `httpOnly`+`secure` in prod (`backend/src/config/index.ts:74-87`) | Bearer-only exempt routes use `requireBearerAuth` to avoid the cookie+CSRF gap (`auth.ts:180`, `csrf.ts:110-117`) |
+| Unique user identification | §164.312(a)(2)(i) | ✅ | `User.id` is a DB-generated UUID: `@id @default(dbgenerated("gen_random_uuid()")) @db.Uuid` (`backend/prisma/schema.prisma:11`) | Was cuid; switched to DB-generated UUID in migration `20260424_align_uuid_defaults_and_rename_claude_response` |
+| Emergency access procedure | §164.312(a)(2)(ii) | ⏳ | Admin context (`withRLSContext(null, …)`, `is_admin_session()`) can read user data for support, gated by `ADMIN` role (`backend/src/middleware/rbac.ts`) | No documented break-glass SOP — TBD (external: emergency-access policy, draft in `docs/`) |
+| Automatic logoff | §164.312(a)(2)(iii) | ✅ | Access JWT lifetime **900s (15 min)**: `accessExpiresIn: parseInt(process.env.JWT_ACCESS_EXPIRES_SECONDS \|\| '900', 10)` (`backend/src/config/index.ts:121`); enforced by `jwt.verify` on every protected request (`backend/src/middleware/auth.ts:95`) | 15-min access + 7-day refresh rotation (`backend/src/config/index.ts:125`); frontend idle-logoff also clears tokens (memory-only, no localStorage) |
+| Encryption / decryption at rest | §164.312(a)(2)(iv) | ✅ | AES-256-GCM (`ALGORITHM = 'aes-256-gcm'`, `backend/src/services/encryption.ts:57`; `createCipheriv` at `:284`, `getAuthTag` at `:289`); per-user key via PBKDF2-SHA512 at `deriveUserKey` (`backend/src/services/encryption.ts:236`, `crypto.pbkdf2Sync(..., 'sha512')` at `:247-253`), **600 000 iterations** (`PBKDF2_ITERATIONS = 600000`, `:85`) | Covers **14 models / 39 fields** (`PHI_FIELDS`, `backend/src/services/encryption.ts:476-562`). See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) for the per-field matrix |
+| OAuth token encryption (lab connections) | §164.312(a)(2)(iv) | ✅ | `PHI_FIELDS.LabConnection = ['accessTokenEncrypted', 'refreshTokenEncrypted']` (`backend/src/services/encryption.ts:558-561`); columns at `backend/prisma/schema.prisma:763-764` | Quest SMART-on-FHIR tokens — a stolen token reaches **live** PHI at the lab. Encrypted with the per-user key before write (`backend/src/services/fhir/labSyncService.ts:144-187`); migration `20260418_add_lab_connections` |
+| Audit controls | §164.312(b) | ✅ | `RETENTION_DAYS = 2555` (~7y) (`backend/src/services/auditLog.ts:10`); scheduler `startAuditCleanup` (`:669`); audit PHI snapshots encrypted: `PHI_FIELDS.AuditLog = ['previousValueEncrypted', 'newValueEncrypted', 'metadataEncrypted']` (`backend/src/services/encryption.ts:527-531`) | Retention is also **DB-enforced**: the `audit_logs_delete` RLS policy only permits deletes of rows older than 7 years (`backend/prisma/migrations/20260613_force_rls_and_audit_retention/migration.sql:42-44`). Legacy plaintext `audit_logs.metadata` IRREVERSIBLY dropped in `20260615_drop_legacy_audit_metadata` (M6) |
+| Integrity (ePHI authentication) | §164.312(c)(1) | 🟡 | AES-256-GCM provides an AEAD authentication tag per ciphertext (`getAuthTag` at `backend/src/services/encryption.ts:289`; verified on decrypt with `authTagLength: 16` at `:312`) | Tamper detection on each PHI field; no higher-level chain-of-custody / signed-record integrity |
+| Person / entity authentication | §164.312(d) | ✅ | JWT verify (`backend/src/middleware/auth.ts:95`); password hashing via bcrypt (`bcrypt.hash(password, config.security.bcryptRounds)`, `backend/src/services/authService.ts:404`) at cost **13** (`bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS \|\| '13', 10)`, `backend/src/config/index.ts:160`) | Account lockout: 5 attempts / 30 min (`backend/src/config/index.ts:157-158`). MFA TBD (external: roadmap) |
+| Transmission security | §164.312(e)(2)(ii) | ✅ | TLS enforced by Cloud Run (HTTPS-only at the edge); deployed via `gcloud run deploy` (`.github/workflows/deploy.yml:183`); DB over Cloud SQL connector (`--set-cloudsql-instances ownmyhealth-prod:us-central1:ownmyhealth-db`, `.github/workflows/deploy.yml:143`) | `railway.toml` is legacy; Cloud Run is the live target. AES-256-GCM AEAD adds integrity in transit between app and external FHIR/AI APIs |
+| Access control (RLS) | §164.312(a)(1) | ✅ prod / 🟡 dev-staging | RLS policies (`backend/prisma/migrations/20260107_add_rls_policies/migration.sql`, patched by `20260529_fix_has_provider_access`, `20260530_add_users_select_provider`) + **FORCE ROW LEVEL SECURITY on all 19 RLS tables** (`backend/prisma/migrations/20260613_force_rls_and_audit_retention/migration.sql:14-31` + `revoked_access_tokens` in `20260613_revoked_access_tokens`); helpers `withRLSContext`/`withRLSTransaction` (`backend/src/services/database.ts`); boot guards `assertNoBypassRLS()` (`:217`) + `assertRLSForced()` (`:270`), both called at `:192-193` | **C-8 closed in production**: both guards `process.exit(1)` in prod (`backend/src/services/database.ts:253` and `:305`); dev/staging only `logger.warn` and continue (`:256`, `:308`). See [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) |
+| Minimum necessary (log redaction) | §164.502(b) | 🟡 | `SENSITIVE_FIELDS` (`backend/src/utils/logger.ts:30`) + `backend/src/utils/phiRedaction.ts` redact PHI/secrets from application logs | Read-audit coverage is partial; redaction-list drift tracked in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md). `pdfRedaction.ts` was DELETED in dead-code cleanup (`redactPatientBanner` / `pdf-lib` gone) — do not cite it |
+| Defense in depth — CSRF | §164.312(a)(1) | ✅ | Stateless double-submit cookie, constant-time compare (`backend/src/middleware/csrf.ts`); strict `===` exemption allowlist; `/auth/refresh` and upload routes are **not** exempt | Supports access control; CSRF token cleared on logout |
+| Defense in depth — rate limiting | §164.312(a)(1) | ✅ | **8 named rate limiters** via `backend/src/middleware/rateLimiter.ts` + shared store `backend/src/middleware/rateLimitStore.ts` | In-memory per-instance by default; `REDIS_URL` enables a shared store (`backend/src/config/index.ts:186`). Deploy caps `--max-instances=3` to bound dilution (`.github/workflows/deploy.yml:189`) |
+| Defense in depth — input validation | §164.312(a)(1) | ✅ | Zod validation at API boundaries (`backend/src/middleware/validation.ts`) | "Validate all input" per [`CLAUDE.md`](../CLAUDE.md) critical rules |
+| AI spend circuit breaker | §164.312(a)(1) (availability) | ✅ | `aiSpendGuard` on **8 mount points across 5 route files**; `admitAISpend()` reserve/settle, **503 fail-closed** on budget or shared-store error (`backend/src/middleware/aiSpendGuard.ts`) | Bounds runaway AI cost; defaults `AI_DAILY_BUDGET_USD=50`, `AI_USER_DAILY_BUDGET_USD=5` (`backend/src/config/index.ts:256-257`) |
 
-### Encryption at rest (§164.312(a)(2)(iv))
+### Encryption-at-rest write path (PHI field → DB)
 
-All PHI is encrypted at the application layer with **AES-256-GCM** before it reaches Postgres, using a **per-user key** derived from a master key + per-user salt via **PBKDF2-SHA512**.
+```
+controller (Zod-validated plaintext)
+        │  encrypt(value, userSalt)
+        ▼
+EncryptionService.deriveUserKey(userSalt, 600000)         (encryption.ts:236)
+        │  crypto.pbkdf2Sync(masterKey, salt, 600000, KEY_LENGTH, 'sha512')   (:247-253)
+        ▼
+crypto.createCipheriv('aes-256-gcm', key, iv)            (encryption.ts:335)
+        │  + cipher.getAuthTag()                          (:340)
+        ▼
+<iv>:<ciphertext>:<authTag>  →  *Encrypted column (e.g. valueEncrypted)
+```
 
 ```ts
-// Source: backend/src/services/encryption.ts:L262-L278
-encrypt(plaintext: string, userSalt: string): string {
-  if (!plaintext) return '';
-  const salt = Buffer.from(userSalt, 'hex');
-  const key = this.deriveUserKey(salt);
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  let encrypted = cipher.update(plaintext, 'utf8', 'base64');
-  encrypted += cipher.final('base64');
-  const authTag = cipher.getAuthTag();
-  // Format: iv:authTag:ciphertext
-  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`;
-}
+// Source: backend/src/services/encryption.ts:247-253
+const derived = crypto.pbkdf2Sync(
+  this.masterKey,
+  userSalt,
+  iterations,
+  KEY_LENGTH,
+  'sha512'
+);
 ```
 
-- **Key derivation:** PBKDF2-SHA512, 600,000 iterations (`PBKDF2_ITERATIONS`, `encryption.ts:85`), with a 100k legacy fallback on decrypt (`encryption.ts:86,306-314`) so older rows decrypt without a coordinated re-encryption.
-- **Per-user salt:** generated and stored encrypted-with-master-key in `UserEncryptionKey` (`backend/src/services/userEncryption.ts:55-62`).
-- **Master key validation:** the service throws and the server refuses to start if `PHI_ENCRYPTION_KEY` is missing, < 64 hex chars, non-hex, or a known placeholder (`encryption.ts:102-185`); prod/staging re-validate in config (`backend/src/config/index.ts:354-383`).
-- **Canonical PHI field list:** `PHI_FIELDS` (`encryption.ts:410-486`) — 13 models. Per-field encryption × audit × read/write matrix lives in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
+Per-user **salt** management (gets/creates the per-user salt in `UserEncryptionKey`, itself master-key-encrypted) lives in `backend/src/services/userEncryption.ts`; the **derivation** itself is `deriveUserKey` in `encryption.ts`. The master key is loaded from `PHI_ENCRYPTION_KEY` (64 hex chars, `backend/src/services/encryption.ts:182`; format-validated at `backend/src/config/index.ts:436-459`).
+
+### RLS access-control flow + boot guards
 
 ```
-PHI write path (encryption-at-rest):
+Request (cookie: access JWT)
+   │  authenticate → req.user.id                          (middleware/auth.ts:95-108)
+   ▼
+withRLSContext(userId, tx => …)                            (services/database.ts)
+   │  $transaction: SET LOCAL app.current_user_id = userId
+   ▼
+Postgres RLS policy: USING (user_id = current_user_id())   (migrations/20260107_add_rls_policies)
+   │  + FORCE ROW LEVEL SECURITY (owner cannot bypass)     (migrations/20260613_…:14-31)
+   ▼
+rows scoped to the authenticated user only
 
-Controller ──plaintext──▶ encryption.encrypt(value, userSalt)   (encryption.ts:262)
-                               │  AES-256-GCM, per-user PBKDF2 key
-                               ▼
-                         "iv:authTag:ciphertext"  ──▶  tx.<model>.create({ valueEncrypted })
-                                                              │ inside withRLSContext (database.ts:447)
-                                                              ▼
-                                                        PostgreSQL (Cloud SQL)
+Boot guards (initializeDatabase, services/database.ts:192-193):
+   assertNoBypassRLS() → prod: process.exit(1) if role has BYPASSRLS   (:253)
+   assertRLSForced()   → prod: process.exit(1) if any RLS table not FORCE-protected (:305)
+   dev/staging → logger.warn + continue                                (:256, :308)
 ```
-
-### OAuth token encryption (lab connections)
-
-Quest SMART-on-FHIR OAuth tokens are PHI-adjacent: a stolen access token is a direct path to live PHI at the lab. Both are encrypted with the user's per-user key before write and decrypted only at use.
 
 ```ts
-// Source: backend/src/services/fhir/labSyncService.ts:L142-L143
-const accessEnc = encryption.encrypt(tokenSet.accessToken, salt);
-const refreshEnc = tokenSet.refreshToken ? encryption.encrypt(tokenSet.refreshToken, salt) : null;
+// Source: backend/src/services/database.ts:247-254
+  if (config.isProduction) {
+    logger.error(
+      'FATAL: Production database role has BYPASSRLS. ' +
+      'RLS policies are not enforcing. Refusing to start. ' +
+      'See docs/c-8-part-c-runbook.md.'
+    );
+    process.exit(1);
+  }
 ```
 
-`PHI_FIELDS.LabConnection` (`encryption.ts:482-485`) lists `accessTokenEncrypted` and `refreshTokenEncrypted`, so iteration-based sweeps (export, deletion, redaction) include them. `token`/`accessToken`/`refreshToken` keys are also log-redacted (`backend/src/utils/logger.ts:22`).
+The 19 FORCE-protected tables are listed in [`DATA_MODEL.md`](./DATA_MODEL.md); the migration enumerates 18 (`users` … `lab_connections`, `backend/prisma/migrations/20260613_force_rls_and_audit_retention/migration.sql:14-31`) plus `revoked_access_tokens` (forced in its own creation migration `20260613_revoked_access_tokens`).
 
-### Audit controls (§164.312(b))
+---
 
-Every PHI **mutation** is audited and **fails closed** — if the audit row cannot be written, the operation is rejected.
+## 3. Audit retention scheduler — which scheduler, where
 
-```ts
-// Source: backend/src/services/auditLog.ts:L291-L298
-// Fail closed for PHI mutations (create/update/delete/export): re-throw
-// so the operation surfaces an error instead of completing with no
-// durable audit trail. Read/auth audits remain best-effort.
-if (entry.failClosed) {
-  throw new InternalServerError(
-    'Operation could not be securely recorded in the audit log and was not completed.'
-  );
-}
-```
+Two mutually-exclusive paths run the 7-year retention cleanup; the choice is driven by whether `AUDIT_CLEANUP_TOKEN` is set.
 
-- `failClosed: true` is set on `logCreate` (`:345`), `logUpdate` (`:370`), `logDelete` (`:394`), `logExport` (`:459`); read/auth audits are best-effort (`logAccess` `:309`, `logAuth` `:400`).
-- Audit rows store **encrypted** before/after PHI snapshots (`previousValueEncrypted`, `newValueEncrypted`, `auditLog.ts:240-241`), using the **system salt** (`AUDIT_LOG_SALT`), not a per-user salt, so logs survive account deletion for the 7-year window (`auditLog.ts:148,214-220`).
-- Audit logs are **immutable**: RLS allows INSERT (`WITH CHECK (true)`) and admin DELETE only — no UPDATE policy (`migration.sql:520-530`).
-
-**7-year retention scheduler** — `RETENTION_DAYS = 2555` (`auditLog.ts:10`). Two mutually-exclusive enforcement paths:
+| Path | Trigger condition | Code | Why |
+|---|---|---|---|
+| In-process `setInterval` (24h) | `AUDIT_CLEANUP_TOKEN` **unset** | `startAuditCleanup` schedules `service.cleanupOldLogs()` every 24h (`backend/src/services/auditLog.ts:688-697`) | Default for single-instance / dev |
+| Cloud Scheduler → HTTP | `AUDIT_CLEANUP_TOKEN` **set** | In-process interval **disabled** (`backend/src/services/auditLog.ts:674-679`); cleanup runs via `POST /api/v1/internal/audit-cleanup` (`backend/src/routes/internalRoutes.ts:40-72`) | Scale-to-zero Cloud Run reaps instances before a 24h interval fires — see code comment `auditLog.ts:670-673` |
 
 ```ts
-// Source: backend/src/services/auditLog.ts:L582-L592
-export function startAuditCleanup(prisma: PrismaClient): void {
-  // #38: when retention cleanup is delegated to Cloud Scheduler (a shared-secret
-  // POST to /internal/audit-cleanup), skip the in-process interval. The 24h
-  // setInterval rarely fires on scale-to-zero Cloud Run ...
+// Source: backend/src/services/auditLog.ts:674-679
   if (config.scheduler.auditCleanupToken) {
     logger.info('Audit retention cleanup delegated to Cloud Scheduler; in-process interval disabled', {
       prefix: 'AuditLog',
@@ -159,243 +161,156 @@ export function startAuditCleanup(prisma: PrismaClient): void {
   }
 ```
 
-```mermaid
-flowchart TD
-  A["startAuditCleanup(prisma)"] --> B{AUDIT_CLEANUP_TOKEN set?}
-  B -- "no" --> C["24h setInterval -> cleanupOldLogs()"]
-  B -- "yes" --> D["in-process interval disabled"]
-  D --> E["Cloud Scheduler POST /api/v1/internal/audit-cleanup"]
-  E --> F["X-Cleanup-Token constant-time compare (internalRoutes.ts:27-33)"]
-  F -- "no token configured" --> G["404"]
-  F -- "bad token" --> H["401"]
-  F -- "valid" --> I["cleanupOldLogs() deletes rows older than 2555 days"]
-  C --> I
-```
+The Cloud Scheduler endpoint is shared-secret authenticated (constant-time compare of `X-Cleanup-Token`), returns **404** when `AUDIT_CLEANUP_TOKEN` is unset (hides the endpoint) and **401** on a bad token (`backend/src/routes/internalRoutes.ts:45-62`). The cutoff is `now() − RETENTION_DAYS` (`backend/src/services/auditLog.ts:619-620`). Database-level, the `audit_logs_delete` policy independently forbids deleting rows newer than 7 years even from an admin context (`backend/prisma/migrations/20260613_force_rls_and_audit_retention/migration.sql:42-44`).
 
-The scheduler endpoint is 404 unless `AUDIT_CLEANUP_TOKEN` is set, 401 on a bad token (`backend/src/routes/internalRoutes.ts:40-72`); it is CSRF-exempt because a scheduler can't carry the cookie (`backend/src/middleware/csrf.ts:138-139`). See [`ENV_VARS.md`](./ENV_VARS.md) for `AUDIT_CLEANUP_TOKEN` and [`RUNBOOK.md`](./RUNBOOK.md) for provisioning the Cloud Scheduler job.
-
-### Access control / RLS (§164.312(a)(1))
-
-Tenant isolation is enforced at **two layers**: application wrappers (`withRLSContext`/`withRLSTransaction`) that issue `SET LOCAL app.current_user_id`, and **PostgreSQL Row-Level Security policies** that check that variable.
-
-```ts
-// Source: backend/src/services/database.ts:L368-L377
-async function applyRLSContext(
-  tx: Prisma.TransactionClient,
-  userId: string | null,
-  isAdmin: boolean
-): Promise<void> {
-  const userIdValue = userId ?? '';
-  const isAdminValue = isAdmin ? 'true' : 'false';
-  await tx.$executeRaw`SELECT set_config('app.current_user_id', ${userIdValue}, true)`;
-  await tx.$executeRaw`SELECT set_config('app.is_admin', ${isAdminValue}, true)`;
-}
-```
-
-**C-8 production enforcement (now closed in prod):** `assertNoBypassRLS()` queries `pg_roles` at boot and **hard-exits in production** if the DB role has `BYPASSRLS`; dev/staging only warn.
-
-```ts
-// Source: backend/src/services/database.ts:L248-L260
-if (config.isProduction) {
-  logger.error(
-    'FATAL: Production database role has BYPASSRLS. ' +
-    'RLS policies are not enforcing. Refusing to start. ' +
-    'See C8_PART3_RUNBOOK.md.'
-  );
-  process.exit(1);
-}
-logger.warn(
-  'WARNING: Database role has BYPASSRLS — RLS policies are not enforcing. ' +
-  'This is acceptable in development but must be fixed before production.'
-);
-```
-
-```
-Two-layer access control:
-
-Request (userId) ──▶ withRLSContext(userId, tx => ...)        (database.ts:447)
-                          │ SET LOCAL app.current_user_id = userId
-                          ▼
-                    Postgres RLS policy USING (user_id = current_user_id()
-                                               OR has_provider_access(...)
-                                               OR is_admin_session())   (migration.sql:151-157)
-                          ▲
-                          └── assertNoBypassRLS() ensures the role can't skip these  (database.ts:218)
-```
-
-- **Policies:** RLS enabled + per-table SELECT/INSERT/UPDATE/DELETE policies in `backend/prisma/migrations/20260107_add_rls_policies/migration.sql:68-551`.
-- **Provider consent:** `has_provider_access(patient_user_id, permission_type)` checks an ACTIVE, unexpired `provider_patients` row with the right capability flag (`migration.sql:39-62`); patched in `20260529_fix_has_provider_access` (dropped dead `can_view_dna` branch) and `20260530_add_users_select_provider` (provider can read a consented patient's minimal identity row).
-- **Residual dev/staging gap:** the boot guard only `process.exit(1)`s when `config.isProduction`; dev/staging commonly connect as the `postgres` superuser (`rolbypassrls=true`), so RLS is structurally present but inert there. The fix is provisioning a `NOBYPASSRLS` `omh_app` role + rotating `DATABASE_URL`. Tracked as the Critical finding in [`SECURITY_STATUS.md`](./SECURITY_STATUS.md). RLS regression harness: `backend/scripts/setup-rls-test-db.sh` + `backend/src/services/rls.test.ts` (see [`TESTING_PATTERNS.md`](./TESTING_PATTERNS.md)).
-
-### Automatic logoff (§164.312(a)(2)(iii))
-
-```ts
-// Source: backend/src/config/index.ts:L60-L66
-jwt: {
-  // Access token - short lived (15 minutes = 900 seconds)
-  accessSecret: requireEnv('JWT_ACCESS_SECRET'),
-  accessExpiresIn: parseInt(process.env.JWT_ACCESS_EXPIRES_SECONDS || '900', 10),
-  // Refresh token - longer lived (7 days = 604800 seconds)
-  refreshSecret: requireEnv('JWT_REFRESH_SECRET'),
-  refreshExpiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_SECONDS || '604800', 10),
-```
-
-- **Timeout:** access token expires after **900 seconds (15 minutes)** by default. Expiry is enforced on every protected route — `jwt.verify` throws `TokenExpiredError`, mapped to 401 at `backend/src/middleware/auth.ts:112-113`.
-- **Revocation before natural expiry:** an in-memory blacklist (`revokeAccessToken`/`isTokenRevoked`, `authService.ts:151-173`) stops a logged-out/rotated token immediately on that instance; checked at `auth.ts:87-89`. (Per-instance — not shared across Cloud Run instances.)
-- **Refresh tokens** are DB-backed sessions with a 7-day expiry (`Session.expiresAt`, `schema.prisma:67`), 30 days for the demo account (`authService.ts:253,287-289`).
-
-### Person / entity authentication (§164.312(d))
-
-```ts
-// Source: backend/src/services/authService.ts:L194-L202
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, config.security.bcryptRounds);
-}
-/**
- * Verify a password against its hash
- */
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-```
-
-- **Algorithm:** `bcryptjs` (`authService.ts:16`), cost factor `config.security.bcryptRounds` = **13** by default (`backend/src/config/index.ts:99-100`, "13 rounds minimum recommended for healthcare/HIPAA workloads").
-- **Token verification:** JWT signature verified with `JWT_ACCESS_SECRET` at `auth.ts:92`; refresh tokens rejected on access routes (`auth.ts:95-97`).
-- **Brute-force controls:** account lockout after `MAX_LOGIN_ATTEMPTS` (default 5) for `LOCKOUT_DURATION_MINUTES` (default 30) (`config/index.ts:97-98`); timing-safe dummy compare on unknown-user login (`authService.ts:785`); password strength ≥12 chars with complexity (`authService.ts:208-228`); 8 rate limiters (`backend/src/middleware/rateLimiter.ts:17-157`).
-- **Gap — MFA:** no multi-factor auth implemented. See [Roadmap](#roadmap).
-
-### Transmission security (§164.312(e))
-
-- **TLS in transit:** the live deploy target is **GCP Cloud Run**, which terminates HTTPS at the managed edge (HTTP→HTTPS by default). Deploy step `gcloud run deploy ownmyhealth-backend` at `.github/workflows/deploy.yml:82-89`; production base URL `https://api.ownmyhealth.io` (`deploy.yml:176`); frontend `VITE_API_URL=https://api.ownmyhealth.io/api/v1` (`deploy.yml:222`).
-- **DB in transit:** backend↔Cloud SQL goes through the Cloud SQL Auth Proxy (30s connect timeout for the proxy, `backend/src/services/database.ts:112`).
-- **Cookies:** `secure: true` in production, `httpOnly: true`, `sameSite` defaults to `strict` for prod same-domain (`backend/src/config/index.ts:74-87`).
-- **Legacy note:** `backend/railway.toml` exists but Cloud Run is the live target (`deploy.yml` is authoritative). See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the deployment topology.
+`AUDIT_CLEANUP_TOKEN` is documented in [`ENV_VARS.md`](./ENV_VARS.md) (`backend/src/config/index.ts:196`).
 
 ---
 
-## Administrative Safeguards (§164.308)
+## 4. Administrative Safeguards (§164.308)
 
-Administrative safeguards are dominantly **policy artifacts** that do not live in code. Code-enforced controls are cited; policy gaps are marked TBD with a resolution path.
-
-| Standard | Requirement | Status | Evidence / Gap |
-|---|---|---|---|
-| §164.308(a)(1)(i) | Security management process | 🟡 | Prompt-driven audits in `prompts/` + [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) act as an informal process; no formal written security-management policy |
-| §164.308(a)(1)(ii)(A) | Risk analysis | 🟡 | Multi-agent security audits (project memory `ownmyhealth-2026-05-29-analysis.md`, 94 findings) + [`SECURITY_STATUS.md`](./SECURITY_STATUS.md); not a formal §164.308 risk-analysis document. TBD (external: formal risk analysis not yet written — flag to compliance owner; stub in `docs/` when drafted) |
-| §164.308(a)(1)(ii)(B) | Risk management | 🟡 | Findings tracked + remediated via PRs (project memory backlog notes); see [Roadmap](#roadmap) |
-| §164.308(a)(1)(ii)(C) | Sanction policy | ⏳ | TBD (external: formal policy not yet written — flag to compliance owner; stub in `docs/` when drafted) |
-| §164.308(a)(1)(ii)(D) | Information system activity review | ✅ | Audit logging (`backend/src/services/auditLog.ts`) + admin audit-log viewer route (RBAC-gated, `auditLog.ts:482-525`); see [Audit controls](#audit-controls-164312b) |
-| §164.308(a)(2) | Assigned security responsibility | ⏳ | TBD (external: no named Security/Privacy Officer in repo — assign before beta) |
-| §164.308(a)(3) | Workforce security / authorization | ✅ | RBAC `PATIENT`/`PROVIDER`/`ADMIN` (`backend/src/middleware/rbac.ts:16-53`); least-privilege role permission matrix at `rbac.ts:31-53` |
-| §164.308(a)(4) | Information access management | ✅ | RLS policies + provider consent (`migration.sql`, `has_provider_access`); consent-first sharing per `CLAUDE.md` |
-| §164.308(a)(5) | Security awareness & training | ⏳ | TBD (external: solo/small-team project — no formal training program; document when staffing grows) |
-| §164.308(a)(6) | Security incident procedures | ⏳ | Partial detection (audit log + redaction) but no SOP — see [Breach Notification](#breach-notification-164400-414) |
-| §164.308(a)(7) | Contingency plan (backup/DR) | 🟡 | Cloud SQL automated backups + Cloud Run rollback via named revisions (`deploy.yml:141-171`); no written DR/contingency policy. TBD (external: GCP Console → Cloud SQL backup config; formal DR plan) |
-| §164.308(a)(8) | Evaluation (periodic technical/non-technical) | 🟡 | Quarterly doc/audit re-verification cadence (`prompts/_doc-quality.md` refresh table); not a formal §164.308(a)(8) evaluation |
-| §164.308(b)(1) | Business associate contracts | 🟡 | Runtime BAA gates implemented (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`); signed-agreement status per-vendor in [BAA table](#business-associate-agreements-baas) |
-
----
-
-## Physical Safeguards (§164.310)
-
-Physical safeguards are **inherited from Google Cloud Platform** under its BAA (data centers, facility access, device/media controls). They are not implemented in application code.
-
-| Standard | Requirement | Status | Evidence / Gap |
-|---|---|---|---|
-| §164.310(a)(1) | Facility access controls | ⏳ inherited | GCP data-center physical security under GCP BAA. TBD (external: confirm GCP BAA — see [BAA table](#business-associate-agreements-baas)) |
-| §164.310(b)/(c) | Workstation use & security | ⏳ | TBD (external: workforce workstation policy not in repo) |
-| §164.310(d)(1) | Device and media controls / disposal | 🟡 | PHI at rest is GCS + Cloud SQL (GCP-managed media lifecycle); app-level account deletion destroys per-user salt rendering that user's PHI unrecoverable (per-user key model, `encryption.ts:14-17`). TBD (external: GCP media-disposal attestation) |
-
-The deploy infra confirming the GCP footprint: project `ownmyhealth-prod`, region `us-central1`, Cloud Run service `ownmyhealth-backend`, GCS buckets `ownmyhealth-frontend` (frontend) and `ownmyhealth-user-files` (PHI files) (`.github/workflows/deploy.yml:20-25`, `backend/src/config/index.ts:168`).
-
----
-
-## Breach Notification (§164.400-414)
-
-| Item | Standard | Status | Evidence / Owner | Gap |
+| Standard | Requirement | Status | Evidence / Owner | Gap |
 |---|---|---|---|---|
-| Detection — logging | §164.400 | 🟡 | Audit log (`auditLog.ts`) + PHI redaction in app logs (`backend/src/utils/logger.ts:21-30,46-55`); rejected-token + invalid-scheduler-token warnings (`internalRoutes.ts:56`) | No automated alerting — logs are not wired to a Cloud Logging alert policy |
-| Detection — alerting | §164.404 | ⚠️ | None in repo | **Most urgent gap.** Hook audit/error logs to GCP Cloud Logging alert policies (anomalous PHI-access volume, decrypt failures at `encryption.ts:375`, audit-write failures at `auditLog.ts:279`). TBD (external: GCP Console → Logging → Alerting) |
-| Notification process (individuals) | §164.404 | ⏳ | TBD (external: breach-notification SOP not written) | Create SOP: who notifies, within 60 days, content requirements |
-| HHS reporting | §164.408 | ⏳ | TBD (external: process not documented) | Define <500 vs ≥500 affected thresholds + HHS breach portal submission flow |
-| Media notice (≥500 in a state) | §164.406 | ⏳ | TBD (external: media-notice procedure not written — fold into the breach-notification SOP, see row above) | Part of the SOP above |
-
-**Most urgent breach gap:** there is no **detection alerting** (§164.404). Audit data and PHI-redacted error logs exist, but nothing surfaces an active incident in real time. The lowest-effort high-value step is wiring decrypt-failure / audit-write-failure / anomalous-access signals to a Cloud Logging alert policy. Operational breach-response steps belong in [`RUNBOOK.md`](./RUNBOOK.md).
-
----
-
-## Required documentation
-
-§164.316 requires written policies/procedures retained 6 years. Most are not yet authored.
-
-| Document | Status | Where it lives / should live |
-|---|---|---|
-| Risk analysis (§164.308(a)(1)(ii)(A)) | 🟡 informal | Security audits in project memory + [`SECURITY_STATUS.md`](./SECURITY_STATUS.md); formal doc TBD (external — stub in `docs/`) |
-| Policies & procedures (§164.316(a)) | ⏳ | TBD (external: not written — create `docs/policies/`) |
-| Breach-notification SOP (§164.404-408) | ⏳ | TBD (external — see [Breach Notification](#breach-notification-164400-414)) |
-| Incident-response SOP (§164.308(a)(6)) | ⏳ | TBD (external: not written — create `docs/incident-response.md`; see [Breach Notification](#breach-notification-164400-414)) |
-| Contingency / DR plan (§164.308(a)(7)) | 🟡 | GCP-backed; formal plan TBD (external: not written — create `docs/dr-plan.md`; confirm Cloud SQL backup config in GCP Console → Cloud SQL) |
-| BAAs (§164.308(b)) | 🟡 | Per-vendor in [BAA table](#business-associate-agreements-baas); signed-copy storage TBD (external) |
-| RLS rollout/rollback runbook | ✅ | `C8_PART3_RUNBOOK.md` (referenced in `database.ts:253`) |
+| §164.308(a)(1)(i) | Security management process | 🟡 | Prompt-driven security audits in `prompts/01-13,26-32,41-42`; status tracked in [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) and [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) | No formal written security-management policy — TBD (external: policy doc, stub in `docs/`) |
+| §164.308(a)(1)(ii)(A) | Risk analysis | 🟡 | Recurring teardown/audit reports under `New Project Documents/` capture technical risk | No formal §164.308 risk-analysis document — TBD (external: risk-analysis SOP) |
+| §164.308(a)(1)(ii)(B) | Risk management | 🟡 | Findings remediated PR-by-PR (e.g. C-8 RLS closure, L24 filename encryption) — see [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) | No formal risk-management plan doc |
+| §164.308(a)(1)(ii)(D) | Information system activity review | ✅ | Audit log (`backend/src/services/auditLog.ts`), 7-year retention, encrypted PHI snapshots; admin audit-log viewer (`ADMIN` role) | No automated anomaly alerting — see Breach Notification §6 |
+| §164.308(a)(2) | Assigned security responsibility | ⏳ | — | TBD (external: name a Security Officer; record in [`RUNBOOK.md`](./RUNBOOK.md)) |
+| §164.308(a)(3) | Workforce security | ⏳ | RBAC roles PATIENT/PROVIDER/ADMIN (`backend/src/middleware/rbac.ts`) constrain in-app access | No HR onboarding/termination policy — TBD (external) |
+| §164.308(a)(4) | Information access management | ✅ | Consent-based provider sharing with granular permissions (`can_view_biomarkers/insurance/health_needs`, `can_edit_data`), immutable-by-trigger except patient/admin (`backend/prisma/migrations/20260615_provider_consent_immutable_audit_insert_check/migration.sql:19-76`); enforced by RLS + `backend/src/services/providerAccess.ts` | Documented in [`DATA_MODEL.md`](./DATA_MODEL.md) |
+| §164.308(a)(5) | Security awareness & training | ⏳ | — | TBD (external: training program) |
+| §164.308(a)(6) | Security incident procedures | ⏳ | Audit log + log redaction support forensics | No incident-response SOP — TBD (external; outline in [`RUNBOOK.md`](./RUNBOOK.md)) |
+| §164.308(a)(7) | Contingency plan (backup, DR) | 🟡 | Cloud SQL automated backups (GCP-managed); migrations run as a dedicated, retry-disabled Cloud Run job (`.github/workflows/deploy.yml:139-161`) | No written disaster-recovery / data-backup plan — TBD (external: DR doc) |
+| §164.308(a)(8) | Evaluation | 🟡 | Periodic prompt-driven teardowns/audits (see `New Project Documents/`) | Cadence not formalized in policy |
+| §164.308(b)(1) | Business associate contracts | 🟡 | Code-side BAA gates (§1); Anthropic BAA signed 2026-04-16 | Google / Quest / SendGrid BAAs TBD (external — §1 table) |
 
 ---
 
-## Minimum necessary + PHI access
+## 5. Physical Safeguards (§164.310)
 
-- **Encryption + audit per field:** the authoritative per-field matrix (encryption status, write/read sites, audit coverage) is [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md). The canonical field source is `PHI_FIELDS` (`backend/src/services/encryption.ts:410-486`).
-- **Log redaction (§164.502(b) minimum necessary):** `SENSITIVE_FIELDS` redacts known PHI/secret keys recursively, including inside arrays (`backend/src/utils/logger.ts:21-30,39-55`). Status 🟡 — redaction is key-name-based, so a renamed/unlisted field can leak; drift findings are tracked in [`PHI_TAXONOMY.md#logger-redaction-coverage`](./PHI_TAXONOMY.md#logger-redaction-coverage).
-- **Provider minimum-necessary:** providers see only data covered by the patient's granted capability flags (`can_view_biomarkers`/`can_view_insurance`/`can_view_health_needs`/`can_edit_data`) via `has_provider_access` (`migration.sql:39-62`) and the app-layer column allowlist on the `users` table (`20260530_add_users_select_provider/migration.sql:16-29`). See [`DATA_MODEL.md`](./DATA_MODEL.md).
-- **Data subject rights:** export + account-deletion capabilities required by product rules (`CLAUDE.md` Product Guidelines); export is audit-logged via `logExport` (`auditLog.ts:440-461`).
+All physical safeguards are **inherited from Google Cloud Platform** (the hosting provider) and are covered by the GCP BAA once confirmed (§1). No on-prem hardware holds ePHI.
+
+| Standard | Requirement | Status | Evidence / Owner | Gap |
+|---|---|---|---|---|
+| §164.310(a)(1) | Facility access controls | ✅ (inherited) | GCP data-center physical security; compute on Cloud Run, data on Cloud SQL/GCS (`.github/workflows/deploy.yml:40-46`) | Covered by GCP BAA — confirm (§1) |
+| §164.310(b)/(c) | Workstation use & security | ⏳ | No org-managed workstations in scope yet | TBD (external: workstation policy when workforce grows) |
+| §164.310(d)(1) | Device & media controls (disposal, reuse) | ✅ (inherited) | GCP-managed disk encryption & media disposal; app-side, account deletion destroys per-user salt (renders PHI unrecoverable) | Per-user salt destruction documented in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) |
 
 ---
 
-## Roadmap
+## 6. Breach Notification (§164.400–414)
 
-| Phase | Item | HIPAA driver | Tracking |
+| Item | Status | Evidence / Owner | Gap |
 |---|---|---|---|
-| Pre-beta (now) | Provision `NOBYPASSRLS` `omh_app` role + rotate `DATABASE_URL` in dev/staging | §164.312(a)(1) | Critical finding in [`SECURITY_STATUS.md`](./SECURITY_STATUS.md); harness `backend/scripts/setup-rls-test-db.sh` |
-| Pre-beta | Confirm + record Google Cloud BAA (infra + Document AI); set `GOOGLE_BAA_ACTIVE=true` | §164.308(b) | [BAA table](#business-associate-agreements-baas); TBD (external: GCP Console) |
-| Pre-beta | Confirm Quest + SendGrid BAAs | §164.308(b) | [BAA table](#business-associate-agreements-baas) |
-| Beta | Wire audit/error logs to Cloud Logging alert policies (breach detection) | §164.404 | [Breach Notification](#breach-notification-164400-414); TBD (external: GCP Console) |
-| Beta | Author breach-notification + incident-response SOPs | §164.404-408, §164.308(a)(6) | [Required documentation](#required-documentation) |
-| Beta | Assign named Security/Privacy Officer | §164.308(a)(2) | TBD (external: no named officer in repo — project owner `breilly1296@pm.me` to designate and record before beta) |
-| GA | Implement MFA | §164.312(d) | No code yet — `auth.ts` |
-| GA | Shared-store token revocation + rate limiting (cross-instance) | §164.312(a)(2)(iii) | `REDIS_URL` gate exists (`config/index.ts:125-127`); revocation map is per-instance (`authService.ts:142`) |
-| GA | Per-ciphertext PBKDF2 iteration envelope; drop legacy 100k fallback | §164.312(a)(2)(iv) | `TODO(key-rotation)` in `encryption.ts:81-83` |
+| Detection — logging | 🟡 | Audit log (`backend/src/services/auditLog.ts`) + PHI redaction in app logs (`backend/src/utils/logger.ts:30`, `phiRedaction.ts`) | Logs exist; **no automated alerting** |
+| Detection — alerting | ⚠️ | None in repo | **Most urgent gap** — hook Cloud Logging alert policies to audit anomalies / repeated `LOGIN_FAILED` / RLS-guard FATALs |
+| Notification process (§164.404) | ⏳ | — | TBD (external: breach-notification SOP — create and store in [`RUNBOOK.md`](./RUNBOOK.md)) |
+| HHS reporting (§164.408) | ⏳ | — | TBD (external: HHS Breach Portal procedure) |
+| Notification to media (§164.406, ≥500 individuals) | ⏳ | — | TBD (external: PR/legal procedure) |
+
+**Most urgent breach-notification gap:** automated **detection alerting** (⚠️). The forensic substrate (immutable, 7-year, encrypted audit log + log redaction) exists, but nothing notifies a human when an anomaly occurs. Without alerting, the §164.404 "without unreasonable delay, no later than 60 days" clock cannot start reliably. Resolution: wire Cloud Logging alert policies to audit-log writes and to the RLS boot-guard FATAL exits (`backend/src/services/database.ts:253,305`).
 
 ---
 
-## Acceptance questions (self-answered)
+## 7. Required documentation status
 
-1. **Which vendors have signed BAAs, and when?** Anthropic — ✅ signed 2026-04-16 (`config/index.ts:185`, project memory). Google Cloud (infra + Document AI), Quest, SendGrid — ⏳ TBD external. See [BAA table](#business-associate-agreements-baas).
-2. **§164.312(a) auto-logoff evidence + timeout?** 900s (15-min) access token, `JWT_ACCESS_EXPIRES_SECONDS` default `900` (`config/index.ts:62`); expiry enforced at `auth.ts:112`. See [Automatic logoff](#automatic-logoff-164312a2iii).
-3. **Where is ePHI encryption + which fields?** AES-256-GCM in `encryption.ts:262`, per-user PBKDF2-SHA512 keys (`:192`); fields = `PHI_FIELDS` (`:410-486`), full matrix in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md). See [Encryption at rest](#encryption-at-rest-164312a2iv).
-4. **§164.312(a)(1) access-control status, prod vs dev/staging?** ✅ prod / 🟡 dev-staging. RLS policies + `withRLSContext`; `assertNoBypassRLS()` hard-exits prod with BYPASSRLS, warns in dev/staging (`database.ts:248-260`). See [Access control / RLS](#access-control--rls-164312a1).
-5. **Which scheduler enforces 7-year retention + where?** `RETENTION_DAYS = 2555` (`auditLog.ts:10`). In-process 24h `setInterval` when `AUDIT_CLEANUP_TOKEN` unset; otherwise Cloud Scheduler → `POST /api/v1/internal/audit-cleanup` (`auditLog.ts:582-592`, `internalRoutes.ts:40`). See [Audit controls](#audit-controls-164312b).
-6. **Which standards are ✅ vs 🟡 vs ⏳?** See [Technical Safeguards table](#technical-safeguards-164312) (mostly ✅), [Administrative table](#administrative-safeguards-164308) (mix), [Physical table](#physical-safeguards-164310) (inherited/⏳).
-7. **Is the Anthropic BAA active + how gated? Google Document AI?** Anthropic: ✅, `config.anthropic.baaActive` from `ANTHROPIC_BAA_ACTIVE`, enforced `claudeExtraction.ts:106`/`sbcExtraction.ts:767`, prod boot-fails without it (`config/index.ts:300-306`). Document AI: gated by `GOOGLE_BAA_ACTIVE`→`documentAiBaaActive` (`config/index.ts:176`), enforced `ocrService.ts:274`, prod boot-fails (`config/index.ts:320-333`); signed status ⏳ TBD external.
-8. **Most urgent breach gap?** Detection alerting (§164.404) — no Cloud Logging alert policy. See [Breach Notification](#breach-notification-164400-414).
-9. **Where is the per-field PHI encryption matrix?** [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
-10. **RLS C-8 status / where is `assertNoBypassRLS()` / residual gap?** Closed in production (`database.ts:218-261`, hard-exit on BYPASSRLS in prod). Residual: dev/staging only warn (superuser `postgres`); fix = `NOBYPASSRLS` `omh_app` role + `DATABASE_URL` rotation. See [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
-11. **Password hashing / §164.312(d) / bcrypt cost?** `bcryptjs` (`authService.ts:16,194-195`), cost `BCRYPT_ROUNDS` default **13** (`config/index.ts:99-100`). See [Authentication](#person--entity-authentication-164312d).
-12. **TLS at the edge + cite?** Yes — Cloud Run HTTPS edge; `gcloud run deploy` at `deploy.yml:82-89`, prod `https://api.ownmyhealth.io` (`deploy.yml:176`). See [Transmission security](#transmission-security-164312e).
-13. **How are Quest OAuth tokens protected + which PHI_FIELDS?** Encrypted per-user before write (`labSyncService.ts:142-143`); `PHI_FIELDS.LabConnection` = `accessTokenEncrypted`, `refreshTokenEncrypted` (`encryption.ts:482-485`). See [OAuth token encryption](#oauth-token-encryption-lab-connections).
+| Document | Required by | Status | Where it lives / should live |
+|---|---|---|---|
+| Risk analysis | §164.308(a)(1)(ii)(A) | 🟡 (technical-only) | Teardown/audit reports in `New Project Documents/`; formal doc TBD (external) |
+| Policies & procedures | §164.316(a) | ⏳ | TBD (external: formal policy not yet written — flag to compliance owner; stub in `docs/` when drafted) |
+| Sanction policy | §164.308(a)(1)(ii)(C) | ⏳ | TBD (external) |
+| BAAs | §164.308(b)(1) | 🟡 | §1 table; Anthropic signed 2026-04-16; others TBD (external) |
+| Audit / activity logs | §164.312(b) | ✅ | `backend/src/services/auditLog.ts` (7-year, encrypted, DB-enforced retention) |
+| Breach-response runbook | §164.404 | ⏳ | [`RUNBOOK.md`](./RUNBOOK.md) (breach-response operational steps) |
+| Per-field PHI matrix | §164.502(b) min-necessary | ✅ | [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) |
+
+---
+
+## 8. Minimum necessary + PHI access
+
+ePHI is encrypted field-by-field (AES-256-GCM, per-user PBKDF2-SHA512 key). The authoritative per-field matrix — every PHI field × encryption × write/read sites × audit coverage — is in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md). The canonical field list is `PHI_FIELDS` (`backend/src/services/encryption.ts:476-562`): **14 models / 39 encrypted fields**, in perfect lockstep with the 39 `*Encrypted` schema columns.
+
+Recent coverage additions (post-2026-06-01) a stale inventory would miss:
+
+| Field | `PHI_FIELDS` line | Migration |
+|---|---|---|
+| `UserFile.originalFilenameEncrypted` (raw client filename can embed identifiers) | `backend/src/services/encryption.ts:499` | `20260615_encrypt_userfile_original_filename` (L24) |
+| `HealthGoal.currentValueEncrypted`, `startValueEncrypted` | `backend/src/services/encryption.ts:519-520` | `20260613_encrypt_goal_values` (M4) |
+| `GoalProgressHistory.valueEncrypted` | `backend/src/services/encryption.ts:524` | `20260613_encrypt_goal_values` (M4) |
+| `AuditLog.metadataEncrypted` (plaintext `metadata` column dropped) | `backend/src/services/encryption.ts:530` | `20260606000001_encrypt_audit_metadata` + `20260615_drop_legacy_audit_metadata` (M6) |
+| `User.healthProfileEncrypted` | `backend/src/services/encryption.ts:484` | `20260418_add_health_profile` |
+| `LabConnection.accessTokenEncrypted`, `refreshTokenEncrypted` | `backend/src/services/encryption.ts:559-560` | `20260418_add_lab_connections` |
+
+Minimum-necessary in access: provider sharing is consent-scoped per permission column, and the consent columns are trigger-protected from forgery (`backend/prisma/migrations/20260615_provider_consent_immutable_audit_insert_check/migration.sql:19-76`).
+
+---
+
+## 9. Roadmap
+
+Tracking is **in-repo** (no external issue tracker referenced in code); items map to findings in [`SECURITY_STATUS.md`](./SECURITY_STATUS.md) and [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md).
+
+### Phase A — close the highest-leverage compliance gaps (now)
+- ⚠️ **Breach detection alerting** — wire Cloud Logging alert policies to audit anomalies + RLS boot-guard FATALs (`backend/src/services/database.ts:253,305`). §164.404 enabler.
+- ⏳ **Confirm Google + Quest + SendGrid BAAs** — resolve §1 TBDs in GCP Console / vendor portals; gates already enforce in prod (`backend/src/config/index.ts:401-414`).
+- ⏳ **Name a Security Officer** (§164.308(a)(2)) — record in [`RUNBOOK.md`](./RUNBOOK.md).
+
+### Phase B — administrative policy set (beta gate)
+- ⏳ Author §164.316 policies & procedures, incident-response SOP (§164.308(a)(6)), breach-notification SOP (§164.404), DR/backup plan (§164.308(a)(7)). Stub in `docs/`.
+- ⏳ Formal §164.308(a)(1)(ii)(A) risk analysis.
+
+### Phase C — technical hardening (post-beta)
+- 🟡 MFA (strengthens §164.312(d)).
+- 🟡 Shared rate-limit / spend store via `REDIS_URL` to remove per-instance dilution (`backend/src/config/index.ts:186`).
+- 🟡 Break-glass emergency-access SOP (§164.312(a)(2)(ii)).
+- 🟡 Resolve the dev/staging RLS-runtime caveat (provision a `NOBYPASSRLS` app role in those tiers) — see [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
+
+---
+
+## 10. Acceptance questions (self-answered from this doc)
+
+**Q1. Which vendors have signed BAAs, and when?** Anthropic — ✅ signed **2026-04-16** (§1). Google Cloud (infra + Document AI), Quest, SendGrid — ⏳ TBD (external), with runtime gates enforcing in production (§1).
+
+**Q2. What code evidence satisfies §164.312(a) auto-logoff, and what's the timeout?** Access JWT lifetime **900s / 15 min** (`backend/src/config/index.ts:121`), enforced by `jwt.verify` on every request (`backend/src/middleware/auth.ts:95`) — §2 row "Automatic logoff."
+
+**Q3. Where is ePHI encryption implemented and which PHI fields are covered?** AES-256-GCM + PBKDF2-SHA512 (600k) in `backend/src/services/encryption.ts:236,247-253,284`; `PHI_FIELDS` covers **14 models / 39 fields** (`:476-562`). Per-field matrix in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) (§2, §8).
+
+**Q4. §164.312(a)(1) access control status, prod vs dev/staging?** ✅ prod / 🟡 dev-staging. RLS + FORCE RLS on 19 tables; `assertNoBypassRLS()`/`assertRLSForced()` hard-exit in prod (`backend/src/services/database.ts:253,305`), warn-only in dev/staging (`:256,308`) — §2 row "Access control (RLS)."
+
+**Q5. Which scheduler enforces 7-year audit retention, and where?** Either an in-process 24h `setInterval` (`backend/src/services/auditLog.ts:688`) when `AUDIT_CLEANUP_TOKEN` is unset, **or** Cloud Scheduler hitting `POST /api/v1/internal/audit-cleanup` (`backend/src/routes/internalRoutes.ts:40`) when it is set, with the in-process interval disabled (`auditLog.ts:674-679`). DB also enforces it via the delete policy (§3).
+
+**Q6. Which standards are ✅ vs 🟡 vs ⏳?** ✅: unique ID, auto-logoff, encryption at rest, OAuth-token encryption, audit controls, authentication, transmission security, RLS (prod), CSRF, rate limiting, input validation, AI spend breaker. 🟡: integrity, log redaction, RLS (dev/staging), most §164.308 administrative items. ⏳: emergency access, security officer, training, incident/breach SOPs — §2, §4, §6.
+
+**Q7. Is the Anthropic BAA active, and how does code gate on it? Same for Google Document AI?** Anthropic ✅; prod boot throws if `ANTHROPIC_API_KEY` set + `ANTHROPIC_BAA_ACTIVE` unset (`backend/src/config/index.ts:381-394`). Google Document AI gated identically by `GOOGLE_BAA_ACTIVE`/`documentAiBaaActive` (`backend/src/config/index.ts:401-414`); BAA status ⏳ TBD (external) — §1.
+
+**Q8. Most urgent breach-notification gap?** Automated **detection alerting** (⚠️) — the audit/log substrate exists but nothing notifies a human; the §164.404 clock can't reliably start (§6).
+
+**Q9. Where is the per-field PHI encryption matrix?** [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md), backed by `PHI_FIELDS` (`backend/src/services/encryption.ts:476-562`) — §8.
+
+**Q10. RLS C-8 status, where is `assertNoBypassRLS()` enforced, residual dev/staging gap?** C-8 **closed in production**; `assertNoBypassRLS()` at `backend/src/services/database.ts:217`, called `:192`, `process.exit(1)` in prod `:253`. Residual: dev/staging only warn (`:256`) — RLS structurally present but not runtime-active until a `NOBYPASSRLS` role is provisioned there (§2, [`SECURITY_STATUS.md`](./SECURITY_STATUS.md)).
+
+**Q11. How does password hashing satisfy §164.312(d), at what bcrypt cost?** `bcrypt.hash(password, config.security.bcryptRounds)` (`backend/src/services/authService.ts:404`), cost **13** (`backend/src/config/index.ts:160`) — §2 row "Person/entity authentication."
+
+**Q12. Is TLS enforced at the load balancer, and what cites it?** Yes — Cloud Run is HTTPS-only at the edge; deploy step `gcloud run deploy` (`.github/workflows/deploy.yml:183`); DB over Cloud SQL connector (`.github/workflows/deploy.yml:143`) — §2 row "Transmission security."
+
+**Q13. How are Quest SMART-on-FHIR OAuth tokens protected at rest, and which `PHI_FIELDS` entries cover them?** Encrypted with the per-user key before write (`backend/src/services/fhir/labSyncService.ts:144-187`); covered by `PHI_FIELDS.LabConnection = ['accessTokenEncrypted', 'refreshTokenEncrypted']` (`backend/src/services/encryption.ts:558-561`; columns `backend/prisma/schema.prisma:763-764`) — §1, §2, §8.
 
 ---
 
 ## Related Documents
 
-- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open findings (incl. the dev/staging RLS Critical) that map to 🟡 / ⚠️ statuses here.
-- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — per-field encryption + audit coverage matrix (the §164.312(a)(2)(iv) detail).
-- [DATA_MODEL.md](./DATA_MODEL.md) — full schema, RLS policies, provider-consent model.
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system-level encryption, audit, and deployment topology.
-- [ENV_VARS.md](./ENV_VARS.md) — BAA gates (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`), `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`, `AUDIT_CLEANUP_TOKEN`, `QUEST_FHIR_*`.
-- [RUNBOOK.md](./RUNBOOK.md) — breach-response operational steps, Cloud Scheduler provisioning.
+- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open findings (C-8 RLS, dev/staging gap) mapped to the partial/gap statuses above.
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — per-field PHI × encryption × write/read × audit-coverage matrix (the min-necessary detail behind §164.312(a)(2)(iv)).
+- [DATA_MODEL.md](./DATA_MODEL.md) — full ER, the 19 RLS tables, consent permission columns, cascade behavior.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — encryption + audit + RLS layers at the system level.
+- [ENV_VARS.md](./ENV_VARS.md) — BAA gates (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`), `PHI_ENCRYPTION_KEY`, `AUDIT_CLEANUP_TOKEN`, `QUEST_FHIR_*`.
+- [RUNBOOK.md](./RUNBOOK.md) — breach-response operational steps; where to record the Security Officer.
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — tracked compliance-adjacent issues.
 
 ---
 
 ## Prompt drift log
 
-- `./22-hipaa-checklist-doc.md` Files-to-review table and BAA table reference `documentAiBaaActive` and the Anthropic gate — both verified present (`config/index.ts:176,185`). No drift on those.
-- `./22-hipaa-checklist-doc.md` example row cites unique-user-ID as "Was cuid; switched to DB-generated UUID in migration `20260424_align_uuid_defaults_and_rename_claude_response`". Verified: `schema.prisma:11` now uses `gen_random_uuid()`, but migration `20260424` only changes UUID **defaults** on 4 tables (`user_files`, `expense_projections`, `expense_actuals`, `cost_analyses`) and renames `claude_response` (`migration.sql:36-53`) — it does **not** touch `User.id`. `User.id` already used `gen_random_uuid()` before that migration. Minor over-attribution in the prompt example; the §164.312(a)(2)(i) status (✅, DB-generated UUID) is unchanged.
-- `CLAUDE.md` "PHI Encryption" section still lists `Insurance: ... plan name, provider name, benefits` and "AI Responses: guidance content" as encrypted fields, and lists `unit` for Biomarker. The authoritative `PHI_FIELDS` (`encryption.ts:410-486`) does **not** include `InsurancePlan` plan/provider/benefits names, biomarker `unit`, or a standalone AI-guidance field — `CostAnalysis.claudeResponseEncrypted` is the only AI-response PHI field. Treat `PHI_FIELDS` / [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) as authoritative; `CLAUDE.md` PHI list is stale.
-- `CLAUDE.md` Project Structure lists `uploadController.ts` as a controller; upload handlers have since moved (per project memory feature-map, legacy `uploadController` is dead code). Not load-bearing for this doc.
+- `../prompts/22-hipaa-checklist-doc.md` Files-to-review table and §164.312 example say `PHI_FIELDS` covers fields without a count, but the fact-digest's `FACT[phi-fields]` summary line states "14 models, 37 encrypted fields." The **live code and the canonical numbers are 14 models / 39 fields** (`backend/src/services/encryption.ts:476-562`, counted: User 6, Biomarker 2, BiomarkerHistory 1, UserFile 1, InsurancePlan 2, ProviderPatient 1, HealthNeed 1, HealthGoal 4, GoalProgressHistory 2, AuditLog 3, ExpenseProjection 3, ExpenseActual 8, CostAnalysis 3, LabConnection 2 = 39). The "37" in the fact-digest body is a stale sub-count; `prompts/_phi-inventory.md:29` correctly says 39. Used 39.
+- `../prompts/22-hipaa-checklist-doc.md` cites the RLS guards at `database.ts:192` (`assertNoBypassRLS`), `:193`/`:270` (`assertRLSForced`), and exits at `:253`/`:305`. Verified live: `assertNoBypassRLS` is **defined** at `backend/src/services/database.ts:217` (called at `:192`, prod-exit at `:253`); `assertRLSForced` defined at `:270` (called at `:193`, prod-exit at `:305`). The prompt's `:192`/`:193` are the *call sites* (correct); the definition line for `assertNoBypassRLS` is `:217`, not `:192`. Cited both.
+- `../prompts/22-hipaa-checklist-doc.md` says "GitHub workflows … deploy.yml:183" for `gcloud run deploy` — verified at `.github/workflows/deploy.yml:183`. The FORCE-RLS migration enumerates 18 tables (`:14-31`); the 19th (`revoked_access_tokens`) is forced in its own migration `20260613_revoked_access_tokens`. Total 19 RLS tables matches the canonical count.
+- [`CLAUDE.md`](../CLAUDE.md) "PHI Encryption" section is stale: it lists `Biomarker.unit`, `InsurancePlan.planName/insurerName/benefits` as encrypted — none are `*Encrypted` columns or in `PHI_FIELDS`. Did not propagate; cited live `PHI_FIELDS` instead. CLAUDE.md also still lists `uploadController.ts` (10 controllers) — upload handlers now live in `backend/src/controllers/upload/`.

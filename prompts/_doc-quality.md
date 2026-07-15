@@ -5,7 +5,7 @@ tags:
   - documentation
 type: shared
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Doc Quality Protocol (shared)
@@ -207,24 +207,25 @@ A correct API_REFERENCE entry looks like this (note citations, snippet, diagram,
 > ### `GET /api/v1/biomarkers`
 > List the authenticated user's biomarkers, most-recent first (`measurementDate desc`), paginated.
 >
-> **Route**: `backend/src/routes/biomarkerRoutes.ts:50`
-> **Controller**: `biomarkerController.getBiomarkers` (`backend/src/controllers/biomarkerController.ts:111`)
+> **Route**: `backend/src/routes/biomarkerRoutes.ts:51`
+> **Controller**: `biomarkerController.getBiomarkers` (`backend/src/controllers/biomarkerController.ts:143`)
 > **Middleware chain** (in order, from route file):
 >
 > | # | Middleware | Source |
 > |---|---|---|
-> | 1 | `authenticate` (applied router-wide via `router.use`) | `backend/src/middleware/auth.ts:71` |
+> | 1 | `authenticate` (applied router-wide via `router.use`) | `backend/src/middleware/auth.ts:74` |
 > | 2 | `validate(schemas.biomarker.listQuery, 'query')` | `backend/src/middleware/validation.ts` |
 >
-> **RLS wrap**: `withRLSTransaction(userId, async tx => { count + findMany })` — `biomarkerController.ts:L137-L147`.
+> **RLS wrap**: `withRLSTransaction(userId, async tx => { count + findMany })` — `biomarkerController.ts:L169-L180`.
 >
 > ```ts
-> // Source: backend/src/controllers/biomarkerController.ts:L137-L147
+> // Source: backend/src/controllers/biomarkerController.ts:L169-L180
 > const { total, biomarkers } = await withRLSTransaction(userId, async (tx) => {
 >   const total = await tx.biomarker.count({ where });
 >   const biomarkers = await tx.biomarker.findMany({
 >     where,
->     include: { history: true },
+>     // Oldest-first so trend math (history[0] = oldest) is order-independent.
+>     include: { history: { orderBy: { measurementDate: 'asc' } } },
 >     skip: pagination.skip,
 >     take: pagination.take,
 >     orderBy: { measurementDate: 'desc' },
@@ -242,9 +243,9 @@ A correct API_REFERENCE entry looks like this (note citations, snippet, diagram,
 >   Ctl-->>C: 200 { data: [{ id, value, unit, ... }], pagination }
 > ```
 >
-> **Response (200)**: `{ data: Array<{ id, value, unit, notes?, date, category, ... }>, pagination }` — values decrypted via `toResponse` (`biomarkerController.ts:60`).
+> **Response (200)**: `{ data: Array<{ id, value, unit, notes?, date, category, ... }>, pagination }` — values decrypted via `toResponse` (`biomarkerController.ts:91`).
 > **PHI fields returned**: `value` (from `valueEncrypted`), `notes` (from `notesEncrypted`) — see [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md#biomarker).
-> **Audit log**: `auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, { operation: 'LIST', ... })` at `biomarkerController.ts:160`.
+> **Audit log**: `auditService.logAccess(RESOURCE_TYPE, undefined, { req, userId }, { operation: 'LIST', ... })` at `biomarkerController.ts:193`.
 >
 > **Related**: [`DATA_MODEL.md#biomarker`](./DATA_MODEL.md#biomarker), [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
 
@@ -280,7 +281,7 @@ Trust the code. Finish the section using what the code actually says, then appen
 ## Prompt drift log
 
 - `./NN-foo.md` says "13 route files"; actual count is 18 (see [glob `backend/src/routes/*.ts`]). Prompt author should update `00-index.md` "Verified codebase counts" table.
-- `./NN-foo.md` references `uploadController.ts`; that single-file controller no longer exists — upload handlers now live in `backend/src/controllers/upload/index.ts` (`uploadLabReport`, `uploadSBC`, `uploadLabResultOCR`), wired from `uploadRoutes.ts:21`. Drift since the upload refactor.
+- `./NN-foo.md` references `uploadController.ts`; that single-file controller no longer exists — upload handlers now live in `backend/src/controllers/upload/index.ts` (`uploadLabReport`, `uploadSBC`, `uploadLabResultOCR`), wired from `uploadRoutes.ts:22`. Drift since the upload refactor.
 ```
 
 These entries drive the quarterly prompt-refresh task.

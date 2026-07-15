@@ -5,7 +5,7 @@ tags:
   - high
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Provider-Patient Collaboration Security Review
@@ -13,14 +13,17 @@ updated: 2026-06-01
 ## Files to Review
 - `backend/src/routes/providerRoutes.ts` (provider API endpoints — list/request/view/biomarkers/health-needs/delete)
 - `backend/src/routes/patientRoutes.ts` (patient consent endpoints — providers/pending/approve/deny/PATCH permissions/revoke/delete)
-- `backend/src/middleware/rbac.ts` (role-based access control + `checkProviderPatientAccess`, `requireOwnership`)
+- `backend/src/middleware/rbac.ts` (ROLE-only gating: `requireRole`/`requireMinRole`/`requirePermission`/`adminOnly`/`providerOrAdmin`). NOTE: the old parallel provider-patient *resource* access cluster (`checkProviderPatientAccess`/`requireOwnership`/`requireResourceAccess`/`enforceUserScope`) was unmounted on every route and removed in the L-26 cleanup (2026-06-14); only a doc comment documenting the removal remains (rbac.ts:6-13). Provider-patient resource access moved to `services/providerAccess.ts`.
+- `backend/src/services/providerAccess.ts` (NEW single access choke point — `resolveProviderAccess(tx, providerId, patientId, requiredFlag)` + `providerAccessError(reason, label)`; M3/L35). Every provider PHI read route routes access through it inside `withRLSContext`, replacing 4 drifted inline copies — review this as the primary app-layer gate (providerAccess.ts:49-106)
 - `backend/src/middleware/rateLimiter.ts` (`providerAccessRequestLimiter` — 10/hour, user-keyed, Redis-backed via `rateLimitStore.ts`)
 - `backend/src/middleware/validation.ts` (`schemas.providerPatient.{request,approve,updatePermissions}`, `schemas.patientIdParam`, `schemas.uuidParam`)
-- `backend/prisma/schema.prisma` (ProviderPatient model ~line 94; `ProviderRelationType`/`ProviderPatientStatus` enums ~line 507)
+- `backend/prisma/schema.prisma` (ProviderPatient model line 125; `ProviderRelationType` enum line 570, `ProviderPatientStatus` enum line 578, `UserRole` line 564)
 - `backend/prisma/migrations/20260107_add_rls_policies/` (original `has_provider_access()` + provider-scoped PHI policies)
 - `backend/prisma/migrations/20260529_fix_has_provider_access/` (drops dead `can_view_dna` branch that 500'd ALL multi-tenant reads under NOBYPASSRLS)
 - `backend/prisma/migrations/20260530_add_users_select_provider/` (`has_active_consent()` + `users_select_provider` policy — provider reads consented patient's minimal identity)
 - `backend/prisma/migrations/20260424_prevent_self_role_elevation/` (trigger blocking self role/is_active elevation)
+- `backend/prisma/migrations/20260613_force_rls_and_audit_retention/` (applies `FORCE ROW LEVEL SECURITY` to all 19 RLS tables — incl. `provider_patients` + the provider-readable PHI tables — closing the table-owner-bypass gap so the `has_provider_access()` backstop is effective even for the table-owning DB role)
+- `backend/prisma/migrations/20260615_provider_consent_immutable_audit_insert_check/` (L23: BEFORE UPDATE trigger `provider_patients_guard_consent()` restores the 4 consent permission columns to OLD values unless writer is the patient or admin — consent booleans DB-immutable to a provider's own re-request UPDATE (migration.sql:19-36); L40: `audit_logs_insert` WITH CHECK tightened from `true` to `user_id=current_user_id() OR is_admin_session() OR current_user_id() IS NULL` so audit rows can't be forged to an arbitrary user (migration.sql:69-76))
 - `backend/src/services/encryption.ts` (relationship `notesEncrypted` — encrypted with the requesting provider's salt)
 - `backend/src/services/auditLog.ts` (cross-user access logging via `logAccess`/`logCreate`/`logUpdate`/`logDelete`)
 - `backend/src/services/database.ts` (`withRLSContext` — RLS identity for every provider/patient query)
@@ -39,7 +42,7 @@ updated: 2026-06-01
 - **Status Lifecycle** (`ProviderPatientStatus` enum): PENDING, ACTIVE, SUSPENDED, REVOKED, EXPIRED. In practice the routes only positively gate on `status === 'ACTIVE'`; deny is a hard delete (no DENIED status), patient revoke is a soft update to REVOKED, provider remove is a hard delete (F-23: inconsistent soft- vs hard-delete is a known deferred item). EXPIRED/SUSPENDED are enum values but expiry is enforced via `consentExpiresAt` time checks, not a status transition.
 - **Relationship type** (`ProviderRelationType` enum): PRIMARY_CARE (default), SPECIALIST, CONSULTANT, EMERGENCY, OTHER
 - **Encryption**: relationship `notesEncrypted` encrypted with the requesting provider's per-user salt (`getUserEncryptionSalt(providerId)`)
-- **RLS backstop**: PHI table policies carry `OR has_provider_access(user_id, <perm>)`; `users_select_provider` (via `has_active_consent`) lets a provider read a consented patient's minimal identity row. App-layer checks remain the primary gate + audit driver; RLS is the no-disclosure backstop.
+- **RLS backstop**: PHI table policies carry `OR has_provider_access(user_id, <perm>)`; `users_select_provider` (via `has_active_consent`) lets a provider read a consented patient's minimal identity row. App-layer checks (`resolveProviderAccess`) remain the primary gate + audit driver; RLS is the no-disclosure backstop. As of `20260613_force_rls_and_audit_retention`, **FORCE ROW LEVEL SECURITY is applied to all 19 RLS tables** (incl. `provider_patients`), so the `has_provider_access` backstop now holds even for the table-owning DB role (previously the owner could bypass RLS). Consent-permission columns are additionally protected by the `provider_patients_guard_consent()` BEFORE UPDATE trigger (L23) — a provider's own UPDATE cannot flip its consent booleans; only patient/admin can.
 
 ## Checklist
 
@@ -58,11 +61,12 @@ updated: 2026-06-01
 ### 2. Granular Permission Enforcement
 - [ ] Each permission flag checked independently on data access:
   - `canViewBiomarkers` → `GET /provider/patients/:patientId/biomarkers`
-  - `canViewInsurance` → insurance plan endpoints (flag exists; verify whether a provider insurance read route is actually wired)
+  - `canViewInsurance` → `GET /provider/patients/:patientId/insurance` (WIRED as of M3 — gated via `resolveProviderAccess(tx,...,'canViewInsurance')` at providerRoutes.ts:611; no longer an orphaned permission)
   - `canViewHealthNeeds` → `GET /provider/patients/:patientId/health-needs`
-  - `canEditData` → mutation endpoints (write/POST/PATCH/DELETE on patient data)
+  - `canEditData` → INTENTIONALLY ORPHANED (L37): there is NO provider write route. The flag is never read/persisted on approve or updatePermissions (patientRoutes.ts:194-198 deliberately omits it), the UI "Edit data" toggle was removed from `CareTeamPage` (CareTeamPage.tsx:41-42), and the DB column + RLS `has_provider_access(..,'edit')` branch are retained ONLY for a future, deliberately-designed feature. The Zod schema still accepts the key for back-compat but it is ignored. Verify it stays orphaned (no silent write route appears) rather than treating it as an active write gate.
   - NOTE: `canViewDna` no longer exists (DNA/Genetics removed) — confirm no dead reference remains in code or RLS functions
-- [ ] Permission flag enforced at backend in BOTH the route handler AND the RLS `has_provider_access(user_id, <perm>)` branch (not just frontend UI)
+- [ ] Permission flag enforced at backend in BOTH the route handler (via `resolveProviderAccess`, the single choke point) AND the RLS `has_provider_access(user_id, <perm>)` branch (not just frontend UI). With `FORCE ROW LEVEL SECURITY` now on all 19 tables (`20260613_force_rls_and_audit_retention`), the RLS branch holds even for the table-owning DB role
+- [ ] Consent permission columns are DB-immutable to a provider's own UPDATE — the `provider_patients_guard_consent()` BEFORE UPDATE trigger (L23, `20260615_provider_consent_immutable_audit_insert_check`) restores `can_view_biomarkers/insurance/health_needs` + `can_edit_data` to OLD values unless the writer is the patient or admin; verify a provider re-request cannot widen its own permissions
 - [ ] Default permissions are restrictive at schema level (`canViewInsurance` default false, `canEditData` default false; `canViewBiomarkers`/`canViewHealthNeeds` default true)
 - [ ] `approve`/`updatePermissions` only accept the 4 known boolean flags (Zod `schemas.providerPatient.*`) — no permission injection
 - [ ] Permission changes logged in audit trail with before/after (`logUpdate` on `provider_consent_permissions`, op `PERMISSIONS_UPDATED`)
@@ -89,6 +93,7 @@ updated: 2026-06-01
 - [ ] Audit log captures both provider ID (`userId`) and patient ID (resource id + `patientId` metadata)
 - [ ] Consent grant/deny/revoke events logged (`provider_consent` ops `CONSENT_GRANTED`/`CONSENT_DENIED`/`CONSENT_REVOKED`/`RELATIONSHIP_DELETED`)
 - [ ] Consent-write audit rows are threaded onto the RLS `tx` so they commit atomically with the state change (no orphaned/lost audit rows)
+- [ ] Audit rows cannot be forged to an arbitrary `user_id` — the `audit_logs_insert` RLS policy WITH CHECK is tightened (L40, `20260615_provider_consent_immutable_audit_insert_check`) from `true` to `user_id=current_user_id() OR is_admin_session() OR current_user_id() IS NULL`; verify every provider/patient consent-audit insert satisfies one of those three shapes
 - [ ] Permission changes logged with old and new values (`logUpdate` carries before/after permission objects)
 - [ ] Failed access attempts logged with specific reason (`no_relationship`, `relationship_not_active`, `consent_expired`, `permission_denied`, `patient_inactive_or_locked`)
 - [ ] Enumeration probes on `/provider/patients/request` logged with real reason (`patient_not_found` vs `not_patient_role`) even though the API response is collapsed
@@ -127,7 +132,8 @@ grep -rn "canViewBiomarkers\|canViewInsurance\|canViewHealthNeeds\|canEditData" 
 grep -rn "canViewDna\|can_view_dna" backend/src/  # expect: zero hits outside the drop migration
 
 # Find cross-user queries (potential IDOR) and confirm they run inside withRLSContext
-grep -rn "providerId_patientId\|withRLSContext" backend/src/routes/providerRoutes.ts backend/src/routes/patientRoutes.ts backend/src/middleware/rbac.ts
+# (provider-patient resource access now lives in services/providerAccess.ts, NOT rbac.ts)
+grep -rn "providerId_patientId\|withRLSContext\|resolveProviderAccess" backend/src/routes/providerRoutes.ts backend/src/routes/patientRoutes.ts backend/src/services/providerAccess.ts
 
 # Verify audit logging on provider access
 grep -rn "logAccess\|logUpdate\|logDelete\|PHI_ACCESS\|CONSENT_" backend/src/routes/providerRoutes.ts backend/src/routes/patientRoutes.ts
@@ -144,7 +150,7 @@ grep -rn "providerAccessRequestLimiter" backend/src/
 2. Are expired consents checked on every request (handler + RLS function) or only periodically? Is there a background job that flips status to EXPIRED, or is expiry purely time-derived?
 3. Is there a notification system when a provider requests access (does the patient get emailed, or only see it on `GET /providers/pending`)?
 4. What happens to shared data if the patient revokes access mid-session — does the next request fail, and is there access-token/session invalidation?
-5. Does `canViewInsurance` have an actual provider-facing insurance read route, or is the flag granted but never consumable (orphaned permission)?
+5. `canViewInsurance` is now wired (`GET /provider/patients/:patientId/insurance`, M3). The remaining orphaned flag is `canEditData` (L37) — is it still deliberately orphaned (no provider write route, not persisted on approve/updatePermissions, UI toggle removed), and is keeping the DB column + RLS `edit` branch as a "future feature" placeholder the right call vs. a latent-activation trap?
 6. Provider remove is a hard delete (F-23) while patient revoke is a soft REVOKED update — does the hard delete break audit joinability / who-accessed-my-data reconstruction?
 7. Is there any patient-facing endpoint to answer "which providers accessed my data and when?" (no such route currently exists)?
 8. Are provider access patterns (enumeration probes, rate-limit hits) monitored for anomalies beyond raw audit rows?

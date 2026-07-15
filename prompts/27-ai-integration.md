@@ -5,14 +5,14 @@ tags:
   - high
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # AI / Claude API Integration Security Review
 
 ## Files to Review
 - `backend/src/services/anthropicClient.ts` (shared lazy Anthropic SDK singleton — `getAnthropicClient`, `isEnabled`, `reset`)
-- `backend/src/services/aiCostTracker.ts` (cost logging + in-memory rolling daily-spend accumulator: `trackAIUsage`, `isAISpendExceeded`)
+- `backend/src/services/aiCostTracker.ts` (cost logging + pluggable reserve/settle spend store: `admitAISpend` returns an `Admission{admitted, scope, settle}` (`:285`); `trackAIUsage` records actual post-call cost (`:302`); `InMemorySpendStore` (`:95`) / `RedisSpendStore` (`:172`) selected by `getStore()` (`:257`). NOTE: `isAISpendExceeded` was removed — replaced by the reserve+check `admitAISpend`)
 - `backend/src/services/usageTracker.ts` (per-user plan-limit counters from audit rows: `getUserUsage`, `checkPlanLimit`)
 - `backend/src/services/claudeExtraction.ts` (Claude lab-report biomarker extraction)
 - `backend/src/services/sbcExtraction.ts` (SBC parsing via Claude)
@@ -61,13 +61,16 @@ updated: 2026-06-01
   structured (non-identifier) fields and scrubbed again on the stream out.
 - **BAA Status**: Anthropic BAA required for HIPAA compliance. Enforced at runtime
   via `config.anthropic.baaActive` (`ANTHROPIC_BAA_ACTIVE === 'true'`). Production
-  boot HARD-EXITS if `ANTHROPIC_API_KEY` is set but the BAA flag is not (see
-  `config/index.ts` ~line 300); every Claude caller re-checks the flag and refuses
-  with 503 if false. Google Document AI image OCR has its own gate,
-  `GOOGLE_BAA_ACTIVE` (`config.gcp.documentAiBaaActive`).
-- **Cost / spend control**: rolling per-UTC-day budgets in `aiCostTracker.ts`
-  (in-memory, per-instance), checked by the `aiSpendGuard` middleware before each
-  AI call; `AI_DAILY_BUDGET_USD` (global, default 50) and `AI_USER_DAILY_BUDGET_USD`
+  boot HARD-EXITS if `ANTHROPIC_API_KEY` is set but the BAA flag is not (gate at
+  `config/index.ts:381-394` — prod errors, dev/staging warn); every Claude caller
+  re-checks the flag and refuses with 503 if false. Google Document AI image OCR
+  has its own gate, `GOOGLE_BAA_ACTIVE` (`config.gcp.documentAiBaaActive`).
+- **Cost / spend control**: per-UTC-day budgets enforced by `aiSpendGuard` before
+  each AI call via a reserve/settle store in `aiCostTracker.ts`. The store is
+  PLUGGABLE: `InMemorySpendStore` (default, `:95`) OR a shared `RedisSpendStore`
+  (`:172`) selected by `getStore()` when `REDIS_URL` is set (`:257-274`), using
+  atomic `INCRBYFLOAT` so the cap is consistent across instances. Budgets:
+  `AI_DAILY_BUDGET_USD` (global, default 50) and `AI_USER_DAILY_BUDGET_USD`
   (per-user, default 5). Per-tier request caps live in `plans.ts` and are enforced
   by `requirePlanLimit` + `usageTracker`.
 
@@ -133,8 +136,12 @@ updated: 2026-06-01
 - [ ] Chat responses are NOT persisted (verify `aiChatController` only streams +
   audit-logs metadata, never stores the answer)
 - [ ] AI responses don't contain medical diagnoses (educational only)
-- [ ] Medical disclaimers displayed with AI-generated content (chat system prompt
-  appends the educational-only disclaimer; UI must surface it too)
+- [ ] Medical disclaimers ENFORCED SERVER-SIDE, not left to the model/UI (L33):
+  `utils/aiDisclaimer.ts` exports `AI_DISCLAIMER` (`:12`) + `disclaimerToAppend(emitted)`
+  (`:24`); chat appends it as a final SSE delta when the model omitted an equivalent
+  (`aiChatController.ts:289`), and the biomarker-guidance handler appends it to the
+  guidance string (`biomarkerRoutes.ts:260`) — verify both still fire and the UI
+  surfaces it too
 - [ ] Responses timeout handled gracefully — shared client default 30s/2 retries;
   chat overrides to `timeout: 60_000, maxRetries: 1` (`CHAT_REQUEST_OPTS`); guidance
   and extraction surface a timeout message rather than hanging
@@ -155,12 +162,19 @@ updated: 2026-06-01
 - [ ] Cost tracking in place — `trackAIUsage` (`aiCostTracker.ts`) logs estimated
   USD per call from token counts; verify it's called on EVERY successful Claude
   response (chat, guidance, cost analysis, both extractors)
-- [ ] Dollar budget circuit breaker — `aiSpendGuard` reads `isAISpendExceeded` and
-  fails closed with 503 once `AI_DAILY_BUDGET_USD` (global) or
-  `AI_USER_DAILY_BUDGET_USD` (per-user) is hit; 0 disables a scope
-- [ ] KNOWN LIMITATION: the spend accumulator is in-memory/per-instance, so under
-  Cloud Run autoscale the effective ceiling is N×budget (bounded by `--max-instances`).
-  Confirm this is acceptable or migrated to a shared store (Memorystore)
+- [ ] Dollar budget circuit breaker — `aiSpendGuard` calls `admitAISpend(userId)`
+  (a reserve+check) BEFORE the call (`aiSpendGuard.ts:37`), and registers the
+  returned idempotent `settle()` on res `'finish'`/`'close'` (`:74-75`) to back out
+  the fixed `$0.05` reservation (`RESERVATION_USD`, `aiCostTracker.ts:67`);
+  `trackAIUsage` adds the real cost post-call. It fails closed with 503 once
+  `AI_DAILY_BUDGET_USD` (global) or `AI_USER_DAILY_BUDGET_USD` (per-user) is hit
+  (0 disables a scope), AND fails closed with 503 on a shared-store (Redis) error
+  (`aiSpendGuard.ts:42` — a billing breaker must not uncap spend during a Redis blip)
+- [ ] Shared store IS implemented (M11/L33): `getStore()` selects `RedisSpendStore`
+  (atomic `INCRBYFLOAT`, cap consistent across instances) when `REDIS_URL` is set,
+  else `InMemorySpendStore` — for which the N×budget caveat still applies under
+  Cloud Run autoscale (effective ceiling N×budget, bounded by `--max-instances`).
+  Confirm Redis is provisioned in prod if the per-instance cap is unacceptable
 - [ ] Spend accounting reflects actual call cost: it's recorded post-call by
   `trackAIUsage`, so the call in flight isn't pre-debited — verify a single runaway
   loop is still bounded (next call is refused once over budget)
@@ -178,7 +192,7 @@ updated: 2026-06-01
 - [ ] GCP credentials secured (`GOOGLE_APPLICATION_CREDENTIALS`)
 - [ ] Image OCR is gated by `GOOGLE_BAA_ACTIVE` (`config.gcp.documentAiBaaActive`) —
   raw image pixels carry demographics no text redaction can scrub, so OCR must refuse
-  when the BAA flag is false (see `ocrService.ts` ~line 274)
+  when the BAA flag is false (see `ocrService.ts:276`)
 - [ ] OCR results validated before biomarker extraction
 - [ ] Uploaded documents processed in memory (not written to disk)
 - [ ] Document content not logged
@@ -195,6 +209,13 @@ updated: 2026-06-01
   (`RESOURCE_HEALTH_GUIDE = 'HealthGuide'`, `RESOURCE_BIOMARKER_GUIDANCE =
   'biomarker_ai_guidance'`) — a mismatch silently breaks plan-limit counting
 - [ ] Blocked/failed calls are also audited (e.g. `CHAT_BLOCKED_NO_BAA`, `CHAT_FAILED`)
+- [ ] Fail-closed PRE-FLIGHT `CHAT_INITIATED` audit (L42): written BEFORE any PHI
+  leaves for Anthropic, and the call is refused if the audit row can't be written
+  (`aiChatController.ts:213-216`)
+- [ ] Blocked/failed/initiated chat attempts logged under a SEPARATE resourceType
+  `HealthGuideAttempt` (`RESOURCE_TYPE_ATTEMPT`, `aiChatController.ts:48`,
+  `:147-150`, `:349-353`) so they do NOT consume the `aiChatsPerDay` quota counter
+  (L-35); the successful `CHAT` stays on the `'HealthGuide'` resourceType
 - [ ] Log captures: user, feature/operation, timestamp, model, token counts, success/failure
 - [ ] AI prompts NOT logged (may contain PHI) — chat audit explicitly never records
   the question or the response, only metadata + which knowledge doc IDs were used
@@ -207,7 +228,7 @@ updated: 2026-06-01
   `ANTHROPIC_BAA_ACTIVE=true` only when truly signed (the flag is the runtime gate,
   not just documentation)
 - [ ] Production refuses to boot with a key but no BAA flag — verify the hard-exit in
-  `config/index.ts` (~line 300) is intact and not downgraded to a warning in prod
+  `config/index.ts:381-394` is intact and not downgraded to a warning in prod
 - [ ] Google Cloud BAA covers Document AI before `GOOGLE_BAA_ACTIVE=true` is set
 - [ ] Data processing agreement covers PHI handling
 - [ ] Anthropic's data retention policy reviewed (no training on PHI)
@@ -238,8 +259,8 @@ grep -rn "claudeResponseEncrypted\|guidance\|aiResponse" backend/src/ --include=
 # Check the guard stack on AI endpoints
 grep -rn "aiLimiter\|aiSpendGuard\|blockDemoAI\|requirePlanLimit" backend/src/routes/
 
-# Confirm cost tracking + spend cap
-grep -rn "trackAIUsage\|isAISpendExceeded\|AI_DAILY_BUDGET_USD\|AI_USER_DAILY_BUDGET_USD" backend/src/
+# Confirm cost tracking + spend cap (NOTE: isAISpendExceeded was removed)
+grep -rn "trackAIUsage\|admitAISpend\|RESERVATION_USD\|InMemorySpendStore\|RedisSpendStore\|AI_DAILY_BUDGET_USD\|AI_USER_DAILY_BUDGET_USD" backend/src/
 ```
 
 ## Questions to Ask

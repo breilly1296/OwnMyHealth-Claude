@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Environment & Secrets Review
@@ -15,10 +15,12 @@ updated: 2026-06-01
 - `backend/src/config/jwtOptions.ts`, `backend/src/config/plans.ts` (sibling config modules)
 - `.env.example` (frontend documented variables — VITE_*)
 - `backend/.env.example` (backend-specific documented variables)
-- `.github/workflows/deploy.yml`, `.github/workflows/deploy-staging.yml` (CI/CD secrets)
-- `backend/Dockerfile` (build-time variables)
+- `.github/workflows/ci.yml` (the actual secret-hygiene gate — gitleaks secret scan + `npm audit --audit-level=high` + RLS-wrapper guard; `deploy.yml` invokes it via `workflow_call` and `needs: ci`)
+- `.github/workflows/deploy.yml`, `.github/workflows/deploy-staging.yml` (CI/CD secrets; deploy is now gated on `ci.yml`)
+- `.github/workflows/maintenance.yml` (one-time data-migration Cloud Run job — same secret wiring)
+- `backend/Dockerfile` (build-time variables; note migrations do NOT run at boot — see §4)
 - Note: some env vars are read directly via `process.env` outside `config/index.ts`
-  (e.g. `GCP_PROCESSOR_ID`, `GCP_LOCATION` in `ocrService.ts`; `DISABLE_CSRF` in `csrf.ts`/`app.ts` — grep `process.env` across `backend/src/`).
+  (e.g. `GCP_PROCESSOR_ID`, `GCP_LOCATION` in `ocrService.ts`; `DISABLE_CSRF` in `csrf.ts`/`app.ts`; `DATABASE_POOL_SIZE` (default 10, pg pool `max`) in `database.ts:108` — grep `process.env` across `backend/src/`).
   `RLS_ENFORCEMENT` is documented in `.env.example` but NOT actually read by code — the BYPASSRLS posture is hardcoded in `database.ts → assertNoBypassRLS()` (prod hard-exits, non-prod warns). Flag the documented-but-dead flag.
 
 ## OwnMyHealth Secrets Architecture
@@ -77,7 +79,7 @@ Verify these secrets exist and are used:
 - [ ] `JWT_REFRESH_EXPIRES_SECONDS` - refresh token TTL in SECONDS, integer (default 604800)
 - [ ] `MAX_LOGIN_ATTEMPTS` - Account lockout threshold (default: 5)
 - [ ] `LOCKOUT_DURATION_MINUTES` - Lockout duration (default: 30)
-- [ ] `BCRYPT_ROUNDS` - Password hashing cost (default: 13 in code; `.env.example` still says 12 — flag the mismatch)
+- [ ] `BCRYPT_ROUNDS` - Password hashing cost (default: 13 in code AND `backend/.env.example:113`, in sync — no mismatch to flag)
 - [ ] `COOKIE_SAME_SITE` - `strict|lax|none` override (prod same-domain default `strict` per F-18; cross-domain needs `none`)
 - [ ] `COOKIE_DOMAIN` - cross-subdomain cookie domain (leading dot, e.g. `.ownmyhealth.io`)
 - [ ] `RATE_LIMIT_WINDOW_MS` (default 900000) / `RATE_LIMIT_MAX_REQUESTS` (default 100)
@@ -107,32 +109,54 @@ grep -rn "client_secret\|clientSecret\|QUEST_FHIR\|AIza\|-----BEGIN" backend/src
 - [ ] Optional variables marked as optional
 - [ ] Example values don't contain real secrets
 - [ ] Format/validation requirements noted (e.g. JWT secrets are SECONDS not "15m"; PHI key is 64 hex)
-- [ ] **Drift check**: several env vars read by `config/index.ts` are NOT documented in
-      `backend/.env.example` — verify and flag. As of this writing the file omits:
-      `SENDGRID_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `SENDGRID_SANDBOX_MODE`,
-      `GCS_BUCKET_NAME`, `GCP_PROJECT_ID`, `GCP_PROCESSOR_ID`, `GCP_LOCATION`,
-      `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_BAA_ACTIVE`, `AI_DAILY_BUDGET_USD`,
-      `AI_USER_DAILY_BUDGET_USD`, and `QUEST_FHIR_AUTH_HOSTS`.
-      (`COOKIE_SAME_SITE`, `COOKIE_DOMAIN`, and `QUEST_FHIR_CLIENT_SECRET` ARE present in
-      `.env.example` — the first two commented-out, the last uncommented — so they are
-      documented; do not flag them.)
-- [ ] **Stale defaults**: `BCRYPT_ROUNDS` documented as 12 in `.env.example` but code default is 13.
-- [ ] Stale `external APIs` block in `.env.example` documents removed integrations
-      (`CMS_API_KEY`, `OPENAI_API_KEY` — CMS Marketplace / OpenAI are NOT in the current
-      codebase). Flag for cleanup, do not treat as live secrets.
+- [ ] **Drift check**: `backend/.env.example` was rewritten and now documents EVERY env var
+      read by `config/index.ts` — the previously-omitted set (`SENDGRID_API_KEY:201`,
+      `EMAIL_FROM:205`, `EMAIL_FROM_NAME:208`, `SENDGRID_SANDBOX_MODE:218`,
+      `GCS_BUCKET_NAME:227`, `GCP_PROJECT_ID:230`, `GCP_PROCESSOR_ID:235`, `GCP_LOCATION:238`,
+      `GOOGLE_APPLICATION_CREDENTIALS:243`, `GOOGLE_BAA_ACTIVE:250`, `AI_DAILY_BUDGET_USD:278`,
+      `AI_USER_DAILY_BUDGET_USD:280`, `QUEST_FHIR_AUTH_HOSTS:300`) is now all present. Do NOT
+      report these as documentation gaps. Still verify any NEW config var introduced since the
+      last refresh appears in `.env.example`; the one var read by code but historically missed
+      is `DATABASE_POOL_SIZE` (`backend/.env.example:32-34`, default 10) — now documented.
+- [ ] **Stale defaults**: none currently — `BCRYPT_ROUNDS` is `13` in both code
+      (`config/index.ts:160`) and `backend/.env.example:113`. (Re-check on each refresh.)
+- [ ] No removed-integration cruft: `CMS_API_KEY` / `OPENAI_API_KEY` (CMS Marketplace / OpenAI)
+      do NOT appear in `backend/.env.example` or the frontend `.env.example` — there is no
+      "external APIs" block listing dead integrations (the frontend "External Services" block at
+      `.env.example:27-33` lists only optional Supabase vars). Nothing to flag here.
 
 ### 4. Secret Rotation
 - [ ] Secrets can be rotated without code changes
 - [ ] Process documented for rotating each secret
 - [ ] No secrets embedded in Docker images
+- [ ] **Migrations run as a dedicated Cloud Run job, NOT at container boot.** The Dockerfile
+      CMD is just `["node", "dist/app.js"]` (`backend/Dockerfile:86`, "Migrations do NOT run at
+      boot"). `prisma migrate deploy` runs in the `ownmyhealth-migrate` Cloud Run job
+      (`deploy.yml:43` `MIGRATE_JOB`, executed `deploy.yml:139,158`), wired to the same secret
+      via `--set-secrets "DATABASE_URL=DATABASE_URL:latest"` (`deploy.yml:144`) and the same
+      Cloud SQL instance via `--set-cloudsql-instances` (`deploy.yml:143`,
+      `CLOUDSQL_INSTANCE:46`), run as the service runtime SA. Verify DATABASE_URL reaches the
+      migrate job the same way it reaches the service (no migrate-specific secret exists).
 
 ### 5. CI/CD Secrets
 GitHub Actions secrets actually referenced in `deploy.yml` / `deploy-staging.yml`:
-- [ ] `GCP_SA_KEY` (service account JSON, passed to `google-github-actions/auth@v2`) — the ONLY repo secret used
-- [ ] `PROJECT_ID`, `REGION`, `SERVICE`, `REPOSITORY`, `FRONTEND_BUCKET` are workflow `env:` values, NOT secrets (do not check them as secrets)
+- [ ] `GCP_SA_KEY` (service account JSON, passed to `google-github-actions/auth`) — the ONLY repo secret used
+- [ ] `PROJECT_ID`, `REGION`, `SERVICE`, `REPOSITORY`, `FRONTEND_BUCKET`, `MIGRATE_JOB`
+      (`ownmyhealth-migrate`), and `CLOUDSQL_INSTANCE`
+      (`ownmyhealth-prod:us-central1:ownmyhealth-db`) are workflow `env:` values
+      (`deploy.yml:37-46`), NOT secrets (do not check them as secrets)
 - [ ] Secrets not echoed in logs
 - [ ] App env vars / Secret Manager values are injected at the Cloud Run service level (not in the workflow); `--update-env-vars` traffic-pinning caveat applies (see `cloud-run-env-update-pinning` notes)
-- [ ] Third-party actions are pinned by tag (`@v2`/`@v4`), not SHA — F-30 follow-up TODO; flag supply-chain risk
+- [ ] **Deploy is gated on `ci.yml`** (`deploy.yml:57-58` `uses: ./.github/workflows/ci.yml`,
+      `:66` `needs: ci`) — that reusable workflow is where the secret-hygiene gate lives
+      (gitleaks secret scan + `npm audit --audit-level=high` + RLS-wrapper guard). Verify the
+      deploy jobs cannot run if `ci` fails.
+- [ ] **F-30 DONE — third-party actions are pinned to full 40-char commit SHAs** (with a
+      trailing version comment), NOT floating tags: `actions/checkout@34e11487…# v4.3.1`
+      (`deploy.yml:74,305`), `google-github-actions/auth@c200f369…# v2.1.13`
+      (`deploy.yml:77,257,308`), `setup-gcloud@e427ad8a…# v2.2.1` (`deploy.yml:83,263,314`);
+      `deploy-staging.yml` carries the same SHA pins. No supply-chain TODO remains here — flag
+      only a NEW unpinned/tag-only action if one is introduced.
 
 ### 6. Local Development
 - [ ] `.env` files in `.gitignore`
@@ -164,6 +188,7 @@ These are the load-bearing boot-time guards — confirm each still fires:
 | Variable | Required | Source | Purpose |
 |----------|----------|--------|---------|
 | DATABASE_URL | Yes (prod/staging) | Secret Manager | DB connection |
+| DATABASE_POOL_SIZE | No (default 10) | Environment | pg pool `max` (read via `process.env` in `database.ts:108`, NOT in config object) |
 | JWT_ACCESS_SECRET | Yes (all envs) | Secret Manager | Access token signing (`requireEnv`) |
 | JWT_REFRESH_SECRET | Yes (all envs) | Secret Manager | Refresh token signing (`requireEnv`) |
 | JWT_ACCESS_EXPIRES_SECONDS | No | Environment | Access TTL (seconds, default 900) |
@@ -209,7 +234,7 @@ These are the load-bearing boot-time guards — confirm each still fires:
 | DEMO_PASSWORD | No | Environment | Demo password |
 
 ## Questions to Ask
-1. Are all secrets documented in `backend/.env.example`, and conversely are any documented vars dead/removed (CMS, OpenAI, RLS_ENFORCEMENT)?
+1. Are all secrets documented in `backend/.env.example`, and conversely are any documented vars dead/removed? (As of this refresh, CMS/OpenAI cruft is gone; the one documented-but-dead flag remaining is `RLS_ENFORCEMENT` in the frontend `.env.example` — not read by code.)
 2. Can secrets be rotated without deployment? (Note `AUDIT_LOG_SALT` and `PHI_ENCRYPTION_KEY` are NOT rotatable in place — rotating breaks decryption of historic PHI/audit data.)
 3. Are there any secrets in the Git history?
 4. Are the BAA gates (`ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`) actually set to `true` in prod, or is PHI egress to Claude/Document AI being blocked by the runtime gates instead?

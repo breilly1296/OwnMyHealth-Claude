@@ -6,7 +6,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate LOCAL_DEV.md
@@ -33,16 +33,16 @@ Produce `New Project Documents/LOCAL_DEV.md` — the **zero-to-running setup gui
 | File | Why read it |
 |---|---|
 | `README.md` | High-level orientation (cross-check any existing setup steps). |
-| `package.json` (root) | Scripts: `dev`, `build`, `test`, `test:unit`, `test:e2e`, `lint`. |
+| `package.json` (root) | Frontend/repo scripts: `dev`, `build`, `test`, `test:e2e`, `lint` (NO `test:unit`/`test:integration`/`test:rls` here — those live only in `backend/package.json`). |
 | `backend/package.json` | Backend scripts: `dev`, `build`, `test`, Prisma scripts. |
 | `backend/.env.example`, `.env.example` | Required env vars for local dev. (Frontend `.env.example` only needs `VITE_API_URL`.) |
 | `backend/src/config/index.ts` | Which vars boot with defaults vs throw (`requireEnv` for JWT secrets; hard-fail validation for `AUDIT_LOG_SALT`, `PHI_ENCRYPTION_KEY`). |
 | `backend/src/app.ts` | Backend entry point + startup assertions — local-dev failure modes. (There is no `src/index.ts`; dev script is `tsx watch src/app.ts`.) |
-| `backend/prisma/schema.prisma` | DB to provision (18 models). |
-| `backend/prisma/migrations/` | Number of migrations to run (22 as of 2026-06-01). |
+| `backend/prisma/schema.prisma` | DB to provision (19 models — `RevokedAccessToken` and `LabConnection` included). |
+| `backend/prisma/migrations/` | Number of migrations to run (32 dirs as of 2026-06-16; newest `20260615_provider_consent_immutable_audit_insert_check`). |
 | `e2e/setup/seed-test-user.ts` | Test-user seeding (idempotent; sets `emailVerified`, `plan: PRO`, `onboardingCompletedAt`) — useful for smoke test. No `backend/scripts/seed*` exists. |
 | `backend/scripts/setup-rls-test-db.sh` | RLS test-DB bootstrap (only script in `backend/scripts/`). |
-| `backend/Dockerfile` | Node version confirmation (`node:20-alpine`). |
+| `backend/Dockerfile` | Node version confirmation (`node:22-alpine`, digest-pinned — M15 bumped from `node:20-alpine` after Node 20 EOL Apr 2026; Prisma 7 needs `^22.12`). Also note: migrations do **not** run at boot — `CMD ["node", "dist/app.js"]` only; `migrate deploy` runs as a separate Cloud Run job. |
 | `vite.config.ts` | Dev server port + chunking. |
 | `CLAUDE.md` | Dev commands section. |
 
@@ -53,11 +53,11 @@ Produce `New Project Documents/LOCAL_DEV.md` — the **zero-to-running setup gui
 1. **Prerequisites** — Node version (from Dockerfile / engines), Postgres version, npm version, optional `gcloud` for GCS features.
 2. **Clone + install** — exact commands, root + workspace install.
 3. **Environment setup** — copying `.env.example` files, generating local secrets. Note the differing generators: JWT secrets use `openssl rand -base64 32` (min 32 chars, no fallback — `requireEnv` crashes at boot if missing); `PHI_ENCRYPTION_KEY` and `AUDIT_LOG_SALT` use `openssl rand -hex 32`. There is **no** `CSRF_SECRET` (CSRF is a stateless double-submit cookie). Postgres connection string.
-4. **Database provisioning** — create DB (or run Prisma Postgres locally via `npx prisma dev` per `.env.example`), run migrations (`npx prisma migrate deploy` or `migrate dev` — 22 migrations), generate Prisma client, optional seed (`npx tsx e2e/setup/seed-test-user.ts`).
+4. **Database provisioning** — create DB (or run Prisma Postgres locally via `npx prisma dev` per `.env.example`), run migrations (`npx prisma migrate deploy` or `migrate dev` — 32 migrations as of 2026-06-16), generate Prisma client, optional seed (`npx tsx e2e/setup/seed-test-user.ts`). NOTE: migrations are no longer applied at container boot — the Dockerfile `CMD` is `node dist/app.js` only and `migrate deploy` runs as a dedicated Cloud Run job (`ownmyhealth-migrate`) in the deploy pipeline. A developer running the backend image locally must apply migrations separately (`docker run ... npx prisma migrate deploy`); running `npm run dev` from source is unaffected (you run `prisma migrate` yourself per the step-by-step).
 5. **Run** — start backend (`npm run dev` in `backend/`, runs `tsx watch src/app.ts`), start frontend (`npm run dev` at root), how to verify each is up.
-6. **Golden-path smoke test** — a copy-paste sequence of `curl` calls (or a script) that: registers a test user, verifies email (in dev without a SendGrid key the verification URL is printed to the backend console via `logger.devBox('EMAIL VERIFICATION', ...)` — or set `DISABLE_CSRF=true` and seed `emailVerified: true`), logs in, creates a biomarker, lists it, deletes it. End-to-end proof.
-7. **Test suites** — how to run unit tests (`npm run test:unit`), integration tests (`npm run test:integration`), RLS (`npm run test:rls`), and e2e (`npm run test:e2e`, which seeds first). Expected runtimes.
-8. **Local mocking** — which external services can be skipped locally. Anthropic key optional (warns at boot; runtime gate blocks Claude calls unless `ANTHROPIC_BAA_ACTIVE=true`). SendGrid optional (no key → emails logged, never sent; or `SENDGRID_SANDBOX_MODE=true`). Redis optional (`REDIS_URL` unset → in-memory rate-limit store). Quest FHIR optional (point `QUEST_FHIR_BASE_URL` at the local mock `http://localhost:3001/api/v1/mock-fhir/r4`).
+6. **Golden-path smoke test** — a copy-paste sequence of `curl` calls (or a script) that: registers a test user, verifies email (in dev without a SendGrid key the verification URL is printed to the backend console via `logger.devBox('EMAIL VERIFICATION', ...)` — or set `DISABLE_CSRF=true` and seed `emailVerified: true`), logs in, creates a biomarker, lists it, deletes it. End-to-end proof. Make sure the worked `curl` block actually includes the DELETE step it promises (the prior version stopped at list). Informational: biomarker writes now route through `upsertBiomarkerReading` (`backend/src/services/biomarkerSeries.ts`) so repeated readings of the same marker append to one time-series instead of creating disconnected rows — the create→list→delete path still validates as written.
+7. **Test suites** — backend unit/integration/RLS scripts live ONLY in `backend/package.json` (run from `backend/`): `npm run test:unit`, `npm run test:integration`, `npm run test:rls` (and `npm test` for all). The root `package.json` has NO `test:unit`/`test:integration`/`test:rls` — running them at root yields "missing script"; root has `test` (Vitest frontend), `test:e2e` (Playwright, seeds first), `test:coverage`, `test:ui`. Document the correct cwd for each. Expected runtimes.
+8. **Local mocking** — which external services can be skipped locally. Anthropic key optional (warns at boot; runtime gate blocks Claude calls unless `ANTHROPIC_BAA_ACTIVE=true`). Google Document AI OCR optional and gated the same way: `GCP_PROCESSOR_ID` set without `GOOGLE_BAA_ACTIVE=true` warns in dev (hard-fails in prod). SendGrid optional (no key → emails logged, never sent; or `SENDGRID_SANDBOX_MODE=true`). Redis optional (`REDIS_URL` unset → in-memory rate-limit store). Quest FHIR optional (point `QUEST_FHIR_BASE_URL` at the local mock `http://localhost:3001/api/v1/mock-fhir/r4`). Also surface these post-2026-06-01 env vars: **`AI_DAILY_BUDGET_USD`** (default 50) and **`AI_USER_DAILY_BUDGET_USD`** (default 5) feed the `aiSpendGuard` circuit breaker — when testing AI features locally a `503 SERVICE_UNAVAILABLE` on an AI route can be a budget hit, not a bug; **`COOKIE_SAME_SITE`** / **`COOKIE_DOMAIN`** (M7) change local cross-origin cookie behavior (relevant if the SPA and API are on different hosts/ports). `OMH_DEPLOY_ENFORCE_PROD` (RT-H1) is baked into the prod image only and is never set by local `npm run dev`.
 9. **Reset procedures** — wipe local DB, clear sessions, reset migrations.
 10. **Common failures + fixes** — "if this fails, try that" table.
 11. **IDE setup** — recommended extensions (ESLint, Prisma), Prettier/format-on-save if configured.
@@ -72,9 +72,9 @@ Produce `New Project Documents/LOCAL_DEV.md` — the **zero-to-running setup gui
 
 | Prereq | Version | Install hint |
 |---|---|---|
-| Node.js | 20 (`backend/Dockerfile` uses `node:20-alpine`; `engines` says `>=18`) | `nvm install 20` |
+| Node.js | 22 (`backend/Dockerfile` uses `node:22-alpine`; `backend/package.json` `engines` = `^20.19 \|\| ^22.12 \|\| >=24`) | `nvm install 22` |
 | npm | latest | bundled with Node |
-| PostgreSQL | 15.x (or `npx prisma dev` for local Prisma Postgres) | Docker: `docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:15` |
+| PostgreSQL | 16.x recommended (matches the CI RLS-regression job which runs against Postgres 16; 15.x also works, or `npx prisma dev` for local Prisma Postgres) | Docker: `docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:16` |
 | gcloud (optional) | latest | for GCS-backed file features + Document AI OCR |
 | Redis (optional) | latest | only if testing the shared rate-limit store (`REDIS_URL`) |
 
@@ -113,7 +113,7 @@ createdb ownmyhealth_dev
 
 cd backend
 npx prisma generate
-npx prisma migrate deploy   # applies all 22 migrations
+npx prisma migrate deploy   # applies all 32 migrations
 cd ..
 
 # (optional) seed an already-verified PRO test user for smoke/e2e flows
@@ -151,8 +151,13 @@ curl -b cookies.txt -X POST http://localhost:3001/api/v1/biomarkers \
   -H "X-CSRF-Token: $CSRF" \
   -d '{"name":"LDL","value":120,"unit":"mg/dL","category":"Lipids","date":"2026-06-01T10:00:00Z","normalRange":{"min":0,"max":100}}'
 
-# List biomarkers
+# List biomarkers (capture the id of the created marker for the delete step)
 curl -b cookies.txt http://localhost:3001/api/v1/biomarkers
+
+# Delete it (close the loop — needs the id from the list response + the CSRF header)
+BIOMARKER_ID=<id-from-list-response>
+curl -b cookies.txt -X DELETE "http://localhost:3001/api/v1/biomarkers/$BIOMARKER_ID" \
+  -H "X-CSRF-Token: $CSRF"
 ```
 
 ### Common failures table
@@ -167,7 +172,7 @@ curl -b cookies.txt http://localhost:3001/api/v1/biomarkers
 | `401` on every request | `JWT_ACCESS_SECRET` differs between token issuance and verification | restart backend after changing `.env` |
 | `403 CSRF mismatch` | not sending `X-CSRF-Token` matching the `csrf_token` cookie | re-read cookie after login (or set `DISABLE_CSRF=true` in dev) |
 | Next dev/vite port conflict | `:5173` in use | `vite --port 5174` |
-| `npm install` fails on Windows ARM64 + Node 24 | Native binary incompat (see CLAUDE.md note) | use Node 20 or apply documented SWC patch |
+| `npm install` fails on Windows ARM64 + Node 24 | Native binary incompat (see CLAUDE.md note) | use Node 22 or apply documented SWC patch |
 
 ### Reset procedures
 
@@ -208,7 +213,7 @@ After writing the doc, self-answer each **using only the doc**:
 
 Before marking anything TBD:
 
-- **Node version**: `backend/Dockerfile` `FROM` line (`node:20-alpine`); `package.json` `engines` field (`>=18`).
+- **Node version**: `backend/Dockerfile` `FROM` line (`node:22-alpine`, digest-pinned); `backend/package.json` `engines` field (`^20.19 || ^22.12 || >=24`). Do NOT cite the old `node:20-alpine` / `>=18`.
 - **Postgres version**: check Cloud SQL version in `.github/workflows/deploy.yml`, or infer from Prisma's minimum supported.
 - **Seed scripts**: the only seed is `e2e/setup/seed-test-user.ts` (no `backend/scripts/seed*` exists — `backend/scripts/` holds only `setup-rls-test-db.sh`). State this explicitly.
 - **Email verification local bypass**: `emailService.ts` — when SendGrid is unavailable the verification URL is logged via `logger.devBox('EMAIL VERIFICATION', ...)`. The e2e seed sets `emailVerified: true` to skip the gate entirely.
@@ -242,7 +247,7 @@ The generated `LOCAL_DEV.md` must link to:
 | Read Dockerfile | Read | `backend/Dockerfile` |
 | Confirm boot-time env validation | Read | `backend/src/config/index.ts` (`requireEnv`, salt/key/secret checks) |
 | Find seed script | Glob | `pattern: "e2e/setup/seed-test-user.ts"` |
-| Count migrations | Glob | `pattern: "backend/prisma/migrations/*/"` (22 dirs) |
+| Count migrations | Glob | `pattern: "backend/prisma/migrations/*/"` (32 dirs as of 2026-06-16) |
 | Find dev-only bypasses | Grep | `pattern: "DISABLE_CSRF|isDevelopment"` over `backend/src/**` |
 
 ---

@@ -5,20 +5,20 @@ tags:
   - medium
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Data Portability & Deletion Security Review
 
 ## Files to Review
 - `backend/src/controllers/settingsController.ts` (`exportUserData`, `deleteAllData`, `deleteAccount` handlers)
-- `backend/src/routes/settingsRoutes.ts` (settings endpoints; all use `sensitiveLimiter` + `blockDemoProfileUpdate`)
-- `backend/src/services/encryption.ts` (`PHI_FIELDS` constant ~line 410; decryption for export)
+- `backend/src/routes/settingsRoutes.ts` (settings endpoints; all use `sensitiveLimiter`, but only the MUTATING routes — `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` — add `blockDemoProfileUpdate`; the GET routes including `/export-data` use `sensitiveLimiter` only. `PATCH /health-profile` additionally has `requirePlanFeature('healthProfile')` — settingsRoutes.ts:34-90, :80)
+- `backend/src/services/encryption.ts` (`PHI_FIELDS` constant at line 476; decryption for export)
 - `backend/src/services/userEncryption.ts` (per-user salt lifecycle — note: there is NO explicit key-destruction call; `UserEncryptionKey` rows cascade from `User` on account delete)
 - `backend/src/services/healthProfileService.ts` (`getDecryptedHealthProfile`, `saveHealthProfile` — self-reported profile in export scope)
 - `backend/src/services/fhir/labSyncService.ts` (`revokeAllUserConnections`, `disconnectConnection` — OAuth token revocation before LabConnection delete)
 - `backend/src/services/storageService.ts` (`deleteFiles` GCS cleanup, returns per-key `{ ok, error }`)
-- `backend/src/services/auditLog.ts` (audit log retention on deletion; PHI in audit logs encrypted with `config.auditSalt` / `AUDIT_LOG_SALT`, not the user salt)
+- `backend/src/services/auditLog.ts` (audit log retention on deletion; PHI in audit logs — `previousValueEncrypted`, `newValueEncrypted`, AND now `metadataEncrypted` (M6) — encrypted with `config.auditSalt` / `AUDIT_LOG_SALT` via `systemSalt`, not the user salt. The legacy plaintext `metadata` column was DROPPED in migration `20260615_drop_legacy_audit_metadata` — auditLog.ts:153,179,251)
 - `backend/prisma/schema.prisma` (cascade delete relationships; `AuditLog.user` is the only non-cascading User relation)
 - `src/services/api/settings.ts` (frontend settings API)
 - `src/components/settings/AccountSettingsPage.tsx` (export/delete UI)
@@ -30,7 +30,7 @@ updated: 2026-06-01
 - **Encryption**: All PHI decrypted for export. On account deletion the per-user salt row (`UserEncryptionKey`) is removed via Prisma `onDelete: Cascade` from `User` — there is NO explicit key-destroy call in `userEncryption.ts` (the old key-rotation helper was removed). `deleteAllData` does NOT touch `UserEncryptionKey` (account/key survive).
 - **Lab Connections (Quest FHIR)**: `deleteAccount` calls `revokeAllUserConnections` to best-effort revoke OAuth tokens at the provider BEFORE the `LabConnection` cascade delete; `deleteAllData` wipes `LabConnection` rows explicitly (account survives) but only revokes locally, not at the provider.
 - **File Cleanup**: GCS objects deleted via `storageService.deleteFiles` BEFORE DB rows ("GCS first, fail hard" — see C-6); any non-404 GCS failure aborts with DB intact for retry.
-- **Audit Retention**: Audit logs retained for 7 years even after account deletion (HIPAA). `AuditLog.userId` is nullable and the `user` relation does NOT cascade, so audit rows survive user deletion. Encrypted PHI snapshots in audit logs use the system salt (`config.auditSalt` / `AUDIT_LOG_SALT`), so they remain decryptable after the user's salt is gone.
+- **Audit Retention**: Audit logs retained for 7 years even after account deletion (HIPAA). `AuditLog.userId` is nullable and the `user` relation does NOT cascade, so audit rows survive user deletion. Encrypted PHI snapshots in audit logs (`previousValueEncrypted`, `newValueEncrypted`, and now `metadataEncrypted` — M6) use the system salt (`config.auditSalt` / `AUDIT_LOG_SALT`), so they remain decryptable after the user's salt is gone. The plaintext `metadata` column was DROPPED (migration `20260615_drop_legacy_audit_metadata`) — metadata JSON is now system-salt-encrypted PHI that also survives user deletion.
 
 ## Checklist
 
@@ -40,13 +40,13 @@ updated: 2026-06-01
   - Self-reported health profile (`healthProfile`: conditions, medications, family history, etc. — feeds AI, MUST be in §164.524 export)
   - Biomarkers (decrypted values, notes, history)
   - Insurance plans (decrypted member/group IDs) AND per-plan benefits
-  - Health goals (decrypted descriptions, target values, progress)
+  - Health goals (decrypted descriptions, target values, AND now current/start values + progress — M4 added `currentValueEncrypted`/`startValueEncrypted` to HealthGoal and `valueEncrypted` to GoalProgressHistory, migration `20260613_encrypt_goal_values`; the export currently reads these from the plaintext Decimal twins via `toNumber` — settingsController.ts:568-569,578-579)
   - Health needs (decrypted descriptions)
   - Expense projections and actuals
   - Cost analyses (decrypted `claudeResponse` — JSON key keeps legacy name despite `claudeResponseEncrypted` column rename)
-  - Uploaded file metadata (id/storageKey/filename — bytes downloaded separately, per `filesNote`)
+  - Uploaded file metadata (id/storageKey/originalFilename — bytes downloaded separately, per `filesNote`). NOTE: `UserFile.originalFilename` is now PHI-encrypted at rest (`originalFilenameEncrypted`, L24, migration `20260615_encrypt_userfile_original_filename`), so the export DECRYPTS it via `decryptOriginalFilename(file, encryptionService, userSalt)` — settingsController.ts:14 (import), :651; helper at `backend/src/utils/userFileNames.ts:13-26` (decrypts the twin, falls back to legacy plaintext on absence/decrypt-failure)
   - Provider relationships (status, permissions, dates)
-- [ ] PHI fields properly decrypted for export (`encryptionService.decrypt` with the user salt from `getUserEncryptionSalt`)
+- [ ] PHI fields properly decrypted for export (`encryptionService.decrypt` with the user salt from `getUserEncryptionSalt`) — including `UserFile.originalFilename` via the L24 `decryptOriginalFilename` helper
 - [ ] LabConnection rows are deliberately NOT exported (only OAuth tokens + provider link — confirm this is intentional; verify no user-facing lab metadata is silently dropped)
 - [ ] Export includes metadata (dates, categories, sources)
 - [ ] Export format documented and machine-readable (JSON)
@@ -56,7 +56,7 @@ updated: 2026-06-01
 ### 2. Export Security
 - [ ] Export endpoint requires authentication (`router.use(authenticate)`)
 - [ ] Export endpoint rate limited (`sensitiveLimiter` — verify it's appropriate for a full-record dump)
-- [ ] Export audit logged with per-category counts (`auditService.logAccess('UserData', ..., { operation: 'EXPORT' })`)
+- [ ] Export audit logged with per-category counts via `auditService.logExport('UserData', [userId], 'json', { req, userId }, {...})` — M18 change: this is `action=EXPORT` + `failClosed:true` (NOT `logAccess` with `action=READ` and an `operation:'EXPORT'` tag), so the largest PHI egress is recorded as an EXPORT a breach query can find and fails closed if the audit can't be written (settingsController.ts:724; auditLog.ts:517-538)
 - [ ] Export doesn't include `passwordHash` or other internal-only fields
 - [ ] Export doesn't include encryption keys or salts
 - [ ] Export response sets no-cache headers (`Cache-Control: no-store, no-cache, private, must-revalidate`, `Pragma`, `Expires: 0`)
@@ -66,7 +66,7 @@ updated: 2026-06-01
 - [ ] Requires password confirmation (`verifyPassword` before any deletion — as destructive as full deletion)
 - [ ] Deletes biomarkers, history, and related records (BiomarkerHistory cascades from Biomarker)
 - [ ] Deletes insurance plans and benefits (InsuranceBenefit cascades from InsurancePlan)
-- [ ] Deletes health goals and progress history (GoalProgressHistory cascades from HealthGoal)
+- [ ] Deletes health goals and progress history (GoalProgressHistory cascades from HealthGoal) — note HealthGoal now also encrypts `currentValueEncrypted`/`startValueEncrypted` and GoalProgressHistory `valueEncrypted` (M4, migration `20260613_encrypt_goal_values`); all are dropped by the cascade
 - [ ] Deletes health needs
 - [ ] Deletes expense projections, actuals, and cost analyses (ordered: cost analyses → actuals → projections, to respect FKs)
 - [ ] Deletes `LabConnection` rows explicitly (account survives so no cascade; verify local-only revoke vs provider revoke is acceptable)
@@ -121,7 +121,7 @@ updated: 2026-06-01
 - [ ] Audit logs survive account deletion (HIPAA 7-year requirement; `AuditLog.user` relation is non-cascading)
 - [ ] Audit logs reference `userId` (nullable) but don't depend on user existence
 - [ ] Deleted user's audit logs still queryable by admin
-- [ ] Audit logs retain encrypted PHI values using the SYSTEM salt (`config.auditSalt` from `AUDIT_LOG_SALT`, length-validated at config load), NOT the per-user salt — so they stay decryptable after the user's `UserEncryptionKey` cascade-deletes (`auditLog.ts` `systemSalt`, ~line 148/220)
+- [ ] Audit logs retain encrypted PHI values — `previousValueEncrypted`, `newValueEncrypted`, AND `metadataEncrypted` (M6) — using the SYSTEM salt (`config.auditSalt` from `AUDIT_LOG_SALT`, length-validated at config load), NOT the per-user salt, so they stay decryptable after the user's `UserEncryptionKey` cascade-deletes (`auditLog.ts` `systemSalt` declared :153, assigned `= config.auditSalt` :179, used in `encryptValue` :251). The legacy plaintext `metadata` column was DROPPED in migration `20260615_drop_legacy_audit_metadata` — metadata JSON is now system-salt-encrypted PHI surviving user deletion
 
 ## Verification Commands
 ```bash
@@ -140,8 +140,11 @@ grep -n "deleteFiles\|storageService" backend/src/controllers/settingsController
 # Confirm NO explicit key-destroy exists (salt removal is cascade-only)
 grep -n "deleteKey\|destroyKey\|userEncryptionKey.*delete" backend/src/services/userEncryption.ts
 
-# Verify PHI_FIELDS is current (healthProfileEncrypted, LabConnection tokens, targetValueEncrypted)
-grep -n "healthProfileEncrypted\|accessTokenEncrypted\|claudeResponseEncrypted" backend/src/services/encryption.ts
+# Verify PHI_FIELDS is current — incl. post-2026-06-01 additions load-bearing for export/deletion:
+#   healthProfileEncrypted, LabConnection tokens, claudeResponseEncrypted,
+#   originalFilenameEncrypted (L24), targetValueEncrypted/currentValueEncrypted/startValueEncrypted (M4),
+#   GoalProgressHistory valueEncrypted (M4), metadataEncrypted (M6)
+grep -n "healthProfileEncrypted\|accessTokenEncrypted\|claudeResponseEncrypted\|originalFilenameEncrypted\|targetValueEncrypted\|currentValueEncrypted\|startValueEncrypted\|metadataEncrypted" backend/src/services/encryption.ts
 
 # Verify audit logs use the SYSTEM salt, not the user salt
 grep -n "systemSalt\|auditSalt" backend/src/services/auditLog.ts

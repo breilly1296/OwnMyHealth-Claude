@@ -5,7 +5,7 @@ tags:
   - medium
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # External API Security Review
@@ -16,7 +16,7 @@ updated: 2026-06-01
 - `backend/src/services/sbcExtraction.ts` (SBC parsing via Claude)
 - `backend/src/services/aiCostTracker.ts` (Claude token cost logging + rolling daily spend accumulator)
 - `backend/src/middleware/aiSpendGuard.ts` (pre-call AI budget circuit breaker)
-- `backend/src/services/ocrService.ts` (Google Document AI image OCR — BAA-gated)
+- `backend/src/services/ocrService.ts` (Google Document AI OCR — images + scanned-PDF fallback; BAA-gated)
 - `backend/src/services/storageService.ts` (Google Cloud Storage)
 - `backend/src/services/emailService.ts` (SendGrid email)
 - `backend/src/services/fhir/smartAuth.ts` (Quest SMART-on-FHIR OAuth — PKCE, token exchange/refresh/revoke)
@@ -32,7 +32,7 @@ updated: 2026-06-01
 - **Anthropic Claude API**: PDF/SBC extraction, biomarker guidance, AI chat, cost analysis. Single shared client in `anthropicClient.ts`; gated by `ANTHROPIC_BAA_ACTIVE` (prod hard-fails at boot if key set but BAA flag unset; dev/staging warn + runtime gate blocks calls). Cost tracked in `aiCostTracker.ts`, spend-capped by `aiSpendGuard` middleware.
 - **Quest Diagnostics SMART-on-FHIR (NEW)**: OAuth 2.0 authorization-code + PKCE lab-result sync (`fhir/smartAuth.ts`, `fhir/fhirClient.ts`). Outbound URLs are SSRF-guarded by `fhir/urlSafety.ts`; OAuth tokens are stored AES-256-GCM-encrypted on the `LabConnection` model (`accessTokenEncrypted` / `refreshTokenEncrypted`). Feature disabled unless `QUEST_FHIR_CLIENT_ID` is set.
 - **Google Cloud Storage**: File upload/download. PHI downloads are now streamed through the backend (`storageService.getFileStream` → `fileController`), NOT served via long-lived signed URLs.
-- **Google Document AI**: OCR for scanned lab report **images** (PDF text path uses Claude, not Document AI). BAA-gated by `GOOGLE_BAA_ACTIVE` (image bytes carry demographics redaction cannot scrub).
+- **Google Document AI**: OCR for scanned lab reports — images AND scanned/image-only PDFs. The text-only Claude path is tried first for PDFs; when it fails to extract (a scanned PDF) AND the Google BAA is active, the raw PDF bytes fall back to Document AI OCR (M-19, `ocrService.ts:401-427`; `processImageWithDocumentAI` accepts `application/pdf`). BAA-gated by `GOOGLE_BAA_ACTIVE` (document bytes carry demographics redaction cannot scrub).
 - **SendGrid**: Transactional emails (verification, password reset, account-exists notice, email-change confirm/notice) + engagement/notification emails via `notificationService` + `emailTemplates.ts`. Sandbox mode (`SENDGRID_SANDBOX_MODE`/staging) validates but never delivers.
 
 ## Checklist
@@ -59,8 +59,8 @@ updated: 2026-06-01
 - [ ] Single shared client via `anthropicClient.getAnthropicClient()` (no per-file copy-pasted singletons) — lazy init, 30s timeout / 2 retries defaults, `reset()` for key rotation
 - [ ] BAA gate enforced: `config.anthropic.baaActive` (`ANTHROPIC_BAA_ACTIVE`) checked before any PHI is sent; prod hard-fails at boot if key set but flag unset (`config/index.ts`); runtime gate in `claudeExtraction`/`sbcExtraction` is load-bearing in dev/staging
 - [ ] Error handling for API failures (timeouts, rate limits, 5xx)
-- [ ] Cost tracking via `aiCostTracker.trackAIUsage` (estimated cost per model logged) AND spend cap enforced by `aiSpendGuard` middleware / `isAISpendExceeded` (`AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`; note accumulator is in-memory/per-instance → effective ceiling N×budget under autoscale)
-- [ ] No PHI sent to Claude: PDF text extracted locally then run through `phiRedaction` (`redactPHI`/`stripPHIFromText`) before the prompt; raw PDF bytes never leave the process; no PDF vision fallback (scanned/image-only PDFs rejected)
+- [ ] Cost tracking via `aiCostTracker.trackAIUsage` (records real cost per call after the response) AND spend cap enforced by `aiSpendGuard` via a reserve/settle admission model: the middleware calls `admitAISpend(userId)` BEFORE the call (`aiCostTracker.ts:285`; `aiSpendGuard.ts:24,37`), which places a fixed `RESERVATION_USD = 0.05` Claude estimate (`aiCostTracker.ts:67`) and returns an `Admission` with an idempotent `settle()`; `trackAIUsage()` (`aiCostTracker.ts:302`) then records the actual cost. (`isAISpendExceeded` no longer exists — flag any reference to it.) Budgets `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD`; the accumulator is now pluggable (`InMemorySpendStore` default OR `RedisSpendStore` when `REDIS_URL` set), so the in-memory/per-instance → N×budget caveat applies ONLY without Redis
+- [ ] No PHI sent to Claude: PDF text extracted locally then run through `phiRedaction` (`redactPHI`/`stripPHIFromText`) before the prompt; raw PDF bytes never leave the process to Claude; no PDF vision fallback — the Claude layer itself refuses scanned/image-only PDFs (`claudeExtraction.ts:124-133`). NOTE this is true only at the Claude layer: the upload/OCR orchestration (`ocrService.processDocument`) does NOT reject scanned PDFs outright — it routes their raw bytes to Google Document AI OCR when the Google BAA is active (`ocrService.ts:418-426`), so "scanned PDFs rejected" is NOT a property of the upload pipeline as a whole
 - [ ] No PHI logged in prompts or responses
 - [ ] AI responses validated before storage/display
 - [ ] See also [[27-ai-integration]] for detailed AI security review
@@ -73,10 +73,11 @@ updated: 2026-06-01
 - [ ] Upload size limits enforced before sending to GCS (10MB in `ocrService` / upload path)
 - [ ] File deletion propagates to GCS object; bulk delete (`deleteFiles`) treats non-404 GCS failures as a hard abort so no PHI is orphaned
 
-### 5. Google Document AI (OCR — images only)
+### 5. Google Document AI (OCR — images + scanned-PDF fallback)
 - [ ] GCP credentials secured (`GOOGLE_APPLICATION_CREDENTIALS` — file path OR inline JSON; processor from `GCP_PROCESSOR_ID`, location from `GCP_LOCATION` default `'us'`, project from `GCP_PROJECT_ID`)
-- [ ] BAA gate: image OCR refuses unless `config.gcp.documentAiBaaActive` (`GOOGLE_BAA_ACTIVE`) — image pixels carry demographics text redaction cannot scrub; prod hard-fails at boot if `GCP_PROCESSOR_ID` set but flag unset
-- [ ] Scope: only **images** go to Document AI; PDFs route to Claude (`processDocument` branches on mime type, no Document AI fallback for PDFs)
+- [ ] BAA gate: Document AI OCR (images AND the scanned-PDF fallback) refuses unless `config.gcp.documentAiBaaActive` (`GOOGLE_BAA_ACTIVE`) — document/image bytes carry demographics text redaction cannot scrub; prod hard-fails at boot if `GCP_PROCESSOR_ID` set but flag unset
+- [ ] Scope: images go to Document AI directly; PDFs try the text-only Claude path FIRST, but a scanned PDF Claude can't extract falls back to `processImageWithDocumentAI` (which accepts `application/pdf`) when `config.gcp.documentAiBaaActive` is true (`ocrService.ts:421-426`). The PDF fallback is gated by the BAA AND by a page-limit hard-reject (L28 `PdfPageLimitError` re-thrown before any per-page OCR cost, `ocrService.ts:414-416`) — confirm both gates hold
+- [ ] Cost gap — Document AI (the paid `client.processDocument` call, `ocrService.ts:300`) has NO `trackAIUsage` / dollar accounting anywhere in `ocrService.ts`. `aiSpendGuard` only reserves/refunds the fixed $0.05 Claude estimate, so Document AI spend never accrues against `AI_DAILY_BUDGET_USD`. The dollar cap meaningfully bounds only Claude token spend; Document AI is bounded ONLY by the count-based `pdfUploadsPerMonth` quota + rate limit — flag if this is acceptable for the paid OCR path
 - [ ] Document content / extracted text not logged (may contain PHI)
 - [ ] OCR results validated before use (`validateBiomarkerValue`)
 - [ ] Processing timeout configured (`processDocument(request, { timeout: 60_000 })`)
@@ -139,6 +140,6 @@ grep -rn "new Anthropic(" backend/src/   # expect only anthropicClient.ts
 1. Are all API keys properly secured (env-only, never logged)?
 2. Can user input — or a server's own response — influence external API URLs? Are all server-supplied FHIR URLs host-allowlisted before credentials attach?
 3. Are external API errors handled gracefully with timeouts on every call?
-4. Is there cost monitoring AND a spend cap for Claude API, and BAA-gating for Claude + Document AI usage?
+4. Is there cost monitoring AND a dollar spend cap for the Claude API (reserve/settle via `admitAISpend`), and BAA-gating for Claude + Document AI usage? Note the dollar cap bounds ONLY Claude — Document AI OCR spend is untracked (bounded only by the `pdfUploadsPerMonth` count quota); is that gap acceptable?
 5. Are SendGrid emails free of PHI content, and does sandbox mode hard-fail in production?
 6. Are Quest FHIR OAuth tokens encrypted at rest (`LabConnection`) and confined to the trusted host set?

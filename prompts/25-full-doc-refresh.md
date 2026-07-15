@@ -4,7 +4,7 @@ tags:
   - meta
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Full Documentation Refresh
@@ -23,11 +23,19 @@ Before running any doc prompt, read:
 
 Orchestrate a full refresh of `New Project Documents/`. The output set, in its entirety, must be rich enough to serve as a Claude.ai Project context **substitute for the full GitHub repo** (which has outgrown Projects' attachment limit).
 
-This prompt is a runner, not a doc generator. It sequences the 18 doc prompts (14-23 plus the 33-40 deep-reference layer) so each run benefits from the context the earlier ones produced.
+This prompt is a runner, not a doc generator. It sequences the 19 doc prompts (14-23 plus the 33-40 deep-reference layer and the 46 biomarker-series deep reference) so each run benefits from the context the earlier ones produced.
 
-> **Current state (2026-06-01):** `New Project Documents/` is **empty** — none of the output docs exist yet. The first full run generates all 22 files from scratch (plus `INDEX.md`); it is not an incremental update of existing docs.
+> **Current state (2026-06-16):** `New Project Documents/` holds the doc set this prompt family produces. Running the 19 doc prompts (14-23, 33-40, 46) writes the named docs here; the 25 security prompts write review reports under `security-reviews/`. On a clean checkout the folder may be **empty** — the first run is a from-scratch generation; subsequent runs are **incremental refreshes** that supersede the existing docs. Do **not** assume any out-of-band reports (e.g. teardown / UX-review files) are present, and cross-link only to docs this prompt family actually produces. Verify what is on disk (`Glob "New Project Documents/*.md"`) before relying on a sibling.
 
-Before sequencing, verify the live codebase counts in [`00-index.md`](./00-index.md) ("Verified codebase counts") so each generated doc starts from accurate totals. Several product domains added since the prompt era — Quest FHIR / lab connections, AI chat + AI cost/spend control, onboarding, email-change, notification preferences, and plan gating / billing tiers — are now in code and must be reflected across the generated set (especially `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ENV_VARS.md`, `ARCHITECTURE.md`, `API_REFERENCE.md`, and `FRONTEND_MAP.md`).
+Before sequencing, verify the live codebase counts in [`00-index.md`](./00-index.md) ("Verified codebase counts") so each generated doc starts from accurate totals. Several product domains added in the prompt era — Quest FHIR / lab connections, AI chat + AI cost/spend control, onboarding, email-change, notification preferences, and plan gating / billing tiers — are in code and must be reflected across the generated set (especially `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ENV_VARS.md`, `ARCHITECTURE.md`, `API_REFERENCE.md`, and `FRONTEND_MAP.md`).
+
+Beyond that snapshot, a re-run must also capture the post-2026-06-01 change wave — these are the new realities each generated doc should reflect:
+
+- **Biomarker time-series merge** — every write path (manual create, bulk upload, FHIR sync) now funnels through `upsertBiomarkerReading` so a metric accumulates one series instead of disconnected single-point rows (`backend/src/services/biomarkerSeries.ts:81`); see the new `BIOMARKER_SERIES.md` deep reference. Reflect in `DATA_MODEL.md`, `API_REFERENCE.md`, `KNOWN_ISSUES.md`.
+- **Cross-instance token revocation** — `users.tokens_valid_after` + the `revoked_access_tokens` table + refresh-reuse family revoke (migrations `20260606000002_add_tokens_valid_after`, `20260613_revoked_access_tokens`). Reflect in `DATA_MODEL.md`, `ROUTING_TABLE.md`, `SECURITY_STATUS.md`; see the new `44-token-revocation` security prompt.
+- **FORCE ROW LEVEL SECURITY on all 19 RLS tables + DB-enforced 7-year audit retention** (`20260613_force_rls_and_audit_retention`); `database.ts` `assertRLSForced()` hard-exits on boot. Reflect in `DATA_MODEL.md`, `SECURITY_STATUS.md`, `HIPAA_CHECKLIST.md`.
+- **Encrypted-PHI expansion** — audit-metadata moved to `metadataEncrypted` with the legacy plaintext `audit_logs.metadata` column **irreversibly dropped** (`20260615_drop_legacy_audit_metadata`, M6); `UserFile.originalFilenameEncrypted` (L24, `20260615_encrypt_userfile_original_filename`); goal-value encryption — `HealthGoal.currentValueEncrypted`/`startValueEncrypted`, `GoalProgressHistory.valueEncrypted` (M4, `20260613_encrypt_goal_values`). `PHI_FIELDS` is now 14 models / 39 fields. Reflect in `PHI_TAXONOMY.md`, `DATA_MODEL.md`, `HIPAA_CHECKLIST.md`; see the new `45-maintenance-jobs` prompt for the `backfill-userfile-filenames` job.
+- **Deploy / runtime topology** — migrations run as the Cloud Run job `ownmyhealth-migrate` (boot-migrate removed); `backend/Dockerfile` CMD is `["node","dist/app.js"]`; deploy is gated on CI (`needs: ci` in `.github/workflows/deploy.yml`); base image is Node 22-alpine (digest-pinned), up from Node 20. Reflect in `RUNBOOK.md`, `LOCAL_DEV.md`, `ARCHITECTURE.md`, `CHANGELOG.md`.
 
 ---
 
@@ -43,6 +51,7 @@ These fill the gaps that make the rest of the set self-sufficient. Later docs cr
 - [ ] [33-data-model-doc](./33-data-model-doc.md) → `DATA_MODEL.md`
 - [ ] [40-phi-taxonomy-doc](./40-phi-taxonomy-doc.md) → `PHI_TAXONOMY.md`
 - [ ] [34-routing-table-doc](./34-routing-table-doc.md) → `ROUTING_TABLE.md`
+- [ ] [46-biomarker-series](./46-biomarker-series.md) → `BIOMARKER_SERIES.md` (data-integrity deep reference; run after DATA_MODEL, before API_REFERENCE — it cross-links into both plus the FHIR layer)
 
 ### Core reference layer
 
@@ -87,21 +96,22 @@ Later docs cross-link into earlier ones, so running in this order maximises the 
 2. **DATA_MODEL** — pure schema reference; depends on ENV_VARS for `DATABASE_URL`.
 3. **PHI_TAXONOMY** — depends on DATA_MODEL for field tables.
 4. **ROUTING_TABLE** — security-stack-per-route; depends on none in `New Project Documents/` but needs to be available before ARCHITECTURE.
-5. **ARCHITECTURE** — system overview; cross-links into all four above.
-6. **API_REFERENCE** — contract-facing; cross-links to ROUTING_TABLE, DATA_MODEL, PHI_TAXONOMY.
-7. **LOCAL_DEV** — uses ENV_VARS, DATA_MODEL, API_REFERENCE.
-8. **ERROR_RECOVERY** — codes + recovery; cross-links to API_REFERENCE + ROUTING_TABLE.
-9. **RUNBOOK** — operational; cross-links to ENV_VARS, ARCHITECTURE, ERROR_RECOVERY.
-10. **TROUBLESHOOTING** — cross-links to ERROR_RECOVERY + RUNBOOK.
-11. **TESTING_PATTERNS** — cross-links to DATA_MODEL, ROUTING_TABLE, LOCAL_DEV.
-12. **FRONTEND_MAP** — cross-links to API_REFERENCE.
-13. **CHANGELOG** — git-log-driven.
-14. **KNOWN_ISSUES** — code-marker-driven; cross-links to SECURITY_STATUS.
-15. **(optional)** Re-run `24-full-security-audit` if due.
-16. **SECURITY_STATUS** — synthesizes `SECURITY_AUDIT_*.md`.
-17. **HIPAA_CHECKLIST** — technical safeguards; cross-links to PHI_TAXONOMY, DATA_MODEL, SECURITY_STATUS.
-18. **STRATEGY** — synthesizes current feature set (cross-links to everything).
-19. **FINANCIAL_TRACKER** — unit economics; cross-links to ROUTING_TABLE (rate limits cap cost) + ENV_VARS.
+5. **BIOMARKER_SERIES** — data-integrity deep reference for the time-series merge primitive; depends on DATA_MODEL, cross-links into API_REFERENCE + the FHIR layer (run before both).
+6. **ARCHITECTURE** — system overview; cross-links into all four reference docs above.
+7. **API_REFERENCE** — contract-facing; cross-links to ROUTING_TABLE, DATA_MODEL, PHI_TAXONOMY, BIOMARKER_SERIES.
+8. **LOCAL_DEV** — uses ENV_VARS, DATA_MODEL, API_REFERENCE.
+9. **ERROR_RECOVERY** — codes + recovery; cross-links to API_REFERENCE + ROUTING_TABLE.
+10. **RUNBOOK** — operational; cross-links to ENV_VARS, ARCHITECTURE, ERROR_RECOVERY.
+11. **TROUBLESHOOTING** — cross-links to ERROR_RECOVERY + RUNBOOK.
+12. **TESTING_PATTERNS** — cross-links to DATA_MODEL, ROUTING_TABLE, LOCAL_DEV.
+13. **FRONTEND_MAP** — cross-links to API_REFERENCE.
+14. **CHANGELOG** — git-log-driven.
+15. **KNOWN_ISSUES** — code-marker-driven; cross-links to SECURITY_STATUS.
+16. **(optional)** Re-run `24-full-security-audit` if due.
+17. **SECURITY_STATUS** — synthesizes `SECURITY_AUDIT_*.md`.
+18. **HIPAA_CHECKLIST** — technical safeguards; cross-links to PHI_TAXONOMY, DATA_MODEL, SECURITY_STATUS.
+19. **STRATEGY** — synthesizes current feature set (cross-links to everything).
+20. **FINANCIAL_TRACKER** — unit economics; cross-links to ROUTING_TABLE (rate limits cap cost) + ENV_VARS.
 
 ---
 
@@ -130,6 +140,7 @@ OwnMyHealth/
 │   ├── DATA_MODEL.md
 │   ├── PHI_TAXONOMY.md
 │   ├── ROUTING_TABLE.md
+│   ├── BIOMARKER_SERIES.md
 │   ├── ARCHITECTURE.md
 │   ├── API_REFERENCE.md
 │   ├── LOCAL_DEV.md
@@ -163,6 +174,7 @@ OwnMyHealth/
 | `DATA_MODEL.md` | Per PR touching `schema.prisma` or migrations | diff detection |
 | `PHI_TAXONOMY.md` | Per PR touching `PHI_FIELDS` or encrypted columns | diff detection |
 | `ROUTING_TABLE.md` | Per PR touching `backend/src/routes/` or middleware chain | diff detection |
+| `BIOMARKER_SERIES.md` | Per PR touching `biomarkerSeries.ts`, `labSyncService.ts`, or biomarker write paths | diff detection |
 | `ARCHITECTURE.md` | When architecture changes | manual |
 | `API_REFERENCE.md` | Per API change | diff detection |
 | `LOCAL_DEV.md` | Semi-annual | schedule |

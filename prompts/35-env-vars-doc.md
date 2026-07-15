@@ -6,7 +6,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate ENV_VARS.md
@@ -35,15 +35,15 @@ Produce `New Project Documents/ENV_VARS.md` — the **complete, single-source-of
 |---|---|
 | `backend/src/config/index.ts` | **Primary source of truth** — the typed `config` object **and** all startup validation. Every env var the backend reads, its default (the `??` / `||` right-hand side), and the boot-time throws all live in this one module. There is no separate `index.ts` entry file. |
 | `backend/src/config/jwtOptions.ts`, `backend/src/config/plans.ts` | Sibling config modules — `jwtOptions.ts` defines the static `jsonwebtoken` sign/verify options (`algorithm`/`issuer`/`audience`; reads no env vars — the JWT secrets/expiries live in `config/index.ts`); `plans.ts` defines plan/billing tiers consumed by `planGating` (no env vars of its own, but cite it for completeness). |
-| `backend/.env.example`, `backend/.env.production.example`, `backend/.env.staging.example` | Documented defaults, sample values, production overrides. NOTE: `.env.example` still lists **removed** vars (`CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY`, `RLS_ENFORCEMENT`) — flag these as drift, they are read nowhere in code. |
-| `.env.example`, `.env.production.example`, `.env.staging` (repo root) | Frontend-side (`VITE_*`) and any shared vars. |
+| `backend/.env.example`, `backend/.env.production.example`, `backend/.env.staging.example` | Documented defaults, sample values, production overrides. NOTE: the old CMS/OpenAI leftover vars (`CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY`) are **no longer present** in `backend/.env.example` — do NOT instruct the generator to flag them as live drift (a flag would produce a false "safe to delete" row for keys that don't exist). The only `RLS_ENFORCEMENT` mention in `backend/.env.example` is an explanatory removal comment that explicitly says "Do not re-add" (`backend/.env.example:95-98`) — it is a comment, not a settable `key=value` entry. The one place a commented-out `# RLS_ENFORCEMENT=strict` still lingers is `backend/.env.staging.example:39-41`, with stale "flip to strict after the omh_app NOBYPASSRLS role is live" guidance that now contradicts `database.ts:209-210` (the flag was **removed**, not pending). |
+| `.env.example`, `.env.production.example`, `.env.staging` (repo root) | Frontend-side (`VITE_*`) and any shared vars. NOTE: these are the **root** frontend/shared examples — they do NOT carry the dead `RLS_ENFORCEMENT` flag. The lingering commented `# RLS_ENFORCEMENT=strict` lives in the **backend** staging example at `backend/.env.staging.example:39-41`. |
 | `backend/src/app.ts` | The actual Express entry point (`dist/app.js` is the prod start command — see `railway.toml`). Reads `CORS_ORIGIN` and `DISABLE_CSRF`. Startup throws come from importing `config/index.ts`, not from here. |
-| `backend/railway.toml` | Start command + healthcheck only — no env pins. Despite this file, **production runs on GCP Cloud Run** via `deploy.yml` (`gcloud run deploy`), not Railway. |
-| `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml` | CI/CD env vars, GitHub secrets (`secrets.GCP_SA_KEY`) used at build/deploy time; `deploy.yml` sets `VITE_API_URL` for the frontend build. |
+| `backend/railway.toml` | Start command + healthcheck only — no env pins. Despite this file, **production runs on GCP Cloud Run** via `deploy.yml` (`gcloud run deploy`), not Railway. The file now documents itself as a legacy/alternate target that **deliberately keeps boot-migrate** (`startCommand = "npx prisma migrate deploy && node dist/app.js"`, `backend/railway.toml:9-14`) because Railway has no migrate-job step. On Cloud Run this is split: the image `CMD` is `["node", "dist/app.js"]` only (`backend/Dockerfile`), and migrations run as the separate `ownmyhealth-migrate` Cloud Run job (`deploy.yml`). Relevant to "how/where DATABASE_URL is provisioned for a deploy" (acceptance Q5). |
+| `.github/workflows/ci.yml`, `deploy.yml`, `deploy-staging.yml`, `maintenance.yml` | CI/CD env vars, GitHub secrets (`secrets.GCP_SA_KEY`) used at build/deploy time; `deploy.yml` sets `VITE_API_URL` for the frontend build and gates the deploy on CI (`needs: ci`). A fourth workflow, `.github/workflows/maintenance.yml` (manual `workflow_dispatch` that runs one-time data-migration / backfill Cloud Run jobs, e.g. `backfill-userfile-filenames`), was added post-06-01 — relevant for ops/maintenance context. |
 | `backend/Dockerfile` | `ENV` directives, build args. |
 | `vite.config.ts`, `src/utils/logger.ts` | Build-time `VITE_*` var consumption (`VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG`, plus Vite built-ins `import.meta.env.DEV/PROD`). |
-| `backend/src/services/*.ts` (23 modules + `fhir/`, `knowledge/` subdirs) | Consumer files — every `process.env.X` or `config.X` usage for the "consumer" column. `ocrService.ts` reads the Document AI vars directly (`GCP_PROCESSOR_ID`, `GCP_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS`); `anthropicClient.ts` reads `ANTHROPIC_API_KEY`; `database.ts` reads `DATABASE_URL`, `DATABASE_POOL_SIZE`. |
-| `backend/src/middleware/*.ts` (10 modules) | Rate limiter (`rateLimiter.ts` + `rateLimitStore.ts` → `REDIS_URL`), CSRF (`csrf.ts` → `DISABLE_CSRF`), `aiSpendGuard.ts` (AI budget vars), CORS consumers. |
+| `backend/src/services/*.ts` (27 non-test top-level modules + `fhir/`, `knowledge/`, `data/` subdirs; new since 06-01: `biomarkerSeries.ts`, `biomarkerConsolidation.ts`, `goalValueBackfill.ts`) | Consumer files — every `process.env.X` or `config.X` usage for the "consumer" column. `ocrService.ts` reads the Document AI vars directly (`GCP_PROCESSOR_ID`, `GCP_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS`); `anthropicClient.ts` reads `ANTHROPIC_API_KEY`; `database.ts` reads `DATABASE_URL`, `DATABASE_POOL_SIZE`. |
+| `backend/src/middleware/*.ts` (11 non-test modules: `auth`, `csrf`, `rateLimiter`, `rateLimitStore`, `rbac`, `demoProtection`, `errorHandler`, `planGating`, `aiSpendGuard`, `validation`, `index`) | Rate limiter (`rateLimiter.ts` + `rateLimitStore.ts` → `REDIS_URL`), CSRF (`csrf.ts` → `DISABLE_CSRF`), `aiSpendGuard.ts` (AI budget vars), CORS consumers. |
 | `src/services/api/client.ts`, `src/services/uploadUtils.ts` | Frontend consumers of `VITE_API_URL`. |
 
 Use `Grep` for `process\.env\.[A-Z_]+` and `import\.meta\.env\.[A-Z_]+` across the whole repo to catch drift between `config/index.ts` and actual usage. Note that several vars are read **directly from `process.env`** (not via the `config` object): `DATABASE_URL`, `PHI_ENCRYPTION_KEY`, `DATABASE_POOL_SIZE`, `DISABLE_CSRF`, `GCP_LOCATION`, `GCP_PROCESSOR_ID`, `GOOGLE_APPLICATION_CREDENTIALS` — so a pure `config.X` grep will miss them.
@@ -97,7 +97,7 @@ The output `ENV_VARS.md` must contain, in order:
 
 At minimum, cover (verify each by reading `config/index.ts` — the canonical inventory below is ~42 vars; these are the **real** names, not the pre-2026-04 names this prompt used to list):
 
-- **Core/server**: `NODE_ENV`, `PORT`, `DATABASE_URL`, `DATABASE_POOL_SIZE` (read directly in `database.ts`), `FRONTEND_URL`, `CORS_ORIGIN`
+- **Core/server**: `NODE_ENV`, `PORT`, `DATABASE_URL`, `DATABASE_POOL_SIZE` (read directly in `database.ts`), `FRONTEND_URL`, `CORS_ORIGIN`, `OMH_DEPLOY_ENFORCE_PROD` (RT-H1 boot guard: when `'true'` on a dev-tier image the app hard-fails to refuse booting at the dev security tier — `config/index.ts:53`; a complete env SSOT must list it)
 - **Auth/crypto secrets**: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` (NOT `JWT_SECRET` — there are two, both via `requireEnv`), `JWT_ACCESS_EXPIRES_SECONDS`, `JWT_REFRESH_EXPIRES_SECONDS` (integers in seconds, NOT `JWT_*_EXPIRY` strings), `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`
 - **Account security**: `BCRYPT_ROUNDS`, `MAX_LOGIN_ATTEMPTS`, `LOCKOUT_DURATION_MINUTES`
 - **Cookies**: `COOKIE_SAME_SITE`, `COOKIE_DOMAIN` (there is NO `CSRF_SECRET` — CSRF is a double-submit cookie with no server-side secret; toggled only by `DISABLE_CSRF`)
@@ -111,7 +111,10 @@ At minimum, cover (verify each by reading `config/index.ts` — the canonical in
 - **CSRF toggle**: `DISABLE_CSRF` (dev only — refused by `csrf.ts` if NODE_ENV=production)
 - **Frontend build-time**: `VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG`
 
-If `config/index.ts` contains others, add them. If any var is **not** in `config/index.ts` (nor read via `process.env` anywhere) but *is* in `.env.example`, flag as drift — known cases: `CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY` (leftovers from the removed CMS Marketplace / provider-search features), and `RLS_ENFORCEMENT` (the strict-mode flag was removed when the `omh_app` NOBYPASSRLS cutover landed — see `database.ts:210-211` — but it lingers in `.env.example` / `.env.staging.example`).
+If `config/index.ts` contains others, add them. If any var is **not** in `config/index.ts` (nor read via `process.env` anywhere) but *is* genuinely present as a settable `key=value` in an example env file, flag it as drift. Caveats — verify the file contents before flagging, do NOT carry these forward from memory:
+
+- The old CMS/OpenAI leftover vars (`CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY`, from the removed CMS Marketplace / provider-search features) are **no longer present** in `backend/.env.example` — there is nothing to flag. Listing them as live drift would produce a false "safe to delete" row for keys that don't exist.
+- `RLS_ENFORCEMENT` (the strict-mode flag removed at the `omh_app` NOBYPASSRLS cutover) is **not a settable entry** in `backend/.env.example` — the only mention there is an explanatory removal comment that says "Do not re-add" (`backend/.env.example:95-98`). The flag DOES still linger as a commented-out `# RLS_ENFORCEMENT=strict` in `backend/.env.staging.example:39-41`, with stale "flip to strict after the omh_app NOBYPASSRLS role is live" guidance. The removal is documented in the `assertNoBypassRLS()` doc-comment at `database.ts:209-210` ("The transitional `RLS_ENFORCEMENT=strict` flag was removed when the omh_app cutover landed."). A sibling boot check, `assertRLSForced()` (`database.ts:193`), was added post-06-01 to hard-exit if FORCE ROW LEVEL SECURITY is missing.
 
 ### Startup-validation snippet
 
