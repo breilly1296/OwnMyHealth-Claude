@@ -243,6 +243,18 @@ export const config = {
     documentAiBaaActive: process.env.GOOGLE_BAA_ACTIVE === 'true',
   },
 
+  // File storage backend (OF-23). 'gcs' streams objects to/from the configured
+  // GCS bucket (deployed default); 'local' writes AES-256-GCM-encrypted blobs
+  // under storage.localDir so the GCP-less sandbox can exercise upload flows.
+  // The guard below the config object refuses 'local' in production/staging —
+  // deployed (Cloud Run) disks are ephemeral and must not hold PHI files.
+  storage: {
+    backend: (process.env.STORAGE_BACKEND ||
+      (isDevelopmentEnv ? 'local' : 'gcs')) as 'gcs' | 'local',
+    localDir:
+      process.env.LOCAL_STORAGE_DIR || path.join(__dirname, '../../.local-storage'),
+  },
+
   // Anthropic Claude API (see C-7 — BAA gate for PHI disclosure)
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -320,6 +332,25 @@ if (config.cookie.sameSite === 'none' && !config.cookie.secure) {
     'Invalid cookie configuration: SameSite=None requires Secure=true — browsers ' +
     'silently reject SameSite=None cookies that are not Secure, dropping auth/refresh/csrf. ' +
     'Check COOKIE_SAME_SITE / COOKIE_DOMAIN / NODE_ENV.'
+  );
+}
+
+// OF-23 — storage backend validation, in EVERY environment. 'local' writes PHI
+// blobs to the process's own disk, which on Cloud Run is ephemeral and
+// instance-scoped: files would silently vanish on instance recycle and never be
+// visible across instances. Refuse to boot rather than lose PHI. Unknown values
+// hard-fail too — a typo must not silently fall through to either backend.
+if (config.storage.backend !== 'gcs' && config.storage.backend !== 'local') {
+  throw new Error(
+    `Invalid STORAGE_BACKEND: ${JSON.stringify(process.env.STORAGE_BACKEND)}. ` +
+    `Valid values: 'gcs', 'local'.`
+  );
+}
+if (config.storage.backend === 'local' && (config.isProduction || config.isStaging)) {
+  throw new Error(
+    'STORAGE_BACKEND=local cannot be used in production or staging — deployed ' +
+    'disks are ephemeral and must not hold PHI files. Unset STORAGE_BACKEND ' +
+    '(the deployed default is GCS) and set GCS_BUCKET_NAME.'
   );
 }
 

@@ -45,6 +45,9 @@ gcp-*key*.json*
 service-account*.json
 *serviceaccount*.json
 
+# Local storage backend (OF-23) — encrypted user-file blobs, never committed
+.local-storage/
+
 # Certificate files
 *.pem
 *.key
