@@ -7,7 +7,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate DATA_MODEL.md
@@ -38,7 +38,10 @@ Produce `New Project Documents/DATA_MODEL.md` — the **complete, deep reference
 | `backend/prisma/migrations/` (entire directory, in chronological order) | Migration history; SQL bodies of RLS policies, triggers, non-Prisma constraints. |
 | `backend/prisma/migrations/20260107_add_rls_policies/migration.sql` | Base RLS policy text + `current_user_id()`/`is_admin_session()`/`has_provider_access()` helpers — copy into the RLS section. |
 | `backend/prisma/migrations/20260529_fix_has_provider_access/migration.sql` and `20260530_add_users_select_provider/migration.sql` | Later RLS corrections — `has_provider_access()` fix + provider-side users SELECT policy; reflect the FINAL policy bodies. |
-| `backend/src/services/database.ts` | `withRLSContext`, `withRLSTransaction`, pool config, SSL handling, RLS context setter. |
+| `backend/prisma/migrations/20260613_force_rls_and_audit_retention/migration.sql` | **FORCE ROW LEVEL SECURITY on all 19 RLS tables** + `audit_logs_delete` rewritten to DB-enforce a 7-year retention window. |
+| `backend/prisma/migrations/20260613_revoked_access_tokens/migration.sql` | New `revoked_access_tokens` table + its ENABLE/FORCE RLS select/insert/delete-own policies. |
+| `backend/prisma/migrations/20260615_provider_consent_immutable_audit_insert_check/migration.sql` | `provider_patients_guard_consent()` BEFORE-UPDATE trigger (consent columns immutable to non-patient/non-admin) + tightened `audit_logs_insert` WITH CHECK. |
+| `backend/src/services/database.ts` | `withRLSContext`, `withRLSTransaction`, pool config, SSL handling, RLS context setter. **Also** the boot-time RLS invariant checks `assertNoBypassRLS()` + `assertRLSForced()` (`database.ts:192-193`, `:270-303`) — prod hard-fails ("Refusing to start — add FORCE ROW LEVEL SECURITY (see migration 20260613).") if any RLS table lacks FORCE. |
 | `backend/src/services/encryption.ts` | `PHI_FIELDS` mapping — cross-reference encrypted columns against the schema. |
 | `backend/src/services/userEncryption.ts` | Per-user key derivation — where the wrap key is stored, what model holds it. |
 | `backend/src/services/auditLog.ts` | Retention policy, cleanup scheduler, audit log schema cross-ref. |
@@ -49,12 +52,12 @@ Produce `New Project Documents/DATA_MODEL.md` — the **complete, deep reference
 
 ## Required sections
 
-1. **Overview** — model count (18), migration count (22), RLS-enabled model count, encrypted-field count. One paragraph.
+1. **Overview** — model count (19), migration count (32), RLS-enabled model count, encrypted-field count (14 models / 39 `*Encrypted` fields per `PHI_FIELDS`). One paragraph.
 2. **ER diagram (Mermaid)** — see Required artifacts.
-3. **Naming conventions** — `@@map("snake_case")` + `@map("snake_case")` pattern, `*Encrypted` suffix convention, `id` PK convention (all models use `@default(dbgenerated("gen_random_uuid()")) @db.Uuid` — NOT cuid; aligned by `20260424_align_uuid_defaults_and_rename_claude_response`).
-4. **Model catalog** — one H3 per model (18 models), alphabetical. Each H3 contains: purpose (1 sentence), field table, index table (if any), relation list, RLS note. Active models: `User`, `Session`, `UserEncryptionKey`, `ProviderPatient`, `UserFile`, `Biomarker`, `BiomarkerHistory`, `InsurancePlan`, `InsuranceBenefit`, `HealthNeed`, `HealthGoal`, `GoalProgressHistory`, `AuditLog`, `SystemConfig`, `ExpenseProjection`, `ExpenseActual`, `CostAnalysis`, `LabConnection`.
-5. **Encryption matrix** — table of every `*Encrypted` column vs `PHI_FIELDS` in `encryption.ts`. Drift rows flagged.
-6. **RLS policy catalog** — per table: SELECT/INSERT/UPDATE/DELETE policy bodies (from migration SQL). Include the `is_admin_session()` helper definition.
+3. **Naming conventions** — `@@map("snake_case")` + `@map("snake_case")` pattern, `*Encrypted` suffix convention, `id` PK convention (almost all models use `@default(dbgenerated("gen_random_uuid()")) @db.Uuid` — NOT cuid; aligned by `20260424_align_uuid_defaults_and_rename_claude_response`). **Exception**: `RevokedAccessToken` has no `id` — its PK is `jti String @id @db.Uuid` with NO `gen_random_uuid()` default (the value is the revoked access token's JWT id; `backend/prisma/schema.prisma:97`). Do not write "all models" without this caveat.
+4. **Model catalog** — one H3 per model (19 models), alphabetical. Each H3 contains: purpose (1 sentence), field table, index table (if any), relation list, RLS note. Active models: `User`, `Session`, `RevokedAccessToken`, `UserEncryptionKey`, `ProviderPatient`, `UserFile`, `Biomarker`, `BiomarkerHistory`, `InsurancePlan`, `InsuranceBenefit`, `HealthNeed`, `HealthGoal`, `GoalProgressHistory`, `AuditLog`, `SystemConfig`, `ExpenseProjection`, `ExpenseActual`, `CostAnalysis`, `LabConnection`. `RevokedAccessToken` (`backend/prisma/schema.prisma:96-106`, M1, added 2026-06-13 for cross-instance single-device access-token revocation): `jti` PK `@db.Uuid`, `userId` FK (`onDelete: Cascade`), `expiresAt`, `createdAt`; `@@index([userId])` + `@@index([expiresAt])`; RLS + FORCE enabled with select/insert/delete-own policies (insert allowed when `current_user_id() IS NULL` for the expired-token logout path).
+5. **Encryption matrix** — table of every `*Encrypted` column vs `PHI_FIELDS` in `encryption.ts` (14 models / 39 encrypted fields at HEAD). Drift rows flagged. Post-06-01 additions that MUST appear: `HealthGoal.currentValueEncrypted` + `HealthGoal.startValueEncrypted` (M4, `20260613_encrypt_goal_values`; `encryption.ts:519-520`), `GoalProgressHistory.valueEncrypted` (M4; `encryption.ts:524`), `UserFile.originalFilenameEncrypted` (L24, `20260615_encrypt_userfile_original_filename`; `encryption.ts:499`), `AuditLog.metadataEncrypted` (M6, `20260606000001_encrypt_audit_metadata`; `encryption.ts:530` — the plaintext `audit_logs.metadata` column was IRREVERSIBLY dropped in `20260615_drop_legacy_audit_metadata`, so do NOT list `metadata` as a live plaintext column). Note the plaintext twins still in the schema but deliberately NOT in `PHI_FIELDS` (read path prefers the encrypted twin; backfill/drop pending): `UserFile.originalFilename`, `HealthGoal.targetValue`/`currentValue`/`startValue`, `GoalProgressHistory.value`; and `Biomarker.sourceFile` is plaintext by design (FHIR idempotency/dedupe key).
+6. **RLS policy catalog** — per table: SELECT/INSERT/UPDATE/DELETE policy bodies (from migration SQL). Include the `is_admin_session()` helper definition. Reflect the post-06-01 RLS changes: (a) `20260613_force_rls_and_audit_retention` applies **FORCE ROW LEVEL SECURITY to all 19 RLS tables** AND rewrites `audit_logs_delete` to DB-enforce a 7-year retention window (`USING (is_admin_session() AND created_at < now() - interval '7 years')` — even admin context can't purge recent audit history); (b) `20260613_revoked_access_tokens` adds RLS+FORCE policies for the new `revoked_access_tokens` table; (c) `20260615_provider_consent_immutable_audit_insert_check` adds the `provider_patients_guard_consent()` BEFORE-UPDATE trigger (restores the four consent permission columns unless writer is the patient or admin) and tightens `audit_logs_insert` from `WITH CHECK (true)` to `WITH CHECK (user_id = current_user_id() OR is_admin_session() OR current_user_id() IS NULL)`. Quote the FINAL policy/trigger bodies from these migrations.
 7. **`withRLSContext` vs `withRLSTransaction` usage matrix** — every call site: `file:line` → which wrapper → `userId | null` → reason ("multi-statement atomicity", "single read", "admin listing").
 8. **Index catalog** — every `@@index` / `@@unique` across the schema, in a single table. Useful for query-plan reasoning.
 9. **Cascade / deletion behavior** — per relation: `onDelete` (Cascade | SetNull | Restrict | NoAction) and what it means for user-data deletion.
@@ -81,6 +84,7 @@ erDiagram
   User ||--o{ Session : has
   User ||--o{ ProviderPatient : "patient-side"
   User ||--o{ ProviderPatient : "provider-side"
+  User ||--o{ RevokedAccessToken : "revokes (jti)"
   InsurancePlan ||--o{ InsuranceBenefit : lists
   User ||--o{ InsurancePlan : owns
   User ||--o{ LabConnection : "FHIR lab link"
@@ -90,7 +94,7 @@ erDiagram
   ...
 ```
 
-There are no deprecated models to diagram — the DNA/genetics models were dropped (migration `20260423_drop_dna_genetics`). Note that `SystemConfig` is the one model with no FK to `User` (global key/value config).
+The generated diagram must include all 19 models (do not omit `RevokedAccessToken`, which has a `User` FK with `onDelete: Cascade` — `backend/prisma/schema.prisma:60,101`). There are no deprecated models to diagram — the DNA/genetics models were dropped (migration `20260423_drop_dna_genetics`). Note that `SystemConfig` is the one model with no FK to `User` (global key/value config).
 
 ### Per-model field table (template)
 
@@ -157,9 +161,12 @@ Include the three helper-function definitions once, at the top of this section: 
 | `Biomarker.valueEncrypted` | yes | yes | `biomarkerController.ts:Lxx` | `biomarkerController.ts:Lyy` |
 | `Biomarker.notesEncrypted` | yes | yes | ... | ... |
 | `LabConnection.accessTokenEncrypted` | yes | yes | ... | ... |
+| `UserFile.originalFilenameEncrypted` | yes | yes | ... | ... |
+| `HealthGoal.currentValueEncrypted` | yes | yes | ... | ... |
+| `AuditLog.metadataEncrypted` | yes | yes | ... | ... |
 | ... | ... | ... | ... | ... |
 
-Rows where either column disagrees = drift; flag in Prompt drift log.
+Rows where either column disagrees = drift; flag in Prompt drift log. The full matrix has 39 encrypted columns across 14 models; the plaintext twins (`UserFile.originalFilename`, `HealthGoal.targetValue`/`currentValue`/`startValue`, `GoalProgressHistory.value`) and the deliberately-plaintext `Biomarker.sourceFile` are NOT in `PHI_FIELDS` and must be listed as "no" in the "In `PHI_FIELDS`?" column (by design, not drift).
 
 ### Index catalog
 
@@ -189,9 +196,18 @@ Rows where either column disagrees = drift; flag in Prompt drift log.
 | 2026-05-29 | `fix_has_provider_access` | Fixed the `has_provider_access()` RLS helper |
 | 2026-05-30 | `add_users_select_provider` | Added users SELECT policy for provider-side access |
 | 2026-06-01 | `add_email_change` | Added `pending_email`/`email_change_token`/`email_change_expires` on `users` |
-| ... | ... | ... |
+| 2026-06-01 | `null_plaintext_health_goal_target` | Dropped NOT NULL on `health_goals.target_value` + NULLed plaintext where `target_value_encrypted` exists (stop duplicating goal-target PHI in clear) |
+| 2026-06-06 | `encrypt_audit_metadata` (M6) | Added `audit_logs.metadata_encrypted`; new rows write AES-256-GCM metadata, legacy plaintext `metadata` retained read-only (later dropped) |
+| 2026-06-06 | `add_tokens_valid_after` | Added `users.tokens_valid_after` TIMESTAMPTZ — cross-instance access-token cutoff (logout-all / pwd change+reset / email change / admin deactivation+role change) |
+| 2026-06-13 | `encrypt_goal_values` (M4) | Added `health_goals.current_value_encrypted` + `start_value_encrypted`; added `goal_progress_history.value_encrypted` + dropped NOT NULL on `value` |
+| 2026-06-13 | `revoked_access_tokens` (M1) | Created `revoked_access_tokens` table (jti PK) + ENABLE/FORCE RLS select/insert/delete-own policies |
+| 2026-06-13 | `force_rls_and_audit_retention` (M2+M19) | **FORCE ROW LEVEL SECURITY on all 19 RLS tables** + `audit_logs_delete` rewritten to DB-enforce 7-year retention |
+| 2026-06-14 | `add_email_sent_markers` | Added `users.last_weekly_summary_sent` + `last_plan_expiring_sent` for at-most-once scheduler-email claiming across instances (non-PHI) |
+| 2026-06-15 | `drop_legacy_audit_metadata` (M6) | **IRREVERSIBLY drops the plaintext `audit_logs.metadata` column** (DDL, since audit_logs is immutable-by-RLS) |
+| 2026-06-15 | `encrypt_userfile_original_filename` (L24) | Added `user_files.original_filename_encrypted` + dropped NOT NULL on `original_filename` (new rows store ciphertext; legacy backfilled by maintenance job) |
+| 2026-06-15 | `provider_consent_immutable_audit_insert_check` (L23+L40) | BEFORE-UPDATE trigger `provider_patients_guard_consent()` (consent columns immutable to non-patient/non-admin) + tightened `audit_logs_insert` WITH CHECK |
 
-Total: 22 migration directories (excluding `migration_lock.toml`).
+Total: 32 migration directories (excluding `migration_lock.toml`). The most recent is `20260615_provider_consent_immutable_audit_insert_check`.
 
 ---
 
@@ -199,7 +215,7 @@ Total: 22 migration directories (excluding `migration_lock.toml`).
 
 After writing the doc, self-answer each **using only the doc**:
 
-1. How many models are in the schema (18), and which models/enums were removed by `20260423_drop_dna_genetics`?
+1. How many models are in the schema (19, incl. `RevokedAccessToken`), and which models/enums were removed by `20260423_drop_dna_genetics`?
 2. Which field on `Biomarker` stores the encrypted value, and what service decrypts it?
 3. What is the `onDelete` behavior for `ProviderPatient → User` and what does that mean for GDPR-style deletion?
 4. Which tables have RLS enabled, and which function lets admin code bypass the policy?
@@ -207,7 +223,7 @@ After writing the doc, self-answer each **using only the doc**:
 6. Name one RLS policy SQL body verbatim.
 7. Which index supports the biomarker dashboard list query?
 8. Which models hold the per-user encryption wrap key, and where is it derived?
-9. How many Prisma migrations exist in the repo (22), and what was the most recent change (`20260601_add_email_change`)?
+9. How many Prisma migrations exist in the repo (32), and what was the most recent change (`20260615_provider_consent_immutable_audit_insert_check`)?
 10. Which callers pass `null` as `userId` to `withRLSContext` and why?
 11. Which models were dropped (DNA/genetics) and in which migration is that recorded?
 12. Is `Biomarker.notesEncrypted` in `PHI_FIELDS`? (consistency check)

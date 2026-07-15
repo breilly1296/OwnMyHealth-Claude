@@ -5,7 +5,7 @@ tags:
   - meta
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Full Security Audit
@@ -15,7 +15,7 @@ updated: 2026-06-01
 > Use [Claude Code tools](./_verification-tools.md) for all greps.
 
 ## Purpose
-Run a comprehensive security audit using all 23 security prompts. Consolidate findings into one report per the review-protocol shape, then update [21-security-status-doc](./21-security-status-doc.md).
+Run a comprehensive security audit using all 25 security prompts. Consolidate findings into one report per the review-protocol shape, then update [21-security-status-doc](./21-security-status-doc.md).
 
 ## Audit Checklist
 
@@ -39,6 +39,7 @@ Run each prompt in sequence. Carry findings forward — don't re-discover the sa
 - [ ] [31-logging-observability](./31-logging-observability.md) — PHI redaction, Cloud Logging
 - [ ] [41-fhir-lab-integration](./41-fhir-lab-integration.md) — SMART-on-FHIR OAuth, encrypted lab tokens, SSRF, sync IDOR
 - [ ] [42-ai-cost-control](./42-ai-cost-control.md) — AI spend cap, cost tracking, per-user/global dollar budgets
+- [ ] [44-token-revocation](./44-token-revocation.md) — Cross-instance revocation (`users.tokens_valid_after` + `revoked_access_tokens`), refresh-reuse family revoke
 
 ### Medium
 - [ ] [08-rate-limiting](./08-rate-limiting.md) — 8 limiters (Redis-backed via `rateLimitStore`), coverage on all expensive routes
@@ -49,6 +50,7 @@ Run each prompt in sequence. Carry findings forward — don't re-discover the sa
 - [ ] [30-admin-security](./30-admin-security.md) — Admin privilege, escalation prevention
 - [ ] [32-error-handling](./32-error-handling.md) — Error shape, stack-trace safety, async flow
 - [ ] [43-plan-gating-billing](./43-plan-gating-billing.md) — Plan-tier enforcement, gate bypass, billing authz
+- [ ] [45-maintenance-jobs](./45-maintenance-jobs.md) — Cloud Run maintenance/backfill jobs (filename re-encrypt, goal-value backfill), least-privilege, RLS context, idempotency
 
 ## Coverage notes (newer domains)
 

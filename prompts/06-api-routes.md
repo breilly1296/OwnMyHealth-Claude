@@ -5,7 +5,7 @@ tags:
   - high
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # API Routes Security Review
@@ -19,10 +19,10 @@ updated: 2026-06-01
 ## OwnMyHealth API Architecture
 - **Base Path**: `/api/${config.apiVersion}` (= `/api/v1`); mounted in `backend/src/app.ts` (`app.use(\`/api/${config.apiVersion}\`, routes)`)
 - **Auth**: JWT access token via HttpOnly cookie OR `Authorization: Bearer` header. Most routes use `authenticate` (accepts either). The AI streaming route uses `requireBearerAuth` (bearer-only) because it is CSRF-exempt — see note in `aiRoutes.ts`.
-- **CSRF**: Double-submit cookie required on mutations (POST/PUT/PATCH/DELETE), EXCEPT exempted paths in `middleware/csrf.ts`: `bearerOnlyStreamingRoutes` (`/ai/chat`) and the scheduler path (`/internal/audit-cleanup`).
+- **CSRF**: Double-submit cookie required on mutations (POST/PUT/PATCH/DELETE), EXCEPT the 10 paths in the inline `EXEMPT_PATHS` Set in `middleware/csrf.ts:124-145` (there is no `bearerOnlyStreamingRoutes` symbol): `/auth/login`, `/auth/register`, `/auth/demo`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`, `/marketplace/plans/search`, `/ai/chat` (bearer-only SSE — MUST stay mounted with `requireBearerAuth`), and `/internal/audit-cleanup` (X-Cleanup-Token scheduler path).
 - **Internal routes**: `/api/v1/internal/*` (mounted separately in `app.ts`, NOT via `routes/index.ts`) authenticate via the `X-Cleanup-Token` shared-secret header — NOT JWT/session — and 404 unless `AUDIT_CLEANUP_TOKEN` is configured. Intended for Cloud Scheduler.
 - **Rate Limiting**: 8 named limiters in `middleware/rateLimiter.ts`, backed by `rateLimitStore.ts` (Redis via `REDIS_URL`, in-memory fallback)
-- **AI spend control**: `/ai/chat` is additionally gated by `aiSpendGuard` (daily budget) and `requirePlanLimit('aiChatsPerDay')`
+- **AI spend control**: `aiSpendGuard` (dollar daily budget) now guards **8 mount points across 5 route files**, not just `/ai/chat`: `aiRoutes.ts:32` (`POST /ai/chat`), `uploadRoutes.ts:82,104,135` (`POST /lab-report`, `/insurance-sbc`, `/lab-results-ocr`), `biomarkerRoutes.ts:136` (`POST /:id/guidance`), `expenseRoutes.ts:114` (`POST /analyze`), and `insuranceRoutes.ts:125,138` (`PUT /plans/:id/reanalyze`, `POST /upload-sbc`). `/ai/chat` is additionally gated by `requirePlanLimit('aiChatsPerDay')`.
 
 ## Checklist
 
@@ -81,7 +81,8 @@ For each route file, verify auth middleware applied (18 route files incl. `index
 - [ ] Demo accounts blocked from sensitive operations (`demoProtection.ts`: `blockDemoAI` used on `/ai/chat` and FHIR connect/sync)
 
 ### 7a. Plan Gating & AI Spend Control (NEW domains)
-- [ ] `/ai/chat` enforces `requirePlanLimit('aiChatsPerDay')` (`middleware/planGating.ts`) and `aiSpendGuard` (per-day budget via `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD`)
+- [ ] `aiSpendGuard` (dollar per-day budget via `AI_DAILY_BUDGET_USD` / `AI_USER_DAILY_BUDGET_USD`) is on **every AI/Document-AI-driven route**, not only `/ai/chat` — verify all 8 mount points: `aiRoutes.ts:32`, `uploadRoutes.ts:82,104,135` (lab-report / insurance-sbc / lab-results-ocr), `biomarkerRoutes.ts:136` (guidance), `expenseRoutes.ts:114` (analyze), `insuranceRoutes.ts:125,138` (reanalyze / upload-sbc)
+- [ ] `/ai/chat` additionally enforces `requirePlanLimit('aiChatsPerDay')` (`middleware/planGating.ts`)
 - [ ] FHIR connect/sync enforce `requirePlanFeature('questFhirIntegration')`
 - [ ] Plan/feature limits read live from DB, not stale JWT claims (see `planRoutes.ts` reads `users.plan` via `withRLSContext`)
 - [ ] Tier definitions live in `config/plans.ts` (FREE/PRO/TEAM); usage tracked via `services/usageTracker.ts`

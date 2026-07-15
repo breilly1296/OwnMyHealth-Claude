@@ -1,132 +1,131 @@
+---
+title: Testing Patterns
+audience: Engineers adding a controller / route / service / middleware / component / e2e test
+status: generated from live code at HEAD fb2cd32 (2026-06-16)
+---
+
 # TESTING_PATTERNS.md
 
-> **Scope**: The how-to-write-a-test reference for OwnMyHealth. A dev adding a new controller / route / service / middleware / frontend component / e2e test should be able to copy the nearest real pattern below without re-reading the whole test tree.
-> **Generated**: 2026-06-01. Counts and line citations verified against the repo on that date.
-> **Quality bar**: this doc follows [`_doc-quality.md`](../prompts/_doc-quality.md) — every non-trivial claim cites `file:path:line`; snippets are verbatim with a `// Source:` marker.
+The **how-to-write-a-test** reference for OwnMyHealth. A dev adding a new
+controller, route, service, middleware, frontend component, or e2e test can copy
+the closest real pattern below without re-reading the whole test tree. Every
+non-trivial claim cites `file:line`; every snippet is verbatim from the repo.
+
+> Runner is **Vitest** everywhere (backend `node` env, frontend `jsdom` env) plus
+> **Playwright** for e2e. There is no Jest in this repo (`backend/package.json:11-17`,
+> root `package.json:12-19`).
+
+## Required reading before generating
+
+Before writing a single line, read:
+
+1. [`_doc-quality.md`](../prompts/_doc-quality.md) — self-containedness, citation, TBD, cross-link, format rules.
+2. [`_verification-tools.md`](../prompts/_verification-tools.md) — Grep/Glob/Read cheat sheet.
+3. [`_phi-inventory.md`](../prompts/_phi-inventory.md) — tests that touch PHI must respect encryption + audit contracts.
 
 ---
 
 ## 1. Test pyramid
 
-Three runners, three scopes. All three are **Vitest or Playwright — there is no Jest in this repo** (`backend/package.json:11`, root `package.json:12`, `playwright.config.ts:13`).
-
-```
-            ┌─────────────────────────────────────┐
-   e2e      │  5 Playwright specs (e2e/*.spec.ts)  │  real browser + real backend + live DB
-            │  auth, biomarker-entry, data-export, │  seeded user, ~minutes, 1 worker
-            │  health-guide, settings             │
-            └─────────────────────────────────────┘
-        ┌───────────────────────────────────────────────┐
-  integ │  Route tests (supertest) + rls.test.ts          │  Express app or live Postgres
-        │  biomarkerRoutes.guidance, internalRoutes,      │  rls.test.ts skips w/o DB
-        │  providerRoutes.requestUniformity, adminRoutes  │
-        └───────────────────────────────────────────────┘
-    ┌─────────────────────────────────────────────────────────┐
-unit│  34 backend *.test.ts (colocated) + 14 frontend tests     │  pure functions / mocked deps
-    │  controllers, services, middleware, utils, schedulers,    │  jsdom (FE) / node (BE)
-    │  config + 14 src/__tests__/**/*.test.{ts,tsx}             │  milliseconds–seconds
-    └─────────────────────────────────────────────────────────┘
-```
+As of 2026-06-16 (`Glob` counts, verbatim):
 
 | Layer | Count | Glob | Runner / env | What it catches |
 |---|---|---|---|---|
-| Backend unit + route (colocated) | **34** | `backend/src/**/*.test.ts` | Vitest, `node` (`backend/vitest.config.ts:6`) | Encryption, RLS-wrapping, audit calls, validation, SSRF guard, AI budget, route gates |
-| Frontend unit | **14** | `src/__tests__/**/*.test.{ts,tsx}` | Vitest, `jsdom` (`vitest.config.ts:9`) | Component render/interaction, auth context, export utils |
-| E2E | **5** | `e2e/*.spec.ts` | Playwright, Chromium (`playwright.config.ts:67`) | Login, manual biomarker entry, data export, health-guide chat, settings |
-| Live-DB RLS regression | 1 (in the 34) | `backend/src/services/rls.test.ts` | Vitest, **skips without DB** | Cross-tenant isolation, provider-consent policy branches |
+| Backend unit + integration (colocated `*.test.ts`) | **54** | `backend/src/**/*.test.ts` | Vitest, `node` (`backend/vitest.config.ts:6`) | Controller/service/middleware/route logic, encryption, RLS-wrap usage, security regressions |
+| Frontend unit (`src/__tests__/`) | **25** | `src/__tests__/**/*.test.{ts,tsx}` | Vitest, `jsdom` (`vitest.config.ts:9`) | Component render/interaction, hooks, contexts, util math, PDF/export logic |
+| Live-DB RLS regression | 1 of the 54, **gated** | `backend/src/services/rls.test.ts` | Vitest + real Postgres (NOBYPASSRLS) | Tenant isolation, provider-consent policy, FORCE-RLS, audit retention |
+| E2E (Playwright) | **5 specs** | `e2e/*.spec.ts` | Playwright/Chromium (`playwright.config.ts:19`) | Full auth + biomarker-entry + export + health-guide + settings flows |
 
-The live-DB suite self-skips: `describe.skipIf(!hasLiveDb)` where `hasLiveDb = Boolean(process.env.DATABASE_URL) && Boolean(process.env.PHI_ENCRYPTION_KEY)` (`backend/src/services/rls.test.ts:27-29`). So unit-only CI runs stay green even though the file is part of the 34.
+```
+        ┌───────────────────────────────────────────────┐
+   E2E  │  5 Playwright specs  (e2e/*.spec.ts)           │  slow, real stack
+        │  auth / biomarker-entry / data-export /        │  NOT yet in CI (ci.yml:215)
+        │  health-guide / settings                       │
+        ├───────────────────────────────────────────────┤
+  FE U  │  25 frontend Vitest (jsdom)                    │  components/hooks/utils
+        │  src/__tests__/**                              │
+        ├───────────────────────────────────────────────┤
+  BE U  │  54 backend Vitest (node) — colocated *.test.ts│  fast, mocked deps
+        │  + 1 live-DB rls.test.ts (skip-if-no-DB)       │  the bulk of the pyramid
+        └───────────────────────────────────────────────┘
+```
 
-> Counts are exact as of 2026-06-01 (re-glob to refresh). The comment in `backend/vitest.config.ci.ts:9` mentions "~417 colocated unit tests" — that is the *test-case* count across the 34 *files*, not a file count. See [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) for missing-coverage gaps.
+The live-DB integration test (`rls.test.ts`) **skips** when `DATABASE_URL`/
+`PHI_ENCRYPTION_KEY` are absent, so unit-only CI runs stay green:
+
+```ts
+// Source: backend/src/services/rls.test.ts:27-29
+const hasLiveDb = Boolean(process.env.DATABASE_URL) && Boolean(process.env.PHI_ENCRYPTION_KEY);
+
+describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
+```
+
+In CI, the testSetup defaults set `DATABASE_URL` to a stub (`postgresql://localhost/test`,
+`backend/src/testSetup.ts:13`), so the live-DB suite would *try* to run under `test:ci` —
+which is exactly why `vitest.config.ci.ts` explicitly **excludes** `rls.test.ts` and runs it
+in the dedicated `rls` CI job against a real Postgres instead (`backend/vitest.config.ci.ts:18-26`,
+`.github/workflows/ci.yml:151-213`).
 
 ---
 
 ## 2. Runners + commands
 
-### Backend (`cd backend`)
+### Backend (`backend/package.json:11-17`)
 
-| Command | Script | What it runs | Source |
-|---|---|---|---|
-| `npm test` | `vitest run` | The **full colocated suite** (all 34, incl. `rls.test.ts` which self-skips w/o DB) | `backend/package.json:11` |
-| `npm run test:watch` | `vitest` | Same, watch mode | `backend/package.json:12` |
-| `npm run test:coverage` | `vitest run --coverage` | Full suite + v8 coverage | `backend/package.json:13` |
-| `npm run test:ci` | `vitest run --config vitest.config.ci.ts` | **The real CI command** — full suite **except** `rls.test.ts` | `backend/package.json:14` |
-| `npm run test:unit` | `vitest run src/__tests__/unit` | **Runs ZERO tests** — that dir does not exist | `backend/package.json:15` |
-| `npm run test:integration` | `vitest run src/__tests__/integration` | **Runs ZERO tests** — that dir does not exist | `backend/package.json:16` |
-| `npm run test:rls` | `vitest run src/services/rls.test.ts` | The live-Postgres RLS suite (its own CI job) | `backend/package.json:17` |
+| Script | Command | Use |
+|---|---|---|
+| `test` | `vitest run` | Run the full colocated suite once (`backend/package.json:11`) |
+| `test:watch` | `vitest` | Watch mode (`backend/package.json:12`) |
+| `test:coverage` | `vitest run --coverage` | v8 coverage (`backend/package.json:13`) |
+| `test:ci` | `vitest run --config vitest.config.ci.ts` | **The real CI command** — runs every colocated `*.test.ts` except `rls.test.ts` (`backend/package.json:14`, `.github/workflows/ci.yml:92-93`) |
+| `test:unit` | `vitest run src/__tests__/unit` | **DEAD** — `src/__tests__/unit` does not exist; runs zero tests (`backend/package.json:15`) |
+| `test:integration` | `vitest run src/__tests__/integration` | **DEAD** — directory does not exist; runs zero tests (`backend/package.json:16`) |
+| `test:rls` | `vitest run src/services/rls.test.ts` | Live-DB RLS suite (`backend/package.json:17`, run by the `rls` CI job `ci.yml:213`) |
 
-> **Trap (Acceptance Q2)**: `test:unit` and `test:integration` point at `src/__tests__/unit` and `src/__tests__/integration`, **directories that do not exist** in the backend. They run nothing. The way to run the backend unit suite is **`npm test`** (local) or **`npm run test:ci`** (CI). This is documented in the config header: *"The old `test:unit` script pointed at `src/__tests__/unit`, a directory that does not exist, so `--passWithNoTests` made the step a silent no-op"* (`backend/vitest.config.ci.ts:7-12`).
+> **Run the backend unit suite with `npm run test` (all) or `npm run test:ci` (CI variant) — NOT
+> `test:unit`.** `test:unit`/`test:integration` point at `src/__tests__/unit` and
+> `src/__tests__/integration`, neither of which exists, so they silently no-op. This was the bug
+> that left ~417 colocated tests ungated for a period; the comment block in
+> `vitest.config.ci.ts:5-17` documents it.
 
-`vitest.config.ci.ts` is a thin override that excludes only the live-DB file:
+### Frontend / root (`package.json:12-19`)
 
-```ts
-// Source: backend/vitest.config.ci.ts:18-27
-export default mergeConfig(baseConfig, {
-  test: {
-    exclude: [
-      'node_modules',
-      'dist',
-      // Live-Postgres suite — runs in the dedicated `rls` CI job instead.
-      'src/services/rls.test.ts',
-    ],
-  },
-});
-```
+| Script | Command | Use |
+|---|---|---|
+| `test` | `vitest run` | Frontend unit suite once (`package.json:12`) |
+| `test:watch` | `vitest` | Watch mode (`package.json:13`) |
+| `test:coverage` | `vitest run --coverage` | Coverage (`package.json:14`) |
+| `test:ui` | `vitest --ui` | Vitest UI (`package.json:15`) |
+| `test:e2e:setup` | `cd backend && npx tsx ../e2e/setup/seed-test-user.ts` | Seed the e2e user (`package.json:16`) |
+| `test:e2e` | `npm run test:e2e:setup && playwright test` | **Seeds first, then runs Playwright** (`package.json:17`) |
+| `test:e2e:ui` | `playwright test --ui` | Playwright UI (`package.json:18`) |
+| `test:e2e:install` | `playwright install chromium` | Install the browser (`package.json:19`) |
 
-### Frontend / root (repo root)
-
-| Command | Script | What it runs | Source |
-|---|---|---|---|
-| `npm test` | `vitest run` | All 14 frontend tests (`jsdom`) | `package.json:12` |
-| `npm run test:watch` | `vitest` | Watch mode | `package.json:13` |
-| `npm run test:coverage` | `vitest run --coverage` | + coverage | `package.json:14` |
-| `npm run test:ui` | `vitest --ui` | Vitest browser UI | `package.json:15` |
-| `npm run test:e2e:setup` | `cd backend && npx tsx ../e2e/setup/seed-test-user.ts` | Idempotently seed the e2e user | `package.json:16` |
-| `npm run test:e2e` | `npm run test:e2e:setup && playwright test` | **Seed then run all 5 specs** | `package.json:17` |
-| `npm run test:e2e:ui` | `playwright test --ui` | Playwright UI mode | `package.json:18` |
-| `npm run test:e2e:install` | `playwright install chromium` | Install the browser | `package.json:19` |
-
-> **Acceptance Q1**: backend unit → Vitest (`node`); frontend unit → Vitest (`jsdom`); e2e → Playwright (Chromium).
-
-Both Vitest configs seed env before any import so `config/index.ts` doesn't throw on missing secrets. Backend uses `src/testSetup.ts` (`backend/vitest.config.ts:11`); frontend uses `src/__tests__/setup.ts` (`vitest.config.ts:10`).
-
-```ts
-// Source: backend/src/testSetup.ts:11-24
-const testDefaults: Record<string, string> = {
-  NODE_ENV: 'test',
-  DATABASE_URL: 'postgresql://localhost/test',
-  JWT_ACCESS_SECRET: 'test-access-secret-' + 'a'.repeat(32),
-  JWT_REFRESH_SECRET: 'test-refresh-secret-' + 'b'.repeat(32),
-  PHI_ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
-  AUDIT_LOG_SALT: 'test-audit-salt-' + 'c'.repeat(32),
-};
-for (const [key, value] of Object.entries(testDefaults)) {
-  if (!process.env[key]) { process.env[key] = value; }
-}
-```
-
-> **Acceptance Q15**: `backend/src/testSetup.ts` seeds `NODE_ENV` + secrets before backend tests import config. It only fills values **not already set**, so a real `.env` in local dev keeps winning (`backend/src/testSetup.ts:5-8`).
+See [LOCAL_DEV.md](./LOCAL_DEV.md) *(doc pending — see prompt `../prompts/21-local-dev-doc.md`)* for prerequisites (Postgres, `backend/.env`).
 
 ---
 
-## 3. Backend unit test recipe (service functions)
+## 3. Backend unit test recipe — service functions
 
-Service tests use the **real implementation** wherever the dependency is deterministic (encryption, URL safety, cost math), and inline `vi.mock` only for I/O (DB, network, logger).
+Service tests import the real function and assert pure behavior. The encryption
+service is the canonical example: it uses the **real** crypto path with a test
+`PHI_ENCRYPTION_KEY` (never a plaintext stub), and validates the key contract.
 
-**Reference**: `backend/src/services/encryption.test.ts:L1-L27` (real encryption path, no plaintext stub).
+**Reference**: `backend/src/services/encryption.test.ts:1-65`
 
 ```ts
-// Source: backend/src/services/encryption.test.ts:1-27
+// Source: backend/src/services/encryption.test.ts:1-22
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import crypto from 'crypto';
 import { EncryptionService, validateEncryptionKey } from './encryption.js';
 
 vi.mock('../utils/logger.js');
 
 const TEST_PHI_ENCRYPTION_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
-// ...
+
 describe('encryption.ts', () => {
   beforeEach(() => {
-    vi.resetModules();                       // fresh singleton per test
+    vi.resetModules();                                    // fresh singleton per test
     process.env.PHI_ENCRYPTION_KEY = TEST_PHI_ENCRYPTION_KEY;
     process.env.NODE_ENV = 'development';
   });
@@ -138,22 +137,34 @@ describe('encryption.ts', () => {
 ```
 
 What this covers:
-- Drives the **real** `EncryptionService` / `validateEncryptionKey` (`encryption.test.ts:2`) — no plaintext stub.
-- Uses a 64-hex test key so AES-256-GCM derivation actually runs (`encryption.test.ts:7`).
-- `vi.resetModules()` in `beforeEach` resets the encryption singleton so each test gets a clean instance (`encryption.test.ts:18`).
+- Real key validation (`validateEncryptionKey`) for short/non-hex/placeholder keys (`encryption.test.ts:55-70`).
+- `vi.resetModules()` in `beforeEach` so the encryption singleton re-reads env (`encryption.test.ts:18`).
+- `process.env.PHI_ENCRYPTION_KEY` set to a real 64-hex key, NOT a fake `encrypt → plaintext` stub.
 
-**When to copy this pattern**: any pure-ish service (encryption, hashing, URL parsing, cost math). For services that hit the DB/network, mock only those edges with `vi.mock('../services/...')` and keep the function under test real.
+When to copy this pattern: any pure service/util whose behavior depends on env config or crypto.
 
 ---
 
-## 4. Controller test recipe (uses `testHelpers.ts` + hoisted `vi.mock`)
+## 4. Controller test recipe
 
-Controllers are tested by **mocking the RLS wrappers** so the test injects a fake `tx`, then asserting on tx-level spies, audit-service spies, and encryption calls. The mocks are declared with `vi.hoisted()` + `vi.mock()` **before** the controller import.
+Controllers are tested by mocking `withRLSContext`/`withRLSTransaction` to inject a
+mock tx (from `testHelpers.ts`), then asserting on tx-level spies, the audit
+service, and the response shape. Mocks are declared **before** the controller
+import; shared handles use `vi.hoisted()`.
 
-**Reference**: `backend/src/controllers/biomarkerController.test.ts` — hoisted handles (`:38-53`), the `database.js` mock that injects the tx (`:57-72`), and the `createBiomarker` assertions (`:257-310`).
+**Reference**: `backend/src/controllers/biomarkerController.test.ts:38-72, 166-216`
 
 ```ts
-// Source: backend/src/controllers/biomarkerController.test.ts:57-72
+// Source: backend/src/controllers/biomarkerController.test.ts:38-72
+const mocks = vi.hoisted(() => ({
+  tx: null as unknown,
+  auditService: null as unknown,
+  encryptionService: null as unknown,
+  config: { anthropic: { baaActive: true, apiKey: 'test-key' } },
+  currentUserId: 'test-user-id',
+  guidanceTxResult: null as unknown,
+}));
+
 vi.mock('../services/database.js', () => ({
   getPrismaClient: vi.fn(() => ({})),
   withRLSContext: vi.fn(async (_userId: unknown, fn: (tx: unknown) => unknown) =>
@@ -170,10 +181,11 @@ vi.mock('../services/database.js', () => ({
 }));
 ```
 
-The per-test setup wires the shared factories into the hoisted handles:
+The `beforeEach` rebuilds the factory mocks and wires them into the hoisted handle,
+then a test asserts user-scoping + audit + response:
 
 ```ts
-// Source: backend/src/controllers/biomarkerController.test.ts:168-175
+// Source: backend/src/controllers/biomarkerController.test.ts:170-209
 beforeEach(() => {
   vi.clearAllMocks();
   tx = createMockPrismaTransaction();
@@ -182,60 +194,52 @@ beforeEach(() => {
   mocks.auditService = audit;
   mocks.encryptionService = createMockEncryptionService();
 });
+
+it('scopes the findMany to the authenticated userId', async () => {
+  tx.biomarker.count.mockResolvedValue(3);
+  tx.biomarker.findMany.mockResolvedValue([ /* makeBiomarkerRow ... */ ]);
+  const req = createMockRequest({ user: { id: 'user-A', email: 'a@example.com', role: 'PATIENT' }, query: {} });
+  const res = createMockResponse();
+  await getBiomarkers(req, res);
+  const findManyArg = tx.biomarker.findMany.mock.calls[0][0];
+  expect(findManyArg.where).toEqual({ userId: 'user-A' });
+  expect(audit.logAccess).toHaveBeenCalledWith(
+    'Biomarker', undefined, expect.any(Object),
+    expect.objectContaining({ operation: 'LIST', count: 3 }),
+  );
+});
 ```
 
-The assertions prove the controller respects the encrypt-before-persist + audit contracts:
+What this covers:
+- Mocks `withRLSContext`/`withRLSTransaction` to inject a `createMockPrismaTransaction()` tx — never the module-level Prisma client.
+- Asserts the controller user-scopes the query (`findManyArg.where`).
+- Asserts the audit service was called with the right method/action.
+- Imports the controller **after** the `vi.mock` block (`biomarkerController.test.ts:154-161`).
 
-```ts
-// Source: backend/src/controllers/biomarkerController.test.ts:283-305
-// Encryption service called for both value and notes with userSalt.
-expect(encryption.encrypt).toHaveBeenCalledWith('95', 'salt');
-expect(encryption.encrypt).toHaveBeenCalledWith('Fasted 12h', 'salt');
-// tx.biomarker.create called with the encrypted payload, not the raw value.
-const createArg = tx.biomarker.create.mock.calls[0][0];
-expect(createArg.data.valueEncrypted).toBe('enc:95');
-expect(createArg.data).not.toHaveProperty('value');   // raw value never persisted
-// Audit log written.
-expect(audit.logCreate).toHaveBeenCalledWith(
-  'Biomarker', 'new-b',
-  expect.objectContaining({ name: 'Glucose', category: 'METABOLIC', value: 95 }),
-  expect.any(Object)
-);
-```
+When to copy this pattern: any new controller function.
 
-What this covers (Acceptance Q3, Q8, Q10):
-- **RLS respected**: the test never touches a real DB; it mocks `withRLSContext`/`withRLSTransaction` to invoke the callback with `mocks.tx`, exactly the shape the controller passes through (`biomarkerController.test.ts:57-72`).
-- **Mock tx factory**: `createMockPrismaTransaction()` builds a tx with spies for every model (`testHelpers.ts:48-82`).
-- **Audit assertion**: `audit.logCreate` (from `createMockAuditService()`, `testHelpers.ts:87-97`) is asserted with resource type, id, and snapshot.
-- **404 / IDOR path**: when `tx.biomarker.findFirst` returns `null`, the controller throws `NotFoundError` and never deletes (`biomarkerController.test.ts:401-418`).
+### How a controller test "respects RLS"
 
-**When to copy this pattern**: any new controller function.
-
-```mermaid
-sequenceDiagram
-  participant T as test (it)
-  participant Ctl as controller fn
-  participant DBm as vi.mock(database.js)
-  participant TX as createMockPrismaTransaction()
-  T->>DBm: withRLSContext mocked to call fn(mocks.tx)
-  T->>Ctl: createBiomarker(req, res)
-  Ctl->>DBm: withRLSContext(userId, fn)
-  DBm->>TX: fn(mocks.tx)
-  TX-->>Ctl: tx.biomarker.create(...) (spy)
-  Ctl-->>T: res.status(201).json(...)
-  T->>TX: expect(tx.biomarker.create).toHaveBeenCalledWith(...)
-```
+The controller never sees raw Prisma — it goes through `withRLSContext`/
+`withRLSTransaction` (`backend/src/services/database.ts`, see [ARCHITECTURE.md](./ARCHITECTURE.md)).
+In a unit test you **mock those wrappers** to run the callback against a mock tx
+(`biomarkerController.test.ts:57-72`). That proves the controller (a) routes through the RLS
+wrapper and (b) user-scopes its query — without a DB. The *enforcement* of RLS itself is proven
+separately in `rls.test.ts` (§7) against a live NOBYPASSRLS Postgres.
 
 ---
 
-## 5. Route (integration) test recipe (supertest + minimal Express app)
+## 5. Route (integration) test recipe
 
-Route tests mount the **real router** on a minimal Express app and drive it with `supertest`. Auth / rate-limit / demo / plan-gating middleware are stubbed to pass-through so the test isolates the handler invariant.
+Route tests mount the **real router** on a minimal Express app and drive it with
+**supertest**, stubbing only the auth/rate-limit/demo/plan middleware so the
+request reaches the handler. They assert HTTP status + body + that no PHI/network
+egress happened on the deny path.
 
-**Reference**: `backend/src/routes/biomarkerRoutes.guidance.test.ts` — the build-app helper (`:143-149`), the stubbed Anthropic client (`:124-135`), and the BAA-gate test (`:186-200`).
+**Reference**: `backend/src/routes/biomarkerRoutes.guidance.test.ts:144-212`
 
 ```ts
-// Source: backend/src/routes/biomarkerRoutes.guidance.test.ts:137-149
+// Source: backend/src/routes/biomarkerRoutes.guidance.test.ts:139-150
 import express from 'express';
 import request from 'supertest';
 import biomarkerRouter from './biomarkerRoutes.js';
@@ -245,13 +249,13 @@ function buildApp() {
   const app = express();
   app.use(express.json());
   app.use('/api/v1/biomarkers', biomarkerRouter);
-  app.use(errorHandler);              // so AppError → JSON envelope
+  app.use(errorHandler);                 // real centralized error handler
   return app;
 }
 ```
 
 ```ts
-// Source: backend/src/routes/biomarkerRoutes.guidance.test.ts:187-200
+// Source: backend/src/routes/biomarkerRoutes.guidance.test.ts:188-212
 it('returns 503 and never calls fetch when baaActive is false', async () => {
   mocks.config.anthropic.baaActive = false;
   const app = buildApp();
@@ -261,106 +265,204 @@ it('returns 503 and never calls fetch when baaActive is false', async () => {
   expect(res.status).toBe(503);
   expect(res.body).toMatchObject({
     success: false,
-    error: { code: 'SERVICE_UNAVAILABLE',
-```
-
-Auth is stubbed so every request is the test user (`biomarkerRoutes.guidance.test.ts:80-89`); the controller import is mocked because only the inline guidance handler is under test (`biomarkerRoutes.guidance.test.ts:109-119`).
-
-What this covers:
-- **Full middleware chain** runs except the explicitly-stubbed ones — see [`ROUTING_TABLE.md`](./ROUTING_TABLE.md) for the real chain.
-- **Error envelope**: mounting `errorHandler` last means thrown `AppError`s become the real JSON shape (`{ success:false, error:{ code } }`) — see [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md).
-- Other route tests in this family: `internalRoutes.test.ts` (cron token gating, below), `providerRoutes.requestUniformity.test.ts` (enumeration defense, below), `adminRoutes.demoProtection.test.ts`, `adminRoutes.updateUser.test.ts`.
-
-The internal/cron endpoint test follows the same shape with a config getter so each test can flip the token (Acceptance Q —security recipes §11):
-
-```ts
-// Source: backend/src/routes/internalRoutes.test.ts:57-62
-it('returns 404 when AUDIT_CLEANUP_TOKEN is not configured (feature off)', async () => {
-  mocks.token = '';
-  const res = await request(buildApp()).post('/api/v1/internal/audit-cleanup');
-  expect(res.status).toBe(404);
-  expect(mocks.cleanupOldLogs).not.toHaveBeenCalled();
+    error: { code: 'SERVICE_UNAVAILABLE', message: expect.stringContaining('ANTHROPIC_BAA_ACTIVE') },
+  });
+  expect(mocks.fetchMock).not.toHaveBeenCalled();         // no network egress
+  expect(mocks.withRLSTransaction).not.toHaveBeenCalled(); // no DB read
+  expect(mocks.logAccess).toHaveBeenCalledWith(
+    'biomarker_ai_guidance', validUuid(), expect.any(Object),
+    expect.objectContaining({ operation: 'GUIDANCE_BLOCKED_NO_BAA' }),
+  );
 });
 ```
 
-**When to copy this pattern**: any route whose behavior depends on the router wiring (status gates, exemptions, uniform responses), not just controller logic.
+```
+supertest(request) ──POST /api/v1/biomarkers/:id/guidance──▶ buildApp()
+                                                                 │
+   express.json() ─▶ biomarkerRouter (real) ─▶ stubbed authenticate/aiLimiter/blockDemoAI
+                                                                 │
+                                          inline guidance handler (biomarkerRoutes.ts)
+                                                                 │
+                          ◀── 503 SERVICE_UNAVAILABLE ── errorHandler (real, ci.yml-gated)
+```
+
+What this covers:
+- Real router + real `errorHandler`; everything else mocked at the module boundary.
+- BAA gate (503) + IDOR 404 (`guidance.test.ts:215-228`) + happy path, all via HTTP.
+- Asserts deny paths do **not** touch the DB or the Anthropic client.
+
+Other route exemplars: `adminRoutes.demoProtection.test.ts`, `adminRoutes.updateUser.test.ts`,
+`internalRoutes.test.ts`, `providerRoutes.requestUniformity.test.ts`,
+`providerRoutes.insurance.test.ts`, `healthNeedsRoutes.statusUpdate.test.ts`,
+`authRoutes.logout.test.ts` (all under `backend/src/routes/`). Middleware chains a routed
+test should exercise are documented in [ROUTING_TABLE.md](./ROUTING_TABLE.md)
+*(doc pending — see prompt `../prompts/16-routing-table-doc.md`)*.
+
+When to copy this pattern: any route whose behavior lives in middleware ordering, status
+codes, or an inline handler (not a named controller export).
 
 ---
 
 ## 6. Middleware test recipe
 
-Middleware tests build bare `req`/`res`/`next` stubs (or `supertest` for CSRF on real routes) and assert control-flow: `next()` called, or an error thrown.
+Middleware tests call the middleware **directly** with hand-built `req`/`res`/`next`
+stubs and assert on `next(err)` / `res.status`. The two highest-value security
+middlewares are `aiSpendGuard` (AI dollar spend cap / 503 fail-closed) and
+`planGating` (plan-tier limit enforcement).
 
-**Reference**: `backend/src/middleware/rbac.test.ts` — mocks `withRLSContext` so the provider-patient lookup goes through the admin RLS context, then asserts allow/deny.
+> Do **not** look for `rbac.test.ts` — the rbac parallel-authz cluster and its tests were
+> removed (L-26). There is no `backend/src/middleware/rbac.test.ts`.
+
+### 6a. `aiSpendGuard` — 503 fail-closed (complete file)
+
+**Reference**: `backend/src/middleware/aiSpendGuard.test.ts:1-95` (full file)
 
 ```ts
-// Source: backend/src/middleware/rbac.test.ts:22-34
-const mocks = vi.hoisted(() => ({
-  findUnique: vi.fn(),
-  withRLSContext: vi.fn(),
-}));
+// Source: backend/src/middleware/aiSpendGuard.test.ts:9-32
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Request, Response, NextFunction } from 'express';
 
-vi.mock('../services/database.js', () => ({
-  withRLSContext: mocks.withRLSContext,
-  getPrismaClient: vi.fn(),
-}));
+const mocks = vi.hoisted(() => ({ admitAISpend: vi.fn() }));
+vi.mock('../services/aiCostTracker.js', () => ({ admitAISpend: mocks.admitAISpend }));
+vi.mock('../utils/logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn() } }));
 
-import { requireResourceAccess, requireOwnership } from './rbac.js';
+import { aiSpendGuard } from './aiSpendGuard.js';
+import { ServiceUnavailableError } from './errorHandler.js';
+
+function makeReq(userId?: string): Request {
+  return { user: userId ? { id: userId } : undefined, path: '/ai/chat' } as unknown as Request;
+}
+function makeRes(): Response & { handlers: Record<string, () => void> } {
+  const handlers: Record<string, () => void> = {};
+  return {
+    handlers,
+    on: vi.fn((event: string, listener: () => void) => { handlers[event] = listener; }),
+  } as unknown as Response & { handlers: Record<string, () => void> };
+}
 ```
 
 ```ts
-// Source: backend/src/middleware/validation.test.ts:51-55
-describe('validate()', () => {
-  const testSchema = z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    age: z.number().optional(),
-```
-
-What each middleware test pins:
-- `rbac.test.ts` — the lookup must run inside `withRLSContext` (admin), and a provider with no ACTIVE relationship is denied (`rbac.test.ts:1-13`).
-- `validation.test.ts` — `validate(schema, source)` calls `next()` on valid input and throws `ValidationError` (mocked at `:7-22`) on invalid.
-- `csrf.test.ts` — upload routes are **not** CSRF-exempt; POST without `X-CSRF-Token` throws `ForbiddenError`; the bearer-only `/ai/chat` exemption still works (`csrf.test.ts:1-13`).
-- `errorHandler.test.ts`, `rateLimitStore.test.ts` — error-envelope shaping and the in-memory rate-limit store.
-
-**When to copy this pattern**: any middleware. Stub `req`/`res`/`next` directly for pure middleware; mock `database.js` if it queries; use `supertest` if the behavior depends on Express routing (CSRF).
-
----
-
-## 7. Service test recipe — RLS-aware (`rls.test.ts`)
-
-There is **no `asUser`/`asAdmin` wrapper helper in the repo today** (Acceptance Q6). The real RLS test calls `withRLSContext(userId, fn)` for a tenant and `withRLSContext(null, fn)` for the admin/system context **directly** (`rls.test.ts:53`, `:190`). The whole suite is gated:
-
-```ts
-// Source: backend/src/services/rls.test.ts:27-29
-const hasLiveDb = Boolean(process.env.DATABASE_URL) && Boolean(process.env.PHI_ENCRYPTION_KEY);
-
-describe.skipIf(!hasLiveDb)('RLS tenant isolation (withRLSContext)', () => {
-```
-
-It requires a **live Postgres with migration `20260107_add_rls_policies` applied** (`rls.test.ts:14-16`). Seed both tenants through the admin context so RLS doesn't block the inserts:
-
-```ts
-// Source: backend/src/services/rls.test.ts:53-67
-await withRLSContext(null, async (tx) => {
-  await tx.user.create({
-    data: { id: userA.id, email: userA.email, passwordHash: 'test-hash-not-used' },
-  });
-  await tx.user.create({
-    data: { id: userB.id, email: userB.email, passwordHash: 'test-hash-not-used' },
-  });
-  // ... biomarkers, provider-patient consents, health needs
+// Source: backend/src/middleware/aiSpendGuard.test.ts:84-94
+it('fails CLOSED with a 503 when the shared store errors', async () => {
+  mocks.admitAISpend.mockRejectedValueOnce(new Error('redis down'));
+  const res = makeRes();
+  const next = vi.fn() as unknown as NextFunction;
+  await aiSpendGuard(makeReq('u1'), res, next);
+  const err = (next as ReturnType<typeof vi.fn>).mock.calls[0][0];
+  expect(err).toBeInstanceOf(ServiceUnavailableError);
+  expect(res.on).not.toHaveBeenCalled(); // no settle registered on error
 });
 ```
 
-The isolation assertion (Acceptance Q9) deliberately **omits any `where: { userId }` filter** — so a leak surfaces if RLS were off:
+What this covers: no-user pass-through (`:38`), admit + settle on `finish`/`close` (`:46`),
+refuse user/global scope (`:60`,`:73`), and **fail-closed on store error** (`:84`). The deleted
+refuse-branch mutation this test was written to kill is described at `aiSpendGuard.test.ts:1-7`.
+
+### 6b. `planGating` — plan-tier limit enforcement
+
+The real middleware + `checkPlanLimit` + `getUserUsage` run against a **mocked
+`withRLSContext`** (it does NOT stub `planGating` itself — that would assert nothing).
+
+**Reference**: `backend/src/middleware/planGating.test.ts:14-74`
 
 ```ts
-// Source: backend/src/services/rls.test.ts:189-203
-it('user A sees only their row when no where-filter is applied', async () => {
-  const rows = await withRLSContext(userA.id, async (tx) => {
-    return tx.biomarker.findMany({ where: { name: { in: markerNames } } });
+// Source: backend/src/middleware/planGating.test.ts:25-34
+vi.mock('../services/database.js', () => ({
+  // Run the callback against the shared mock tx, ignoring the RLS userId.
+  withRLSContext: (_userId: string, fn: (tx: unknown) => unknown) => fn(mocks.tx),
+}));
+import { requirePlanLimit } from './planGating.js';
+```
+
+```ts
+// Source: backend/src/middleware/planGating.test.ts:54-74
+it('403 PLAN_LIMIT_EXCEEDED when a FREE user is at the maxBiomarkers cap', async () => {
+  mocks.tx.biomarker.count.mockResolvedValue(50);
+  const { req, res, next, status, json } = harness('u1');
+  await requirePlanLimit('maxBiomarkers')(req, res, next);
+  expect(next).not.toHaveBeenCalled();
+  expect(status).toHaveBeenCalledWith(403);
+  expect(json).toHaveBeenCalledWith(expect.objectContaining({
+    error: expect.objectContaining({
+      code: 'PLAN_LIMIT_EXCEEDED', feature: 'maxBiomarkers',
+      limit: 50, current: 50, upgradeRequired: true,
+    }),
+  }));
+});
+```
+
+What this covers: the 403 cap, the under-cap pass (`:76`), the expired-paid-plan downgrade to
+FREE limits (`:86`), and the no-user bypass. `maxBiomarkers` + `insurancePlans` are now enforced;
+`planGating` fails CLOSED to FREE on a DB error.
+
+### 6c. Other middleware exemplars
+
+| Middleware | File | What it pins |
+|---|---|---|
+| CSRF | `backend/src/middleware/csrf.test.ts:52-...` | Upload routes NOT exempt (throws `ForbiddenError`); bearer-only `/ai/chat` exemption still works (`csrf.test.ts:1-13`) |
+| Error handler | `backend/src/middleware/errorHandler.test.ts` | Centralized error → sanitized response (see [ERROR_RECOVERY.md](./ERROR_RECOVERY.md)) |
+| Rate-limit store | `backend/src/middleware/rateLimitStore.test.ts` | Shared store keying / window math |
+| Validation (Zod) | `backend/src/middleware/validation.test.ts`, `validation.healthNeed.test.ts` | Boundary input rejection |
+
+CSRF middleware is invoked synchronously and its throw is caught in-test:
+
+```ts
+// Source: backend/src/middleware/csrf.test.ts:38-50
+function callMiddleware(req: Request): { error: unknown; nextCalled: boolean } {
+  let nextCalled = false;
+  let error: unknown = null;
+  const next: NextFunction = () => { nextCalled = true; };
+  try { validateCsrfToken(req, {} as Response, next); } catch (e) { error = e; }
+  return { error, nextCalled };
+}
+```
+
+When to copy these patterns: any middleware — build `req`/`res`/`next` stubs, call directly,
+assert on `next(err)` instance type or `res.status`.
+
+[ERROR_RECOVERY.md](./ERROR_RECOVERY.md) *(doc pending — see prompt `../prompts/19-error-recovery-doc.md`)* documents which error paths are worth asserting.
+
+---
+
+## 7. Service test recipe (RLS-aware)
+
+There is **no** `asUser`/`asAdmin` wrapper helper in the repo today. The real RLS
+test calls `withRLSContext(userId, fn)` and `withRLSContext(null, fn)` (admin
+context) **directly**, and the whole suite is gated by `describe.skipIf(!hasLiveDb)`
+because it needs a live Postgres with migration `20260107_add_rls_policies` applied.
+
+**Reference**: `backend/src/services/rls.test.ts:1-540` (full live-DB suite)
+
+Seed both tenants' rows via the **admin context** (`withRLSContext(null, …)`):
+
+```ts
+// Source: backend/src/services/rls.test.ts:60-98
+await withRLSContext(null, async (tx) => {
+  await tx.user.create({ data: { id: userA.id, email: userA.email, passwordHash: 'test-hash-not-used' } });
+  await tx.user.create({ data: { id: userB.id, email: userB.email, passwordHash: 'test-hash-not-used' } });
+  await tx.biomarker.create({
+    data: {
+      userId: userA.id, category: 'test', name: markerNames[0], unit: 'test',
+      valueEncrypted: 'ct-a', normalRangeMin: 0, normalRangeMax: 1, measurementDate: new Date(),
+    },
   });
+  await tx.biomarker.create({
+    data: {
+      userId: userB.id, category: 'test', name: markerNames[1], unit: 'test',
+      valueEncrypted: 'ct-b', normalRangeMin: 0, normalRangeMax: 1, measurementDate: new Date(),
+    },
+  });
+});
+```
+
+**Cross-user isolation** — the queries intentionally OMIT a `where: { userId }` filter, so a
+leak surfaces if RLS were off:
+
+```ts
+// Source: backend/src/services/rls.test.ts:228-242
+it('user A sees only their row when no where-filter is applied', async () => {
+  const rows = await withRLSContext(userA.id, async (tx) =>
+    tx.biomarker.findMany({ where: { name: { in: markerNames } } }));
   expect(rows).toHaveLength(1);
   expect(rows[0].userId).toBe(userA.id);
 });
@@ -373,116 +475,104 @@ it('user B sees only their row when no where-filter is applied', async () => {
 });
 ```
 
-It also covers the provider-consent policy branch (`has_provider_access`): consented provider reads the patient row; non-consented sees nothing; REVOKED/SUSPENDED/PENDING/expired all grant nothing (`rls.test.ts:241-323`). Admin context sees both tenants (`rls.test.ts:205-210`).
+Beyond plain tenant isolation, the suite also proves: admin context sees both tenants (`:244`),
+no cross-call pool leakage (`:251`), consented provider reads via `has_provider_access` (`:296-389`),
+FORCE-RLS on every table (`:393-407`), DB-enforced 7-year audit retention (`:410-427`), and
+consent-column immutability (L23) + audit-insert check (L40) (`:436-539`).
 
-**The `asUser` helper (Acceptance Q6)**: it does **not exist**. The canonical call is `withRLSContext(userId, fn)` (`backend/src/services/database.ts:447`), which wraps the callback in a `$transaction` and issues `SET LOCAL app.current_user_id` so RLS policies evaluate against the right user. Calling `prisma.*` directly (outside the wrapper) runs on a different connection that does **not** carry the `SET LOCAL`, so RLS evaluates against NULL and is effectively bypassed (`backend/src/services/database.ts:388-391`). If you want a thin convenience wrapper, it would be **proposed (does not exist yet)**:
+```mermaid
+sequenceDiagram
+  participant T as rls.test.ts
+  participant DB as Postgres (NOBYPASSRLS role)
+  Note over T,DB: gated by describe.skipIf(!hasLiveDb)
+  T->>DB: withRLSContext(null, seed userA + userB rows)   # admin context
+  T->>DB: withRLSContext(userA.id, findMany no where-filter)
+  DB-->>T: [userA row]   # RLS scopes to userA
+  T->>DB: withRLSContext(userB.id, findMany no where-filter)
+  DB-->>T: [userB row]   # leak would return 2 rows → test fails
+```
+
+### `asUser` helper — what it would do (proposed, does NOT exist yet)
+
+If you want a thin convenience wrapper, label it explicitly as proposed and align it with
+`database.ts`:
 
 ```ts
-// PROPOSED — not in the repo. Aligns with database.ts:447.
-export async function asUser<T>(
-  userId: string,
-  fn: (tx: Prisma.TransactionClient) => Promise<T>,
-): Promise<T> {
-  return withRLSContext(userId, fn);          // wrapper over the real export
+// Proposed (does NOT exist in the repo) — a thin alias over withRLSContext:
+export async function asUser<T>(userId: string, fn: (tx: PrismaTx) => Promise<T>): Promise<T> {
+  return withRLSContext(userId, fn);
 }
 ```
 
-**When to copy this pattern**: any DB-level isolation regression. Gate it on `describe.skipIf(!hasLiveDb)` so unit-only CI stays green, and run it via `npm run test:rls`. See [`DATA_MODEL.md`](./DATA_MODEL.md) for the RLS policies and [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the RLS layer.
+`asUser(userId, fn)` would run `fn` inside a transaction that carries `SET LOCAL app.current_user_id`,
+so RLS policies scope every query to `userId` — the difference from calling Prisma directly is that
+a bare `prisma.biomarker.findMany()` runs on a connection **without** that `SET LOCAL`, so the policy
+matches against NULL and isolation breaks (this exact failure mode is what `rls.test.ts:1-12` and
+CLAUDE.md's RLS section warn against). Today, write `withRLSContext(userId, fn)` directly.
+
+The `rls` CI job runs this suite against a real Postgres as a NOBYPASSRLS role
+(`.github/workflows/ci.yml:155-213`) — that is what gates it from running in unit-only CI.
 
 ---
 
-## 8. Frontend unit test recipe (Vitest `jsdom` + React Testing Library)
+## 8. Frontend unit test recipe
 
-Frontend tests live under `src/__tests__/` (NOT colocated) and run in `jsdom` (`vitest.config.ts:9-14`). The setup file polyfills browser APIs RTL needs.
+Vitest (`jsdom`) + React Testing Library. Tests live under `src/__tests__/`
+(NOT colocated). Global stubs for `matchMedia`/`ResizeObserver`/
+`IntersectionObserver`/`localStorage`/`scrollTo` are in the setup file
+(`src/__tests__/setup.ts:8-63`).
 
-**Reference**: `src/__tests__/components/Button.test.tsx:L1-L56` (smallest complete example).
+**Reference**: `src/__tests__/components/Button.test.tsx:1-56` (full file)
 
 ```tsx
 // Source: src/__tests__/components/Button.test.tsx:7-36
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
-// ...
+
 describe('Button Component', () => {
   it('should render with text', () => {
     render(<TestButton>Click Me</TestButton>);
     expect(screen.getByText('Click Me')).toBeInTheDocument();
   });
+
   it('should call onClick when clicked', () => {
     const handleClick = vi.fn();
     render(<TestButton onClick={handleClick}>Click Me</TestButton>);
     fireEvent.click(screen.getByText('Click Me'));
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
-```
-
-Real components are tested the same way with prop spies — e.g. `LoginPage` asserts headings, labelled inputs, the demo button, and the security notice (`src/__tests__/components/LoginPage.test.tsx:29-72`):
-
-```tsx
-// Source: src/__tests__/components/LoginPage.test.tsx:30-37
-it('should render the login form', () => {
-  render(<LoginPage {...defaultProps} />);
-  expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
-  expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-  expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
 });
 ```
 
-The setup file mocks `matchMedia`, `ResizeObserver`, `IntersectionObserver`, `localStorage`, and `scrollTo` (`src/__tests__/setup.ts:11-63`) — required because recharts and the SPA shell call these on mount.
+What this covers: render assertion (`getByText` + `toBeInTheDocument`), click handler spy via
+`vi.fn()` + `fireEvent`, disabled-state assertion. `@testing-library/jest-dom` matchers come from
+`src/__tests__/setup.ts:8`.
 
-**Frontend coverage (Acceptance Q12)** — all under `src/__tests__/`:
+Frontend tests with real component coverage (selected from the 25):
+`AdminPage`, `BiomarkerSummary`, `CareTeamPage`, `LoginPage`, `RegisterPage`, `Dashboard`,
+`AddMeasurementModal`, `MyPatientsPage`, `LabConnectionsSection`, `TrendsPage`,
+`ConfirmEmailChangePage`, `a11yScreenReader` (components); `useAuth`, `useBiomarkerData` (hooks);
+`AuthContext` (context); `healthNeeds` (api service); plus utils (`exportBiomarkers`,
+`pdfReportGenerator`, `dateNormalizer`, `trendCalculations`, `extractionReview`, `frameGuard`,
+`pdfWorker`) and a build test (`rewriteCspConnectSrc`). All paths under `src/__tests__/`.
 
-| Test file | Source |
-|---|---|
-| `components/AddMeasurementModal.test.tsx` | `src/__tests__/components/AddMeasurementModal.test.tsx` |
-| `components/AdminPage.test.tsx` | `src/__tests__/components/AdminPage.test.tsx` |
-| `components/BiomarkerSummary.test.tsx` | `src/__tests__/components/BiomarkerSummary.test.tsx` |
-| `components/Button.test.tsx` | `src/__tests__/components/Button.test.tsx` |
-| `components/CareTeamPage.test.tsx` | `src/__tests__/components/CareTeamPage.test.tsx` |
-| `components/Dashboard.test.tsx` | `src/__tests__/components/Dashboard.test.tsx` |
-| `components/LabConnectionsSection.test.tsx` | `src/__tests__/components/LabConnectionsSection.test.tsx` |
-| `components/LoginPage.test.tsx` | `src/__tests__/components/LoginPage.test.tsx` |
-| `components/MyPatientsPage.test.tsx` | `src/__tests__/components/MyPatientsPage.test.tsx` |
-| `components/ConfirmEmailChangePage.test.tsx` | `src/__tests__/components/ConfirmEmailChangePage.test.tsx` |
-| `contexts/AuthContext.test.tsx` | `src/__tests__/contexts/AuthContext.test.tsx` |
-| `hooks/useAuth.test.ts` | `src/__tests__/hooks/useAuth.test.ts` |
-| `utils/exportBiomarkers.test.ts` | `src/__tests__/utils/exportBiomarkers.test.ts` |
-| `utils/pdfReportGenerator.test.ts` | `src/__tests__/utils/pdfReportGenerator.test.ts` |
-
-> The frontend config excludes OneDrive sync-conflict duplicates (`**/*\\(1\\)*` etc.) so local `npm test` matches CI (`vitest.config.ts:18-25`).
-
-**When to copy this pattern**: any new React component / hook / util. Render with RTL, query by accessible role/label, assert with `@testing-library/jest-dom` matchers.
+When to copy this pattern: any component/hook/util. Put the file under `src/__tests__/`,
+import RTL, render, query by role/text, assert.
 
 ---
 
-## 9. E2E test recipe (Playwright + seeded user)
+## 9. E2E test recipe (Playwright)
 
-E2E specs drive a real Chromium against a real backend + frontend (auto-started by `webServer`, `playwright.config.ts:50-64`). They import the shared seeded user and login helper — **never hardcode creds inline**.
+Specs live under `e2e/*.spec.ts`, run against a locally-running dev stack
+(backend `:3001`, frontend `:5173`) that Playwright auto-starts via `webServer`
+(`playwright.config.ts:50-64`). The 5 specs cover **auth, biomarker-entry,
+data-export, health-guide, settings**.
 
-**Reference**: `e2e/biomarker-entry.spec.ts:L1-L56` (complete spec).
-
-```ts
-// Source: e2e/biomarker-entry.spec.ts:11-28
-import { test, expect } from '@playwright/test';
-import { loginAsTestUser } from './helpers/auth';
-
-test.describe('Biomarker manual entry', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsTestUser(page);
-  });
-
-  test('add a biomarker manually and confirm it appears on the dashboard', async ({ page }) => {
-    await page
-      .getByRole('button', { name: /add (measurement|manually)/i })
-      .first().click();
-    await expect(page.getByRole('heading', { name: /add measurement/i })).toBeVisible();
-```
-
-The login helper + `TEST_USER` live in `e2e/helpers/auth.ts` (Acceptance Q5):
+Auth is centralized in `e2e/helpers/auth.ts` — never hardcode creds inline:
 
 ```ts
-// Source: e2e/helpers/auth.ts:18-37
+// Source: e2e/helpers/auth.ts:18-45
 export const TEST_USER = {
   email: 'e2e-test@ownmyhealth.io',
   password: 'E2ETestPass123!',
@@ -494,13 +584,35 @@ export async function loginAsTestUser(page: Page): Promise<void> {
   await page.getByLabel(/email/i).first().fill(TEST_USER.email);
   await page.getByLabel(/password/i).first().fill(TEST_USER.password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
-  // SPA does not navigate on login — wait on dashboard greeting:
   await expect(page.getByRole('heading', { name: /welcome back,|^dashboard$/i }).first())
     .toBeVisible({ timeout: 15_000 });
 }
 ```
 
-The **seed-test-user script** (Acceptance Q5) is `e2e/setup/seed-test-user.ts`, run by `test:e2e:setup` (which `test:e2e` calls first, `package.json:16-17`). It is idempotent — refreshes an existing row or creates one — and grants `emailVerified`, `plan: 'PRO'`, and `onboardingCompletedAt` so gates don't block flows:
+A full spec imports that helper in `beforeEach` and drives the real UI:
+
+```ts
+// Source: e2e/biomarker-entry.spec.ts:11-28
+import { test, expect } from '@playwright/test';
+import { loginAsTestUser } from './helpers/auth';
+
+test.describe('Biomarker manual entry', () => {
+  test.beforeEach(async ({ page }) => { await loginAsTestUser(page); });
+
+  test('add a biomarker manually and confirm it appears on the dashboard', async ({ page }) => {
+    await page.getByRole('button', { name: /add (measurement|manually)/i }).first().click();
+    await expect(page.getByRole('heading', { name: /add measurement/i })).toBeVisible();
+    // ... fill value/date, save, assert it appears ...
+  });
+});
+```
+
+### Seed-test-user helper
+
+The seed script is at **`e2e/setup/seed-test-user.ts`**. It is idempotent (creates or refreshes
+the user) and is run automatically by `npm run test:e2e` via the `test:e2e:setup` script
+(`package.json:16-17`). It seeds `emailVerified: true`, `plan: 'PRO'`, and
+`onboardingCompletedAt: now` so plan-gating / email-gate / onboarding don't block flow tests:
 
 ```ts
 // Source: e2e/setup/seed-test-user.ts:42-61
@@ -519,88 +631,75 @@ if (existing) {
 }
 ```
 
-**The 5 e2e specs and what they cover (Acceptance Q7)**:
+E2E is **not yet wired into CI** — the `e2e-tests` job is commented out pending staging DB
+(`.github/workflows/ci.yml:215-239`); see [KNOWN_ISSUES.md](./KNOWN_ISSUES.md).
 
-| Spec | Covers | Source |
-|---|---|---|
-| `auth.spec.ts` | Login with valid creds lands on dashboard; logout | `e2e/auth.spec.ts:1-7` |
-| `biomarker-entry.spec.ts` | Manual biomarker entry → appears on dashboard | `e2e/biomarker-entry.spec.ts:1-9` |
-| `data-export.spec.ts` | Trigger export → JSON file downloads (HIPAA) | `e2e/data-export.spec.ts:1-9` |
-| `health-guide.spec.ts` | Health-guide chat page mounts + responds (no Claude-output assert) | `e2e/health-guide.spec.ts:1-12` |
-| `settings.spec.ts` | Account settings flows | `e2e/settings.spec.ts` |
-
-> `e2e/fixtures/` holds only `README.md` (`e2e/fixtures/README.md`); upload-spec PDF fixtures are described in `e2e/helpers/testData.ts:6-14` but the binaries must be created locally (a `%PDF-1.4` magic-byte prefix is enough). Playwright only treats `*.spec.ts` as tests (`playwright.config.ts:19`), so `helpers/`, `setup/`, `fixtures/` are ignored.
-
-**When to copy this pattern**: any critical user flow. Always `import { TEST_USER, loginAsTestUser } from './helpers/auth'`.
+When to copy this pattern: any new full-flow test. Import `loginAsTestUser`, use a `test.describe`
++ `beforeEach`, query by role/label, assert visible DOM (the SPA does not change URL on login —
+`auth.ts:1-14`).
 
 ---
 
 ## 10. Mock catalog
 
-**There are no `__mocks__/` directories.** Backend tests mock two ways: (1) inline `vi.mock('../services/...')` factories declared **before** the module-under-test import, often hoisted via `vi.hoisted()` so the same handle is shared across describe blocks; and (2) the reusable factories in `backend/src/controllers/testHelpers.ts`.
+There are **no `__mocks__/` directories** in this repo. Backend tests mock two ways:
+(1) inline `vi.mock('../services/...')` declared **before** the module-under-test import
+(often via `vi.hoisted()` so the same handle is shared across describe blocks —
+`biomarkerController.test.ts:38-72`), and (2) the reusable factory functions in
+`backend/src/controllers/testHelpers.ts`.
 
 | Dependency | Real source | How to use |
 |---|---|---|
-| Prisma tx | `createMockPrismaTransaction()` — `controllers/testHelpers.ts:48-82` | Mock tx with `findMany/findFirst/findUnique/create/createMany/update/updateMany/delete/deleteMany/count` spies for every model (user, biomarker, insurancePlan, labConnection, …). Inject via the mocked `withRLSContext`/`withRLSTransaction`. |
-| Audit log | `createMockAuditService()` — `controllers/testHelpers.ts:87-97` | Spies for `logAccess/logCreate/logUpdate/logDelete/logAuth/logExport/logSystem`. Assert the right method + action. |
-| Encryption | `createMockEncryptionService()` — `controllers/testHelpers.ts:106-114` | Deterministic `encrypt`→`enc:<v>` / `decrypt` reverse (+ master-key + `generateUserSalt`). Assert values were encrypted before persistence. |
-| Anthropic client | inline `vi.mock('../services/anthropicClient.js')` — `biomarkerController.test.ts:96-110`, `biomarkerRoutes.guidance.test.ts:124-135` | Stub `getAnthropicClient()` to return `{ messages: { create } }`; the guidance route uses the shared SDK, **not** raw `fetch`. See §11. |
-| SendGrid | inline `vi.mock('@sendgrid/mail')` / `services/emailService` (used by `schedulers/emailScheduler.test.ts`) | No-op send; assert on the send spy. |
+| Prisma tx | `createMockPrismaTransaction()` (`controllers/testHelpers.ts:48-82`) | Returns a mock tx whose every model exposes `findMany/findFirst/findUnique/create/createMany/update/updateMany/delete/deleteMany/count` (`testHelpers.ts:49-60`) for User, Biomarker, InsurancePlan, etc. Inject via the `withRLSContext`/`withRLSTransaction` mock. Note: it also defines a stale `conversationHistory` spy (`testHelpers.ts:79`) for a model that does not exist in `schema.prisma` — harmless dead helper state. |
+| Audit log | `createMockAuditService()` (`controllers/testHelpers.ts:87-97`) | Spies for `logAccess/logCreate/logUpdate/logDelete/logAuth/logExport/logSystem`. Assert the right method was called. |
+| Encryption | `createMockEncryptionService()` (`controllers/testHelpers.ts:106-114`) | Deterministic `encrypt → enc:<value>` / `decrypt` reverse (+ master-key + salt variants); assert values were encrypted before persistence. |
+| Anthropic client | inline `vi.mock('../services/anthropicClient.js')` (`biomarkerController.test.ts:97-111`, `biomarkerRoutes.guidance.test.ts:125-136`) | Stub `getAnthropicClient` to return `{ messages: { create } }`; the route uses the shared `anthropicClient` SDK, not raw `fetch`. See also `claudeExtraction.test.ts`, `sbcExtraction.test.ts`. |
+| SendGrid / email | inline `vi.mock` of `@sendgrid/mail` / `services/emailService` (see `schedulers/emailScheduler.test.ts`) | No-op send; assert on the send spy. |
 | GCS / Document AI OCR | inline `vi.mock` of `services/storageService` / `services/ocrService` | In-memory buffer / fixed OCR text per fixture. |
-| FHIR SSRF guard | real, no mock — `services/fhir/urlSafety.test.ts` | Asserts disallowed hosts/IPs are rejected before any outbound request. See §11. |
-| AI cost/spend | real, no mock — `services/aiCostTracker.test.ts` | Asserts per-day / per-user budget used by `aiSpendGuard`. See §11. |
+| FHIR SSRF guard | **real (no mock)** — `services/fhir/urlSafety.test.ts` | Asserts disallowed hosts/IPs are rejected before any outbound request. |
+| AI cost/spend | **real (no mock)** — `services/aiCostTracker.test.ts` | Asserts reserve-first per-user/global budget accounting used by `aiSpendGuard`. |
 
-The two `testHelpers.ts` factories that carry the encrypt/audit contracts:
-
-```ts
-// Source: backend/src/controllers/testHelpers.ts:106-114
-export function createMockEncryptionService() {
-  return {
-    encrypt: vi.fn((value: string) => `enc:${value}`),
-    decrypt: vi.fn((value: string) => value.replace(/^enc:/, '')),
-    encryptWithMasterKey: vi.fn((value: string) => `menc:${value}`),
-    decryptWithMasterKey: vi.fn((value: string) => value.replace(/^menc:/, '')),
-    generateUserSalt: vi.fn(() => 'mock-user-salt'),
-  };
-}
-```
-
-**Mocking the Anthropic client (Acceptance Q4)** — stub the shared client at its module boundary; both `fetchMock` (legacy "did the network call happen" alias) and `messagesCreate` (the SDK resolver each test sets) fire on every call:
+The Anthropic stub at the boundary, verbatim:
 
 ```ts
-// Source: backend/src/controllers/biomarkerController.test.ts:96-110
+// Source: backend/src/routes/biomarkerRoutes.guidance.test.ts:125-136
 vi.mock('../services/anthropicClient.js', () => ({
-  getAnthropicClient: () => ({
+  getAnthropicClient: vi.fn(() => ({
     messages: {
       create: (...args: unknown[]) => {
-        if (mocks.fetchMock) (mocks.fetchMock as ReturnType<typeof vi.fn>)(...args);
-        if (mocks.messagesCreate) {
-          return (mocks.messagesCreate as ReturnType<typeof vi.fn>)(...args);
-        }
-        return Promise.resolve({ content: [{ type: 'text', text: '' }] });
+        mocks.fetchMock(...args);          // "did the network call happen"
+        return mocks.messagesCreate(...args); // canned SDK response per test
       },
     },
-  }),
+  })),
   isEnabled: () => Boolean(process.env.ANTHROPIC_API_KEY),
-  reset: () => undefined,
+  reset: vi.fn(),
 }));
 ```
 
-> A `__mocks__/`-directory recipe is **not present** in this repo. If you add one later, label it as new; today everything is inline `vi.mock` + `testHelpers.ts`.
+> A `__mocks__/`-directory recipe is **not present** in this repo. If you introduce one,
+> label it explicitly as not-yet-present and prefer the inline + factory approach above for
+> consistency.
 
 ---
 
 ## 11. Security-domain test recipes
 
-| Domain | File | What it pins |
+| Concern | File | What it asserts |
 |---|---|---|
-| FHIR SSRF guard | `backend/src/services/fhir/urlSafety.test.ts` | Cross-host / metadata / cleartext / non-http schemes rejected before any request (Acceptance Q13) |
-| AI cost/budget | `backend/src/services/aiCostTracker.test.ts` | Per-user + global spend caps used by `aiSpendGuard` (Acceptance Q14) |
-| PHI redaction | `backend/src/utils/phiRedaction.test.ts` | SSN/email/NPI/DEA/ZIP/labeled-name scrubbed from log text |
-| Provider-access uniformity | `backend/src/routes/providerRoutes.requestUniformity.test.ts` | Same response body for unknown/non-patient/patient → no account enumeration |
-| Internal/cron token | `backend/src/routes/internalRoutes.test.ts` | 404 w/o token, 401 on bad token, runs cleanup on good token |
+| FHIR SSRF guard | `backend/src/services/fhir/urlSafety.test.ts:6-66` | Same-host allow, relative-resolve, **different-host reject**, cloud-metadata reject, cleartext-http reject, non-http scheme reject, auth-host allowlist |
+| AI cost / budget | `backend/src/services/aiCostTracker.test.ts:1-...` | Reserve-first semantics across `InMemorySpendStore` + `RedisSpendStore` (faithful fake ioredis), atomic reserve/refund |
+| AI spend-cap 503 | `backend/src/middleware/aiSpendGuard.test.ts:1-95` | Refuse user/global + **fail-closed on store error** (see §6a) |
+| Plan-limit enforcement | `backend/src/middleware/planGating.test.ts:1-...` | 403 cap, expired-plan downgrade, fail-closed to FREE (see §6b) |
+| Provider-access choke point | `backend/src/services/providerAccess.test.ts:1-44` | Every denial reason in `resolveProviderAccess`; the REQUIRED flag drives the check; denied flag short-circuits before the patient row loads |
+| Provider request uniformity | `backend/src/routes/providerRoutes.requestUniformity.test.ts` | Identical responses regardless of patient existence (no enumeration oracle) |
+| Internal/cron endpoints | `backend/src/routes/internalRoutes.test.ts` | Token-gated cleanup/scheduler endpoints |
+| Schema↔PHI_FIELDS guard | `backend/src/services/phiFieldsCoverage.test.ts:1-172` | Two-way sync of every `*Encrypted` column ↔ PHI_FIELDS + plaintext-PHI-twin guard (see §13) |
+| Server-side AI disclaimer | `backend/src/utils/aiDisclaimer.test.ts` | Disclaimer appended server-side, not trusted from client |
+| Filename PHI encrypt/decrypt | `backend/src/utils/userFileNames.test.ts` | `originalFilename` round-trips through per-user AES-GCM (L24) |
+| FHIR sync idempotency | `backend/src/services/fhir/labSyncService.sync.test.ts` | Re-sync does not duplicate biomarkers (dedup on `sourceFile`) |
 
-**FHIR SSRF guard (Q13)** — `assertAllowedFhirUrl` rejects anything not the trusted Quest host, before any outbound call:
+The FHIR SSRF guard, verbatim (real — no mock):
 
 ```ts
 // Source: backend/src/services/fhir/urlSafety.test.ts:20-30
@@ -617,163 +716,136 @@ it('rejects the cloud metadata endpoint', () => {
 });
 ```
 
-Private/loopback detection is table-driven with `it.each` (`urlSafety.test.ts:57-66`).
-
-**AI cost/budget (Q14)** — token counts are derived from the configured budgets so the test survives env overrides; it asserts user-scope vs global-scope circuit-breaking:
-
-```ts
-// Source: backend/src/services/aiCostTracker.test.ts:41-50
-it.runIf(USER_CAP > 0 && GLOBAL_CAP > USER_CAP)(
-  'blocks a user once their per-user budget is exceeded (user scope), leaving others unaffected',
-  () => {
-    spend('user-1', USER_CAP + 1); // over per-user, still under global
-    const r = isAISpendExceeded('user-1');
-    expect(r.exceeded).toBe(true);
-    expect(r.scope).toBe('user');
-    expect(isAISpendExceeded('user-2').exceeded).toBe(false);
-  }
-);
-```
-
-It resets the accumulator between tests with `__resetAISpendForTests()` (`aiCostTracker.test.ts:35`).
-
-**PHI redaction** — asserts both the substitution and the `firedPatterns` report:
-
-```ts
-// Source: backend/src/utils/phiRedaction.test.ts:20-25
-it('redacts email addresses', () => {
-  const { text, firedPatterns } = redactPHI('Contact: jane.doe@example.com');
-  expect(text).toContain('[EMAIL_REDACTED]');
-  expect(text).not.toContain('jane.doe@example.com');
-  expect(firedPatterns).toContain('Email');
-});
-```
-
-**Provider-access uniformity** — the `withRLSContext` mock returns a tx exposing exactly the delegates the controller uses, so the test can assert that an unknown email never triggers `providerPatient.upsert` while a real patient does (`providerRoutes.requestUniformity.test.ts:44-63`).
-
 ---
 
 ## 12. Fixture + factory conventions
 
-| Need | Use | Source |
+| Need | Tool | Source |
 |---|---|---|
-| Mock `req` (AuthenticatedRequest) | `createMockRequest(overrides)` | `controllers/testHelpers.ts:14-27` |
-| Mock `res` (chainable) | `createMockResponse()` | `controllers/testHelpers.ts:30-39` |
+| Mock authenticated request | `createMockRequest(overrides)` | `controllers/testHelpers.ts:14-27` |
+| Mock Express response | `createMockResponse()` (chainable `status/json/setHeader/write/end/send`) | `controllers/testHelpers.ts:30-39` |
 | Mock Prisma tx (all models) | `createMockPrismaTransaction()` | `controllers/testHelpers.ts:48-82` |
 | Mock audit service | `createMockAuditService()` | `controllers/testHelpers.ts:87-97` |
 | Mock encryption service | `createMockEncryptionService()` | `controllers/testHelpers.ts:106-114` |
-| Build a biomarker row | local `makeBiomarkerRow(overrides)` factory | `controllers/biomarkerController.test.ts:613-628` |
-| Build a provider-patient relationship | local `buildRelationship(overrides)` factory | `middleware/rbac.test.ts:57-75` |
-| Seed an e2e user | `e2e/setup/seed-test-user.ts` (via `test:e2e:setup`) | `e2e/setup/seed-test-user.ts:32-80` |
-| Shared e2e user constant | `TEST_USER` | `e2e/helpers/auth.ts:18-21` |
+| Inline row builders | per-test `makeBiomarkerRow` / `cannedBiomarkerRow` / `relRow` | `biomarkerController.test.ts`, `biomarkerRoutes.guidance.test.ts:156-170`, `providerAccess.test.ts:22-40` |
+| Seed e2e user | `e2e/setup/seed-test-user.ts` (idempotent, run by `test:e2e`) | `seed-test-user.ts:32-80` |
 
-> `testHelpers.ts` is named without `*.test.ts` on purpose so Vitest does not treat it as a test file — it's a pure helper module imported by the colocated tests (`controllers/testHelpers.ts:4-7`). There are **no** `fixtures/`, `factories/`, or `__mocks__/` source directories in `backend/src`. Per-test row factories (`makeBiomarkerRow`, `buildRelationship`) live inside the test file that uses them.
+There are **no** `fixtures/`, `factories/`, or `__mocks__/` source directories — `e2e/fixtures/`
+holds only a README. The shared factory module is `testHelpers.ts` (named non-`*.test.ts` so
+Vitest does not treat it as a test — `testHelpers.ts:1-7`). For DB-backed factories (rls test),
+seed via the admin context as in §7. Tables the factories model are documented in
+[DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see prompt `../prompts/15-data-model-doc.md`)*.
 
-Local row factory pattern (copy into your test file):
+`createMockPrismaTransaction` model-method set, verbatim:
 
 ```ts
-// Source: backend/src/controllers/biomarkerController.test.ts:613-628
-function makeBiomarkerRow(overrides: BiomarkerRowOverrides = {}) {
-  return {
-    id: 'b1', userId: 'user-A', name: 'Glucose', category: 'METABOLIC',
-    unit: 'mg/dL', valueEncrypted: 'enc:95', notesEncrypted: null,
-    normalRangeMin: 70, normalRangeMax: 100, normalRangeSource: null,
-    measurementDate: new Date('2026-04-18'),
-    sourceType: 'MANUAL', sourceFile: null, extractionConfidence: null,
-    // ...overrides
-  };
-}
+// Source: backend/src/controllers/testHelpers.ts:48-60
+export function createMockPrismaTransaction() {
+  const modelMethods = () => ({
+    findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(),
+    create: vi.fn(), createMany: vi.fn(),
+    update: vi.fn(), updateMany: vi.fn(),
+    delete: vi.fn(), deleteMany: vi.fn(), count: vi.fn(),
+  });
+  // ...one entry per model (user, biomarker, insurancePlan, ...)
 ```
-
-See [`DATA_MODEL.md`](./DATA_MODEL.md) for the real model fields these rows mirror.
 
 ---
 
 ## 13. PHI-aware test conventions
 
-PHI rules from [`_phi-inventory.md`](../prompts/_phi-inventory.md) carry into tests:
+Rules: **never print decrypted PHI; always use the real encryption path with a test
+`PHI_ENCRYPTION_KEY` (not a plaintext stub) in service tests; assert that values are encrypted
+before persistence.** See [`_phi-inventory.md`](../prompts/_phi-inventory.md). PHI canonical
+state: PHI_FIELDS covers **14 models / 39 encrypted fields** (`encryption.ts:476-562`); the schema
+has 39 matching `*Encrypted` columns.
 
-1. **Never print decrypted PHI.** Assert on encryption *shape*, not plaintext leaking out — the controller test asserts `createArg.data.valueEncrypted === 'enc:95'` and that the raw `value` property is **absent** from the persisted payload (`biomarkerController.test.ts:289-295`).
-2. **Use the real encryption path in service tests.** `encryption.test.ts` drives the real `EncryptionService` with a 64-hex `PHI_ENCRYPTION_KEY` (`encryption.test.ts:7,19`) — it does **not** stub `encrypt` to return plaintext. The mock encryption service (`enc:<value>` prefix) is only for *controller* unit tests where you assert "encryption was invoked", not crypto correctness.
-3. **Encrypted-field equality**: compare the ciphertext placeholder (`enc:95`), or decrypt through the same service and compare the round-trip — never assume `valueEncrypted` equals the plaintext (Acceptance Q11).
-4. **OAuth tokens are PHI.** `LabConnection.accessTokenEncrypted` / `refreshTokenEncrypted` must be encrypted before write — the same rules apply to any test seeding a lab connection.
-5. **Audit logs use the system salt, not per-user salt** (so they survive account deletion) — verify in `auditLog.test.ts`, not by re-deriving a per-user key.
-
-The encrypt-before-persist assertion that proves no plaintext PHI reaches the DB:
+The canonical guard is `phiFieldsCoverage.test.ts` — it parses `schema.prisma`, extracts every
+`*Encrypted` column per model, and asserts an **exact two-way match** against `PHI_FIELDS`,
+failing the build on drift in either direction. It also enforces a plaintext-PHI-twin rule (M5):
 
 ```ts
-// Source: backend/src/controllers/biomarkerController.test.ts:289-295
-expect(createArg.data.valueEncrypted).toBe('enc:95');
-expect(createArg.data.notesEncrypted).toBe('enc:Fasted 12h');
-expect(createArg.data.userId).toBe('user-A');
-// Raw `value` field is never persisted.
-expect(createArg.data).not.toHaveProperty('value');
-expect(createArg.data).not.toHaveProperty('notes');
+// Source: backend/src/services/phiFieldsCoverage.test.ts:120-135
+it('every *Encrypted column in schema.prisma is registered in PHI_FIELDS', () => {
+  const missing: string[] = [];
+  for (const [model, fields] of Object.entries(schemaModels)) {
+    const registered = new Set(phiFields[model] ?? []);
+    for (const field of fields) {
+      if (!registered.has(field)) missing.push(`${model}.${field}`);
+    }
+  }
+  expect(missing, `Encrypted column(s) missing from PHI_FIELDS ...`).toEqual([]);
+});
 ```
 
-See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) for the full encrypted-field inventory and [`HIPAA_CHECKLIST.md`](./HIPAA_CHECKLIST.md) for the safeguard mapping.
+```ts
+// Source: backend/src/services/phiFieldsCoverage.test.ts:107-110
+const PLAINTEXT_PHI_REQUIRING_TWIN: Record<string, string[]> = {
+  HealthGoal: ['targetValue', 'currentValue', 'startValue'],
+  GoalProgressHistory: ['value'],
+};
+```
+
+This guard was extended after the L24 filename-encryption, M4 goal-value, and M6 audit-metadata
+work, so `PHI_FIELDS` now covers `UserFile.originalFilenameEncrypted`,
+`HealthGoal.{current,start,target}ValueEncrypted`, `GoalProgressHistory.valueEncrypted`, and
+`AuditLog.metadataEncrypted` (`encryption.ts:499-530`). It cannot prove a value is actually
+encrypted at its controller write site — that stays a manual review item
+(`phiFieldsCoverage.test.ts:23-25`).
+
+**Asserting equality on encrypted fields**: do not compare against a plaintext value. Either
+(a) in controller tests use the deterministic mock (`encrypt → enc:<value>`) and assert the
+ciphertext form, e.g. `valueEncrypted: 'enc:120'` (`biomarkerController.test.ts:186`); or
+(b) in service tests use the real encrypt→decrypt round-trip with the test key
+(`encryption.test.ts:20`). In the live RLS suite, rows store literal placeholder ciphertext
+(`valueEncrypted: 'ct-a'`) and are **never decrypted** (`rls.test.ts:81`,
+`.github/workflows/ci.yml:184-188`).
+
+See [PHI_TAXONOMY.md / DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see prompt `../prompts/15-data-model-doc.md`)* for the full field × encryption map.
 
 ---
 
 ## 14. Bad vs good examples
 
-| Category | ❌ Bad | ✅ Good |
+| Category | ❌ Bad pattern | ✅ Good pattern |
 |---|---|---|
-| Controller | Hand-rolls a bespoke Prisma stub per test | `createMockPrismaTransaction()` (`testHelpers.ts:48`); mock `withRLSContext`/`withRLSTransaction` to inject it; assert tx-level spies (`biomarkerController.test.ts:57-72,283-305`) |
-| Route | Issues raw SQL to set up state | supertest against a minimal Express app + mock factories (`biomarkerRoutes.guidance.test.ts:143-149`) |
-| Service (crypto) | Stubs encryption to return plaintext | Real encryption path with a test `PHI_ENCRYPTION_KEY` (`encryption.test.ts:7,19`) |
-| RLS | Adds `where: { userId }` that hides whether RLS works | Omits the filter; gate on `describe.skipIf(!hasLiveDb)` against a live DB (`rls.test.ts:27-29,189-195`) |
-| E2E | Hardcodes creds inline | Import `TEST_USER`/`loginAsTestUser` (`e2e/helpers/auth.ts:18-37`); seed via `e2e/setup/seed-test-user.ts` (run by `npm run test:e2e`) |
-| AI mock | Intercept raw `fetch` | Stub `getAnthropicClient()` at the module boundary (`biomarkerController.test.ts:96-110`) — the route uses the SDK, not `fetch` |
-
-Two concrete pairs:
-
-**Pair 1 — Controller (encrypt-before-persist).**
-- ❌ `prisma.biomarker.create = jest.fn()` (wrong runner; bypasses RLS wrapper; can't assert the encrypted payload shape).
-- ✅ Mock `withRLSContext` to call `fn(mocks.tx)`, then `expect(tx.biomarker.create.mock.calls[0][0].data.valueEncrypted).toBe('enc:95')` (`biomarkerController.test.ts:288-289`).
-
-**Pair 2 — RLS isolation.**
-- ❌ `tx.biomarker.findMany({ where: { userId: userB.id } })` — the filter does the scoping, so the test passes even with RLS disabled.
-- ✅ `tx.biomarker.findMany({ where: { name: { in: markerNames } } })` with no `userId` filter, expecting exactly the caller's row (`rls.test.ts:190-195`).
-
----
-
-## Acceptance questions — self-answers
-
-1. **Backend / frontend / e2e runner?** Backend unit → Vitest `node` (`backend/vitest.config.ts:6`); frontend → Vitest `jsdom` (`vitest.config.ts:9`); e2e → Playwright Chromium (`playwright.config.ts:67`). §1–§2.
-2. **Exact script that runs the backend unit suite?** `npm test` (local) or `npm run test:ci` (CI). **Not** `test:unit`/`test:integration` — those target nonexistent dirs and run zero tests. §2.
-3. **Controller test respecting RLS?** Mock `withRLSContext`/`withRLSTransaction` to call the callback with `createMockPrismaTransaction()`; assert tx + audit spies. §4.
-4. **Mock the Anthropic client?** Inline `vi.mock('../services/anthropicClient.js')` stubbing `getAnthropicClient().messages.create`. §10.
-5. **Seed-test-user helper?** `e2e/setup/seed-test-user.ts`, run by `test:e2e:setup`. §9.
-6. **What does `asUser` do / vs Prisma directly?** It does **not exist**; canonical call is `withRLSContext(userId, fn)` which sets `SET LOCAL app.current_user_id` inside a transaction. Raw `prisma.*` bypasses RLS. §7.
-7. **How many e2e specs / coverage?** 5: auth, biomarker-entry, data-export, health-guide, settings. §9.
-8. **Mock-Prisma-tx factory?** `createMockPrismaTransaction()` in `controllers/testHelpers.ts:48`. §4, §10.
-9. **RLS-isolation test + what gates it?** Yes — `rls.test.ts:189-203`; gated by `describe.skipIf(!hasLiveDb)` (needs `DATABASE_URL` + `PHI_ENCRYPTION_KEY`). §7.
-10. **Assert audit service called?** `expect(audit.logCreate).toHaveBeenCalledWith(...)` from `createMockAuditService()`. §4, §10.
-11. **Encrypted PHI equality?** Compare the ciphertext placeholder or round-trip decrypt; never assume `*Encrypted === plaintext`. §13.
-12. **Frontend coverage + location?** 14 tests under `src/__tests__/` (Button, LoginPage, Dashboard, AuthContext, useAuth, etc.). §8.
-13. **FHIR SSRF guard tested where?** `backend/src/services/fhir/urlSafety.test.ts` — `assertAllowedFhirUrl` rejects cross-host/metadata/cleartext. §11.
-14. **AI cost/budget tested where?** `backend/src/services/aiCostTracker.test.ts` — user + global spend caps. §11.
-15. **Setup file seeding NODE_ENV + secrets?** `backend/src/testSetup.ts`. §2.
+| Controller test | Hand-rolls a bespoke Prisma stub per test | Uses `createMockPrismaTransaction()` (`testHelpers.ts:48`); mocks `withRLSContext`/`withRLSTransaction` to inject it; asserts tx-level + audit spies (`biomarkerController.test.ts:170-209`) |
+| Controller test | Asserts `value: 120` against an encrypted field | Asserts the encrypted form `valueEncrypted: 'enc:120'` via the deterministic mock (`biomarkerController.test.ts:186`) |
+| Route test | Issues raw SQL to set up state | supertest against a minimal Express app + shared mocks (`biomarkerRoutes.guidance.test.ts:144-150`) |
+| Route test | Skips the error handler so failures look like 500s | Mounts the real `errorHandler` so status/body match prod (`biomarkerRoutes.guidance.test.ts:148`) |
+| Service test | Stubs encryption to return plaintext | Real encryption path with a test `PHI_ENCRYPTION_KEY` (`encryption.test.ts:20`) |
+| Middleware test | Stubs `planGating` itself (asserts nothing) | Runs the real middleware against a mocked `withRLSContext` (`planGating.test.ts:25-34`) |
+| RLS test | Adds a `where: { userId }` filter that hides whether RLS works | Omits the filter; gates on `describe.skipIf(!hasLiveDb)` against a live DB (`rls.test.ts:29, 228-242`) |
+| E2E | Hardcodes test creds inline | Imports `TEST_USER`/`loginAsTestUser` from `e2e/helpers/auth.ts`; seeds via `e2e/setup/seed-test-user.ts` (run by `test:e2e`) (`auth.ts:18-45`) |
 
 ---
 
 ## Related Documents
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — the layers (controllers, services, middleware, RLS) these tests exercise.
-- [DATA_MODEL.md](./DATA_MODEL.md) — tables and RLS policies the factories and `rls.test.ts` mirror.
-- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — the real middleware chains that route tests stub or exercise.
-- [ERROR_RECOVERY.md](./ERROR_RECOVERY.md) — error paths (`AppError` envelope, 404/503/401) worth asserting.
-- [LOCAL_DEV.md](./LOCAL_DEV.md) — how to run the suites and stand up a live DB for the RLS job.
-- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — missing-test gaps to prioritize.
-- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — encrypted-field inventory referenced by PHI-aware test conventions.
-- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — technical safeguards the security-domain tests defend.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — the layers being tested (controllers, services, RLS wrappers, middleware stack).
+- [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — missing-test gaps (e.g. e2e not in CI) worth prioritizing.
+- [DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see prompt `../prompts/15-data-model-doc.md`)* — tables used by factories + RLS policies.
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) *(doc pending — see prompt `../prompts/16-routing-table-doc.md`)* — middleware chains a routed test must exercise.
+- [ERROR_RECOVERY.md](./ERROR_RECOVERY.md) *(doc pending — see prompt `../prompts/19-error-recovery-doc.md`)* — error paths worth asserting.
+- [LOCAL_DEV.md](./LOCAL_DEV.md) *(doc pending — see prompt `../prompts/21-local-dev-doc.md`)* — how to run the suites locally.
 
 ---
 
 ## Prompt drift log
 
-- **`./38-testing-patterns-doc.md` §10 / "Mock catalog" says SendGrid is mocked via `vi.mock('@sendgrid/mail')` in `schedulers/emailScheduler.test.ts`.** Confirmed the file exists (`backend/src/schedulers/emailScheduler.test.ts`) and is one of the 34; the exact mock target was not line-cited here because the controller/service/route/middleware/frontend/e2e categories were prioritized for full copies. No contradiction — flagged only as an un-deep-cited claim.
-- **Spec "Required artifacts" expects a full e2e copy "do not truncate past a single `describe` block".** The e2e specs use `test.describe`/`test`, not `describe`/`it`. `biomarker-entry.spec.ts` is quoted through its single `test.describe` block opening + the full first `test` (`e2e/biomarker-entry.spec.ts:11-28`); the file is only 56 lines total. No drift in substance.
-- **`backend/vitest.config.ci.ts:9` comment cites "~417 colocated unit tests"** while the spec headline count is "34 backend `*.test.ts` files". These are not in conflict — 417 is the test-*case* count, 34 is the *file* count. Documented explicitly in §1 to prevent reader confusion.
-- **Spec §2 mentions `test:integration` "self-skips without a live DB (see its header)" referring to `src/__tests__/integration`.** That directory does not exist in the backend today (`backend/vitest.config.ci.ts:7-12` confirms it was always absent), so `test:integration` runs zero tests — there is no integration suite to self-skip. Captured in the §2 trap callout.
+- `../prompts/38-testing-patterns-doc.md` and `_doc-quality.md` instruct cross-linking to
+  `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ERROR_RECOVERY.md`, and `LOCAL_DEV.md`. At the time of this
+  generation run (HEAD `fb2cd32`), only `ARCHITECTURE.md` and `KNOWN_ISSUES.md` exist in
+  `New Project Documents/` (`Glob "New Project Documents/*.md"`). Per `_doc-quality.md:270`, the
+  not-yet-present siblings are written with the `(doc pending — see prompt …)` form rather than as
+  live links, to avoid linking to docs that do not yet exist in this run's output set.
+- The prompt's §1 says "54 backend `*.test.ts`, 25 frontend tests, 5 Playwright e2e specs" — all
+  three confirmed exactly by `Glob` (`backend/src/**/*.test.ts` = 54; `src/__tests__/**/*.test.{ts,tsx}`
+  = 25; `e2e/*.spec.ts` = 5). No drift.
+- The root `CLAUDE.md` "Testing" / structure section is stale in places the canonical fact digest
+  corrects (e.g. it predates `vitest.config.ci.ts`, the `test:ci` script, and the removal of
+  `rbac.test.ts`). This doc follows the live code and the fact digest, not `CLAUDE.md`.
+- The fact digest notes "14 models / 39 encrypted fields" as the canonical PHI count and also
+  contains an internal inline tally of "37" in one prose paragraph; this doc uses the canonical
+  **39** (the task's CANONICAL NUMBERS line and `encryption.ts:476-562`). Not load-bearing for any
+  test recipe here.

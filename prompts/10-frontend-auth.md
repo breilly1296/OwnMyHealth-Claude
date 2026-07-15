@@ -5,7 +5,7 @@ tags:
   - high
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Frontend Authentication Review
@@ -16,7 +16,7 @@ updated: 2026-06-01
 - `src/services/api/auth.ts` (auth API calls, incl. logoutAll, email-change, demoLogin)
 - `src/services/api/client.ts` (HTTP client, memory-only token, CSRF, 401-refresh + 429 backoff)
 - `src/components/auth/LoginPage.tsx` (login UI)
-- `src/components/auth/RegisterPage.tsx` (registration UI)
+- `src/components/auth/RegisterPage.tsx` (registration UI; on successful submit it now shows a "We sent a verification link to {email}" confirmation state with a working resend — `resendState` idle/sending/sent/error → `authApi.resendVerification`, fixes the previously dead registration funnel: `RegisterPage.tsx:55,117-123,156,160-172`)
 - `src/components/auth/VerifyEmailPage.tsx` (email verification)
 - `src/components/auth/ResetPasswordPage.tsx` (password reset)
 - `src/components/auth/ForgotPasswordPage.tsx` (forgot password)
@@ -58,7 +58,9 @@ updated: 2026-06-01
 - [ ] Auth check happens before render
 - [ ] No flash of protected content before redirect
 
-### 4. Login/Logout Flow
+### 4. Login/Logout/Register Flow
+- [ ] After a successful register, `RegisterPage` clears password fields and shows the "We sent a verification link to {email}" confirmation state (does NOT silently leave the user on the form) — `RegisterPage.tsx:107-111,149-159`
+- [ ] The confirmation-state "Resend email" button calls `authApi.resendVerification(registeredEmail)` and reflects `resendState` (sending/sent/error) — `RegisterPage.tsx:117-125,160-172`
 - [ ] Login clears any stale state (clears `error` before submit)
 - [ ] Login does NOT flip global `isLoading` (would unmount LoginPage mid-submit and wipe the email field — see AuthContext comment)
 - [ ] Logout clears all auth state (`clearAuthToken()` + `setUser(null)`)
@@ -106,12 +108,11 @@ const user = await getCurrentUser(); // now works
 ```
 
 ### 9. Role-Based UI Protection
-- [ ] `useRBAC` hook provides role checks: `isPatient`, `isProvider`, `isAdmin`, plus capability flags (`canViewPatients`, `canManageUsers`, `canViewAuditLogs`, `canAccessAdminPanel`, `canManageProviderAccess`) and `hasRole`/`hasMinRole` (hierarchy ADMIN 3 > PROVIDER 2 > PATIENT 1)
-- [ ] `RoleGuard` component wraps protected UI sections
-- [ ] Provider-only views hidden from patients (patient list, patient data)
-- [ ] Admin-only views hidden from non-admins (user management, audit logs, system health)
-- [ ] Permission-based sections hidden when provider lacks specific consent
-- [ ] Role checks enforced at backend (UI hiding is convenience, not security)
+- [ ] `useRBAC` hook exposes ONLY `role`, `isAuthenticated`, `hasRole`, `hasMinRole`, `getRoleLabel`, `getRoleBadgeClasses` (hierarchy ADMIN 3 > PROVIDER 2 > PATIENT 1). There are NO `isPatient`/`isProvider`/`isAdmin` booleans and NO `can*` capability flags — that `permissions` flag object was removed as never-consumed dead code (audit L-28); do NOT re-flag its absence as a regression (`src/hooks/useRBAC.ts:23-29` removal note, `:81-88` actual returned API)
+- [ ] `RoleGuard` / `PatientOnly` / `ProviderOnly` / `AdminOnly` / `ProviderOrAdmin` and `useRBAC` are currently UNUSED by any rendered component (audit L-18) — they are retained only because the `components/common` + `hooks` barrels re-export them. Verify this is still the case and that the STATUS note in `src/components/common/RoleGuard.tsx:7-16` is accurate; do NOT treat these guards as the live UI-gating mechanism
+- [ ] Real UI role gating is done INLINE in Dashboard (nav filter + defensive recheck in `renderSpecialPage`) — confirm provider-only and admin-only views (patient list/data; user management, audit logs, system health) are gated there
+- [ ] Provider sections that depend on specific consent are gated by the data the backend returns (consent-scoped), not by a client capability flag
+- [ ] Role checks enforced at backend (client-side role gating is cosmetic only — the backend RBAC middleware is the real authorization boundary)
 
 ### 10. Demo Mode
 - [ ] Demo banner/button only shown when `VITE_DEMO_MODE=true` (`onDemoLogin` wired in `App.tsx`)

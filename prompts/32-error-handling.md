@@ -6,7 +6,7 @@ tags:
   - medium
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Error Handling Review
@@ -23,7 +23,7 @@ Error responses are the easiest unintentional data leak in a web app: stack trac
 - `backend/src/middleware/errorHandler.ts` — the full `AppError` family (`BadRequestError`, `UnauthorizedError`, `AuthenticationError`, `ForbiddenError`, `NotFoundError`, `ConflictError`, `ValidationError`, `RateLimitError`, `InternalServerError`, `ServiceUnavailableError`, `DatabaseError`, `ExternalServiceError`), the Prisma/JWT/Multer/SyntaxError translation maps, the Express `errorHandler`, `notFoundHandler`, and the `asyncHandler` wrapper
 - `backend/src/middleware/validation.ts` — Zod validation errors → `ValidationError` (`{ field, message, code }[]` details) and `requireJsonContentType`
 - `backend/src/app.ts` — middleware registration order (404 then error handler **last**) and the top-level `unhandledRejection` / `uncaughtException` handlers (~lines 411-422)
-- Controllers that **bypass** the central handler — `aiChatController.ts` (SSE error events), `fhirController.ts` (OAuth callback redirects, inline `res.status().json`) — these write their own error responses instead of `throw`/`next(error)`
+- Controllers that **bypass** the central handler — `aiChatController.ts` (SSE error events), `fhirController.ts` (OAuth callback redirects + inline `res.status().json` **pre-checks** only — `initiateQuestConnect` 503 at `fhirController.ts:46-54`, `triggerSync` 404 at `fhirController.ts:184-189`). NOTE: the actual error PATHS of `triggerSync` (`fhirController.ts:201`) and `deleteConnection` (`fhirController.ts:225`) now `throw new ExternalServiceError(...)` and route through the central handler — they do NOT write their own error bodies for failures, so don't reflexively flag those as bypass
 - Every other controller — async flow, `next(error)` vs throw, unhandled promises
 - `backend/src/types/index.ts` — `ApiResponse` type (`error: { code, message, details? }` — note it does NOT declare `stack`)
 - `src/services/api/client.ts` — how the frontend consumes error responses (`getUserFriendlyMessage`, 401 refresh, 429 backoff, `PLAN_LIMIT_EXCEEDED` parsing)
@@ -33,7 +33,7 @@ Error responses are the easiest unintentional data leak in a web app: stack trac
 ## OwnMyHealth Error Architecture
 - **Error classes**: `AppError` base + typed subclasses carry `statusCode`, `code`, `isOperational`. `ValidationError` additionally carries `details` (the `{ field, message, code }[]` array). `InternalServerError`, `DatabaseError` set `isOperational = false`. `ExternalServiceError` is a 502 prefixing the service name.
 - **Translation maps**: `errorHandler` does not rely on subclasses alone. It maps Prisma errors (`PRISMA_ERROR_MAP`: P2002→409, P2025→404, P2003/P2014→400, default 500 `DATABASE_ERROR`), JWT errors (`JWT_ERROR_MAP`: `JsonWebTokenError`/`TokenExpiredError`→401), JSON-body `SyntaxError`→400 `INVALID_JSON`, and `MulterError` (`LIMIT_FILE_SIZE`→413 `FILE_TOO_LARGE`, else 400 `UPLOAD_ERROR`). All collapse to a `GENERIC_ERROR_MESSAGE` for unmapped 500s.
-- **Client shape**: errors return `{ success: false, error: { code, message, details? } }` from the central handler (verify in `ApiResponse` type). NOTE: several controllers (`aiChatController`, `fhirController`) emit error bodies directly without going through the handler, and some of those omit `success: false` or use a bare string (`fhirController.handleCallback` returns `{ error: 'Missing code or state' }`) — flag shape drift.
+- **Client shape**: errors return `{ success: false, error: { code, message, details? } }` from the central handler (verify in `ApiResponse` type). NOTE: a few inline responses still emit error bodies directly without going through the handler — confirm they match the shape and omit no `success: false`. `aiChatController` SSE error events and the `fhirController` inline pre-checks (503/404) are the live ones. The OAuth callback (`fhirController.handleCallback`) does NOT return a JSON error body at all: on missing code/state it redirects to the frontend with `?error=missing_code_or_state` (`fhirController.ts:90-97`), consistent with the OAuth-denied (`:84-89`) and exchange-failure (`:108-132`) branches — the old "bare `{ error: 'Missing code or state' }` string" shape no longer exists.
 - **Stack traces / dev gate**: the dev-only branch is gated on `config.isDevelopment`, NOT `config.isProduction`. `config.isDevelopment` is `false` in BOTH production AND **staging** (it is `!isProduction && !isStaging`), so staging exposes the generic message and no stack — verify staging is treated like production, not like dev.
 - **Async flow**: Express 4 does not auto-propagate async errors — routes use the `asyncHandler` wrapper (forwards rejections to `next`). NOTE: SSE (AI chat) and OAuth-redirect (FHIR callback) handlers are wrapped in `asyncHandler` but still handle their own errors inline because once headers are flushed / a redirect is committed the central JSON handler can't respond — they write SSE `error` events or redirect with `?error=...` instead.
 
@@ -50,7 +50,7 @@ Error responses are the easiest unintentional data leak in a web app: stack trac
 ### 2. Response shape consistency
 - [ ] Every error response matches `ApiResponse` error shape `{ success: false, error: { code, message, details? } }` (confirm in `types/index.ts`).
 - [ ] `details` is only present for `ValidationError` and only carries `{ field, message, code }[]` (never internal info). The central handler attaches `details` solely for `ValidationError` instances — verify nothing else populates it.
-- [ ] Inline controller error responses (`aiChatController`, `fhirController`) match the shape — current code drifts: some omit `success: false`, and `fhirController.handleCallback` returns a bare `{ error: 'Missing code or state' }` string. Flag and normalize.
+- [ ] Inline controller error responses (`aiChatController` SSE events, `fhirController` 503/404 pre-checks) match the shape — verify none omit `success: false`. NOTE: `fhirController.handleCallback` no longer returns a JSON error body — its failure branches redirect with `?error=...` (`fhirController.ts:84-97,108-132`), so there is no bare `{ error: 'Missing code or state' }` string left to normalize.
 - [ ] No raw error strings or HTML error pages in production.
 - [ ] In production/staging, the response body has no `stack` field (only added when `config.isDevelopment`).
 - [ ] Content-Type is always `application/json` — **except** the AI chat SSE endpoint, which emits `text/event-stream` and signals errors via a `{ type: 'error', message }` event, not an HTTP status body.
@@ -66,7 +66,7 @@ Error responses are the easiest unintentional data leak in a web app: stack trac
 - [ ] PostgreSQL error codes (`23505`, `42P01`, etc.) not in response body (these surface as Prisma errors; verify they hit the map, not the unmapped 500 path which echoes `err.message` only in dev).
 - [ ] File paths in `err.stack` stripped before any user-visible text (stack only attached in dev — verify dev is the only path).
 - [ ] Library error messages wrapped in an `AppError` subclass before throwing (raw `throw new Error(...)` falls through to the generic 500).
-- [ ] Third-party API errors (Anthropic, SendGrid, GCS, **Quest FHIR / Document AI**) never reflected verbatim — they can contain internal IDs or hints. WATCH the inline handlers: `fhirController.triggerSync`/`deleteConnection` currently put `err.message` directly in the 500 response body (`message: err instanceof Error ? err.message : ...`), which can leak FHIR/SMART-OAuth internals — flag this.
+- [ ] Third-party API errors (Anthropic, SendGrid, GCS, **Quest FHIR / Document AI**) never reflected verbatim — they can contain internal IDs or hints. CONFIRM this stays fixed: `fhirController.triggerSync` (`fhirController.ts:201`) and `deleteConnection` (`fhirController.ts:225`) log full detail server-side and `throw new ExternalServiceError('Lab provider', '<generic message>')` so the central handler emits a generic 502 — no `err.message` reaches the client. Flag any regression that puts `err.message` back into a response body.
 
 ### 5. Status code correctness
 - [ ] 400 for invalid JSON body (`SyntaxError`→`INVALID_JSON`), bad Prisma references (P2003/P2014), and generic Multer upload errors (`UPLOAD_ERROR`). NOTE: Zod schema validation failures (malformed input, missing fields) are 422, not 400 — see below.
@@ -81,7 +81,7 @@ Error responses are the easiest unintentional data leak in a web app: stack trac
 - [ ] 502 `ExternalServiceError` for downstream API failures; 503 `ServiceUnavailableError` for downstream unavailable (Anthropic BAA off, DB pool exhausted). The BAA-off AI path returns 503 inline from `aiChatController` (SERVICE_UNAVAILABLE). Add `Retry-After` where appropriate.
 
 ### 6. Async error propagation
-- [ ] Every async route handler is wrapped in the `asyncHandler` helper (errorHandler.ts ~line 219, `Promise.resolve(fn).catch(next)`) or calls `next(error)` explicitly. All 17 route files already use it — verify no route registered a bare async fn.
+- [ ] Every async route handler is wrapped in the `asyncHandler` helper (errorHandler.ts ~line 219, `Promise.resolve(fn).catch(next)`) or calls `next(error)` explicitly. All 18 non-test route files already use it — verify no route registered a bare async fn.
 - [ ] No bare `.then()` without `.catch()` in controller/service code.
 - [ ] `router.get('/x', async (req, res) => { ... })` without the wrapper is a finding — Express 4 swallows these.
 - [ ] Top-level `process.on('unhandledRejection', ...)` and `process.on('uncaughtException', ...)` handlers present in `app.ts` (~lines 411-422) — both log via the structured logger and `process.exit(1)` so Cloud Run restarts. Confirm they remain after any refactor.

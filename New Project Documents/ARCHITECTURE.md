@@ -1,276 +1,246 @@
 # ARCHITECTURE.md — OwnMyHealth System Overview
 
-> **Status**: Generated 2026-06-01 against the live codebase at repo root `C:/Users/breil/Projects/OwnMyHealth/`.
-> **Scope**: The system-overview reference. This doc is the root of the `New Project Documents/` cross-link graph; every other doc points back here for the big picture. Per-endpoint contracts live in [API_REFERENCE.md](./API_REFERENCE.md); full schema in [DATA_MODEL.md](./DATA_MODEL.md).
-> This doc was written to be read **without repo access** — every non-trivial claim cites `file:path:line`.
+> **Generated**: 2026-06-16 · **HEAD**: `fb2cd32` · **Scope**: backend (`backend/src/`) + frontend (`src/`) + infra (`.github/workflows/`, `backend/Dockerfile`).
+>
+> This is the **root** of the `New Project Documents/` cross-link graph. It orients a reader to OwnMyHealth's moving parts: tech stack, request lifecycle, middleware stack, security data flows (auth, CSRF, RLS, encryption, consent), AI extraction + cost control, Quest SMART-on-FHIR lab sync, file/OCR pipeline, onboarding, audit logging, deployment topology, and schedulers. Per-endpoint, per-model, and per-field detail is deferred to the sibling docs linked at the bottom.
+
+## Required reading before generating
+
+This doc was generated against [`_doc-quality.md`](../prompts/_doc-quality.md), [`_verification-tools.md`](../prompts/_verification-tools.md), and [`_phi-inventory.md`](../prompts/_phi-inventory.md). It is held to the five tests in `_doc-quality.md` (question-answering, path-and-line, snippet, diagram, reproducibility).
 
 ---
 
 ## 1. System overview
 
-OwnMyHealth is a privacy-first, HIPAA-oriented health-tracking platform: patients track biomarkers, manage insurance plans (with AI Summary-of-Benefits extraction), project/track medical expenses, set health goals, sync lab results from Quest via SMART-on-FHIR, and chat with an AI Health Guide. All Protected Health Information (PHI) is encrypted at the application layer (AES-256-GCM, per-user keys) and protected at the database layer by PostgreSQL Row-Level Security (RLS). Provider–patient data sharing is consent-gated; an admin tier manages users and audit logs.
+OwnMyHealth is a **privacy-first, HIPAA-grade health-tracking platform**: patients track biomarkers (with longitudinal trends and AI educational guidance), upload lab reports and insurance documents (parsed by Claude + Google Document AI OCR), connect Quest lab accounts over SMART-on-FHIR, track health goals/needs and medical expenses, and share data with providers under consent-based, granular access control. All PHI is AES-256-GCM encrypted with per-user keys, every PHI access is audit-logged with DB-enforced 7-year retention, and PostgreSQL **FORCE ROW LEVEL SECURITY** isolates each user's rows.
 
-The backend is an Express + TypeScript API (`backend/src/app.ts`) on Cloud Run; the frontend is a React + Vite SPA served from a GCS bucket; data lives in Cloud SQL PostgreSQL.
-
-### Deployment topology (ASCII)
+The system is a **React SPA served from a GCS bucket** talking to a **stateless Express API on Cloud Run** backed by **Cloud SQL Postgres**, with Anthropic, Google Document AI, SendGrid, and Quest FHIR as external services.
 
 ```
-  ┌─────────────┐      ┌──────────────────────┐      ┌─────────────────────┐
-  │  Browser    │─GET─▶│  GCS bucket          │      │  Cloud SQL (PG)     │
-  │  (React SPA)│      │  ownmyhealth-frontend│      │  (DATABASE_URL)     │
-  └──────┬──────┘      └──────────────────────┘      └──────────┬──────────┘
-         │  JSON + HttpOnly cookies                              ▲
-         │  (access_token, refresh_token, csrf_token)            │ pg Pool (SSL)
-         ▼                                                       │
-  ┌────────────────────────────┐                                │
-  │  Cloud Run                 │────────────────────────────────┘
-  │  ownmyhealth-backend       │   project: ownmyhealth-prod, region: us-central1
-  │  (Node 20 Alpine, app.js)  │
-  └───┬─────────┬─────────┬────┘
-      │         │         │
-      ▼         ▼         ▼
-  Anthropic  SendGrid   Google {Document AI (OCR), Cloud Storage (uploads)}
-  Claude API  email      + Quest SMART-on-FHIR (external lab)
+  ┌─────────────┐     ┌──────────────────┐     ┌───────────────────┐
+  │  Browser    │────▶│  GCS bucket      │     │  Cloud SQL (PG 16)│
+  │  (React SPA)│     │  frontend static │     │  ownmyhealth db   │ ← via Cloud SQL connector
+  └──────┬──────┘     └──────────────────┘     └─────────┬─────────┘
+         │                                                ▲
+         │ JSON + httpOnly cookies (access, refresh,      │ FORCE RLS,
+         │ csrf_token) — credentials: 'include'           │ SET LOCAL app.current_user_id
+         ▼                                                │
+  ┌────────────────────────────┐                         │
+  │  Cloud Run                 │─────────────────────────┘
+  │  ownmyhealth-backend       │   (+ deploy-time job: ownmyhealth-migrate,
+  │  Node 22 alpine, app.ts    │    + manual job: ownmyhealth-maintenance)
+  └─┬────────┬────────┬────────┬───────────┐
+    │        │        │        │           │
+    ▼        ▼        ▼        ▼           ▼
+ Anthropic SendGrid  Google   GCS        Quest FHIR
+ (Claude)  (email)   Doc AI   (uploads)  (SMART-on-FHIR)
+                     (OCR)               + Secret Manager (secrets)
 ```
 
-Topology constants are from the deploy workflow: `PROJECT_ID: ownmyhealth-prod`, `REGION: us-central1`, `SERVICE: ownmyhealth-backend`, `FRONTEND_BUCKET: ownmyhealth-frontend` (`.github/workflows/deploy.yml:21-25`). The hardcoded prod frontend origins are `https://app.ownmyhealth.io` and `https://ownmyhealth.io` (`backend/src/app.ts:65-68`); the prod API is `https://api.ownmyhealth.io` (`.github/workflows/deploy.yml:176`).
+Server entry point is **`backend/src/app.ts`** (NOT `index.ts`); the production container runs `CMD ["node", "dist/app.js"]` (`backend/Dockerfile:93`).
 
 ---
 
 ## 2. Technology stack
 
-Versions are the declared semver ranges from `package.json` (root) and `backend/package.json`.
+Versions are pinned in `package.json` (frontend, repo root) and `backend/package.json`.
 
 ### Frontend
 
 | Component | Technology | Version | Source |
 |---|---|---|---|
-| UI framework | React + React DOM | ^18.3.1 | `package.json:28-29` |
-| Build tool | Vite | ^7.3.0 | `package.json:58` |
-| Language | TypeScript | ^5.5.3 | `package.json:56` |
-| Styling | TailwindCSS | ^3.4.1 | `package.json:54` |
-| Charts | Recharts | ^3.5.0 | `package.json:30` |
-| Icons | lucide-react | ^0.344.0 | `package.json:26` |
-| Client-side PDF | pdfjs-dist / jspdf | ^4.0.379 / ^4.2.1 | `package.json:27,24` |
-| Client-side OCR | tesseract.js | ^5.0.4 | `package.json:32` |
-| Tests | Vitest + Testing Library | ^4.1.0 | `package.json:59,39` |
-| E2E | Playwright | ^1.59.1 | `package.json:36` |
+| UI library | React + React DOM | `^18.3.1` | `package.json:28-29` |
+| Build tool | Vite | `^8.0.16` | `package.json:58` |
+| Language | TypeScript | `^5.5.3` | `package.json:56` |
+| Styling | Tailwind CSS | `^3.4.1` | `package.json:54` |
+| Charts | Recharts | `^3.5.0` | `package.json:30` |
+| Icons | lucide-react | `^0.344.0` | `package.json:26` |
+| Client-side PDF | pdfjs-dist | `^4.0.379` | `package.json:27` |
+| Client-side OCR | tesseract.js | `^5.0.4` | `package.json:32` |
+| PDF export | jspdf + jspdf-autotable | `^4.2.1` / `^5.0.2` | `package.json:24-25` |
+| Test runner | Vitest | `^4.1.0` | `package.json:59` |
+| E2E | @playwright/test | `^1.59.1` | `package.json:36` |
 
 ### Backend
 
 | Component | Technology | Version | Source |
 |---|---|---|---|
-| Runtime | Node.js | >=18.0.0 (Cloud Run runs Node 20 Alpine) | `backend/package.json:74`, `backend/Dockerfile:4,24` |
-| HTTP framework | Express | ^4.18.2 | `backend/package.json:31` |
-| Language | TypeScript | ^5.3.2 | `backend/package.json:69` |
-| Security headers | helmet | ^7.1.0 | `backend/package.json:33` |
-| Rate limiting | express-rate-limit + rate-limit-redis + ioredis | ^8.3.2 / ^4.3.1 / ^5.11.0 | `backend/package.json:32,41,34` |
-| Auth | jsonwebtoken / bcryptjs | ^9.0.2 / ^2.4.3 | `backend/package.json:35,26` |
-| Validation | zod | ^3.22.4 | `backend/package.json:43` |
-| Compression | compression | ^1.8.1 | `backend/package.json:27` |
-| File upload | multer | ^2.0.2 | `backend/package.json:37` |
-| PDF parsing | pdf-parse / pdf-lib | 1.1.1 / ^1.17.1 | `backend/package.json:39,38` |
+| Runtime | Node.js | `^20.19 \|\| ^22.12 \|\| >=24` (Cloud Run = 22) | `backend/package.json:77`, `backend/Dockerfile:15` |
+| Web framework | Express | `^4.18.2` | `backend/package.json:34` |
+| Language | TypeScript | `^5.3.2` | `backend/package.json:72` |
+| Security headers | helmet | `^7.1.0` | `backend/package.json:36` |
+| CORS | cors | `^2.8.5` | `backend/package.json:32` |
+| Cookies | cookie-parser | `^1.4.7` | `backend/package.json:31` |
+| Compression | compression | `^1.8.1` | `backend/package.json:30` |
+| Rate limiting | express-rate-limit + rate-limit-redis | `^8.3.2` / `^4.3.1` | `backend/package.json:35,44` |
+| Shared store | ioredis | `^5.11.0` | `backend/package.json:37` |
+| JWT | jsonwebtoken | `^9.0.2` | `backend/package.json:38` |
+| Password hash | bcryptjs | `^2.4.3` | `backend/package.json:29` |
+| File upload | multer | `^2.0.2` | `backend/package.json:40` |
+| Validation | zod | `^3.22.4` | `backend/package.json:46` |
+| Logging | morgan | `^1.10.0` | `backend/package.json:39` |
 
-### Database
+### Database / ORM
 
 | Component | Technology | Version | Source |
 |---|---|---|---|
-| Database | PostgreSQL (Cloud SQL) | — | `backend/src/services/database.ts:50,108` |
-| ORM | Prisma client | ^7.7.0 | `backend/package.json:24` |
-| PG adapter | @prisma/adapter-pg | ^7.8.0 | `backend/package.json:23` |
-| Driver | pg | ^8.16.3 | `backend/package.json:40` |
-| Models | 18 Prisma models | — | `backend/prisma/schema.prisma`; count per `prompts/00-index.md:122` |
+| Database | PostgreSQL (Cloud SQL, PG 16 in CI RLS job) | — | `ci.yml` RLS regression job (see [§16](#16-deployment-topology)) |
+| ORM | Prisma Client + CLI | `^7.7.0` / `^7.8.0` | `backend/package.json:27,69` |
+| Driver/adapter | pg + @prisma/adapter-pg | `^8.16.3` / `^7.8.0` | `backend/package.json:43,26` |
+| Schema | 19 models, 13 enums, 32 migrations | — | `backend/prisma/schema.prisma`, [`DATA_MODEL.md`](./DATA_MODEL.md) |
+
+> **Model count note**: `schema.prisma` defines **19 models** (User, Session, RevokedAccessToken, UserEncryptionKey, ProviderPatient, UserFile, Biomarker, BiomarkerHistory, InsurancePlan, InsuranceBenefit, HealthNeed, HealthGoal, GoalProgressHistory, AuditLog, SystemConfig, ExpenseProjection, ExpenseActual, CostAnalysis, LabConnection). `RevokedAccessToken` (`schema.prisma:96`) and `LabConnection` (`schema.prisma:755`) are post-06-01 additions. Full ER + cascades in [`DATA_MODEL.md`](./DATA_MODEL.md).
 
 ### External services
 
-| Service | Library | Version | Used by | Source |
-|---|---|---|---|---|
-| Anthropic Claude | @anthropic-ai/sdk | ^0.91.1 | AI chat, biomarker guidance, SBC/lab extraction | `backend/package.json:20`, `backend/src/services/anthropicClient.ts:21` |
-| Google Document AI | @google-cloud/documentai | ^9.5.0 | image/PDF OCR | `backend/package.json:21` |
-| Google Cloud Storage | @google-cloud/storage | ^7.19.0 | lab/SBC file storage | `backend/package.json:22` |
-| SendGrid | @sendgrid/mail | ^8.1.4 | verification, reset, engagement email | `backend/package.json:25` |
-| Quest SMART-on-FHIR | (native `fetch`) | — | lab-result sync | `backend/src/services/fhir/smartAuth.ts:186` |
+| Service | Purpose | SDK / Version | Source |
+|---|---|---|---|
+| Anthropic Claude | Biomarker guidance, SBC/lab extraction, cost analysis, Health Guide chat | `@anthropic-ai/sdk` `^0.91.1` | `backend/package.json:23` |
+| Google Document AI | OCR of scanned lab reports | `@google-cloud/documentai` `^9.5.0` | `backend/package.json:24` |
+| Google Cloud Storage | Lab report + SBC file storage, signed URLs | `@google-cloud/storage` `^7.19.0` | `backend/package.json:25` |
+| SendGrid | Transactional + engagement email | `@sendgrid/mail` `^8.1.4` | `backend/package.json:28` |
+| Quest Diagnostics | SMART-on-FHIR lab result sync | (custom FHIR client, `fetch`) | `backend/src/services/fhir/` |
+
+BAA posture for Anthropic/Google is gated by env vars — see [§11 AI cost control](#11-ai-cost-control-architecture) and [`ENV_VARS.md`](./ENV_VARS.md).
 
 ---
 
 ## 3. Request lifecycle
 
-A request passes the global middleware stack (mounted in `app.ts`), is routed to a per-domain router (which applies route-level middleware), reaches a controller, which calls a service wrapped in `withRLSContext`/`withRLSTransaction`, which sets the RLS session variable before Prisma issues SQL.
+A request flows: global middleware (`app.ts`) → versioned router (`/api/v1`) → route-file middleware → controller → service (wrapped in `withRLSContext`/`withRLSTransaction`) → Prisma → Postgres (RLS-policied) → decrypt PHI → JSON response, with an audit log written along the way.
 
 ```mermaid
 sequenceDiagram
-  participant C as Client (browser)
+  participant C as Client (SPA)
   participant M as Global middleware (app.ts)
-  participant R as Route router (routes/*)
+  participant R as Route (routes/*.ts)
   participant Ctl as Controller
-  participant Svc as Service / RLS wrapper
-  participant DB as Prisma + Postgres
+  participant Svc as Service
+  participant DB as Prisma + Postgres (FORCE RLS)
 
   C->>M: request (cookies: access_token, refresh_token, csrf_token)
-  M->>M: helmet → cors → cookieParser → compression → csrfProtection → standardLimiter → morgan → json/urlencoded → requireJsonContentType → /api no-store
-  M->>R: app.use('/api/v1', routes)
-  R->>R: authenticate → (validate) → (rbac / plan / aiSpendGuard / demo) → route-specific limiter
+  M->>M: helmet → cors → cookieParser → compression → csrf → standardLimiter → morgan → json/urlencoded → requireJsonContentType → /api no-store
+  M->>R: app.use('/api/v1', routes)  (app.ts:265)
+  R->>R: authenticate → (csrf for mutations) → validate → rbac/planGating → route limiter → aiSpendGuard → demoProtection
   R->>Ctl: handler
   Ctl->>Svc: withRLSContext(userId, tx => tx.X.find...)
-  Svc->>DB: SELECT set_config('app.current_user_id', :userId, true); then query via tx
-  DB-->>Svc: rows (PHI ciphertext)
-  Svc-->>Ctl: decrypt(value, userSalt)
-  Ctl-->>C: JSON { success, data } (auditService.log in parallel)
+  Svc->>DB: SET LOCAL app.current_user_id = :userId; SQL via tx
+  DB-->>Svc: rows (PHI still ciphertext)
+  Svc-->>Ctl: decrypt PHI (encryption.ts)
+  Ctl-->>C: { success, data } JSON  (auditService.log* in parallel)
 ```
 
-### Worked example — `POST /api/v1/biomarkers`
-
-| Step | What runs | Source |
-|---|---|---|
-| 1 | Global stack (helmet…no-store) | `backend/src/app.ts:125-262` |
-| 2 | `router.use(authenticate)` (router-wide) | `backend/src/routes/biomarkerRoutes.ts:47` |
-| 3 | `validate(schemas.biomarker.create)` | `backend/src/routes/biomarkerRoutes.ts:85`; schema `backend/src/middleware/validation.ts:302-318` |
-| 4 | `asyncHandler(biomarkerController.createBiomarker)` | `backend/src/routes/biomarkerRoutes.ts:86` |
-| 5 | controller encrypts PHI + writes via `withRLSTransaction` | see [§8 Encryption](#8-encryption-layer) and [§6 RLS](#6-row-level-security-rls) |
-
-CSRF is enforced for the `POST` by the global `csrfProtection` (`app.ts:215-217`) because `/biomarkers` is not on any CSRF exemption list (`backend/src/middleware/csrf.ts:98-139`).
+The version prefix is `config.apiVersion` (mounted at `app.ts:265`); all examples below use `/api/v1`. The error envelope on failure is always `{ success: false, error: { code, message, ... } }` (`errorHandler.ts:L199-L210`, see [§19](#19-error-handling)).
 
 ---
 
-## 4. Middleware stack (global, in mount order)
+## 4. Middleware stack (mount order)
 
-The `app.use(...)` sequence in `app.ts` **is** the order. CLAUDE.md's listed order is stale; trust this list (drift logged in [§21](#21-prompt-drift-log)).
+The global stack is the literal `app.use(...)` sequence in `backend/src/app.ts`. There are **11 non-test middleware modules** (`Glob backend/src/middleware/*.ts`, excluding `*.test.ts`): `auth`, `csrf`, `rbac`, `rateLimiter`, `rateLimitStore`, `demoProtection`, `validation`, `errorHandler`, `planGating`, `aiSpendGuard`, and the `index.ts` barrel.
 
-| # | Middleware | What it does | `app.ts` line | Module |
+| # | Middleware | `app.ts` line | Module | Effect |
 |---|---|---|---|---|
-| 1 | `app.set('trust proxy', 1)` | trust first proxy hop (Cloud Run LB) for `req.ip` | `app.ts:120` | — |
-| 2 | `helmet({...})` | CSP (`default-src 'self'`, `style-src 'unsafe-inline'`), CORP/COEP | `app.ts:125-141` | helmet |
-| 3 | `cors(corsOptions)` | origin allowlist + credentials | `app.ts:191` | cors |
-| 4 | `app.options('*', cors(corsOptions))` | explicit preflight handler | `app.ts:194` | cors |
-| 5 | `cookieParser()` | parse cookies (must precede CSRF/routes) | `app.ts:197` | cookie-parser |
-| 6 | `compression({ threshold: 1024, level: 6, filter })` | gzip JSON; **filter opts OUT of `text/event-stream`** (SSE) | `app.ts:204-211` | compression |
-| 7 | `csrfProtection` | double-submit cookie validate (dev-skippable via `DISABLE_CSRF`) | `app.ts:215-217` | `middleware/csrf.ts:180` |
-| 8 | `standardLimiter` | global rate limit (100 / 15 min default) | `app.ts:220` | `middleware/rateLimiter.ts:17` |
-| 9 | `morgan(...)` | request logging; **prod uses query-stripped `PROD_LOG_FORMAT`** | `app.ts:231-245` | morgan |
-| 10 | `express.json({ limit: '10mb' })` | JSON body parse | `app.ts:248` | express |
-| 11 | `express.urlencoded({ extended: true, limit: '10mb' })` | urlencoded body parse | `app.ts:249` | express |
-| 12 | `requireJsonContentType` | reject non-JSON bodies on POST/PUT/PATCH (skips multipart) | `app.ts:252` | `middleware/validation.ts:190` |
-| 13 | `/api` `Cache-Control: no-store, no-cache, private` | block intermediate caching of PHI | `app.ts:259-262` | inline |
-| 14 | `app.use('/api/v1', routes)` | API router mount | `app.ts:265` | `routes/index.ts` |
-| 15 | `app.use('/api/v1/internal', internalRoutes)` | **Cloud Scheduler, shared-secret, CSRF-exempt** | `app.ts:269` | `routes/internalRoutes.ts` |
-| 16 | dev-only mock FHIR server | mounted only when `config.isDevelopment` | `app.ts:275-281` | `services/fhir/mockFhirServer.ts` |
-| 17 | `notFoundHandler` | 404 → `NotFoundError` | `app.ts:327` | `middleware/errorHandler.ts:214` |
-| 18 | `errorHandler` | centralized error shaping (must be last) | `app.ts:330` | `middleware/errorHandler.ts:135` |
+| 0 | `app.set('trust proxy', 1)` | `app.ts:120` | — | Trust Cloud Run's first proxy hop → real `req.ip` for rate limit + audit. |
+| 1 | `helmet({ contentSecurityPolicy, crossOriginResourcePolicy })` | `app.ts:125` | helmet | CSP (`defaultSrc 'self'`, `styleSrc` allows `'unsafe-inline'`), security headers. CSP relaxes for cross-domain cookie deploys. |
+| 2 | `cors(corsOptions)` + `app.options('*', cors(...))` | `app.ts:191`, `:194` | cors | Origin allowlist (env `CORS_ORIGIN` ∪ hardcoded prod hosts), `credentials: true`, explicit preflight handler. |
+| 3 | `cookieParser()` | `app.ts:197` | cookie-parser | Parse `access_token`/`refresh_token`/`csrf_token` cookies. |
+| 4 | `compression({ threshold: 1024, level: 6, filter })` | `app.ts:204` | compression | gzip responses; **filter opts OUT of `text/event-stream`** so the SSE Health Guide chat is not buffered (`app.ts:207-208`). |
+| 5 | `csrfProtection` (skippable in dev via `DISABLE_CSRF=true`) | `app.ts:215-217` | `middleware/csrf.ts` | Double-submit cookie check on mutations (see [§6](#6-csrf-architecture)). |
+| 6 | `standardLimiter` | `app.ts:220` | `middleware/rateLimiter.ts:66` | Global rate limit (`RATE_LIMIT_MAX_REQUESTS`/`RATE_LIMIT_WINDOW_MS`, default 100/15min). |
+| 7 | `morgan(dev \| PROD_LOG_FORMAT)` | `app.ts:242`, `:244` | morgan | HTTP logging. **Prod format strips query strings** (`:urlpath` token, `app.ts:231-237`) so `?token=...` reset/verify secrets never reach Cloud Logging. |
+| 8 | `express.json({ limit: '10mb' })` + `express.urlencoded(...)` | `app.ts:248-249` | express | Body parsing, 10MB cap. |
+| 9 | `requireJsonContentType` | `app.ts:252` | `middleware/validation.ts` | Reject non-JSON bodies on JSON routes. |
+| 10 | `app.use('/api', ... Cache-Control: no-store)` | `app.ts:259-262` | inline | Blanket `no-store, no-cache, private` on all `/api` responses (PHI safety). |
+| 11 | `app.use('/api/v1', routes)` | `app.ts:265` | `routes/index.ts` | Versioned API router (18 route files — see [§19 File structure](#20-file-structure)). |
+| 12 | `app.use('/api/v1/internal', internalRoutes)` | `app.ts:269` | `routes/internalRoutes.ts` | Cloud Scheduler maintenance (shared-secret, **CSRF-exempt**; 404s unless secret configured). |
+| 13 | dev-only mock FHIR server | `app.ts:275-281` | `fhir/mockFhirServer.ts` | Mounted only when `config.isDevelopment`; never in prod. |
+| 14 | `notFoundHandler` | `app.ts:327` | `middleware/errorHandler.ts:214` | 404 for unknown routes. |
+| 15 | `errorHandler` | `app.ts:330` | `middleware/errorHandler.ts` | Centralized error envelope (must be last). |
 
-**What runs before CSRF validation** (Acceptance Q1): trust-proxy → helmet → cors → OPTIONS handler → cookieParser → compression. CSRF (#7) is next, then the rate limiter and body parsers.
+**Per-route middleware** (applied inside each `routes/*.ts`, after the global stack) runs roughly: `authenticate` → `csrfProtection` (mutations) → `validate(schema)` → `rbac`/`requirePlanLimit` → route-specific limiter → `aiSpendGuard` (AI routes) → `blockDemoAI`/`demoProtection`. Per-route chains are catalogued in [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
 
-### Route-level middleware (applied inside routers, after global stack)
-
-Routers add their own chain. Examples:
-
-```ts
-// Source: backend/src/routes/aiRoutes.ts:21,29-37
-router.use(requireBearerAuth);              // Bearer-only (CSRF-exempt SSE route)
-router.post('/chat',
-  aiLimiter,                                // 10/hr per user
-  aiSpendGuard,                             // daily $ budget gate
-  blockDemoAI,                              // demo accounts blocked from AI
-  requirePlanLimit('aiChatsPerDay'),        // billing-tier gate
-  validate(schemas.ai.chat),
-  asyncHandler(handleAIChat));
-```
-
-Rate limiters available (8 total, `backend/src/middleware/rateLimiter.ts`): `standardLimiter` (`:17`), `authLimiter` (`:37`, 20/15min), `strictAuthLimiter` (`:53`, 5/15min, email+IP keyed, skips successes), `uploadLimiter` (`:76`, 20/hr), `sensitiveLimiter` (`:92`, 10/hr), `aiLimiter` (`:108`, 10/hr per-user-keyed), `providerAccessRequestLimiter` (`:133`, 10/hr per-provider), `bulkOperationLimiter` (`:157`, 30/hr). All swap to a shared Redis store when `REDIS_URL` is set (`rateLimiter.ts:8-14`); otherwise per-instance MemoryStore.
+> The `CLAUDE.md` "Middleware Stack" list omits `compression`, the SSE-exempt filter, `requireJsonContentType`, and the `/api` no-store layer — this table is authoritative against `app.ts`.
 
 ---
 
 ## 5. Authentication architecture
 
-JWT access tokens (15 min) + DB-backed refresh tokens (7 days; 30 days for demo). Tokens are delivered as HttpOnly cookies AND the access token is echoed in the refresh response body for `Authorization: Bearer` use after a page reload.
+JWT access tokens (15 min) + DB-backed refresh tokens (7 days) delivered as httpOnly cookies, with a **cross-instance revocation layer** rewritten post-06-01.
 
-```mermaid
-sequenceDiagram
-  participant C as Client
-  participant Ctl as authController
-  participant Svc as authService
-  participant DB as Postgres (sessions)
-
-  C->>Ctl: POST /auth/register (email, password)
-  Ctl->>Svc: createUser + email verification token
-  C->>Ctl: GET /auth/verify-email?token=...
-  C->>Ctl: POST /auth/login (email, password)
-  Ctl->>Svc: generateTokens(user)
-  Svc->>Svc: generateAccessToken (sign w/ JWT_ACCESS_SECRET)
-  Svc->>DB: generateRefreshToken → session row (sign w/ JWT_REFRESH_SECRET)
-  Ctl-->>C: Set-Cookie access_token, refresh_token, csrf_token
-  Note over C,Ctl: ~15 min later access token expires
-  C->>Ctl: POST /auth/refresh (cookie: refresh_token)
-  Ctl->>Svc: refreshTokens → new access + rotated refresh
-  Ctl-->>C: Set-Cookie (rotated) + body { token }
-```
-
-Token signing:
+### Token issuance
 
 ```ts
-// Source: backend/src/services/authService.ts:237-250
+// Source: backend/src/services/authService.ts:L446-L463
 export function generateAccessToken(user: User): string {
-  const payload: TokenPayload = {
-    id: user.id, email: user.email, role: user.role,
-    plan: user.plan || 'FREE', type: 'access',
+  const payload: TokenPayload & { jti: string } = {
+    id: user.id, email: user.email, role: user.role, plan: user.plan || 'FREE',
+    type: 'access',
+    // M1: per-token id so a single access token can be revoked cross-instance
+    jti: uuidv4(),
   };
   return jwt.sign(payload, config.jwt.accessSecret, {
-    ...JWT_SIGN_OPTIONS,
-    expiresIn: config.jwt.accessExpiresIn,   // 900s default
+    ...JWT_SIGN_OPTIONS, expiresIn: config.jwt.accessExpiresIn,
   });
 }
 ```
 
-- **Access secret**: `config.jwt.accessSecret` ← `JWT_ACCESS_SECRET` via `requireEnv` (no fallback in any env) — `backend/src/config/index.ts:61`. Expiry default 900s (`config/index.ts:62`).
-- **Refresh secret**: `config.jwt.refreshSecret` ← `JWT_REFRESH_SECRET` — `config/index.ts:65`. Expiry 604800s (`config/index.ts:66`). The refresh token also creates a `Session` row keyed by its `jti` (`authService.ts:307-319`).
-- **Cookie set**: `access_token` HttpOnly+Secure+SameSite, maxAge 15 min (`authController.ts:94-101`); `refresh_token` (`:113-120`).
-- **Verification** on every protected request: `authenticate` reads cookie-first then `Bearer` (`middleware/auth.ts:34-47,71-120`), rejects revoked tokens via `isTokenRevoked` (`auth.ts:87`).
-- **Revocation**: in-memory `revokedTokens` map; `revokeAccessToken`/`isTokenRevoked`/`sweepRevokedTokens` (`authService.ts:142-185`). Note: per-instance only — a revoked token still works on other Cloud Run instances until natural expiry.
+- **Access JWT**: HS256, signed with `JWT_ACCESS_SECRET` (`config/index.ts:120`), default 900s (`JWT_ACCESS_EXPIRES_SECONDS`, `config/index.ts:121`). Payload `{id,email,role,plan,type:'access',jti}`.
+- **Refresh JWT**: signed with `JWT_REFRESH_SECRET` (`config/index.ts:124`), default 604800s (`config/index.ts:125`), `jti = sessionId`; every refresh has a `sessions` row keyed by its jti (`authService.ts:521-532`).
+- **Cookies**: `httpOnly`, `secure` (forced for prod/staging/SameSite=None/COOKIE_DOMAIN), `sameSite` resolved from `COOKIE_SAME_SITE`/`COOKIE_DOMAIN`/env tier (`config/index.ts:88-95,138-147`). `csrf_token` is `httpOnly:false` (JS-readable).
 
-### Frontend refresh (Acceptance Q12)
+```mermaid
+sequenceDiagram
+  participant C as Client (SPA)
+  participant Ctl as authController
+  participant Svc as authService
+  participant DB as Postgres (sessions, users)
 
-The Axios-style client refreshes on a 401 and on app boot:
-
-```ts
-// Source: src/services/api/client.ts:145-157
-const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-  method: 'POST', credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
-});
-if (response.ok) {
-  const data = await response.json();
-  if (data.data?.token) { setAuthToken(data.data.token); }  // store in memory only
-  return true;
-}
+  C->>Ctl: POST /api/v1/auth/register
+  Ctl->>Svc: create user, send verification email (SendGrid)
+  C->>Ctl: GET /api/v1/auth/verify-email?token=...
+  C->>Ctl: POST /api/v1/auth/login (authLimiter, strictAuthLimiter)
+  Ctl->>Svc: attemptLogin → bcrypt verify (rounds=13), lockout after 5 fails/30min
+  Svc-->>Ctl: access JWT (jti) + refresh JWT (sessionId)
+  Ctl-->>C: 200 + Set-Cookie access_token, refresh_token, csrf_token
+  Note over C,Svc: access expires (15m)
+  C->>Ctl: POST /api/v1/auth/refresh (X-CSRF-Token double-submit)
+  Ctl->>Svc: refreshTokens — SELECT ... FOR UPDATE session, rotate (single-use, atomic)
+  Svc-->>C: new access + refresh + csrf cookies
 ```
 
-- A 401 on a non-auth-management endpoint triggers a single `attemptTokenRefresh()` then one retry (`client.ts:284-311`); concurrent calls share one in-flight `refreshPromise` (`client.ts:137-143`).
-- On boot, `AuthContext` calls `authApi.refreshToken()` **first** (using the 7-day refresh cookie) before any data fetch (`src/contexts/AuthContext.tsx:96-109`).
-- The access token is stored **in memory only** (`client.ts:64-72`) — never `localStorage` — and a failed refresh logs the user out via `onAuthFailureCallback` (`client.ts:289-291`, `AuthContext.tsx:240`).
+### Cross-instance revocation (post-06-01)
+
+Three mechanisms, all checked in `authenticate`/`optionalAuth`/`requireBearerAuth` (`middleware/auth.ts`):
+
+1. **In-memory blacklist** — `revokeAccessToken(token)` adds the raw token with clamped expiry; per-instance only (`authService.ts:156,181`).
+2. **`users.tokens_valid_after`** (migration `20260606000002_add_tokens_valid_after`, `schema.prisma:36`) — per-user DB cutoff stamped by `revokeAllUserTokens` on logout-all / password change / reset / email-change / admin-deactivate. `authenticate` rejects any access JWT whose `iat` predates it on **every replica** (`auth.ts:106-108`). Fails OPEN on DB error (`authService.ts:314-320`).
+3. **`revoked_access_tokens` table** (migration `20260613_revoked_access_tokens`, model `RevokedAccessToken` `schema.prisma:96`) — single-device logout records the access token's `jti` cross-instance via `revokeAccessTokenCrossInstance` (`authService.ts:358-394`) WITHOUT logging out other devices.
+
+`tokens_valid_after` + revoked-jti set are read in one cached lookup (`fetchUserRevocationState`, 15s TTL, `authService.ts:259-278`). **Refresh-token reuse** outside a 10s grace window (`REFRESH_REUSE_GRACE_MS`, `authService.ts:668-688`) triggers `revokeAllUserTokens` — the **entire token family is revoked** and a `LOGIN_FAILED` audit row written (`authService.ts:795-836`).
 
 ---
 
 ## 6. CSRF architecture
 
-Stateless double-submit cookie. There is **no server-side CSRF secret**; the server compares the `csrf_token` cookie against the `x-csrf-token` header using a constant-time hash compare.
+Stateless **double-submit cookie**, no server-side CSRF secret. The `csrf_token` cookie (`httpOnly:false`) is read by the SPA and echoed in the `X-CSRF-Token` header; `csrf.ts` constant-time compares them.
 
 ```mermaid
 sequenceDiagram
   participant C as Client (SPA)
-  participant S as csrfProtection (app.ts)
-  C->>S: GET /api/v1/csrf-token  (or any GET)
-  S-->>C: Set-Cookie csrf_token=<hex>  (httpOnly:false, JS-readable)
-  C->>C: document.cookie → read csrf_token
-  C->>S: POST /... with header x-csrf-token: <hex>
-  S->>S: sha256(cookie) vs sha256(header), timingSafeEqual
+  participant S as Server (csrf.ts)
+  C->>S: login / refresh → Set-Cookie csrf_token (httpOnly:false)
+  C->>C: getCsrfToken() reads document.cookie  (src/services/api/client.ts:120-139)
+  C->>S: POST/PUT/PATCH/DELETE + header X-CSRF-Token = csrf_token cookie
+  S->>S: SHA-256(cookie) vs SHA-256(header) → timingSafeEqual  (csrf.ts:177-179)
   alt match
-    S-->>C: next() → 2xx
+    S-->>C: proceed
   else mismatch / missing
-    S-->>C: 403 ForbiddenError ('Invalid CSRF token' / 'CSRF token missing')
+    S-->>C: 403 ForbiddenError 'Invalid/missing CSRF token'
   end
 ```
 
 ```ts
-// Source: backend/src/middleware/csrf.ts:164-170
+// Source: backend/src/middleware/csrf.ts:L177-L183
 const cookieDigest = crypto.createHash('sha256').update(cookieToken).digest();
 const headerDigest = crypto.createHash('sha256').update(headerToken).digest();
 const tokensMatch = crypto.timingSafeEqual(cookieDigest, headerDigest);
@@ -279,47 +249,73 @@ if (!tokensMatch) {
 }
 ```
 
-- The compare function is `crypto.timingSafeEqual` over SHA-256 digests (normalizes length so timing doesn't leak token length) — `csrf.ts:159-170`.
-- Cookie set on GET / when absent (`csrf.ts:66-76`); `httpOnly: false` so JS can read it (`csrf.ts:43`).
-- **Exemptions** (`csrf.ts:98-141`): public auth routes (login/register/demo/refresh/forgot/reset/verify/resend, `/marketplace/plans/search`); bearer-only SSE `/ai/chat`; the scheduler `/internal/audit-cleanup`. The frontend reads the cookie (`src/services/api/client.ts:120-135`) and attaches `x-csrf-token` on every mutating method (`client.ts:229-238`).
-- Refresh **rotates** the CSRF cookie to bound its lifetime (`authController.ts:395`).
+- **Exempt paths** use **strict `===`** against a fully-qualified allowlist on the normalized path (`csrf.ts:124-156`) — login, register, demo, forgot/reset-password, verify-email, resend-verification, marketplace search, `/api/v1/ai/chat` (Bearer-only via `requireBearerAuth`), `/api/v1/internal/audit-cleanup` (shared-secret). The old suffix `endsWith` match (bypassable via `/api/v1/evil/auth/login`) was removed (M-2, `csrf.ts:100-107`).
+- **`/api/v1/auth/refresh` is NOT exempt** — it rotates the session, so the SPA double-submits on refresh (`csrf.ts:114-123`; client at `src/services/api/client.ts:149-159`). **Upload routes are no longer exempt** (`csrf.ts:147-152`).
 
 ---
 
 ## 7. Row-Level Security (RLS)
 
-PHI tables enable Postgres RLS. The app sets `app.current_user_id` (and `app.is_admin`) on a transaction with `SET LOCAL` (via `set_config(..., true)`); policies compare it to each row's `user_id`.
-
-### Enforcement path (ASCII)
+PostgreSQL RLS isolates every user's rows. The application sets `app.current_user_id` per transaction; policies compare it to `user_id`. Admin/system operations run with `app.is_admin = true`.
 
 ```
 request → authenticate → req.user.id
-                          │
-                          ▼
-   controller: withRLSContext(userId, async (tx) => ...)        services/database.ts:447
-                          │
-                          ▼
-   applyRLSContext: SELECT set_config('app.current_user_id', :userId, true)   database.ts:368-377
-                          │
-                          ▼
-   Prisma queries run THROUGH tx on the SAME pooled connection
-                          │
-                          ▼
-   Postgres policy USING (user_id = current_user_id()
-                          OR has_provider_access(user_id,'view_biomarkers')
-                          OR is_admin_session())                 migration 20260107:151-157
-                          │
-                          ▼
-                     allowed rows only
+                         │
+                         ▼
+   controller: withRLSContext(userId, async (tx) => ...)   (database.ts:498)
+                         │
+                         ▼
+   database.ts: applyRLSContext(tx) → SET LOCAL app.current_user_id = :userId  (database.ts:490-491)
+                         │
+                         ▼
+   Prisma-generated SQL (via tx) carries the SET LOCAL on the SAME connection
+                         │
+                         ▼
+   Postgres policy: USING (user_id = current_user_id() OR is_admin_session())
+                         │
+                         ▼
+                     allowed rows
 ```
 
-Policy helpers and a representative table policy:
+### Wrapper functions (`database.ts`)
+
+```ts
+// Source: backend/src/services/database.ts:L498-L507
+export async function withRLSContext<T>(
+  userId: string | null,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  options: RLSOptions = {}
+): Promise<T> {
+  return runWithRLS(userId, fn, options, {
+    maxWait: options.maxWait ?? 20_000,
+    timeout: options.timeout ?? 30_000,
+  });
+}
+```
+
+- **`withRLSContext`** (`database.ts:498`) and **`withRLSTransaction`** (`database.ts:519`) both run `fn` inside a Prisma `$transaction` that first calls `applyRLSContext(tx)` (`database.ts:490-491`). Difference: `withRLSTransaction` lets a caller opt into a longer transaction window (`maxWait`/`timeout`) for many sequential statements — e.g. the bulk biomarker series merge of up to ~100 readings (`database.ts:524-533`). **Use `withRLSTransaction` when you need atomicity across multiple writes** (e.g. create biomarker + audit row in one commit); `withRLSContext` for a self-contained read/write.
+- `userId = null` → admin context (`is_admin_session() = true`), e.g. `tx.user.findMany()` system queries (`database.ts:491`, `CLAUDE.md` RLS section).
+
+### Why `prisma.X` inside the callback is WRONG
+
+```typescript
+// ❌ WRONG — prisma.* inside the callback runs on a DIFFERENT connection that
+// does NOT carry the SET LOCAL, so RLS evaluates against NULL.   (CLAUDE.md)
+const biomarkers = await withRLSContext(userId, async () => {
+  return prisma.biomarker.findMany();   // sees current_user_id() = NULL → no rows / wrong rows
+});
+// ✅ CORRECT — go through `tx`, which carries the SET LOCAL.
+const biomarkers = await withRLSContext(userId, async (tx) => tx.biomarker.findMany());
+```
+
+The policy's `current_user_id()` (`migration 20260107_add_rls_policies/migration.sql:17-25`) reads `current_setting('app.current_user_id')`, which is only set on the transaction's connection. CI enforces this with `scripts/check-rls-wrappers.sh` (fails the build on module-level `prisma.X` in controllers/services — `ci.yml:148-149`).
+
+### Policy mechanism (SQL)
 
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:17-36
+-- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L17-L36
 CREATE OR REPLACE FUNCTION current_user_id() RETURNS uuid AS $$
-BEGIN
-  RETURN NULLIF(current_setting('app.current_user_id', true), '')::uuid;
+BEGIN RETURN NULLIF(current_setting('app.current_user_id', true), '')::uuid;
 EXCEPTION WHEN OTHERS THEN RETURN NULL; END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
@@ -329,455 +325,512 @@ EXCEPTION WHEN OTHERS THEN RETURN false; END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 ```
 
+A representative per-table policy:
+
 ```sql
--- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:151-157
-CREATE POLICY biomarkers_select ON biomarkers FOR SELECT USING (
-  user_id = current_user_id()
-  OR has_provider_access(user_id, 'view_biomarkers')
-  OR is_admin_session()
-);
+-- Source: backend/prisma/migrations/20260107_add_rls_policies/migration.sql:L118-L120
+CREATE POLICY sessions_select_own ON sessions
+  FOR SELECT
+  USING (user_id = current_user_id() OR is_admin_session());
 ```
 
-Provider access and the consented-identity read are layered in later migrations: `has_provider_access` checks `status='ACTIVE'` + unexpired consent + the relevant capability flag (`20260107…:39-62`); `has_active_consent` + `users_select_provider` let a provider read a consented patient's identity row (`20260530_add_users_select_provider/migration.sql:33-57`). Full policy catalog: [DATA_MODEL.md#rls-policies](./DATA_MODEL.md).
+### Post-06-01 hardening — FORCE RLS + boot guard
 
-### The two wrappers (Acceptance Q3)
+Migration `20260613_force_rls_and_audit_retention` applied **FORCE ROW LEVEL SECURITY on all 19 RLS tables** (closing the table-owner bypass) and rewrote the audit DELETE policy to DB-enforce 7-year retention (`USING (is_admin_session() AND created_at < now() - interval '7 years')`). `database.ts` now runs **two boot assertions** (`database.ts:192-193`):
 
 ```ts
-// Source: backend/src/services/database.ts:447-456
-export async function withRLSContext<T>(userId, fn, options = {}) {
-  return runWithRLS(userId, fn, options, {
-    maxWait: options.maxWait ?? 20_000,
-    timeout: options.timeout ?? 30_000,   // explicit tx timeouts
-  });
+// Source: backend/src/services/database.ts:L294-L300 (assertRLSForced)
+if (unforced.length === 0) {
+  logger.startup('✓ RLS FORCE assertion passed: all RLS-enabled tables are FORCE-protected');
+  return;
 }
-// Source: backend/src/services/database.ts:468-474
-export async function withRLSTransaction<T>(userId, fn, options = {}) {
-  return runWithRLS(userId, fn, options, undefined);  // Prisma default tx options
-}
+if (config.isProduction) {
+  // ... process.exit(1)  — 'Refusing to start — add FORCE ROW LEVEL SECURITY (see migration 20260613)'
 ```
 
-Both wrap the callback in a Prisma `$transaction` and issue `SET LOCAL` via `applyRLSContext`. The practical difference: `withRLSContext` passes explicit `maxWait`/`timeout` (20s/30s) suited to single-statement reads/writes; `withRLSTransaction` uses Prisma's default transaction options and is the idiom for **atomic multi-statement** writes (e.g. create biomarker + history + audit row together). Use `withRLSTransaction` whenever two or more statements must commit/roll back as one unit.
+- `assertNoBypassRLS()` (`database.ts:217-260`) — prod hard-exits if the DB role has `BYPASSRLS`.
+- `assertRLSForced()` (`database.ts:270`, called `:193`) — prod hard-exits if any RLS-enabled table lacks FORCE. Non-prod warns.
 
-### The footgun (Acceptance Q4)
-
-```
-// Source: backend/src/services/database.ts:14-31 (header banner, condensed)
-Inside a withRLSContext(userId, async (tx) => ...) callback, EVERY Prisma call
-MUST go through `tx`. If you call the module-level `prisma` client, the query
-runs on a DIFFERENT pooled connection — one that never received SET LOCAL
-app.current_user_id. RLS policies then evaluate current_user_id() as NULL and
-the query silently returns/affects nothing for the user (or all rows under a
-BYPASSRLS role). No error, no warning — a bypass.
-```
-
-`current_user_id()` returns `NULL` when the setting is unset (`migration 20260107…:20`), so under the non-bypass `omh_app` role the policy denies every row. A grep-based CI guard (`scripts/check-rls-wrappers.sh`, wired in `.github/workflows/ci.yml`) fails the build on `prisma.` calls inside controllers/services (`database.ts:26-30`). At boot, `assertNoBypassRLS()` hard-exits production if the DB role has `BYPASSRLS` (`database.ts:218-261`).
+Full policy catalog + cascades in [`DATA_MODEL.md`](./DATA_MODEL.md).
 
 ---
 
 ## 8. Encryption layer
 
-AES-256-GCM authenticated encryption, format `iv:authTag:ciphertext` (all base64), with **per-user keys** derived from a master key.
+**AES-256-GCM with per-user keys** derived via PBKDF2-SHA512. The master `PHI_ENCRYPTION_KEY` (64 hex, `encryption.ts:182`) plus a per-user salt (`userEncryption.ts`) derive each user's key, so a single-key compromise does not decrypt all users uniformly.
 
-- **Algorithm / format**: `aes-256-gcm`, 16-byte IV, 16-byte auth tag (`backend/src/services/encryption.ts:57-66,225-227`).
-- **Per-user key**: `PBKDF2-SHA512(masterKey, userSalt, 600_000, 32)` — `encryption.ts:85,192-200`. Decryption falls back to the legacy 100k iteration count if the auth tag fails (pre-hardening data) — `encryption.ts:300-315`.
-- **Master key**: `PHI_ENCRYPTION_KEY` (≥64 hex chars / 256 bits; placeholder keys rejected in every env) — `encryption.ts:102-142`, `config/index.ts:354-383`.
-- **Per-user salt**: stored in `user_encryption_keys` encrypted with the master key; fetched/created via `getUserEncryptionSalt(userId)` under admin RLS context (`backend/src/services/userEncryption.ts:29-72`).
-- **Audit-log PHI** uses the **system salt** (`AUDIT_LOG_SALT`), not a per-user salt — because audit logs survive account deletion (per-user salts are destroyed on deletion) — `backend/src/services/auditLog.ts:148,220`.
+- **Encrypt on write / decrypt on read** both run in `backend/src/services/encryption.ts` (`EncryptionService`). Controllers call the encryption service before passing `*Encrypted` columns to Prisma, and decrypt after reading. Per-user salt resolution: `getUserEncryptionSalt(userId)` (`userEncryption.ts`, used e.g. `labUploadController.ts:49`, `labSyncService.ts:144-187`).
+- **`PHI_FIELDS`** (`encryption.ts:476-562`) is the canonical map of `Model → [*Encrypted columns]`, audited against the schema (every `*Encrypted` column appears, and a coverage test `phiFieldsCoverage.test.ts` enforces it). **14 models / 39 encrypted fields.**
 
 ```ts
-// Source: backend/src/services/encryption.ts:262-278
-encrypt(plaintext: string, userSalt: string): string {
-  if (!plaintext) return '';
-  const salt = Buffer.from(userSalt, 'hex');
-  const key = this.deriveUserKey(salt);
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  let encrypted = cipher.update(plaintext, 'utf8', 'base64');
-  encrypted += cipher.final('base64');
-  const authTag = cipher.getAuthTag();
-  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`;
-}
+// Source: backend/src/services/encryption.ts:L498-L521
+UserFile: [ 'originalFilenameEncrypted' ],            // L24 — raw client filename
+InsurancePlan: [ 'memberIdEncrypted', 'groupIdEncrypted' ],
+ProviderPatient: [ 'notesEncrypted' ],
+HealthNeed: [ 'descriptionEncrypted' ],
+HealthGoal: [ 'descriptionEncrypted', 'targetValueEncrypted',
+             'currentValueEncrypted', 'startValueEncrypted' ],   // M4 — numeric goal values
 ```
 
-**Where encryption runs / where decryption runs** (Acceptance Q5): the single `EncryptionService` (`encryption.ts`) does both. Controllers/services **encrypt before DB write** (e.g. lab upload: `controllers/upload/labUploadController.ts:47,86-125`; FHIR tokens: `services/fhir/labSyncService.ts:140-162`) and **decrypt on read** (e.g. biomarker guidance: `routes/biomarkerRoutes.ts:180,188`; FHIR token use: `labSyncService.ts:211-214`). The canonical per-model field map is `PHI_FIELDS` (`encryption.ts:410-486`); the canonical list lives in [PHI_TAXONOMY.md](./PHI_TAXONOMY.md).
+### Post-06-01 PHI_FIELDS expansion
+
+| Field | Migration | Note |
+|---|---|---|
+| `UserFile.originalFilenameEncrypted` | `20260615_encrypt_userfile_original_filename` (L24) | Raw filename can embed identifiers ("Jane Doe MRI.pdf"). `decryptOriginalFilename` helper (`utils/userFileNames.ts`) decrypts-with-fallback; `backfill-userfile-filenames` maintenance job re-encrypts legacy plaintext. Server-generated `filename` stays plaintext (`encryption.ts:495-500`). |
+| `HealthGoal.current/start/targetValueEncrypted`, `GoalProgressHistory.valueEncrypted` | `20260613_encrypt_goal_values` (M4) | Numeric goal/progress PHI now encrypted; plaintext Decimal twins kept for back-compat, read path prefers encrypted. |
+| `AuditLog.metadataEncrypted` | `20260606000001` (add) → `20260615_drop_legacy_audit_metadata` (M6) | Plaintext `audit_logs.metadata` column **IRREVERSIBLY DROPPED**. |
+
+> **Deliberate plaintext** (NOT in PHI_FIELDS): `Biomarker.sourceFile` (`schema.prisma:195`) is the FHIR idempotency/dedupe key (`fhir:{provider}:{obs.id}`) — encrypting it would break re-sync dedupe.
+
+Per-field × encryption × audit detail in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
 
 ---
 
 ## 9. Provider-patient consent
 
-The real status enum is `ProviderPatientStatus { PENDING, ACTIVE, SUSPENDED, REVOKED, EXPIRED }` (`backend/prisma/schema.prisma:515-521`). Capability flags on `ProviderPatient`: `canViewBiomarkers` (default true), `canViewInsurance` (default false), `canViewHealthNeeds` (default true), `canEditData` (default false), plus `consentGrantedAt` / `consentExpiresAt` (`schema.prisma:98-105`).
+Consent is modeled by the `ProviderPatient` row's `status` (`ProviderPatientStatus` enum, `schema.prisma:578-584`) plus four boolean permission flags. The **real** states are `PENDING`, `ACTIVE`, `SUSPENDED`, `REVOKED`, `EXPIRED`.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING: provider requests access (POST /patient/.../request)
-  PENDING --> ACTIVE: patient grants (status:'ACTIVE', consentGrantedAt set)
-  PENDING --> ACTIVE: auto-approve path on existing PENDING
-  ACTIVE --> REVOKED: patient revokes (status:'REVOKED')
-  ACTIVE --> EXPIRED: consentExpiresAt lapses (time-based, checked at access)
+  [*] --> PENDING: provider requests access (providerRoutes.ts:278-282)
+  PENDING --> ACTIVE: patient grants (patientRoutes.ts grant w/ permission flags)
+  PENDING --> REVOKED: patient rejects
+  ACTIVE --> REVOKED: patient revokes (patientRoutes.ts:461-471, status:'REVOKED')
+  ACTIVE --> SUSPENDED: paused
+  SUSPENDED --> ACTIVE: resumed
+  ACTIVE --> EXPIRED: consentExpiresAt lapses (time-based gate)
   REVOKED --> [*]
   EXPIRED --> [*]
 ```
 
-Observed transitions in `backend/src/routes/patientRoutes.ts`: relationship created `PENDING` (`:209`); grant sets `status:'ACTIVE'` + `consentGrantedAt` + `consentExpiresAt` (`:226-232`); revoke sets `status:'REVOKED'` (`:457,466`); permission updates require `status==='ACTIVE'` and a non-expired `consentExpiresAt` (`:346,362-370`). `SUSPENDED` exists in the enum but no transition writing it was found in `patientRoutes.ts` — treat suspend as schema-supported but currently UI/route-unwired (see drift log [§21](#21-prompt-drift-log)). Expiry is enforced lazily at read time both in the RLS function (`has_provider_access` `consent_expires_at > NOW()`, `migration 20260107…:49`) and in middleware (`rbac.ts:233`).
+```ts
+// Source: backend/src/routes/patientRoutes.ts:L468-L471 (patient revokes a provider)
+await tx.providerPatient.update({
+  where: { id },
+  data: { status: 'REVOKED' },
+});
+```
 
-Authorization combines two checks: the DB RLS policy (`has_provider_access`) and the app-layer `checkProviderPatientAccess` (`backend/src/middleware/rbac.ts:202-250`), which re-validates `status==='ACTIVE'`, expiry, and the specific capability flag.
+### Permission flags + enforcement
+
+| Flag | Effect | Enforced in RLS |
+|---|---|---|
+| `canViewBiomarkers` | Provider may read patient biomarkers | `has_provider_access(patient, 'view_biomarkers')` (`migration 20260107...:50-57`) |
+| `canViewInsurance` | Read insurance plans | `has_provider_access(..., 'view_insurance')` |
+| `canViewHealthNeeds` | Read health needs | `has_provider_access(..., 'view_health_needs')` |
+| `canEditData` | Write patient data | `has_provider_access(..., 'edit')` |
+
+`has_provider_access` additionally requires `status = 'ACTIVE'` AND `(consent_expires_at IS NULL OR consent_expires_at > NOW())` (`migration 20260107_add_rls_policies/migration.sql:44-58`) — so an EXPIRED window denies access even if `status` is still ACTIVE. Permission edits are blocked on expired consent (`patientRoutes.ts:364-369`). Post-06-01, migration `20260615_provider_consent_immutable_audit_insert_check` adds a BEFORE-UPDATE trigger that **restores the four consent columns to OLD values unless the writer is the patient or admin** (L23). The provider-side choke point is `services/providerAccess.ts` `resolveProviderAccess(...)`. See [`DATA_MODEL.md`](./DATA_MODEL.md) and [`API_REFERENCE.md`](./API_REFERENCE.md) for endpoints.
 
 ---
 
 ## 10. AI extraction architecture
 
-Five Claude-backed subflows share `getAnthropicClient()` (`backend/src/services/anthropicClient.ts:46-60`, 30s timeout / 2 retries) and are fronted by `aiLimiter` + `aiSpendGuard` + `blockDemoAI` + a `requirePlanLimit`. Every flow checks the BAA gate (`config.anthropic.baaActive`) and refuses (503) if false.
+Five AI subflows, all on Claude via `anthropicClient.ts` (`@anthropic-ai/sdk`), each fronted by the `aiLimiter` rate limiter and the `aiSpendGuard` middleware ([§11](#11-ai-cost-control-architecture)).
 
-### 10a. Health Guide chat (SSE)
+| Subflow | Entry point | Claude call site | Cost-tracked |
+|---|---|---|---|
+| Health Guide chat (SSE) | `aiChatController.handleAIChat:135` (route `aiRoutes.ts:32`, `requireBearerAuth`) | `aiChatController.ts:232` | `trackAIUsage` `:308` |
+| Biomarker guidance | `biomarkerRoutes.ts:136` (`POST /:id/guidance`) | `biomarkerRoutes.ts:245` | `trackAIUsage` `:267` |
+| Expense cost analysis | `expenseRoutes.ts:114` (`POST /analyze`) | `expenseController.ts:752` | `trackAIUsage` `:779` |
+| Insurance SBC extraction | `insuranceRoutes.ts:125,138` + `uploadRoutes.ts:104` | `sbcExtraction.ts:808` | `trackAIUsage` `:847` |
+| Lab-report extraction | `uploadRoutes.ts:82,135` | `claudeExtraction.ts:150` | `trackAIUsage` `:170` |
 
 ```mermaid
 sequenceDiagram
-  participant C as Client (EventSource)
-  participant R as aiRoutes
-  participant Ctl as aiChatController.handleAIChat
-  participant K as knowledgeRetrieval
-  participant A as Anthropic SDK
-  C->>R: POST /ai/chat (Bearer; message, history)
-  R->>R: requireBearerAuth, aiLimiter, aiSpendGuard, blockDemoAI, requirePlanLimit('aiChatsPerDay')
-  R->>Ctl: handleAIChat
-  Ctl->>Ctl: if !baaActive → 503 (audit CHAT_BLOCKED_NO_BAA)
-  Ctl->>Ctl: assembleHealthContext(userId) [RLS-scoped decrypt]
-  Ctl->>K: retrieveKnowledge(message, context, budget)
-  Ctl->>Ctl: sanitizeForPrompt(message + history)
-  Ctl->>A: messages stream → SSE data: lines
-  A-->>C: text/event-stream chunks
-  Ctl->>Ctl: trackAIUsage(...)
+  participant C as Client
+  participant R as AI route (aiLimiter + aiSpendGuard)
+  participant Ctl as Controller / extraction service
+  participant A as anthropicClient (Claude)
+  participant T as aiCostTracker
+
+  C->>R: POST /api/v1/ai/chat (Bearer) | /guidance | /analyze | /upload-*
+  R->>R: aiSpendGuard.admitAISpend(userId) → reserve $0.05  (aiSpendGuard.ts:37)
+  alt admitted
+    R->>Ctl: handler
+    Ctl->>A: messages.create / stream  (anthropicClient.ts)
+    A-->>Ctl: completion (SSE for chat)
+    Ctl->>T: trackAIUsage(model, tokens) → real cost
+    Ctl-->>C: result (+ server-appended AI disclaimer, utils/aiDisclaimer.ts)
+    Note over R: res 'finish'/'close' → settle() backs out the $0.05 reservation
+  else budget reached / store error
+    R-->>C: 503 ServiceUnavailableError (fail-closed)
+  end
 ```
 
-Entry: `aiChatController.handleAIChat` (`backend/src/controllers/aiChatController.ts:118`); BAA gate `:128-141`; SSE headers `:180-184`; sanitization `:169-175`.
+The Health Guide chat streams over Server-Sent Events — it is **CSRF-exempt but Bearer-only** (`requireBearerAuth`, `csrf.ts:133-139`) and exempted from gzip compression (`app.ts:207-208`). All AI responses get a server-enforced educational disclaimer appended (`utils/aiDisclaimer.ts`, L33).
 
-### 10b. Biomarker guidance
-
-`POST /api/v1/biomarkers/:id/guidance` → BAA gate (`routes/biomarkerRoutes.ts:137-151`) → load biomarker under RLS (`:160-171`) → decrypt (`:180-188`) → `claude-haiku-4-5-20251001` (`:233`) → `stripPHIFromText` (`:244`) → `trackAIUsage` (`:248`) → audit `PHI_ACCESS` (`:266-272`). The dedicated `extractBiomarkersWithClaude` service (lab text) uses the same model (`services/claudeExtraction.ts:93,146`, BAA gate `:106`).
-
-### 10c. Insurance SBC extraction
-
-`extractInsuranceFromSBC` (`backend/src/services/sbcExtraction.ts:756`) — BAA gate `:767`, model `claude-sonnet-4-5-20250929` (`:804`), `trackAIUsage` (`:844`). Driven by the SBC upload flow (§13).
-
-### 10d. Lab-report biomarker extraction
-
-`extractBiomarkersWithClaude` (`claudeExtraction.ts:93`) over parsed PDF text; results encrypted and written as `Biomarker` rows (see §13).
-
-### 10e. Cost analysis
-
-Expense cost analysis calls Claude from `expenseController` and persists the response to `CostAnalysis.claudeResponseEncrypted` (encrypted before write) — see [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) item #3 and [DATA_MODEL.md#costanalysis](./DATA_MODEL.md).
+> **Google Document AI OCR** (`ocrService.ts:300`) is a separate paid call in the upload/OCR path; it is **not** dollar-tracked (no `trackAIUsage`) — bounded only by the `pdfUploadsPerMonth` plan quota and `aiLimiter`. See [§11](#11-ai-cost-control-architecture).
 
 ---
 
 ## 11. AI cost-control architecture
 
-Two layers cap spend: per-user/IP **rate** (`aiLimiter`, 10/hr) and per-day **dollar budget** (`aiSpendGuard`).
+Two independent governance layers cap AI usage.
 
-```mermaid
-sequenceDiagram
-  participant R as AI route
-  participant G as aiSpendGuard
-  participant T as aiCostTracker
-  participant A as Anthropic
-  R->>G: (after authenticate)
-  G->>T: isAISpendExceeded(userId)
-  alt exceeded (global or user)
-    G-->>R: 503 ServiceUnavailableError
-  else within budget
-    G-->>R: next()
-    R->>A: Claude call
-    A-->>R: usage tokens
-    R->>T: trackAIUsage → recordSpend(userId, costUsd)
-  end
-```
+**Layer 1 — dollar circuit breaker** (`aiSpendGuard` + `aiCostTracker`):
 
 ```ts
-// Source: backend/src/services/aiCostTracker.ts:69-78
-export function isAISpendExceeded(userId): { exceeded: boolean; scope: 'global'|'user'|null } {
-  rollIfNewDay();
-  if (config.ai.dailyBudgetUsd > 0 && globalSpentUsd >= config.ai.dailyBudgetUsd)
-    return { exceeded: true, scope: 'global' };
-  if (config.ai.userDailyBudgetUsd > 0 && (userSpentUsd.get(userId) ?? 0) >= config.ai.userDailyBudgetUsd)
-    return { exceeded: true, scope: 'user' };
-  return { exceeded: false, scope: null };
+// Source: backend/src/middleware/aiSpendGuard.ts:L54-L67
+if (!admission.admitted) {
+  next(new ServiceUnavailableError(
+    admission.scope === 'global'
+      ? 'AI features are temporarily unavailable (daily budget reached). Please try again later.'
+      : "You've reached today's AI usage limit. Please try again tomorrow."
+  ));
+  return;
 }
 ```
 
-- Guard middleware: `aiSpendGuard` reads the accumulator and fails closed with 503 (`backend/src/middleware/aiSpendGuard.ts:23-48`). Must run **after** `authenticate` (`:11-14`).
-- Budgets: `AI_DAILY_BUDGET_USD` (default 50) and `AI_USER_DAILY_BUDGET_USD` (default 5) — `config/index.ts:195-198`. `0` disables that scope.
-- Accumulator is **in-memory per-instance, per-UTC-day** — under autoscale the effective ceiling is N×budget (`aiCostTracker.ts:30-54`). Pricing table feeds the estimate (`aiCostTracker.ts:16-19`).
-- **BAA runtime gate**: `ANTHROPIC_BAA_ACTIVE` — production refuses to boot if `ANTHROPIC_API_KEY` is set but the flag is unset (`config/index.ts:300-313`); every AI call site re-checks `config.anthropic.baaActive` (e.g. `aiChatController.ts:129`). Mirrored for OCR via `GOOGLE_BAA_ACTIVE` (`config/index.ts:320-333`). See [ENV_VARS.md](./ENV_VARS.md).
+- `aiSpendGuard` (`middleware/aiSpendGuard.ts:28`) calls `admitAISpend(userId)` (`aiCostTracker.ts`) which reserves a fixed `RESERVATION_USD = $0.05` (`aiCostTracker.ts:67`) and admits/refuses against per-day **global** (`AI_DAILY_BUDGET_USD`, default 50, `config/index.ts:256`) and **per-user** (`AI_USER_DAILY_BUDGET_USD`, default 5, `config/index.ts:257`) caps. The reservation is backed out on response `finish`/`close` via idempotent `settle()` (`aiSpendGuard.ts:74-75`); the real cost is added post-call by `trackAIUsage()`. The old `isAISpendExceeded` was **deleted**.
+- **Pluggable store**: `InMemorySpendStore` (default) or `RedisSpendStore` (atomic, shared) when `REDIS_URL` is set (`config/index.ts:186`). In-memory means the effective ceiling under autoscale is N×budget (per instance).
+- **Fails CLOSED with 503** on both budget-reached and Redis-store error (`aiSpendGuard.ts:42-51,60-67`). Falls through (`next()`) if there is no authenticated user — must run AFTER `authenticate` (`aiSpendGuard.ts:29-33`).
+- **8 mount points across 5 route files**: `aiRoutes.ts:32`, `biomarkerRoutes.ts:136`, `expenseRoutes.ts:114`, `insuranceRoutes.ts:125,138`, `uploadRoutes.ts:82,104,135`.
+
+**Layer 2 — plan-tier usage quotas** (counts, not dollars): `usageTracker.checkPlanLimit` + `requirePlanLimit` middleware ([§18 RBAC](#18-role-based-access-control)).
+
+**BAA posture**: `ANTHROPIC_BAA_ACTIVE` (prod hard-fails if `ANTHROPIC_API_KEY` set + flag unset, `config/index.ts:381-394`) and `GOOGLE_BAA_ACTIVE` (`config/index.ts:401-414`). Per-user cost estimate is TBD (external: billing console — see [`FINANCIAL_TRACKER.md`](./FINANCIAL_TRACKER.md)). All vars in [`ENV_VARS.md`](./ENV_VARS.md).
 
 ---
 
 ## 12. Quest SMART-on-FHIR lab sync
 
-OAuth (PKCE) connect → encrypted tokens on `LabConnection` → `labSyncService` pull → `loincMapper` → encrypted `Biomarker` rows.
+OAuth 2.0 authorization-code + PKCE (S256). Encrypted tokens are stored on `LabConnection`; sync pulls Observations, maps LOINC codes, and writes biomarkers through the time-series merge.
 
 ```mermaid
 sequenceDiagram
   participant C as Client
   participant Ctl as fhirController
-  participant SA as smartAuth
+  participant SA as smartAuth (PKCE)
   participant Q as Quest FHIR
   participant LS as labSyncService
-  C->>Ctl: GET /fhir/connect/quest (auth, plan: questFhirIntegration)
-  Ctl->>SA: buildConnectRedirect → discoverEndpoints + PKCE + state
-  Ctl-->>C: { redirectUrl }  → browser to Quest
-  Q-->>Ctl: GET /fhir/callback?code&state  (public route, PKCE-bound)
-  Ctl->>SA: handleOAuthCallback → exchangeCodeForToken
-  Ctl->>LS: persistConnection(userId, tokenSet)  → encrypt + upsert LabConnection
-  C->>Ctl: POST /fhir/sync/:connectionId (auth, csrf, plan)
-  Ctl->>LS: syncLabResults → decrypt token → fetch Observations
-  LS->>LS: loincMapper → encrypt values → Biomarker rows
+  participant DB as Postgres (LabConnection, Biomarker)
+
+  C->>Ctl: POST connect (requirePlanFeature questFhirIntegration)
+  Ctl->>SA: buildConnectRedirect → discover endpoints (assertAllowedFhirUrl), gen PKCE
+  SA-->>C: 302 authorize URL (state, code_challenge S256)
+  C->>Q: authorize → consent → redirect ?code&state
+  C->>Ctl: GET /fhir/callback?code&state
+  Ctl->>SA: handleOAuthCallback → exchange code (15s timeout)
+  SA-->>LS: tokenSet
+  LS->>DB: persistConnection → encrypt access/refresh w/ per-user key (withRLSContext)
+  C->>Ctl: POST /fhir/connections/:id/sync (csrf, sensitiveLimiter, blockDemoAI)
+  Ctl->>LS: syncLabResults(userId, provider)
+  LS->>Q: GET Observation?category=laboratory (30s timeout, urlSafety on next links)
+  LS->>LS: loincMapper → upsertBiomarkerReading (idempotent on fhir:{provider}:{obs.id})
+  LS->>DB: biomarker rows + audit CREATE
 ```
 
-- Routes: `GET /fhir/connect/quest`, public `GET /fhir/callback`, `GET /fhir/connections`, `POST /fhir/sync/:connectionId`, `DELETE /fhir/connections/:id` (`backend/src/routes/fhirRoutes.ts:24-60`). The callback is the one route without session auth — bound by the PKCE `state` (`fhirRoutes.ts:17-24`, `fhirController.ts:72-96`).
-- **Token storage**: `persistConnection` encrypts both tokens with the user's per-user key and writes `accessTokenEncrypted` / `refreshTokenEncrypted` on `LabConnection` (`services/fhir/labSyncService.ts:140-162`; model `schema.prisma:692-716`).
-- **SSRF guard**: `assertAllowedFhirUrl` confines every server-supplied FHIR/SMART URL to the trusted base host + `QUEST_FHIR_AUTH_HOSTS` allowlist, blocks private/loopback/metadata hosts, and refuses cleartext http to public hosts (`backend/src/services/fhir/urlSafety.ts:56-91`, `isPrivateOrLoopbackHost:20-35`). Called from `smartAuth.discoverEndpoints` (`smartAuth.ts:119-125`).
-- **Env vars**: `QUEST_FHIR_CLIENT_ID`/`CLIENT_SECRET`/`BASE_URL`/`REDIRECT_URI`/`SUCCESS_REDIRECT`/`AUTH_HOSTS` (`config/index.ts:205-224`). Feature disabled unless `clientId` is set; dev can point `QUEST_FHIR_BASE_URL` at the mock server (`config/index.ts:200-209`).
+- **Token storage**: `LabConnection.accessTokenEncrypted` (required) / `refreshTokenEncrypted` (nullable), encrypted with the per-user key in `persistConnection` (`labSyncService.ts:144-187`, `schema.prisma:755-779`).
+- **SSRF guard**: `services/fhir/urlSafety.ts` `assertAllowedFhirUrl` (`urlSafety.ts:64-99`) — must be http(s), **host must equal the FHIR base host or be in `extraAllowedHosts`**, public hosts must use https, and `isPrivateOrLoopbackHost` blocks private/loopback/link-local incl. cloud metadata `169.254.169.254` (`urlSafety.ts:28-43`). Enforced on discovery, pagination `next` links (`fhirClient.ts:31-42`), token exchange/refresh, and revoke.
+- **Env**: `QUEST_FHIR_CLIENT_ID/SECRET/BASE_URL/REDIRECT_URI/SUCCESS_REDIRECT/AUTH_HOSTS` (`config/index.ts:266-280`); `QUEST_FHIR_AUTH_HOSTS` is the SSRF allowlist. Feature disabled unless `QUEST_FHIR_CLIENT_ID` is set.
+- **Idempotency (post-06-01)**: imports dedupe on the stable `sourceFile = fhir:{provider}:{obs.id}` so re-sync never clobbers user edits; biomarker writes flow through `upsertBiomarkerReading` ([§13](#13-file-upload--ocr-pipeline--biomarker-time-series-merge)).
 
 ---
 
-## 13. File upload + OCR pipeline
+## 13. File upload + OCR pipeline + biomarker time-series merge
+
+Upload handlers live in `backend/src/controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`, `index.ts`) — the old top-level `uploadController.ts` no longer exists.
 
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant R as uploadRoutes
-  participant Ctl as upload/labUploadController
-  participant P as pdfParser / ocrService
-  participant X as claudeExtraction / biomarkerExtractor
-  participant E as encryption + GCS + DB
-  C->>R: POST /upload/lab-report (multipart file)
-  R->>R: uploadLimiter, authenticate, aiLimiter, blockDemoAI, requirePlanLimit('pdfUploadsPerMonth'), multer.single('file')
-  R->>Ctl: uploadLabReport
-  Ctl->>Ctl: validatePdfHeader(buffer)
-  Ctl->>P: processDocument / extract text (PDF) or OCR (image)
-  Ctl->>X: extract biomarkers
-  Ctl->>E: uploadToGCS(userId, fileId, buffer) → encrypt values → withRLSTransaction → Biomarker + UserFile rows
-  Ctl-->>C: { createdBiomarkers, ... }
+  participant R as uploadRoutes (csrf, uploadLimiter, planGating, aiSpendGuard, Multer)
+  participant U as labUploadController / sbcUploadController
+  participant OCR as processDocument (pdfParser / pdfTextExtraction / ocrService)
+  participant AI as claudeExtraction / sbcExtraction / biomarkerExtractor
+  participant GCS as Google Cloud Storage
+  participant DB as Postgres
+
+  C->>R: POST /api/v1/upload/lab-report (multipart, X-CSRF-Token)
+  R->>U: validateUploadFile + validatePdfHeader (labUploadController.ts:44-45)
+  U->>OCR: processDocument(buffer, mime, name, userId) (labUploadController.ts:53)
+  OCR->>AI: extract biomarkers / SBC fields (Claude)
+  AI-->>U: structured fields
+  U->>U: encrypt PHI (per-user key) + truncate to maxBiomarkers
+  U->>GCS: persist source file (withGcsOrphanCleanup on tx rollback)
+  U->>DB: withRLSTransaction → upsertBiomarkerReading per reading + audit
+  U-->>C: { biomarkers, ... }
 ```
 
-- Routes: `POST /upload/lab-report`, `/upload/insurance-sbc`, `/upload/lab-results-ocr` (`backend/src/routes/uploadRoutes.ts:77-132`). Multer: memory storage, **10MB limit, single file**; lab/SBC accept PDF only, OCR accepts PDF + PNG/JPEG/TIFF/GIF/WEBP (`uploadRoutes.ts:29-68`).
-- Lab handler: `uploadLabReport` (`backend/src/controllers/upload/labUploadController.ts:36`) — GCS upload (`:73`), then encrypt + write biomarkers and the `UserFile` atomically under `withRLSTransaction` (`:86-125`).
-- SBC handler: `uploadSBC` (`backend/src/controllers/upload/sbcUploadController.ts:33`) → `extractSBCData` (Claude Sonnet + regex fallback) → map to `InsurancePlan` + `InsuranceBenefit` rows, persist source PDF to GCS as `UserFile` (`:40-60`). PHI-to-records path: PDF bytes → `extractSBCData` → `mapExtractedDataToPlanFields`/`mapExtractedBenefits` → encrypted DB write (Acceptance Q15).
-- Upload handlers live in `controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`); the old top-level `uploadController.ts` no longer exists.
-- Download is proxied through the backend (auth + RLS) rather than signed URLs, to avoid shareable PHI links (`backend/src/services/storageService.ts:94-110`, `getFileStream`).
+The raw `user_files.original_filename` is **AES-256-GCM encrypted** (`UserFile.originalFilenameEncrypted`, L24). Upload routes carry CSRF (the frontend `uploadUtils.ts` attaches `X-CSRF-Token`). SBC uploads route extracted insurance fields → `sanitizeExtractedSbc()` validation → `InsurancePlan` rows; lab uploads route extracted biomarkers → the series merge.
+
+### Biomarker time-series merge — the headline post-06-01 change
+
+ALL biomarker writes (manual create, bulk, upload-extraction, FHIR) now go through `biomarkerSeries.ts` `upsertBiomarkerReading`, which APPENDS to a single per-biomarker series instead of creating disconnected rows.
+
+```ts
+// Source: backend/src/services/biomarkerSeries.ts:L75-L85
+ * Merge rules (by measurement date relative to the series' current point):
+ *  - no existing series  -> create the anchor row                  ('created')
+ *  - newer than current  -> archive current to history, promote it ('promoted')
+ *  - older than current  -> insert as a history point, keep current('archived')
+ *  - same date as current-> correct the current point in place     ('corrected')
+export async function upsertBiomarkerReading(
+  tx: Prisma.TransactionClient, userId: string, reading: BiomarkerReadingInput
+): Promise<UpsertResult> {
+```
+
+```mermaid
+flowchart TD
+  R[new reading] --> Q{existing series?}
+  Q -- no --> CR[create anchor Biomarker row · 'created']
+  Q -- yes --> D{measurementDate vs anchor}
+  D -- newer --> P[archive anchor → BiomarkerHistory, promote new · 'promoted']
+  D -- older --> A[insert into BiomarkerHistory, keep anchor · 'archived']
+  D -- same --> CO[correct anchor in place · 'corrected']
+```
+
+The anchor row is the newest reading (`Biomarker`); older readings live in `BiomarkerHistory`. Series are matched case-insensitively on `name`+`unit` (`biomarkerSeries.ts:89-96`); legacy duplicates merge into the most recent series. A one-time `consolidateBiomarkerSeries.ts` maintenance job collapses pre-existing duplicate rows.
 
 ---
 
 ## 14. Onboarding flow
 
-First-session wizard tracked server-side via `users.onboardingCompletedAt`; auto-heals so existing users aren't ambushed.
+First-session wizard backed by `onboardingService.ts`, `routes/onboardingRoutes.ts`, frontend `src/components/onboarding/` and `src/services/api/onboarding.ts`. The wizard captures health-profile basics and seeds the dashboard; completion is tracked per-user so the wizard does not re-trigger.
 
-```mermaid
-stateDiagram-v2
-  [*] --> upload_lab: no labs & no biomarkers
-  upload_lab --> health_profile: lab/biomarkers present, profile missing
-  health_profile --> upload_insurance: profile set, no plan
-  upload_insurance --> done: any meaningful data → auto-complete
-  done --> [*]
+```
+Login (first session) ──▶ onboarding wizard (frontend onboarding/)
+        │
+        ▼
+GET/POST /api/v1/onboarding  ──▶ onboardingService (withRLSContext)
+        │                          • persist health-profile (healthProfileEncrypted)
+        │                          • mark onboarding complete on the user
+        ▼
+Dashboard (zero-data first-run CTA shown until first biomarker, ONB-7)
 ```
 
-- Routes: `GET /onboarding/status`, `POST /onboarding/complete` (auth required) — `backend/src/routes/onboardingRoutes.ts:22-43`.
-- Status computes step booleans (`hasLabReport`, `hasInsurancePlan`, `hasBiomarkers`, `hasHealthProfile`) and `suggestedNextStep` (`backend/src/services/onboardingService.ts:14-114`). Priority: lab → profile → insurance (`pickSuggestedStep:49-52`).
-- Auto-complete: if any meaningful data exists and no completion stamp, it stamps `onboardingCompletedAt` automatically (`onboardingService.ts:100-107`).
-- Frontend components live in `src/components/onboarding/` (`prompts/00-index.md:121`).
+Onboarding state-change endpoints are behind `authenticate` + `csrfProtection`; the health-profile write encrypts `User.healthProfileEncrypted` (PHI). Endpoint contracts in [`API_REFERENCE.md`](./API_REFERENCE.md).
 
 ---
 
 ## 15. Audit logging flow
 
-Every PHI access/mutation writes an encrypted snapshot to `audit_logs`; a scheduler purges rows older than ~7 years.
+Every PHI access/mutation writes an encrypted snapshot to `audit_logs`; retention is DB-enforced and swept by a scheduler.
 
 ```
-controller/service
-   │  auditService.log({ userId, action, resourceType, resourceId,
-   │                     previousValue?, newValue?, tx?, failClosed? })
-   ▼
-auditLog.log()  (backend/src/services/auditLog.ts:237)
-   │  encrypt previousValue/newValue with SYSTEM salt (auditLog.ts:220)
-   │  if entry.tx → write on SAME tx (atomic with the operation)   :257-264
-   │  else → withRLSContext(null, ..., { isAdmin: true })          :266-275
-   ▼
-audit_logs row (previous_value_encrypted, new_value_encrypted, metadata JSON)
-   │
-   ▼  daily (or Cloud Scheduler)
-cleanupOldLogs(): delete where createdAt < now - 2555 days         :531-555
+controller ──▶ auditService.logAccess / logCreate / logUpdate({ userId, action, resourceType,
+                 resourceId, previousValues?, newValues?, metadata? }, { req, userId, tx })
+                         │  (auditLog.ts)
+                         ▼
+   encrypted snapshot row in audit_logs
+   (previousValueEncrypted, newValueEncrypted, metadataEncrypted — encryption.ts:527-531)
+                         │
+                         ▼
+   DELETE policy: USING (is_admin_session() AND created_at < now() - interval '7 years')
+                  (migration 20260613_force_rls_and_audit_retention — DB-enforced retention)
+                         │
+                         ▼
+   retention sweep: startAuditCleanup (auditLog.ts:669, daily) OR Cloud Scheduler
+   POST /api/v1/internal/audit-cleanup when AUDIT_CLEANUP_TOKEN is set (auditLog.ts:674-678)
 ```
 
-- `RETENTION_DAYS = 2555` (~7 years) — `auditLog.ts:10`.
-- **Fail-closed**: for PHI mutations (`failClosed`), a failed audit write re-throws and aborts the operation (`auditLog.ts:291-298`); read/auth audits are best-effort.
-- PHI snapshots use the system salt (not per-user) so they remain decryptable after account deletion (`auditLog.ts:148,220`).
-- Cleanup runs as an in-process daily `setInterval` **unless** `AUDIT_CLEANUP_TOKEN` is set, in which case it's delegated to Cloud Scheduler POSTing `/internal/audit-cleanup` (`auditLog.ts:582-613`, `routes/internalRoutes.ts:40-72`).
+The legacy plaintext `audit_logs.metadata` column was **irreversibly dropped** (M6, `20260615_drop_legacy_audit_metadata`); only `metadataEncrypted` remains. The `audit_logs_insert` policy was tightened from `WITH CHECK (true)` to `user_id = current_user_id() OR is_admin_session() OR current_user_id() IS NULL` (L40) so rows can't be forged to an arbitrary user.
 
 ---
 
 ## 16. Deployment topology
 
-| Tier | Local (dev) | Staging | Production |
-|---|---|---|---|
-| `NODE_ENV` | `development` (default/unset) | `staging` | `production` | 
-| Backend | `tsx watch src/app.ts` on :3001 | Cloud Run revision | Cloud Run `ownmyhealth-backend` (Node 20 Alpine) |
-| Frontend | Vite dev :5173 | — | GCS bucket `ownmyhealth-frontend` |
-| DB | local/Prisma Postgres | Cloud SQL | Cloud SQL |
-| Claude | runtime-gated (BAA warn) | **BAA inactive — blocked** | gated by `ANTHROPIC_BAA_ACTIVE` |
-| SendGrid | optional | **sandbox (no delivery)** | live (sandbox forbidden) |
-| Demo account | allowed | allowed | **forbidden** |
-
-Env tiering: `isProductionEnv`/`isStagingEnv`/`isDevelopmentEnv` (`backend/src/config/index.ts:34-36`); staging carveouts (Claude locked, SendGrid sandbox, demo allowed) `config/index.ts:30-33,341-427`. CMD: `sh -c "npx prisma migrate deploy && node dist/app.js"` (`backend/Dockerfile:51`; mirrored `railway.toml:9`). Node version: **Node 20 Alpine** (`Dockerfile:4,24`). Health checks: container `/health` (`Dockerfile:48-49`); Railway `/api/v1/health` (`railway.toml:10`).
+The frontend is static files in a GCS bucket; the backend is a Cloud Run service; migrations run as a **separate Cloud Run job**, not at container boot.
 
 ```mermaid
 flowchart LR
-  A[git push master/main] --> B[GitHub Actions deploy.yml]
-  B --> C[docker build + push → Artifact Registry :sha]
-  C --> D[gcloud run deploy --no-traffic --max-instances=3 --tag staging-sha]
-  D --> E[smoke-test /api/v1/health]
-  E --> F[promote: update-traffic --to-revisions NEW=100]
-  F --> G[post-promote prod health probe]
-  B --> H[deploy-frontend: vite build → gsutil rsync → GCS]
+  Repo[GitHub repo] --> CI[ci.yml: lint + test + build + gitleaks + npm audit high + live-PG RLS job]
+  CI -->|needs: ci| D[deploy.yml build-and-stage]
+  D --> IMG[Docker build + push :sha → Artifact Registry]
+  IMG --> MIG[ownmyhealth-migrate Cloud Run job: prisma migrate deploy]
+  MIG --> STAGE[Cloud Run revision @ 0% traffic, tag staging-sha]
+  STAGE --> SMOKE[smoke-test: probe /api/v1/health]
+  SMOKE --> PROMOTE[promote: shift 100% via --to-revisions, prod health probe]
+  PROMOTE --> FE[deploy-frontend needs:ci,promote: gsutil rsync SPA → GCS]
+  PROMOTE --> CR[(Cloud SQL + GCS + Secret Manager)]
 ```
 
-Deploy stages: build-and-stage at 0% traffic (`deploy.yml:30-108`), smoke-test (`:114-139`), promote to 100% via explicit `--to-revisions` (`:149-171`), frontend `gsutil rsync` + no-cache `index.html` (`:224-235`). `--max-instances=3` bounds in-memory rate-limiter/spend dilution (`deploy.yml:78-89`). The GitHub workflow that builds + deploys the backend is **`.github/workflows/deploy.yml`** (Acceptance Q18).
+- **Migrations run as a job, NOT at boot** — Dockerfile `CMD ["node", "dist/app.js"]` (`backend/Dockerfile:93`); migrate runs as job `ownmyhealth-migrate` (`deploy.yml`, env `MIGRATE_JOB`) AFTER image push, BEFORE the revision is staged, so a failed migration fails the deploy, never the running service. (Old `migrate && node` boot CMD caused a 10-day outage — teardown #18, `Dockerfile:86-92`.)
+- **Deploy gated on CI** — `deploy.yml` invokes `ci.yml` via `workflow_call` and `build-and-stage` has `needs: ci`. CI includes frontend lint/test/build, backend lint/`test:ci`/build, a **Security Audit** job (gitleaks + `npm audit --audit-level=high` both sides + `check-rls-wrappers.sh`), and an **RLS Regression job** that runs the tenant-isolation suite against a real Postgres 16 as a NOBYPASSRLS role.
+- **Staged deploy**: 0%-traffic revision → smoke-test → named-revision promote (deterministic rollback) → frontend `gsutil rsync` (needs `[ci, promote]`).
+- **`maintenance.yml`** — manual `workflow_dispatch` running one-time backfills (dry-run default) as job `ownmyhealth-maintenance`.
 
-### Service-to-service map (production)
+### Environment breakdown
 
-```
-Cloud Run ──pg Pool (SSL)──▶ Cloud SQL (DATABASE_URL)
-          ──HTTPS──▶ api.anthropic.com (Claude, 30s timeout)
-          ──HTTPS──▶ Google Document AI (OCR, BAA-gated)
-          ──HTTPS──▶ Google Cloud Storage (uploads bucket GCS_BUCKET_NAME)
-          ──HTTPS──▶ SendGrid (email)
-          ──HTTPS──▶ Quest FHIR (SSRF-allowlisted)
-Secrets   ──▶ Secret Manager (JWT_*, PHI_ENCRYPTION_KEY, AUDIT_LOG_SALT, API keys)
-```
+| Env | Frontend | Backend | DB | Notes |
+|---|---|---|---|---|
+| Local | Vite dev (`:5173`) | `tsx watch src/app.ts` (`:3001`) | local/Cloud SQL | `DISABLE_CSRF=true` optional; mock FHIR mounted (`app.ts:275`); migrations applied manually. |
+| Staging | GCS | Cloud Run | Cloud SQL | `deploy-staging.yml`; SendGrid sandbox forced; BAA gates warn. |
+| Prod | GCS bucket (SPA) | Cloud Run `ownmyhealth-backend` (Node 22) | Cloud SQL | `NODE_ENV=production` + `OMH_DEPLOY_ENFORCE_PROD=true` baked into image (`Dockerfile:53-54`); BAA gates hard-fail; FORCE-RLS boot assertion active. |
+
+Cost model and per-user economics: [`FINANCIAL_TRACKER.md`](./FINANCIAL_TRACKER.md). Operations: [`RUNBOOK.md`](./RUNBOOK.md). Local setup: [`LOCAL_DEV.md`](./LOCAL_DEV.md).
 
 ---
 
 ## 17. Scheduled jobs
 
-All run as in-process `setInterval` started in `startServer()` (`backend/src/app.ts:342-349`) and stopped on `SIGTERM`/`SIGINT` (`app.ts:382-395`).
-
 | Job | File:line | Cadence | Effect |
 |---|---|---|---|
-| Session cleanup | `backend/src/services/authService.ts:1408` (`startSessionCleanup`) | every 10 min | `sweepRevokedTokens()` + delete expired `sessions` rows (`authService.ts:1417-1424,1378-1399`) |
-| Audit log cleanup | `backend/src/services/auditLog.ts:582` (`startAuditCleanup`) | daily (24h); **disabled if `AUDIT_CLEANUP_TOKEN` set** → Cloud Scheduler | delete `audit_logs` rows older than 2555 days (`auditLog.ts:531-555`) |
-| Engagement email | `backend/src/schedulers/emailScheduler.ts:311` (`startEmailScheduler`) | hourly tick; weekly summary Mon 08:00-08:59 UTC; goal reminders + plan-expiring sweep once per UTC day | SendGrid digests via `notificationService` (`emailScheduler.ts:1-18,280-309`) |
+| Audit log cleanup | `backend/src/services/auditLog.ts:669` (`startAuditCleanup`) | daily (24h `setInterval`); **disabled in favor of Cloud Scheduler if `AUDIT_CLEANUP_TOKEN` set** (`auditLog.ts:674-678`) | Delete audit rows older than the 7-year window |
+| Session cleanup + token sweep | `backend/src/services/authService.ts:1792` (`startSessionCleanup`) | every 10 minutes (`authService.ts:1801-1808`) | `sweepRevokedTokens()` (evict expired in-memory blacklist) + `cleanupExpiredSessions()` (prune expired `sessions` + `revoked_access_tokens`) |
+| Engagement email scheduler | `backend/src/schedulers/emailScheduler.ts:462` (`startEmailScheduler`) | hourly tick (`emailScheduler.ts:464-466`); weekly summary + goal reminders gated to Mon 8am UTC, daily plan-expiring sweep | Send SendGrid digests; multi-instance dedupe via `users.last_weekly_summary_sent` / `last_plan_expiring_sent` claim markers |
 
-Which scheduler removes expired sessions and at what cadence (Acceptance Q9): `startSessionCleanup` in `authService.ts:1408`, every **10 minutes**.
+All three start in `startServer()` (`app.ts:342-349`) and stop on graceful shutdown (`app.ts:384-386`).
 
 ---
 
-## 18. Role-based access control (RBAC)
+## 18. Role-based access control
 
-Two orthogonal authorization axes: **role** (RBAC) and **billing plan** (plan gating).
+Two layered authorization axes: **RBAC** (role) and **plan gating** (billing tier).
 
-### Role hierarchy
+### RBAC (`middleware/rbac.ts`)
+
+| Role | Level | Capabilities |
+|---|---|---|
+| PATIENT | 1 | Own data CRUD, manage provider consent, AI guidance |
+| PROVIDER | 2 | + read authorized patient data, scoped by consent permission flags ([§9](#9-provider-patient-consent)) |
+| ADMIN | 3 | + user management, audit-log viewer, system health/config |
+
+### Plan gating (`middleware/planGating.ts`, `config/plans.ts`) — separate axis
+
+`requirePlanLimit(limitKey)` (`planGating.ts:37-124`; `requirePlanFeature` is an alias) reads the **effective plan fresh from the DB under RLS** (not the JWT), applies a `planExpiresAt → FREE` downgrade, and calls `usageTracker.checkPlanLimit`. **Fails CLOSED to FREE on DB error** (`planGating.ts:76-88`) — degrades PRO/TEAM rather than trusting the more-permissive JWT.
+
+- Plans `FREE`/`PRO`/`TEAM` in `config/plans.ts:40-102`; `-1` = unlimited, `0` = disabled, `N` = cap.
+- **Enforced numeric limits**: `maxBiomarkers`, `insurancePlans`, `aiChatsPerDay`, `aiGuidancePerDay`, `pdfUploadsPerMonth`, `costAnalysisPerMonth`. **Enforced booleans**: `healthProfile`, `questFhirIntegration`. **Deliberately ungated** (true on all tiers): `providerSharing` (patient right) and `dataExport` (HIPAA requirement) (`plans.ts:54-61`).
+- Known documented TOCTOU race on count-then-allow (`usageTracker.ts:179-198`), backstopped by the dollar spend-cap. Detail in [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
+
+### Rate limiters (`middleware/rateLimiter.ts`) — 8 named
+
+`standardLimiter` (global, `:66`), `authLimiter` (`:88`), `strictAuthLimiter` (`:105`), `uploadLimiter` (`:134`), `sensitiveLimiter` (`:151`), `aiLimiter` (`:177` — guards Claude endpoints), `providerAccessRequestLimiter` (`:211`), `bulkOperationLimiter` (`:240`). Shared Redis store via `rateLimitStore.ts` when `REDIS_URL` set.
+
+### Demo protection (`middleware/demoProtection.ts`)
+
+`demoProtection` / `blockDemoAI` block the demo account from creating real PHI or hitting AI endpoints; applied per-route on mutation and AI routes (e.g. FHIR `blockDemoAI`, `fhirRoutes.ts:30-72`). The demo account is blocked entirely in production (`config/index.ts:489`).
+
+---
+
+## 19. Error handling
+
+The API **always** returns a uniform envelope; on error:
 
 ```ts
-// Source: backend/src/middleware/rbac.ts:16-20
-export const ROLE_HIERARCHY = { ADMIN: 3, PROVIDER: 2, PATIENT: 1 } as const;
+// Source: backend/src/middleware/errorHandler.ts:L199-L210
+const response: ApiResponse = {
+  success: false,
+  error: {
+    code,
+    message,
+    ...(details ? { details } : {}),
+    ...(config.isDevelopment ? { stack: err.stack } : {}),   // stack ONLY in dev
+  },
+};
+res.status(statusCode).json(response);
 ```
 
-| Role | Level | Capabilities | Source |
-|---|---|---|---|
-| PATIENT | 1 | own data CRUD; manage provider consent; AI guidance | `rbac.ts:32-38` |
-| PROVIDER | 2 | + read/write consented patients' biomarkers/health-needs, read insurance (scoped by capability flags + consent) | `rbac.ts:39-45`, `checkProviderPatientAccess:202-250` |
-| ADMIN | 3 | + full access; user management, audit viewer, system health | `rbac.ts:46-52,137-139` |
-
-Helpers: `requireRole(...)` (`rbac.ts:58`), `requireMinRole` (`:77`), `requirePermission` (`:98`), `requireResourceAccess` (`:121`), `adminOnly()` (`:358`), `providerOrAdmin()` (`:365`). Demo accounts are additionally constrained by `demoProtection` middleware (`backend/src/middleware/demoProtection.ts`) — see Q16 below.
-
-### Plan gating (separate axis)
-
-`requirePlanLimit(limitKey)` reads the **current DB plan** (not the possibly-stale JWT), enforces `planExpiresAt`, and 403s with `code:'PLAN_LIMIT_EXCEEDED'` + `upgradeRequired:true` (`backend/src/middleware/planGating.ts:37-113`). The plan catalogue is `backend/src/config/plans.ts` — tiers `FREE`/`PRO`/`TEAM` with per-feature limits (`-1` = unlimited; `plans.ts:40-98`). Which middleware gates by billing plan (Acceptance Q24): `planGating.ts:37` + `config/plans.ts:40`.
-
-### Demo protection (Acceptance Q16)
-
-`blockDemoAI` blocks demo accounts from every AI/upload endpoint (`demoProtection.ts:164-175`), applied in `aiRoutes.ts:33`, `biomarkerRoutes.ts:124`, `uploadRoutes.ts:81,98,128`, `fhirRoutes.ts:33,46,57`. `blockDemoProfileUpdate`/`blockDemoAdminAccess`/`blockDemoUserModification` cover profile/admin/user-mutation routes (`demoProtection.ts:67-156`). Demo identity resolves against `DEMO_EMAIL`; an unset value matches no one (`demoProtection.ts:33-36`). Demo mode is forbidden in production (`config/index.ts:408-414`).
+Error classes (`errorHandler.ts:7-...`) map to status + code: `BadRequestError` 400/`BAD_REQUEST`, `UnauthorizedError` 401/`UNAUTHORIZED`, `ForbiddenError` 403/`FORBIDDEN`, `NotFoundError` 404/`NOT_FOUND`, `ServiceUnavailableError` 503 (AI budget). Stack traces are never sent in production. Success responses are `{ success: true, data, pagination? }` (mirror in frontend `src/services/api/client.ts:25-35`).
 
 ---
 
-## 19. File structure (verified counts, 2026-06-01)
+## 20. File structure
 
-Counts from `prompts/00-index.md:113-125` (verify with `Glob`).
+Counts are non-test files at HEAD `fb2cd32` (verified via Glob; `*.test.ts` excluded).
 
-| Directory | Purpose | Count |
+### Backend (`backend/src/`)
+
+| Directory | Count | Purpose |
 |---|---|---|
-| `backend/src/routes/` | API route modules (mounted in `routes/index.ts`) | 18 incl. `index.ts` |
-| `backend/src/controllers/` | route handlers (+ `controllers/upload/` subdir) | 10 top-level + `index.ts` |
-| `backend/src/middleware/` | security/validation middleware | 10 + `index.ts` |
-| `backend/src/services/` | business logic (+ `fhir/`, `knowledge/`, `data/`) | ~23 top-level |
-| `backend/src/schedulers/` | `emailScheduler.ts` | 1 |
-| `backend/src/config/` | `index.ts`, `jwtOptions.ts`, `plans.ts` | 3 |
-| `backend/prisma/migrations/` | SQL migrations | 22 dirs |
-| `src/components/` | React `.tsx` across 14 dirs | 73 |
-| `src/services/api/` | frontend API client modules | 17 + `index.ts` |
-| `.github/workflows/` | `ci.yml`, `deploy.yml`, `deploy-staging.yml` | 3 |
+| `routes/` | 18 | API route definitions incl. `index.ts`, `internalRoutes.ts` |
+| `controllers/` (top-level) | 12 | Request handlers (incl. `index.ts`, `testHelpers.ts`) |
+| `controllers/upload/` | 4 | `labUploadController`, `sbcUploadController`, `shared`, `index` |
+| `middleware/` | 11 | auth, csrf, rbac, rateLimiter, rateLimitStore, demoProtection, validation, errorHandler, planGating, aiSpendGuard, index |
+| `services/` (top-level) | 27 | Business logic incl. `database`, `encryption`, `userEncryption`, `authService`, `auditLog`, `biomarkerSeries`, `biomarkerConsolidation`, `goalValueBackfill`, `providerAccess` |
+| `services/fhir/` | 7 | `fhirClient`, `smartAuth`, `labSyncService`, `loincMapper`, `urlSafety`, `mockFhirServer`, `types` |
+| `services/knowledge/` | 4 | Health/insurance knowledge retrieval |
+| `services/data/` | 1 | `biomarkerDefinitions` (canonical biomarker reference) |
+| `schedulers/` | 1 | `emailScheduler` |
+| `config/` | — | `index.ts` (env catalogue), `jwtOptions.ts`, `plans.ts` |
+| `maintenance/` | — | one-off backfill jobs (`backfillGoalValues`, `backfillUserFileNames`, `consolidateBiomarkerSeries`) |
 
-Glob to re-verify routes: `Glob pattern: "backend/src/routes/*.ts"`. Models: 18 (`backend/prisma/schema.prisma`), with `InsuranceBenefit`, `SystemConfig`, `LabConnection` added and `DNAVariant`/`GeneticTrait` dropped in `20260423_drop_dna_genetics` (`prompts/00-index.md:122`).
+### Frontend (`src/`)
 
----
+| Directory | Count | Purpose |
+|---|---|---|
+| `components/` | ~73 `.tsx` across 14 dirs | `admin, analytics, auth, biomarkers, common, dashboard, files, health, insurance, onboarding, provider, settings, trends, upload` |
+| `services/api/` | 18 `.ts` | `admin, ai, auth, biomarkers, client, expenses, fhir, files, healthGoals, healthNeeds, index, insurance, onboarding, patient, plan, provider, settings, upload` (`ai`, `fhir`, `onboarding`, `plan` are post-06-01) |
+| `contexts/` | — | `AuthContext` (token refresh + multi-tab session), `ThemeContext` |
+| `utils/`, `hooks/`, `data/`, `types/` | — | helpers, `useBiomarkerData` (bounded-parallel pagination), `biomarkerDirections`, types |
 
-## 20. Cross-cutting reference answers
+### Infra
 
-- **Error shape (Acceptance Q19)**: every API error is `{ success: false, error: { code, message, details?, stack? (dev only) } }` (`backend/src/middleware/errorHandler.ts:199-210`). Stack traces and raw messages are suppressed in production (`errorHandler.ts:144,206`).
-- **Third-party timeouts (Acceptance Q20)**: Anthropic SDK 30s timeout / 2 retries (`anthropicClient.ts:24-25,56-57`); frontend fetch 30s `AbortController` (`src/services/api/client.ts:12,114-117`); pg pool `connectionTimeoutMillis: 30000`, `statement_timeout: 30000` (`database.ts:112-113`); RLS tx timeouts 30s (`database.ts:454`). FHIR/Quest calls use native `fetch` (no explicit per-call timeout found — relies on platform default).
-- **User deletion (Acceptance Q14)**: deletes cascade from `User` — e.g. `ProviderPatient` (`schema.prisma:109-110`) and `LabConnection` (`schema.prisma:711`) declare `onDelete: Cascade`. Audit logs deliberately survive deletion (system-salt encryption). Full cascade matrix: [DATA_MODEL.md#cascades](./DATA_MODEL.md).
-- **BAA env vars (Acceptance Q13)**: `ANTHROPIC_BAA_ACTIVE` (Claude) and `GOOGLE_BAA_ACTIVE` (Document AI OCR) — `config/index.ts:185,176,300-333`. See [ENV_VARS.md](./ENV_VARS.md).
-- **Cost model**: per-user dollar cost is not derivable from code. `TBD (external: per-user cost estimate lives in the billing console — see FINANCIAL_TRACKER.md)`.
+| Path | Purpose |
+|---|---|
+| `.github/workflows/` | 4 workflows: `ci.yml`, `deploy.yml`, `deploy-staging.yml`, `maintenance.yml` |
+| `backend/Dockerfile` | Node 22-alpine multi-stage, digest-pinned, source-maps stripped, `CMD ["node","dist/app.js"]` |
+| `backend/railway.toml` | Runtime env config |
+| `vite.config.ts` | Build chunk splits (PDF, OCR, charts) |
 
----
+### ER overview (top 8 of 19 models)
 
-## Acceptance questions — self-check
+```mermaid
+erDiagram
+  User ||--o{ Biomarker : owns
+  User ||--o{ Session : has
+  User ||--o{ RevokedAccessToken : revokes
+  User ||--o{ ProviderPatient : "patient/provider"
+  User ||--o{ InsurancePlan : owns
+  User ||--o{ HealthGoal : owns
+  User ||--o{ LabConnection : connects
+  Biomarker ||--o{ BiomarkerHistory : "older readings"
+```
 
-1. **Middleware before CSRF, in order?** §4: trust-proxy → helmet → cors → OPTIONS → cookieParser → compression, then CSRF. ✓
-2. **How is the RLS user identified?** §3/§7: `authenticate` sets `req.user.id`; controllers pass it to `withRLSContext(userId, tx => ...)` which sets `app.current_user_id`. ✓
-3. **`withRLSContext` vs `withRLSTransaction`?** §7: both wrap a tx + SET LOCAL; the latter uses Prisma default tx options and is for atomic multi-statement writes. ✓
-4. **Why is `prisma.X` inside the callback wrong?** §7: it runs on a different connection without SET LOCAL → policy sees `current_user_id()` NULL → bypass/empty. ✓
-5. **Which service encrypts/decrypts PHI?** §8: `EncryptionService` (`encryption.ts`); encrypt before write, decrypt on read. ✓
-6. **How does CSRF double-submit work / compare fn?** §6: `crypto.timingSafeEqual` over SHA-256 digests of cookie vs header. ✓
-7. **Consent state machine?** §9: PENDING → ACTIVE → {REVOKED, EXPIRED}; SUSPENDED in enum but route-unwired. ✓
-8. **Which limiter guards Claude endpoints?** §4/§10/§11: `aiLimiter` (10/hr, user-keyed). ✓
-9. **Session-cleanup scheduler + cadence?** §17: `startSessionCleanup` (`authService.ts:1408`), every 10 min. ✓
-10. **Cloud Run vs Cloud SQL vs GCS in prod?** §1/§16: backend in Cloud Run, DB in Cloud SQL, frontend + uploads in GCS. ✓
-11. **`POST /api/v1/biomarkers` path?** §3 worked example. ✓
-12. **Frontend refresh of expired token?** §5: `attemptTokenRefresh` POSTs `/auth/refresh` with the refresh cookie. ✓
-13. **BAA env vars?** §11/§20: `ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`. ✓
-14. **What changes on user delete?** §20: cascades (ProviderPatient, LabConnection…); audit logs survive. ✓
-15. **SBC upload PDF→records?** §13: PDF → `extractSBCData` → map → encrypted `InsurancePlan`/`InsuranceBenefit`. ✓
-16. **Which middleware blocks demo PHI/AI + where?** §18: `blockDemoAI`/`demoProtection` family, applied on AI/upload/profile routes. ✓
-17. **Node version in Cloud Run?** §16: Node 20 Alpine; CMD `sh -c "npx prisma migrate deploy && node dist/app.js"`. ✓
-18. **Which workflow deploys backend?** §16: `.github/workflows/deploy.yml`. ✓
-19. **API error shape?** §20: `{ success:false, error:{ code, message, details?, stack?} }`. ✓
-20. **Third-party APIs + timeouts?** §20. ✓
-21. **AI spend cap?** §11: `aiSpendGuard` + `aiCostTracker`, `AI_DAILY_BUDGET_USD`/`AI_USER_DAILY_BUDGET_USD`. ✓
-22. **Quest connect + token storage?** §12: OAuth via `smartAuth`, encrypted `LabConnection.accessTokenEncrypted`/`refreshTokenEncrypted`. ✓
-23. **FHIR SSRF protection?** §12: `services/fhir/urlSafety.ts` host allowlist + private-host block. ✓
-24. **Plan-gating middleware + catalogue?** §18: `planGating.ts` + `config/plans.ts`. ✓
-25. **Real `ProviderPatientStatus` states?** §9: PENDING, ACTIVE, SUSPENDED, REVOKED, EXPIRED (`schema.prisma:515-521`). ✓
+Full ER, all 19 models, RLS policies, and cascade behavior in [`DATA_MODEL.md`](./DATA_MODEL.md). (`DNAVariant`/`GeneticTrait` were dropped in `20260423_drop_dna_genetics` — not present.)
 
 ---
 
-## 21. Prompt drift log
+## Acceptance questions — self-answered
 
-- **CLAUDE.md middleware order is stale.** CLAUDE.md "Middleware Stack" lists Helmet → CORS → Cookie Parser → CSRF → Rate Limiting → Body Parser. The actual order inserts `compression` between cookieParser and CSRF, and places `standardLimiter` **after** CSRF, not before (`backend/src/app.ts:197-220`). Plus `morgan`, `requireJsonContentType`, and the `/api` no-store layer that CLAUDE.md omits. This doc follows the code.
-- **CLAUDE.md controller/middleware/service counts are stale.** CLAUDE.md says "controllers (10 files)" including `uploadController.ts`, "middleware (8 files)", "services (18 files)". Actual: the single `uploadController.ts` is gone (split into `controllers/upload/`), middleware is 10 modules + `index.ts`, services ~23 top-level. Counts here follow `prompts/00-index.md:113-125`.
-- **`ProviderPatientStatus.SUSPENDED` has no writer.** The enum includes `SUSPENDED` (`schema.prisma:519`) and the spec's example state machine includes `ACTIVE↔SUSPENDED` transitions, but no route in `backend/src/routes/patientRoutes.ts` writes `status:'SUSPENDED'` (grep found only PENDING/ACTIVE/REVOKED writes). The §9 diagram reflects the wired transitions and notes SUSPENDED as schema-only.
-- **RLS migration `20260107` still references dropped tables/columns.** The original RLS migration enables RLS on `dna_data`/`dna_variants`/`genetic_traits` and `has_provider_access` references `can_view_dna` (`migration.sql:75-77,53`). Those models/columns were dropped in `20260423_drop_dna_genetics`; the migration text is historical and superseded — current schema has no DNA tables (`prompts/00-index.md:122`).
-- **`config/index.ts` exposes more env vars than CLAUDE.md's list.** Notably `AUDIT_LOG_SALT`, `REDIS_URL`, `AUDIT_CLEANUP_TOKEN`, `AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`, `ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE`, the full `QUEST_FHIR_*` set, `COOKIE_DOMAIN`/`COOKIE_SAME_SITE`, `DATABASE_POOL_SIZE`, `SENDGRID_SANDBOX_MODE`. Catalogued in [ENV_VARS.md](./ENV_VARS.md).
+1. **Middleware before CSRF, in order?** trust-proxy → helmet → cors (+OPTIONS) → cookieParser → compression → **then** csrfProtection ([§4](#4-middleware-stack-mount-order), `app.ts:120-217`).
+2. **How is the user identified for RLS?** `authenticate` sets `req.user.id`; controllers pass it to `withRLSContext(userId, tx => ...)` which `SET LOCAL app.current_user_id` ([§7](#7-row-level-security-rls), `database.ts:498,490-491`).
+3. **`withRLSContext` vs `withRLSTransaction`?** Both wrap `applyRLSContext` in a transaction; use `withRLSTransaction` for atomic multi-write ops / longer windows ([§7](#7-row-level-security-rls), `database.ts:519-533`).
+4. **Why is `prisma.X` inside the callback wrong?** It runs on a different connection without the `SET LOCAL`, so `current_user_id()` is NULL → wrong/no rows ([§7](#7-row-level-security-rls)).
+5. **Which service encrypts/decrypts PHI?** `encryption.ts` (`EncryptionService`), per-user key via `userEncryption.ts`, on both write and read ([§8](#8-encryption-layer)).
+6. **CSRF double-submit + compare fn?** SHA-256 then `crypto.timingSafeEqual` (`csrf.ts:177-179`) ([§6](#6-csrf-architecture)).
+7. **Consent state machine?** PENDING → ACTIVE/REVOKED; ACTIVE → SUSPENDED/REVOKED/EXPIRED ([§9](#9-provider-patient-consent), `schema.prisma:578-584`).
+8. **Rate limiter for Claude?** `aiLimiter` (`rateLimiter.ts:177`), plus `aiSpendGuard` dollar cap ([§10](#10-ai-extraction-architecture), [§11](#11-ai-cost-control-architecture)).
+9. **Session cleanup cadence?** `startSessionCleanup`, every 10 min (`authService.ts:1792,1801`) ([§17](#17-scheduled-jobs)).
+10. **Cloud Run vs Cloud SQL vs GCS?** Cloud Run = Express API; Cloud SQL = Postgres; GCS = SPA static + uploaded files ([§16](#16-deployment-topology)).
+11. **`POST /api/v1/biomarkers` path?** global stack → `authenticate` → csrf → validate → `requirePlanLimit(maxBiomarkers)` → controller → `withRLSTransaction` → `upsertBiomarkerReading` → audit → JSON ([§3](#3-request-lifecycle), [§13](#13-file-upload--ocr-pipeline--biomarker-time-series-merge)).
+12. **Frontend refresh of expired access token?** `apiFetch` catches 401 → `attemptTokenRefresh()` POSTs `/auth/refresh` with `x-csrf-token`, one-shot retry (`src/services/api/client.ts:141-192,308-334`) ([§5](#5-authentication-architecture)).
+13. **Env vars gating Anthropic BAA?** `ANTHROPIC_BAA_ACTIVE` (+ `ANTHROPIC_API_KEY` trigger), `config/index.ts:381-394` → [`ENV_VARS.md`](./ENV_VARS.md) ([§11](#11-ai-cost-control-architecture)).
+14. **User deletion cascades?** FK `onDelete: Cascade` removes sessions, revoked tokens, lab connections, biomarkers, etc. — full list in [`DATA_MODEL.md`](./DATA_MODEL.md).
+15. **SBC upload PDF→records?** Multer → `processDocument` (pdf/OCR) → `sbcExtraction` (Claude) → `sanitizeExtractedSbc` → `InsurancePlan` rows ([§13](#13-file-upload--ocr-pipeline--biomarker-time-series-merge)).
+16. **Demo-block middleware + where?** `demoProtection`/`blockDemoAI` on mutation + AI routes ([§18](#18-role-based-access-control)).
+17. **Node version + where migrations run?** Node 22-alpine (`Dockerfile:15`), `CMD ["node","dist/app.js"]`; migrations as job `ownmyhealth-migrate` in `deploy.yml`, not at boot ([§16](#16-deployment-topology)).
+18. **Which workflow builds+deploys backend?** `.github/workflows/deploy.yml` (gated `needs: ci`) ([§16](#16-deployment-topology)).
+19. **Error shape?** `{ success: false, error: { code, message, details?, stack?(dev) } }` (`errorHandler.ts:199-210`) ([§19](#19-error-handling)).
+20. **Third-party callers + timeouts?** Anthropic (`anthropicClient`), Document AI (`ocrService`), GCS (`storageService`), SendGrid (`emailService`), Quest FHIR (`smartAuth` 15s, `fhirClient` 30s via AbortController); frontend client 30s ([§12](#12-quest-smart-on-fhir-lab-sync), `src/services/api/client.ts:12`).
+21. **AI spend cap?** `aiSpendGuard.admitAISpend` reserve/settle against `AI_DAILY_BUDGET_USD`/`AI_USER_DAILY_BUDGET_USD`, 503 fail-closed ([§11](#11-ai-cost-control-architecture)).
+22. **Quest connect + token storage?** `smartAuth` PKCE flow → `LabConnection.accessTokenEncrypted`/`refreshTokenEncrypted` (per-user encrypted) ([§12](#12-quest-smart-on-fhir-lab-sync)).
+23. **FHIR SSRF protection?** `services/fhir/urlSafety.ts` `assertAllowedFhirUrl` host allowlist + private-IP block ([§12](#12-quest-smart-on-fhir-lab-sync)).
+24. **Plan-gating middleware + catalogue?** `planGating.requirePlanLimit`, plans in `config/plans.ts` ([§18](#18-role-based-access-control)).
+25. **Real `ProviderPatientStatus` states?** PENDING, ACTIVE, SUSPENDED, REVOKED, EXPIRED (`schema.prisma:578-584`) ([§9](#9-provider-patient-consent)).
 
 ---
 
 ## Related Documents
 
-- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts (request/response, auth, rate limits, audit).
-- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — full per-route middleware chains.
-- [DATA_MODEL.md](./DATA_MODEL.md) — complete ER, per-model tables, RLS policy catalog, cascade matrix.
+- [API_REFERENCE.md](./API_REFERENCE.md) — per-endpoint contracts (request/response, auth, rate limits).
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — per-route middleware chain detail.
+- [DATA_MODEL.md](./DATA_MODEL.md) — full ER, 19 models, RLS policy catalog, cascade behavior.
 - [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — every PHI field × encryption × write/read sites × audit coverage.
-- [ENV_VARS.md](./ENV_VARS.md) — required + optional env vars, consumers, secret classification, BAA gates.
-- [RUNBOOK.md](./RUNBOOK.md) — operating this stack (deploy, rollback, scheduler ops).
-- [LOCAL_DEV.md](./LOCAL_DEV.md) — running backend + frontend + DB locally (mock FHIR, `DISABLE_CSRF`).
-- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open findings against these flows (BAA gates, RLS, SSRF).
-- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — which §164.312 safeguard each layer satisfies.
-- [FINANCIAL_TRACKER.md](./FINANCIAL_TRACKER.md) — cost model and per-user AI spend.
+- [ENV_VARS.md](./ENV_VARS.md) — every env var wired into these flows (BAA gates, budgets, Quest FHIR).
+- [RUNBOOK.md](./RUNBOOK.md) — how to operate, deploy, and run maintenance jobs against this stack.
+- [LOCAL_DEV.md](./LOCAL_DEV.md) — how to run the stack locally.
+- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open findings against these flows (TOCTOU, multi-instance gaps).
+- [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — which safeguard each layer satisfies.
+- [FINANCIAL_TRACKER.md](./FINANCIAL_TRACKER.md) — cost model / per-user economics.
+
+---
+
+## Prompt drift log
+
+- `prompts/16-architecture-doc.md` and the verification table cite **"19 models"** and **"PHI_FIELDS 14 models / 39 fields"** (canonical numbers). The earlier in-task fact-digest draft transiently said "17/18 models" and "37 fields" before self-correcting; the **authoritative live values are 19 models and 14 models / 39 encrypted fields** (`encryption.ts:476-562`, `schema.prisma` model list). `00-index.md` "Verified codebase counts" should reflect 19 models / 39 PHI fields.
+- `CLAUDE.md` "Project Structure" / "Middleware Stack" / "Roles & Access Control" / "PHI Encryption" sections are **stale**: they list 10 controllers (incl. a non-existent `uploadController.ts`), 8 middleware, 13 route files, 18 services, and omit `compression`, `requireJsonContentType`, the `/api` no-store layer, `aiSpendGuard`, `planGating`, the time-series merge, FHIR, cross-instance token revocation, FORCE RLS, and the migrate-as-job change. This doc is generated against the live code per `_doc-quality.md` rule 6 ("trust the code over the prompt").
+- `prompts/16-architecture-doc.md` references migration `20260613_force_rls_and_audit_retention` "all 19 RLS tables" — confirmed against `database.ts:assertRLSForced` and the migration; no drift.
+- The prompt's "Files to review" cite line numbers (`startAuditCleanup:669`, `startSessionCleanup:1792`, `startEmailScheduler:462`, `withRLSContext:498`, `withRLSTransaction:519`, `aiSpendGuard:28`, `RevokedAccessToken schema.prisma:96`, `ProviderPatientStatus schema.prisma:578`) — all verified accurate at HEAD `fb2cd32`.

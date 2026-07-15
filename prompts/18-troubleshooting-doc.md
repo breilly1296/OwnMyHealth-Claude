@@ -4,7 +4,7 @@ tags:
   - troubleshooting
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate TROUBLESHOOTING.md
@@ -41,7 +41,7 @@ Produce `New Project Documents/TROUBLESHOOTING.md` — the **symptom-first catal
 | `backend/src/middleware/errorHandler.ts` | Error envelope shape (`code`-keyed `AppError` hierarchy). |
 | `src/services/api/client.ts` | Frontend interceptor behavior (auto-refresh, auto-redirect). |
 | `src/contexts/AuthContext.tsx` | Mount-time `refreshToken()`→`getCurrentUser()` ordering (the "data disappears on refresh" root cause). |
-| `backend/src/utils/phiRedaction.ts`, `backend/src/utils/pdfRedaction.ts` | PHI/log redaction — the canonical answer to "PHI leaking into logs". |
+| `backend/src/utils/phiRedaction.ts` | PHI/log redaction — the canonical answer to "PHI leaking into logs" (exports `stripPHIFromText` :86, `redactPHI` :97; the legacy `pdfRedaction.ts` was deleted post-2026-06-01 — do not cite it). |
 | `backend/src/middleware/aiSpendGuard.ts`, `backend/src/services/aiCostTracker.ts` | AI budget/spend-cap behavior (`aiSpendGuard` fails closed with 503 `SERVICE_UNAVAILABLE` once the daily/per-user dollar budget is hit; 429 on AI routes is the separate `aiLimiter` rate limiter). |
 | `backend/src/services/fhir/urlSafety.ts`, `backend/src/services/fhir/labSyncService.ts` | Quest/SMART-on-FHIR lab-sync failure modes (SSRF guard, OAuth token expiry). |
 | Project memory (postmortems, session summaries if present) | Retrospective context. |
@@ -57,10 +57,10 @@ Produce `New Project Documents/TROUBLESHOOTING.md` — the **symptom-first catal
    - Data disappears on refresh (auth state)
    - Upload returns 500 / extraction empty
    - RLS mystery (query returns fewer rows than expected)
-4. **Auth symptoms** (each with: symptom, root cause, workaround, fix, files).
+4. **Auth symptoms** (each with: symptom, root cause, workaround, fix, files). **Include the post-06-01 cross-instance access-token revocation symptom class**: a previously-valid access token suddenly returning 401 after a logout-all / password change / single-device logout / admin deactivation or role change. Root cause is the new revocation machinery — per-user `users.tokens_valid_after` cutoff (migration `20260606000002_add_tokens_valid_after`) and the `revoked_access_tokens` jti table (migration `20260613_revoked_access_tokens`); `authenticate`/`optionalAuth`/`requireBearerAuth` now reject stale/revoked tokens via `isAccessTokenStale(userId, iat, jti)` (`backend/src/middleware/auth.ts:106-108`, helpers `isAccessTokenStale`/`revokeAccessTokenCrossInstance`/`fetchUserRevocationState` in `authService.ts`). This is expected behavior, not a bug — the fix is re-login / refresh.
 5. **CSRF symptoms**.
-6. **Database symptoms** (pool exhaustion, migration failure, RLS context loss).
-7. **Deployment symptoms** (Cloud Run env-update pinning — cite postmortem; workflow failure; Docker build).
+6. **Database symptoms** (pool exhaustion, migration failure, RLS context loss, **service won't boot due to a failed FORCE-RLS invariant** — `assertRLSForced()` runs at startup in `backend/src/services/database.ts:270` (called :193) and, in prod, hard-fails the boot if any RLS-enabled table is not `FORCE ROW LEVEL SECURITY`; migration `20260613_force_rls_and_audit_retention` applied FORCE RLS to all 19 RLS tables. Catalog "boot aborts with FORCE-RLS assertion failure" as a distinct high-impact startup symptom).
+7. **Deployment symptoms** (Cloud Run env-update pinning — cite postmortem; workflow failure; Docker build; **migrate-job failure** — migrations no longer run at container boot: the Dockerfile `CMD` is just `["node","dist/app.js"]` (`backend/Dockerfile:86,93`) and migrations run as a dedicated Cloud Run job `ownmyhealth-migrate` (`--max-retries 0`) executed by `deploy.yml` AFTER the image push but BEFORE the revision is staged, so a failed migration fails the **deploy** at the migrate-job step rather than crash-looping the running service; deploy is also gated on CI (`needs: ci`). Catalog "deploy red at the migrate step" as its own symptom).
 8. **Frontend symptoms** (blank page, CORS, cookie-SameSite, Vite/SWC on ARM64 per memory).
 9. **API / 500 symptoms**.
 10. **PDF / OCR / Claude extraction symptoms**.
@@ -86,7 +86,7 @@ Produce `New Project Documents/TROUBLESHOOTING.md` — the **symptom-first catal
 
 **Workaround**: hard refresh twice (in-flight refresh completes before 2nd mount).
 
-**Fix**: in `AuthContext.tsx`, `await refreshToken()` before `getCurrentUser()`. See commit `195ccc1`, and `50d7426` for the regression test.
+**Fix**: in `AuthContext.tsx`, `await refreshToken()` before `getCurrentUser()`. See commit `195ccc1` ("Fix auth token restoration order on page refresh"). (Do not cite `50d7426` here — that is the unrelated "add domain to all auth cookies for cross-domain support" fix, not the ordering regression test; find the actual regression-test commit via `git log` if you cite one.)
 
 **Files**: `src/contexts/AuthContext.tsx:Lxx-Lyy`.
 
@@ -105,7 +105,13 @@ User reports "I'm stuck on login"
      │                 └── yes ──▶ refresh cookie present?
      │                                 ├── no  ──▶ re-login
      │                                 └── yes ──▶ /auth/refresh succeeds?
-     │                                                   ├── no  ──▶ "JWT secret rotated" playbook in RUNBOOK.md
+     │                                                   ├── no  ──▶ token revoked cross-instance?
+     │                                                   │             (tokens_valid_after cutoff /
+     │                                                   │              revoked_access_tokens jti —
+     │                                                   │              after logout-all / pwd change /
+     │                                                   │              deactivation) ──▶ re-login (expected)
+     │                                                   │             else ──▶ "JWT secret rotated"
+     │                                                   │              playbook in RUNBOOK.md
      │                                                   └── yes ──▶ AuthContext ordering bug
      └── no (loops in UI) ──▶ frontend redirect loop; see "Data disappears…"
 ```
@@ -134,7 +140,7 @@ After writing the doc, self-answer each **using only the doc + siblings**:
 2. What's the decision tree for a stuck-on-login user?
 3. What symptom indicates the Cloud Run env-update pinning gotcha, and where's the fix?
 4. What causes an RLS "mystery" (fewer rows than expected), and how do you confirm?
-5. How do you detect PHI leaking into logs, and which redaction util (`phiRedaction.ts` / `pdfRedaction.ts`) is the guard?
+5. How do you detect PHI leaking into logs, and which redaction util is the guard? (Answer: `backend/src/utils/phiRedaction.ts` — `stripPHIFromText`/`redactPHI`; there is no `pdfRedaction.ts`.)
 6. What's the most common cause of blank page on frontend, and where is it fixed?
 7. Which past fix covers upload 500 errors, and where is the commit?
 8. What's the quick curl to verify prod health?
@@ -180,7 +186,7 @@ The generated `TROUBLESHOOTING.md` must link to:
 |---|---|---|
 | Fix commits | Bash | `git log --all --since='2 years ago' --grep='^fix:\|^hotfix:\|^revert:' --pretty='%h %ad %s' --date=short` |
 | Look for console.log leaks | Grep | `pattern: "console\\.log"` over `backend/src/**` (exclude tests) |
-| Confirm log redaction guard | Read | `backend/src/utils/phiRedaction.ts`, `backend/src/utils/pdfRedaction.ts` |
+| Confirm log redaction guard | Read | `backend/src/utils/phiRedaction.ts` (sole guard; `pdfRedaction.ts` no longer exists) |
 | Find retry/backoff | Grep | `pattern: "retry|backoff|setTimeout"` over `backend/src/services/**` |
 | AI spend-cap behavior | Read | `backend/src/middleware/aiSpendGuard.ts`, `backend/src/services/aiCostTracker.ts` |
 | FHIR lab-sync failure modes | Read | `backend/src/services/fhir/urlSafety.ts`, `backend/src/services/fhir/labSyncService.ts` |

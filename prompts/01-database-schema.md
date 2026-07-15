@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Database Schema Review
@@ -15,11 +15,14 @@ updated: 2026-06-01
 > Use [Claude Code tools](./_verification-tools.md).
 
 ## Files to Review
-- `backend/prisma/schema.prisma` — authoritative model definitions (18 models)
-- `backend/prisma/migrations/` — migration history, 22 dirs (esp. `20260107_add_rls_policies` and the
+- `backend/prisma/schema.prisma` — authoritative model definitions (19 models — `RevokedAccessToken` added 2026-06-13)
+- `backend/prisma/migrations/` — migration history, 32 dirs (esp. `20260107_add_rls_policies` and the
   RLS follow-ups `20260424_prevent_self_role_elevation`, `20260529_fix_has_provider_access`,
-  `20260530_add_users_select_provider`)
-- `backend/src/services/database.ts` — Prisma client, `withRLSContext`, `withRLSTransaction`, `assertNoBypassRLS`
+  `20260530_add_users_select_provider`, and the FORCE-RLS / consent-immutability hardening
+  `20260613_force_rls_and_audit_retention`, `20260613_revoked_access_tokens`,
+  `20260615_provider_consent_immutable_audit_insert_check`)
+- `backend/src/services/database.ts` — Prisma client, `withRLSContext`, `withRLSTransaction`,
+  `assertNoBypassRLS`, and the boot check `assertRLSForced()` (database.ts:193 call, :270 definition)
 - `backend/src/services/encryption.ts` — `PHI_FIELDS` constant (must mirror every `*Encrypted` schema column)
 
 ## OwnMyHealth Database Architecture
@@ -37,7 +40,7 @@ updated: 2026-06-01
 - [ ] UUID used for primary keys (not sequential integers)
 
 ### 2. Row-Level Security
-- [ ] RLS policies defined for ALL user-owned tables (each created with its table's migration):
+- [ ] RLS policies defined for ALL user-owned tables — **19 RLS-protected tables** (each created with its table's migration):
   - `users`, `sessions`, `user_encryption_keys`
   - `biomarkers`, `biomarker_history`
   - `insurance_plans`, `insurance_benefits`
@@ -45,9 +48,21 @@ updated: 2026-06-01
   - `provider_patients`
   - `user_files` (policies in `20260108000000_add_user_files_table`)
   - `expense_projections`, `expense_actuals`, `cost_analyses` (policies in `20260111_add_expense_tracking`)
-  - `lab_connections` (NEW — SMART-on-FHIR OAuth token rows; policies in `20260418_add_lab_connections`)
+  - `lab_connections` (SMART-on-FHIR OAuth token rows; policies in `20260418_add_lab_connections`)
+  - `revoked_access_tokens` (NEW — M1 cross-instance access-token revocation; ENABLE + FORCE with
+    select/insert/delete-own policies in `20260613_revoked_access_tokens`. NOTE: insert is allowed when
+    `current_user_id() IS NULL`, the expired-token logout path — confirm this NULL branch is intentional and
+    can't be abused to forge revocation rows for other users)
   - `system_config` (admin-only: every policy gated on `is_admin_session()`)
   - `audit_logs`
+- [ ] **FORCE ROW LEVEL SECURITY is present on EVERY RLS table** (closes the silent owner-bypass gap — plain
+  `ENABLE RLS` does not apply to the table owner). `20260613_force_rls_and_audit_retention` applies
+  `FORCE ROW LEVEL SECURITY` to all 18 then-existing tables (migration.sql:14-31) and
+  `20260613_revoked_access_tokens` FORCEs the 19th (migration.sql:27). Flag any RLS-enabled table missing FORCE.
+- [ ] Boot enforcement: `database.ts` runs `assertRLSForced()` (database.ts:193) right after `assertNoBypassRLS()`,
+  which hard-exits in production if any RLS-enabled table is not FORCE-protected
+  (database.ts:270 definition, :303 `'Refusing to start — add FORCE ROW LEVEL SECURITY (see migration 20260613).'`).
+  Confirm the check is wired and not short-circuited.
 - [ ] DNA/genetics tables are GONE — `dna_data`, `dna_variants`, `genetic_traits` were dropped in
   `20260423_drop_dna_genetics` (CASCADE). Flag any RLS check, policy, or `can_view_dna` reference that still
   assumes they exist.
@@ -56,6 +71,21 @@ updated: 2026-06-01
   `20260529_fix_has_provider_access` recreates the function; verify no copy still carries the `'view_dna'`
   branch (under a NOBYPASSRLS role the stale branch broke EVERY multi-tenant read, not just DNA).
 - [ ] `provider_patients` table has RLS for both `provider_id` and `patient_id`.
+- [ ] Consent-column immutability (L23): `20260615_provider_consent_immutable_audit_insert_check` adds a
+  BEFORE UPDATE trigger `provider_patients_guard_consent()` that restores the four consent permission columns
+  (`can_view_biomarkers`, `can_view_insurance`, `can_view_health_needs`, `can_edit_data`) to their OLD values
+  unless the writer is the patient or an admin (migration.sql:19-36), and makes `provider_patients_update`
+  WITH CHECK explicit (migration.sql:50-56). RLS WITH CHECK alone can't compare OLD vs NEW, so verify the
+  trigger is present and a provider session cannot self-escalate its own permissions.
+- [ ] `audit_logs_insert` no longer accepts an arbitrary `user_id` (L40): the same migration rewrites the policy
+  from `WITH CHECK (true)` to `WITH CHECK (user_id = current_user_id() OR is_admin_session() OR
+  current_user_id() IS NULL)` (migration.sql:69-72) so audit rows can't be forged against another user.
+  Flag any remaining `WITH CHECK (true)` insert policy.
+- [ ] `audit_logs` retention is DB-enforced, not just app-side: the DELETE policy is now
+  `USING (is_admin_session() AND created_at < (now() - interval '7 years'))`
+  (`20260613_force_rls_and_audit_retention` migration.sql:41-44) — even an admin context cannot purge audit rows
+  newer than 7 years. Confirm the 7-year window matches the HIPAA retention requirement and that no code path
+  bypasses it.
 - [ ] Provider can read a CONSENTED patient's `users` row via the additive `users_select_provider` policy
   (`has_active_consent()`, `20260530_add_users_select_provider`) — confirm provider route handlers select an
   explicit non-secret column allowlist (RLS is row-level, so this policy exposes `password_hash` and the
@@ -67,16 +97,30 @@ updated: 2026-06-01
 
 ### 3. PHI Fields Identification
 - [ ] Every `*Encrypted` column in `schema.prisma` matches a field listed in the `PHI_FIELDS` constant in
-  `backend/src/services/encryption.ts` (~line 410) and in [_phi-inventory](./_phi-inventory.md). Drift here means
-  iteration-based sweeps (export, deletion, admin views, audit redaction) silently skip fields.
+  `backend/src/services/encryption.ts` (`export const PHI_FIELDS` at encryption.ts:476) and in
+  [_phi-inventory](./_phi-inventory.md). Drift here means iteration-based sweeps (export, deletion, admin views,
+  audit redaction) silently skip fields.
 - [ ] Every field in `PHI_FIELDS` / the inventory exists in the schema (no stale entries after a migration).
 - [ ] No plaintext PHI column: if a non-`Encrypted` column name matches a PHI concept (`firstName`, `dateOfBirth`, `phone`, `memberId`), flag it.
 - [ ] Confirm the NEW encrypted fields are present in BOTH schema and `PHI_FIELDS`:
   - `User.healthProfileEncrypted` (added `20260418_add_health_profile`)
-  - `HealthGoal.targetValueEncrypted` (added `20260420_encrypt_health_goal_target`; the plaintext `targetValue`
-    Decimal column is retained for backward-compat reads — flag if new writes still populate it unencrypted)
+  - `HealthGoal.targetValueEncrypted` (added `20260420_encrypt_health_goal_target`)
+  - `HealthGoal.currentValueEncrypted` / `startValueEncrypted` (M4, `20260613_encrypt_goal_values`;
+    encryption.ts:519-520, schema.prisma:467,470)
+  - `GoalProgressHistory.valueEncrypted` (M4, `20260613_encrypt_goal_values`; encryption.ts:524, schema.prisma:504)
+  - `UserFile.originalFilenameEncrypted` (L24, `20260615_encrypt_userfile_original_filename`;
+    encryption.ts:499, schema.prisma:164 — per-user AES-GCM; the plaintext twin `originalFilename` is being
+    phased out via the `backfill-userfile-filenames` job + a follow-up drop, so it is deliberately NOT in `PHI_FIELDS`)
+  - `AuditLog.metadataEncrypted` (M6, `20260606000001_encrypt_audit_metadata`; encryption.ts:530, schema.prisma:533 —
+    the legacy plaintext `audit_logs.metadata` column was IRREVERSIBLY dropped in `20260615_drop_legacy_audit_metadata`)
   - `LabConnection.accessTokenEncrypted` / `refreshTokenEncrypted` (SMART-on-FHIR OAuth tokens — a stolen
     token is a direct path to live PHI at Quest/LabCorp)
+- [ ] Health-goal numeric PHI now follows the encrypt-then-null pattern: `20260601_null_plaintext_health_goal_target`
+  drops NOT NULL on `health_goals.target_value` and NULLs the plaintext value where an encrypted twin exists; M4
+  (`20260613_encrypt_goal_values`) extends the same nullable-twin pattern to `current_value`/`start_value` and to
+  `goal_progress_history.value`. The plaintext Decimal twins (`targetValue` schema.prisma:455, `currentValue` :462,
+  `startValue` :468, `GoalProgressHistory.value` :503) are retained read-only and are NOT in `PHI_FIELDS` — flag if
+  any new write path still populates them unencrypted instead of writing only the `*Encrypted` column.
 - [ ] `CostAnalysis.claudeResponseEncrypted` carries the `Encrypted` suffix (RENAMED from `claudeResponse`,
   column `claude_response` → `claude_response_encrypted`, in `20260424_align_uuid_defaults_and_rename_claude_response`).
   Flag any lingering reference to the old `claudeResponse` name.
@@ -100,21 +144,29 @@ updated: 2026-06-01
 ### 5. Migration Safety
 - [ ] No destructive migrations without a data backup plan (e.g. `20260423_drop_dna_genetics` documents that
   tables were verified empty in every env before the `DROP ... CASCADE`).
+- [ ] `20260615_drop_legacy_audit_metadata` (M6) IRREVERSIBLY drops the legacy plaintext `audit_logs.metadata`
+  column (`ALTER TABLE "audit_logs" DROP COLUMN IF EXISTS "metadata"`, migration.sql:18) — done via DDL because
+  `audit_logs` is immutable-by-RLS. New rows write only `metadata_encrypted`. Confirm no code still reads/writes
+  the dropped plaintext `metadata` column and that the encrypted backfill ran before the drop.
 - [ ] Index DDL: note that `20260103_add_compound_indexes` deliberately does NOT use `CREATE INDEX CONCURRENTLY`
   (Prisma wraps each migration in a transaction; `CONCURRENTLY` cannot run inside one) — it uses plain
   `CREATE INDEX IF NOT EXISTS` instead. Flag only locking risk on large tables, not the absence of `CONCURRENTLY`.
 - [ ] Migrations are idempotent where possible (`IF EXISTS` / `IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP TRIGGER IF EXISTS`).
 
 ### 6. Model Completeness
-- [ ] All 18 models present and correct:
-  - User, Session, UserEncryptionKey
+- [ ] All 19 models present and correct:
+  - User, Session, RevokedAccessToken
+  - UserEncryptionKey
   - ProviderPatient, UserFile
   - Biomarker, BiomarkerHistory
   - InsurancePlan, InsuranceBenefit
   - HealthNeed, HealthGoal, GoalProgressHistory
   - AuditLog, SystemConfig
   - ExpenseProjection, ExpenseActual, CostAnalysis
-  - LabConnection (NEW — `20260418_add_lab_connections`)
+  - LabConnection (`20260418_add_lab_connections`)
+  - `RevokedAccessToken` is the newest model (M1 cross-instance single-device access-token revocation;
+    `jti` PK, `userId`, `expiresAt`, `createdAt`, `onDelete: Cascade`; table `revoked_access_tokens`,
+    schema.prisma:96-106, added `20260613_revoked_access_tokens`)
 - [ ] `DNAData`, `DNAVariant`, `GeneticTrait` are NO LONGER models — dropped in `20260423_drop_dna_genetics`.
   Flag any code, relation, or doc still referencing them.
 - [ ] 13 enums present: `UserRole`, `ProviderRelationType`, `ProviderPatientStatus`, `DataSourceType`, `PlanType`,

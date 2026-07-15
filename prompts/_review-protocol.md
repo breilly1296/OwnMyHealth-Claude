@@ -4,12 +4,12 @@ tags:
   - protocol
 type: shared
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Review Protocol (shared)
 
-Every security / audit prompt in `01-13` and `26-32` inherits this protocol. Keep it open (or reference it) while running any of those prompts.
+Every security / audit prompt in `01-13`, `26-32`, and `41-45` inherits this protocol. Keep it open (or reference it) while running any of those prompts.
 
 ---
 
@@ -79,7 +79,7 @@ Rank by **exploitability × blast radius**, not by how long the fix takes.
 This is an *illustrative* finding (the format, not a live bug). Given a checklist item *"JWT secret loaded from env, not hardcoded"*, a correct finding would look like:
 
 > ### F-3 — Hardcoded JWT fallback — **Critical**
-> - **Location:** `backend/src/config/index.ts:61` (hypothetical regression — see note below)
+> - **Location:** `backend/src/config/index.ts:120` (hypothetical regression — see note below)
 > - **Observation:** `JWT_ACCESS_SECRET` has a literal fallback string `'dev-secret'` when the env var is unset.
 > - **Impact:** In production with a misconfigured deploy, tokens would be signed with a known public string, allowing any attacker to forge admin JWTs.
 > - **Fix:** Replace the fallback with a `throw new Error('JWT_ACCESS_SECRET is required')` gate in the same file; add the check to startup validation.
@@ -88,7 +88,7 @@ This is an *illustrative* finding (the format, not a live bug). Given a checklis
 >   jwt: { accessSecret: process.env.JWT_ACCESS_SECRET ?? 'dev-secret' }
 >   ```
 
-> **Note:** As of 2026-06-01 the live code does *not* have this bug — `config/index.ts:61` reads `accessSecret: requireEnv('JWT_ACCESS_SECRET')`, which hard-fails at module load when the secret is unset (see the `requireEnv` helper, `config/index.ts:18`). The example above is a deliberately fabricated regression to demonstrate the output format; do not report it against the current repo.
+> **Note:** As of 2026-06-16 the live code does *not* have this bug — `config/index.ts:120` reads `accessSecret: requireEnv('JWT_ACCESS_SECRET')`, which hard-fails at module load when the secret is unset (see the `requireEnv` helper, `config/index.ts:18`). The example above is a deliberately fabricated regression to demonstrate the output format; do not report it against the current repo.
 
 An incorrect finding — which this protocol forbids — would be:
 

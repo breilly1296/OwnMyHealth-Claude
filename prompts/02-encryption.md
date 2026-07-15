@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Encryption Review
@@ -15,11 +15,12 @@ updated: 2026-06-01
 > Use [Claude Code tools](./_verification-tools.md).
 
 ## Files to Review
-- `backend/src/services/encryption.ts` — AES-256-GCM implementation, `PHI_FIELDS` constant (~line 410)
+- `backend/src/services/encryption.ts` — AES-256-GCM implementation, `PHI_FIELDS` constant (declared at line 476, runs 476–562)
 - `backend/src/services/userEncryption.ts` — per-user salt management (salt encrypted with master key; key-derivation iterations live in `encryption.ts`)
-- `backend/prisma/schema.prisma` — encrypted column declarations (currently 38 `*Encrypted` columns across 18 models)
+- `backend/prisma/schema.prisma` — encrypted column declarations (currently 39 `*Encrypted` columns across 19 models, 14 of which hold encrypted PHI)
 - `backend/src/controllers/*.ts` — every encrypt/decrypt call site
-- `backend/src/services/auditLog.ts` — audit log PHI encryption (uses `systemSalt` from `AUDIT_LOG_SALT`, not per-user)
+- `backend/src/services/auditLog.ts` — audit log PHI encryption (uses `systemSalt` from `AUDIT_LOG_SALT`, not per-user). Now covers `metadataEncrypted` too — see Audit-metadata lifecycle below.
+- `backend/src/utils/userFileNames.ts` — raw client filename encryption (L24, 2026-06-15): `UserFile.originalFilenameEncrypted` is AES-256-GCM per-user encrypted; `decryptOriginalFilename` is the read helper. The plaintext `originalFilename` twin is deliberately retained-but-nullable pending the backfill job `backend/src/maintenance/backfillUserFileNames.ts`.
 - `backend/src/services/fhir/labSyncService.ts` — SMART-on-FHIR OAuth token encryption (`accessTokenEncrypted` / `refreshTokenEncrypted` on `LabConnection`, encrypted with the **per-user salt**)
 - Any file importing `getEncryptionService()`
 
@@ -62,7 +63,12 @@ Verify against [_phi-inventory](./_phi-inventory.md) — do **not** re-enumerate
 - [ ] The controller for that model encrypts on write and decrypts on read (find with Grep: `pattern: "encrypt\|decrypt"`, then locate the `<fieldName>` write/read; the service exposes `encrypt`/`decrypt` and the batch helpers `encryptFields`/`decryptFields`, NOT `encryptField`/`decryptField`).
 - [ ] No PLAINTEXT write path exists that bypasses encryption (Grep each non-`Encrypted` concept name — `firstName`, `memberId`, etc. — outside test files).
 
-Flag any drift between schema ↔ `PHI_FIELDS` ↔ inventory as a **Critical** finding.
+**New PHI classes since the 2026-06-01 inventory — confirm each is present and wired:**
+- [ ] `UserFile.originalFilenameEncrypted` (L24, `encryption.ts:499`, `schema.prisma:164`). Raw client filenames are PHI; encrypted per-user, read via `decryptOriginalFilename` (`utils/userFileNames.ts`). The plaintext `originalFilename` twin (`schema.prisma:163`) is deliberately NOT in `PHI_FIELDS` (legacy column being phased out via `maintenance/backfillUserFileNames.ts`, then a follow-up migration drops it). Server-generated `filename` (`schema.prisma:156`) is intentionally plaintext (non-PHI).
+- [ ] HealthGoal numeric values (M4): `currentValueEncrypted` (`encryption.ts:519`, `schema.prisma:467`) and `startValueEncrypted` (`encryption.ts:520`, `schema.prisma:470`) — both now in `PHI_FIELDS` alongside `descriptionEncrypted`/`targetValueEncrypted`. Each has a plaintext Decimal twin (`targetValue`/`currentValue`/`startValue`) NOT in `PHI_FIELDS` (read path prefers encrypted; backfilled by `maintenance/backfillGoalValues.ts`). Migration `20260613_encrypt_goal_values`.
+- [ ] `GoalProgressHistory.valueEncrypted` (M4, `encryption.ts:524`, `schema.prisma:504`) — was previously only `noteEncrypted`; plaintext twin `value` (`schema.prisma:503`) retained, not in `PHI_FIELDS`.
+
+Flag any drift between schema ↔ `PHI_FIELDS` ↔ inventory as a **Critical** finding. NOTE: an automated guard test, `backend/src/services/phiFieldsCoverage.test.ts`, now enforces schema ↔ `PHI_FIELDS` parity in CI — drift fails the build. Treat this as the first line of defense (confirm it still passes), but still review the write/read wiring manually, which the guard does not cover.
 
 ### 5. Encryption Service Usage
 - [ ] All PHI writes go through encryption service
@@ -70,6 +76,10 @@ Flag any drift between schema ↔ `PHI_FIELDS` ↔ inventory as a **Critical** f
 - [ ] No plaintext PHI in logs
 - [ ] Error messages don't leak plaintext data
 - [ ] Decryption errors handled gracefully (corrupted data doesn't crash)
+
+**Audit-metadata lifecycle (M6, 2026-06-06 → 2026-06-15):** `AuditLog.metadataEncrypted` is now a `PHI_FIELDS.AuditLog` member (`encryption.ts:530`, `schema.prisma:533`), encrypted/decrypted with `systemSalt` via `encryptValue`/`decryptMetadata` (`auditLog.ts:251,275-278,301,314`) — same salt as `previousValueEncrypted`/`newValueEncrypted`, NOT the per-user salt. The legacy plaintext `metadata` column was **IRREVERSIBLY DROPPED** in migration `20260615_drop_legacy_audit_metadata` (done via DDL because `audit_logs` is immutable-by-RLS).
+- [ ] Audit writes encrypt `metadata` (no plaintext `metadata` column remains; do not flag its absence as a regression).
+- [ ] Audit reads decrypt via `decryptMetadata` and strip `metadataEncrypted` from the returned row (`auditLog.ts:604-605`).
 
 ### 6. Memory Safety
 - [ ] Sensitive data cleared from memory after use
@@ -95,11 +105,11 @@ these with the same rigor as PHI fields.
 | All `*Encrypted` columns in schema | Grep | `pattern: "Encrypted\\b"`, `path: "backend/prisma/schema.prisma"`, `output_mode: "content"` |
 | Controllers that touch encryption | Grep | `pattern: "encrypt\|decrypt"`, `glob: "backend/src/controllers/**/*.ts"`, `output_mode: "files_with_matches"` |
 | Plaintext PHI leaks | Grep | `pattern: "firstName\|lastName\|dateOfBirth\|phone\|address\|healthProfile\|memberId\|groupId\|targetValue\|accessToken\|refreshToken"`, `glob: "backend/src/**/*.ts"`; manually filter hits inside `encrypt(...)` / `decrypt(...)` calls and test files |
-| `PHI_FIELDS` definition | Read | `backend/src/services/encryption.ts` lines ~405–486 |
+| `PHI_FIELDS` definition | Read | `backend/src/services/encryption.ts` lines 476–562 |
 | Per-user PBKDF2 iterations | Grep | `pattern: "PBKDF2_ITERATIONS"`, `path: "backend/src/services/encryption.ts"`, `output_mode: "content"` |
 
 ## Questions to Ask
-1. Are there any PHI fields being stored without encryption? (Compare `PHI_FIELDS` ↔ schema's 38 `*Encrypted` columns ↔ [_phi-inventory](./_phi-inventory.md).)
+1. Are there any PHI fields being stored without encryption? (Compare `PHI_FIELDS` ↔ schema's 39 `*Encrypted` columns ↔ [_phi-inventory](./_phi-inventory.md). The `phiFieldsCoverage.test.ts` guard enforces this parity in CI.)
 2. Is there a working key-rotation path, given the in-service rotation helper was removed? (Confirm no dead reference, and that rotation is acknowledged as a future dedicated re-encryption job.)
 3. Are decryption errors handled without leaking data, including the legacy-iteration PBKDF2 fallback?
 4. Is the per-user key properly destroyed on account deletion (and do `LabConnection` rows go with it)?

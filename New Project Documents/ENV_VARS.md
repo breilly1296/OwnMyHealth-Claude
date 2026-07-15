@@ -1,95 +1,17 @@
 # ENV_VARS.md — Environment Variable Reference
 
-> **Generated:** 2026-06-01
-> **Scope:** Every environment variable consumed by OwnMyHealth — backend runtime, frontend build (`VITE_*`), CI, and Cloud Run deploy.
-> **Primary source of truth:** `backend/src/config/index.ts` (the typed `config` object **and** all boot-time validation live in this one module — there is no `backend/src/index.ts`; the entry point is `backend/src/app.ts`).
+> Single source of truth for every environment variable consumed by OwnMyHealth (backend runtime, frontend build, CI/CD, Cloud Run). Generated from the live code at HEAD `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`.
 
-## How to read this doc
+## Purpose / how to read this doc
 
-This is a **reference**, not a tutorial. Start at the [Master table](#master-table) for the one-line summary of every variable, then jump to the [By category](#by-category) sections for defaults, consumers, and gotchas. If you only want to **boot the backend**, you need the three universal secrets (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `AUDIT_LOG_SALT`) plus — in `production`/`staging` — `DATABASE_URL` and `PHI_ENCRYPTION_KEY`; see [Startup validation](#startup-validation). Everything else is defaulted or optional. Defaults shown are the literal right-hand side of the `??`/`||` in `config/index.ts`. Two facts that trip people up:
+A reader with only this doc must be able to answer: *what env vars do I need to set to run this app? which are secrets? what happens if I omit one? which file reads each one?* The authoritative inventory is the typed `config` object **and** all boot-time validation in `backend/src/config/index.ts` (there is **no** `backend/src/index.ts`; the Express entry point is `backend/src/app.ts`, which does no env validation of its own except the prod `CORS_ORIGIN` check). Several vars are read **directly** from `process.env` outside the `config` object — those are flagged in the master table and the [Drift findings](#drift-findings) section. Start with the [Master table](#master-table), then jump to the category section you need, then read [Startup validation](#startup-validation) for boot-time behavior.
 
-1. **Several vars are read straight from `process.env`, not through the `config` object** — `DATABASE_URL`, `DATABASE_POOL_SIZE`, `PHI_ENCRYPTION_KEY`, `DISABLE_CSRF`, `GCP_PROCESSOR_ID`, `GCP_LOCATION`, `GOOGLE_APPLICATION_CREDENTIALS`. A grep for `config.X` alone misses them.
-2. **Two secrets are NOT freely rotatable** — `PHI_ENCRYPTION_KEY` and `AUDIT_LOG_SALT`. Rotating either makes existing encrypted PHI / audit logs undecryptable. See [Secret rotation policy](#secret-rotation-policy).
-
----
-
-## Master table
-
-Columns: **Name** · **Required?** (with the deciding line) · **Default** · **Format** · **Consumer(s)** · **Secret?** · **Where stored (prod)** · **Notes**.
-
-| Name | Required? | Default | Format | Consumer(s) `file:line` | Secret? | Where stored (prod) | Notes |
-|---|---|---|---|---|---|---|---|
-| `NODE_ENV` | optional (`index.ts:40`) | `development` | enum `development`/`staging`/`production`/`test` | `config/index.ts:34-36,75`; `database.ts:122`; `fhir/mockFhirServer.ts:195` | no | Cloud Run env (`production`) | Drives prod/staging gates, cookie `secure`, sandbox defaults. |
-| `PORT` | optional (`index.ts:41`) | `3001` | int | `config/index.ts:41`; `Dockerfile:49` | no | Cloud Run env (auto-set) | Cloud Run injects `PORT`; `app.ts` listens on `config.port`. |
-| `DATABASE_URL` | **required in prod/staging** (`index.ts:344-352`); also throws when DB initializes (`database.ts:62-64`) | none | url (`postgres://`, `postgresql://`, or `prisma+postgres://`) | `database.ts:60`; `config/index.ts:344-352` | **yes** (contains DB password) | GCP Secret Manager → Cloud Run env | Cloud SQL connection string. `prisma+postgres://` form is decoded for local Prisma dev (`database.ts:68-82`). |
-| `DATABASE_POOL_SIZE` | optional (`database.ts:110`) | `10` | int | `database.ts:110` | no | Cloud Run env (optional) | pg `Pool.max`. Read directly from `process.env`, NOT in `config`. |
-| `JWT_ACCESS_SECRET` | **required everywhere** — `requireEnv` throws at module load (`index.ts:61`, `18-28`) | none | secret, ≥32 chars (`index.ts:264`) | `config/index.ts:61` → `config.jwt.accessSecret` (`authService.ts`) | **yes** | GCP Secret Manager → Cloud Run env | Rejected if a known-weak placeholder (`index.ts:250-255`). |
-| `JWT_REFRESH_SECRET` | **required everywhere** — `requireEnv` throws (`index.ts:65`) | none | secret, ≥32 chars (`index.ts:271`) | `config/index.ts:65` → `config.jwt.refreshSecret` | **yes** | GCP Secret Manager → Cloud Run env | Placeholder/length checks at `index.ts:256-261,271-277`. |
-| `JWT_ACCESS_EXPIRES_SECONDS` | optional (`index.ts:62`) | `900` (15 min) | int (**seconds**, not `15m`) | `config/index.ts:62` | no | Cloud Run env (optional) | Integer seconds; `jsonwebtoken` `expiresIn`-as-number. |
-| `JWT_REFRESH_EXPIRES_SECONDS` | optional (`index.ts:66`) | `604800` (7 days) | int (seconds) | `config/index.ts:66` | no | Cloud Run env (optional) | — |
-| `PHI_ENCRYPTION_KEY` | **required in prod/staging** (`index.ts:344-352`); EncryptionService throws hard everywhere if invalid (`encryption.ts:159-181`) | none | `hex:64` (256-bit) | `encryption.ts:159`; `config/index.ts:355` | **yes** | GCP Secret Manager → Cloud Run env | **NOT rotatable** — re-encrypts all PHI. 64-hex + placeholder checks at `index.ts:355-383`. |
-| `AUDIT_LOG_SALT` | **required everywhere** — module-load gate (`index.ts:284-293`) | `''` (fails gate) | hex, ≥16 chars (`index.ts:283`) | `config/index.ts:54` → `config.auditSalt`; `auditLog.ts:148` | **yes** | GCP Secret Manager → Cloud Run env | **NOT rotatable** — breaks audit-log PHI decryption (HIPAA 7-yr). |
-| `BCRYPT_ROUNDS` | optional (`index.ts:100`) | `13` | int | `config/index.ts:100`; `authService.ts:195` | no | Cloud Run env (optional) | `.env.example` says 12; code default is 13. |
-| `MAX_LOGIN_ATTEMPTS` | optional (`index.ts:97`) | `5` | int | `config/index.ts:97`; `authService.ts:545-548` | no | Cloud Run env (optional) | Account lockout threshold. |
-| `LOCKOUT_DURATION_MINUTES` | optional (`index.ts:98`) | `30` | int (minutes) | `config/index.ts:98`; `authService.ts:549` | no | Cloud Run env (optional) | Stored as ms internally. |
-| `COOKIE_SAME_SITE` | optional (`index.ts:86`) | derived (`none` if `COOKIE_DOMAIN`, else `strict` in prod / `lax` in dev) | enum `strict`/`lax`/`none` | `config/index.ts:86`; `authController.ts:97,116,130,137` | no | Cloud Run env (cross-domain only) | Staging sets `none` (cross-domain). |
-| `COOKIE_DOMAIN` | optional (`index.ts:88`) | `undefined` | string (e.g. `.ownmyhealth.io`) | `config/index.ts:87-88`; `authController.ts:100,119` | no | Cloud Run env (cross-domain only) | Leading dot for cross-subdomain. |
-| `CORS_ORIGIN` | **required in prod** (`app.ts:82-85`); optional elsewhere (`index.ts:105`) | localhost list (`index.ts:105-111`) | comma-separated urls | `config/index.ts:105`; `app.ts:80` | no | Cloud Run env | Prod rejects `localhost`/`127.0.0.1` (`app.ts:87-88`). |
-| `FRONTEND_URL` | optional (`index.ts:153`) | `http://localhost:5173` | url | `config/index.ts:153` → `config.email.frontendUrl`; `emailService.ts:350,372,395`; `emailTemplates.ts:47` | no | Cloud Run env | Builds verify / reset / confirm links in emails. |
-| `RATE_LIMIT_WINDOW_MS` | optional (`index.ts:117`) | `900000` (15 min) | int (ms) | `config/index.ts:117` → `config.rateLimit.windowMs` | no | Cloud Run env (optional) | — |
-| `RATE_LIMIT_MAX_REQUESTS` | optional (`index.ts:118`) | `100` | int | `config/index.ts:118` → `config.rateLimit.maxRequests` | no | Cloud Run env (optional) | Name is `_MAX_REQUESTS`, not `_MAX`. |
-| `REDIS_URL` | optional (`index.ts:126`) | `''` (→ MemoryStore) | url (`redis://`) | `config/index.ts:126`; `rateLimitStore.ts:33,41` | no | Cloud Run env (optional) | Shared limiter store across instances. Fails closed if set + unreachable. |
-| `AUDIT_CLEANUP_TOKEN` | optional (`index.ts:136`) | `''` (→ 404 + in-process interval) | secret string | `config/index.ts:136`; `internalRoutes.ts:43`; `auditLog.ts:587` | **yes** | GCP Secret Manager → Cloud Run env | Enables `POST /api/v1/internal/audit-cleanup`. |
-| `ANTHROPIC_API_KEY` | optional (`index.ts:181`); warns in prod/staging if unset (`index.ts:431-433`) | `''` | secret (`sk-ant-…`) | `config/index.ts:181`; `anthropicClient.ts:49,68`; `claudeExtraction.ts:276`; `sbcExtraction.ts:1031` | **yes** | GCP Secret Manager → Cloud Run env | Unset → AI features unavailable (degrade, no crash). |
-| `ANTHROPIC_BAA_ACTIVE` | conditionally required: **prod throws** if API key set + flag false (`index.ts:300-306`) | `false` | bool (`"true"`) | `config/index.ts:185` → `config.anthropic.baaActive`; `claudeExtraction.ts:106`; `sbcExtraction.ts:767` | no | Cloud Run env | Gates all PHI→Claude paths. |
-| `AI_DAILY_BUDGET_USD` | optional (`index.ts:196`) | `50` | number (USD; `0`=off) | `config/index.ts:196` → `config.ai.dailyBudgetUsd` (`aiCostTracker`/`aiSpendGuard`) | no | Cloud Run env (optional) | Global circuit breaker. In-memory per instance. |
-| `AI_USER_DAILY_BUDGET_USD` | optional (`index.ts:197`) | `5` | number (USD; `0`=off) | `config/index.ts:197` → `config.ai.userDailyBudgetUsd` | no | Cloud Run env (optional) | Per-user circuit breaker. In-memory per instance. |
-| `GCP_PROJECT_ID` | optional (`index.ts:169`); warns in prod/staging if unset (`index.ts:437-439`) | `''` | string | `config/index.ts:169`; `ocrService.ts:83,115`; `storageService.ts:17` | no | Cloud Run env | Needed for GCS + Document AI. |
-| `GCS_BUCKET_NAME` | **required in prod** (`index.ts:399-405`); optional elsewhere (`index.ts:168`) | `ownmyhealth-user-files` | string | `config/index.ts:168` → `config.gcp.bucketName`; `storageService.ts:25` | no | Cloud Run env | Default reserved for dev/staging — prod must set explicitly. |
-| `GCP_PROCESSOR_ID` | optional (`index.ts:320`); if set + BAA false, **prod throws** (`index.ts:320-326`) | `undefined` | string | `ocrService.ts:86,117`; `config/index.ts:320` | no | Cloud Run env | Document AI processor; read directly from `process.env`. |
-| `GCP_LOCATION` | optional (`ocrService.ts:116`) | `us` | string | `ocrService.ts:116` | no | Cloud Run env (optional) | Document AI region. Read directly from `process.env`. |
-| `GOOGLE_APPLICATION_CREDENTIALS` | optional (`ocrService.ts:90`) | none | path or inline JSON | `ocrService.ts:90,471`; `config/index.ts:171` | **yes** (if inline JSON) | Cloud Run uses the service identity (usually unset) | Inline JSON (`{…}`) parsed at `ocrService.ts:92-96`. |
-| `GOOGLE_BAA_ACTIVE` | conditionally required: **prod throws** if `GCP_PROCESSOR_ID` set + flag false (`index.ts:320-326`) | `false` | bool (`"true"`) | `config/index.ts:176` → `config.gcp.documentAiBaaActive`; `ocrService.ts:274` | no | Cloud Run env | Gates image OCR (`processImageWithDocumentAI`). |
-| `QUEST_FHIR_CLIENT_ID` | optional (`index.ts:206`) | `''` | string | `config/index.ts:206`; `fhir/labSyncService.ts:56,60` | no | Cloud Run env (optional) | Empty ⇒ Quest sync disabled (throws at `fhir/labSyncService.ts:57`). |
-| `QUEST_FHIR_CLIENT_SECRET` | optional (`index.ts:207`) | `''` | secret | `config/index.ts:207`; `fhir/labSyncService.ts:61`; `fhir/smartAuth.ts:182,222,284` | **yes** | GCP Secret Manager → Cloud Run env | OAuth client secret; only sent to `authHosts`. |
-| `QUEST_FHIR_BASE_URL` | optional (`index.ts:208`) | `https://api.questdiagnostics.com/fhir/r4` | url | `config/index.ts:208`; `fhir/labSyncService.ts:63` | no | Cloud Run env | Set to mock server for local dev. |
-| `QUEST_FHIR_REDIRECT_URI` | optional (`index.ts:210`) | `https://api.ownmyhealth.io/api/v1/fhir/callback` | url | `config/index.ts:210`; `fhir/labSyncService.ts:62` | no | Cloud Run env | Must match Quest app registration. |
-| `QUEST_FHIR_SUCCESS_REDIRECT` | optional (`index.ts:213`) | `http://localhost:5173/settings?labConnected=quest` | url | `config/index.ts:213` | no | Cloud Run env | Where the OAuth callback sends the browser on success. |
-| `QUEST_FHIR_AUTH_HOSTS` | optional (`index.ts:220`) | `''` (→ FHIR base host only) | comma-separated hostnames | `config/index.ts:220` → `config.quest.authHosts`; `fhir/labSyncService.ts:64` | no | Cloud Run env | SSRF/token-exfil allowlist for authorize/token/revoke. |
-| `SENDGRID_API_KEY` | optional (`index.ts:150`); warns in prod/staging if unset (`index.ts:434-436`) | `''` | secret (`SG.…`) | `config/index.ts:150` → `config.email.sendgridApiKey`; `emailService.ts:43` | **yes** | GCP Secret Manager → Cloud Run env | Unset ⇒ `config.email.enabled=false` (`index.ts:149`). |
-| `EMAIL_FROM` | optional (`index.ts:151`) | `noreply@ownmyhealth.com` | email | `config/index.ts:151` → `config.email.fromEmail`; `emailService.ts:313` | no | Cloud Run env | Must be a SendGrid verified sender in prod. |
-| `EMAIL_FROM_NAME` | optional (`index.ts:152`) | `OwnMyHealth` | string | `config/index.ts:152`; `emailService.ts:314` | no | Cloud Run env | Display name. |
-| `SENDGRID_SANDBOX_MODE` | optional (`index.ts:158`); **prod throws** if `"true"` (`index.ts:421-427`) | `false` (auto-`true` in staging) | bool (`"true"`) | `config/index.ts:158` → `config.email.sandboxMode`; `emailService.ts:323,329` | no | Cloud Run env (must be unset/false in prod) | Validates but never delivers. |
-| `DEMO_ACCOUNT_ENABLED` | optional (`index.ts:142`); **prod throws** if `true` (`index.ts:408-414`) | `false` | bool (`"true"`) | `config/index.ts:142` → `config.demo.enabled` | no | Cloud Run env (must be false in prod) | Allowed in staging for smoke tests. |
-| `DEMO_EMAIL` | optional (`index.ts:143`) | `''` | email | `config/index.ts:143` → `config.demo.email` | no | Cloud Run env (staging only) | — |
-| `DEMO_PASSWORD` | optional (`index.ts:144`) | `''` | secret | `config/index.ts:144` → `config.demo.password` | **yes** | GCP Secret Manager (staging only) | `.env.staging.example:88` notes inject from Secret Manager. |
-| `DISABLE_CSRF` | optional (`csrf.ts:146`) | unset (CSRF on) | bool (`"true"`) | `csrf.ts:146`; `app.ts:215` | no | n/a — refused in prod | Only honored when `config.isDevelopment` (`csrf.ts:146`). |
-| `VITE_API_URL` | **build-time** (`client.ts:10`) | `http://localhost:3001/api/v1` | url | `src/services/api/client.ts:10`; `src/services/uploadUtils.ts:8` | no | baked into JS bundle at build (`deploy.yml:222`) | Set by CI/deploy, not at runtime. |
-| `VITE_DEMO_MODE` | **build-time** (`App.tsx:281`) | unset | bool (`"true"`) | `src/App.tsx:281`; `src/hooks/useBiomarkerData.ts:18` | no | not set in prod builds | Demo login button; gated by `import.meta.env.DEV`. |
-| `VITE_DEBUG` | **build-time** (`logger.ts:17`) | unset | bool (`"true"`) | `src/utils/logger.ts:17` | no | not set in prod builds | Verbose client console logging. |
-
-> Vite built-ins `import.meta.env.DEV` / `import.meta.env.PROD` (`logger.ts:14`, `client.ts:125,233`, `LoginPage.tsx:79,90`) are set automatically by Vite from the build mode — they are not user-supplied env vars and need no entry.
-
----
-
-## By category
-
-### Critical secrets
-
-These five never appear in logs and never get committed. Three throw at **module load in every environment**; two more throw only in prod/staging.
-
-| Var | Throws when | Line |
-|---|---|---|
-| `JWT_ACCESS_SECRET` | missing/empty (any env); weak placeholder; <32 chars | `index.ts:61,250,264` |
-| `JWT_REFRESH_SECRET` | missing/empty (any env); weak placeholder; <32 chars | `index.ts:65,256,271` |
-| `AUDIT_LOG_SALT` | missing or <16 chars (any env) | `index.ts:284-293` |
-| `PHI_ENCRYPTION_KEY` | missing (prod/staging); not 64-hex; placeholder; also EncryptionService throws everywhere on invalid | `index.ts:355-383`; `encryption.ts:159-181` |
-| `DATABASE_URL` | missing (prod/staging); missing at DB init (any env) | `index.ts:344-352`; `database.ts:62-64` |
-
-Third-party API-key secrets (`ANTHROPIC_API_KEY`, `SENDGRID_API_KEY`, `QUEST_FHIR_CLIENT_SECRET`, `DEMO_PASSWORD`, `AUDIT_CLEANUP_TOKEN`, inline `GOOGLE_APPLICATION_CREDENTIALS`) are optional secrets — features degrade if unset, but they are still secrets that belong in Secret Manager.
+Two helpers in `config/index.ts` drive most behavior:
+- `requireEnv(key)` — throws at module load if the var is missing/empty (`backend/src/config/index.ts:18-28`). Used only for the two JWT secrets.
+- `parseBudget(raw, fallback, name)` — warns and falls back on a NaN/negative AI budget instead of crashing boot (`backend/src/config/index.ts:66-76`).
 
 ```ts
-// Source: backend/src/config/index.ts:18-28 (requireEnv — module-load throw for JWT secrets)
+// Source: backend/src/config/index.ts:18-28
 function requireEnv(key: string): string {
   const value = process.env[key];
   if (!value || value.trim() === '') {
@@ -103,350 +25,498 @@ function requireEnv(key: string): string {
 }
 ```
 
+---
+
+## Where vars are loaded and where they end up
+
+```
+                           process.env (Cloud Run env + Secret Manager refs)
+                                          │
+       ┌──────────────────────────────────┼─────────────────────────────────────┐
+       │                                   │                                       │
+       ▼                                   ▼                                       ▼
+backend/src/config/index.ts        Direct process.env reads             Frontend build (Vite)
+(typed `config` object +           (NOT in the config object)           import.meta.env.VITE_*
+ ALL boot-time throws)             ─ DATABASE_URL  database.ts:58       ─ VITE_API_URL  client.ts:10
+ ─ requireEnv(JWT_*)               ─ DATABASE_POOL_SIZE database.ts:108 ─ VITE_DEBUG     logger.ts:17
+ ─ AUDIT_LOG_SALT gate             ─ PHI_ENCRYPTION_KEY encryption.ts:182─ VITE_DEMO_MODE App.tsx:281
+ ─ PHI/CORS/BAA/demo gates         ─ GCP_LOCATION   ocrService.ts:117    (baked into dist/ at build time)
+       │                           ─ GCP_PROCESSOR_ID ocrService.ts:88   deploy.yml sets VITE_API_URL:330
+       ▼                           ─ GOOGLE_APPLICATION_CREDENTIALS ocrService.ts:91
+config.jwt / config.gcp / ...      ─ DISABLE_CSRF   csrf.ts:159, app.ts:215
+ consumed by services/middleware   ─ CORS_ORIGIN    app.ts:80
+```
+
+`config/index.ts` loads a local `.env` via `dotenv.config()` at `backend/src/config/index.ts:5`; in deployed environments the values come from the Cloud Run service env / GCP Secret Manager refs (see [Where stored in prod](#local-vs-staging-vs-prod) and `.github/workflows/deploy.yml`).
+
+---
+
+## Master table
+
+Columns: **Name | Required? | Default | Format | Consumer(s) (file:line) | Secret? | Where stored (prod) | Notes**. "Required?" cites the line that decides. `required` = boot throws on missing; `prod/staging` = required only in those tiers; `optional` = defaulted; `build-time` = VITE_*.
+
+### Backend — read in `backend/src/config/index.ts`
+
+| Name | Required? | Default | Format | Consumer(s) (file:line) | Secret? | Where stored (prod) | Notes |
+|---|---|---|---|---|---|---|---|
+| `JWT_ACCESS_SECRET` | required (all envs) — `config/index.ts:120` | none | secret:≥32 chars | `config/index.ts:120`; blocklist `:324`; length `:338` | yes | GCP Secret Manager → Cloud Run secret ref | `requireEnv`; rejected if in `BLOCKED_JWT_VALUES` (`:315-322`) or `<32` chars. Generate `openssl rand -base64 32`. |
+| `JWT_REFRESH_SECRET` | required (all envs) — `config/index.ts:124` | none | secret:≥32 chars | `config/index.ts:124`; blocklist `:330`; length `:345` | yes | GCP Secret Manager | Same rules as access secret. |
+| `AUDIT_LOG_SALT` | required (all envs) — `config/index.ts:358` | `''` (then hard-fail) | hex (≥16 chars) | `config/index.ts:113`, gate `:358` | yes | GCP Secret Manager | **NOT rotatable** — rotating makes historic audit-log PHI undecryptable (`:358-366`). |
+| `PHI_ENCRYPTION_KEY` | prod/staging — `config/index.ts:427-432`; format `:436-464` | none | hex:64 (256-bit) | `config/index.ts:436`; `encryption.ts:182` | yes | GCP Secret Manager | 64 hex chars, hex-only, non-placeholder. **NOT rotatable** — rotating orphans all encrypted PHI. |
+| `DATABASE_URL` | prod/staging (config) — `config/index.ts:425-432`; always (runtime) — `database.ts:58-62` | none | url (postgres / prisma+postgres) | `database.ts:58`; required-list `config/index.ts:426` | yes | GCP Secret Manager (`DATABASE_URL:latest`) | Migrate job consumes the same secret (`deploy.yml:144`). Throws "DATABASE_URL environment variable is not set" if unset in any env. |
+| `NODE_ENV` | optional | `'development'` | enum: development/staging/production | `config/index.ts:34-36,99`; `database.ts:120`; `mockFhirServer.ts:195` | no | Cloud Run env (+ Dockerfile `ENV`) | Drives the security tier. Dev tier loosens cookies + downgrades BAA gates to warnings. |
+| `OMH_DEPLOY_ENFORCE_PROD` | optional | unset | bool (`'true'`) | `config/index.ts:53` | no | Dockerfile `ENV` (`Dockerfile:54`) | RT-H1: if `'true'` + NODE_ENV resolves to dev → boot hard-fails (refuses to serve at dev tier on a deployed image). |
+| `PORT` | optional | `3001` | int | `config/index.ts:100` | no | Cloud Run injects `$PORT` | |
+| `JWT_ACCESS_EXPIRES_SECONDS` | optional | `900` (15 min) | int (seconds) | `config/index.ts:121` | no | Cloud Run env | Integer seconds, NOT a string like `15m`. |
+| `JWT_REFRESH_EXPIRES_SECONDS` | optional | `604800` (7 days) | int (seconds) | `config/index.ts:125` | no | Cloud Run env | |
+| `COOKIE_SAME_SITE` | optional | derived | enum: strict/lax/none | `config/index.ts:89`, used `:147` | no | Cloud Run env | Explicit value wins; else `none` if `COOKIE_DOMAIN` set; else `strict` (prod) / `lax` (dev). |
+| `COOKIE_DOMAIN` | optional | `undefined` | string (`.domain.tld`) | `config/index.ts:90,95,148` | no | Cloud Run env | Setting it forces SameSite=None + Secure (`:91-95`). |
+| `MAX_LOGIN_ATTEMPTS` | optional | `5` | int | `config/index.ts:157` | no | Cloud Run env | |
+| `LOCKOUT_DURATION_MINUTES` | optional | `30` | int (minutes) | `config/index.ts:158` | no | Cloud Run env | Multiplied to ms. |
+| `BCRYPT_ROUNDS` | optional | `13` | int | `config/index.ts:160` | no | Cloud Run env | HIPAA-recommended ≥13. |
+| `CORS_ORIGIN` | prod (required) — `app.ts:83-84` | localhost array | csv of urls | `config/index.ts:165`; `app.ts:80` | no | Cloud Run env | Comma-separated; localhost rejected in prod (`app.ts:87-88`). |
+| `RATE_LIMIT_WINDOW_MS` | optional | `900000` (15 min) | int (ms) | `config/index.ts:177` | no | Cloud Run env | |
+| `RATE_LIMIT_MAX_REQUESTS` | optional | `100` | int | `config/index.ts:178` | no | Cloud Run env | NOT `RATE_LIMIT_MAX`. |
+| `REDIS_URL` | optional | `''` | url (redis://) | `config/index.ts:186` | yes (conn string) | GCP Secret Manager / Cloud Run env | Shared rate-limit + AI-spend store (Cloud Memorystore). Unset → per-instance in-memory. If set but unreachable → requests error (fail-closed). |
+| `AUDIT_CLEANUP_TOKEN` | optional | `''` | secret:string | `config/index.ts:196` | yes | GCP Secret Manager | When set, enables `POST /api/v1/internal/audit-cleanup` for Cloud Scheduler and disables the in-process 24h interval. |
+| `DEMO_ACCOUNT_ENABLED` | optional (prod-blocked) | `false` | bool (`'true'`) | `config/index.ts:202`; prod-block `:489` | no | Cloud Run env | Boot hard-fails if `true` in production (`:489-495`). |
+| `DEMO_EMAIL` | optional | `''` | email | `config/index.ts:203` | no | Cloud Run env | |
+| `DEMO_PASSWORD` | optional | `''` | secret:string | `config/index.ts:204` | yes | Cloud Run env | |
+| `SENDGRID_API_KEY` | optional | `''` | secret (`SG.*`) | `config/index.ts:209,210` | yes | GCP Secret Manager | `config.email.enabled` derived from whether this is set (`:209`). |
+| `EMAIL_FROM` | optional | `noreply@ownmyhealth.com` | email | `config/index.ts:211` | no | Cloud Run env | Must be a verified SendGrid sender; default unsafe for prod. |
+| `EMAIL_FROM_NAME` | optional | `OwnMyHealth` | string | `config/index.ts:212` | no | Cloud Run env | |
+| `FRONTEND_URL` | optional | `http://localhost:5173` | url | `config/index.ts:213` | no | Cloud Run env | Builds links inside emails. Default unsafe for prod. |
+| `SENDGRID_SANDBOX_MODE` | optional (prod-blocked) | `false` (forced `true` in staging) | bool (`'true'`) | `config/index.ts:218`; prod-block `:502` | no | Cloud Run env | Boot hard-fails if `true` in production (`:502-508`). |
+| `GCS_BUCKET_NAME` | prod (required) — `config/index.ts:480-486` | `ownmyhealth-user-files` (dev/staging only) | string | `config/index.ts:228`; `storageService.ts:17` | no | Cloud Run env | F-28: prod must set explicitly or boot hard-fails. |
+| `GCP_PROJECT_ID` | optional (OCR/storage) | `''` | string | `config/index.ts:229`; `ocrService.ts:84,116,502`; `storageService.ts:17` | no | Cloud Run env | NOT `GOOGLE_CLOUD_PROJECT`. Warns at boot in prod if unset (`:518`). |
+| `GOOGLE_APPLICATION_CREDENTIALS` | optional | `''` | path OR inline JSON | `config/index.ts:231`; `ocrService.ts:91,507` | yes (if inline JSON) | Cloud Run env (prefer Workload Identity) | `ocrService` parses inline JSON if value starts with `{` (`ocrService.ts:93`). |
+| `GOOGLE_BAA_ACTIVE` | conditional: prod + `GCP_PROCESSOR_ID` set — `config/index.ts:401-414` | `false` | bool (`'true'`) | `config/index.ts:236`; gate `:401-414` | no | Cloud Run env | Gates Document AI OCR. Prod hard-fails if processor set + flag unset. |
+| `GCP_PROCESSOR_ID` | optional (OCR) | unset | string | `config/index.ts:401` (gate trigger); `ocrService.ts:87,118,504` | no | Cloud Run env | NOT `GOOGLE_DOCUMENT_AI_PROCESSOR_ID`. Setting it triggers the `GOOGLE_BAA_ACTIVE` requirement in prod. |
+| `ANTHROPIC_API_KEY` | optional (feature-gate) | `''` | secret (`sk-ant-*`) | `config/index.ts:241`; `anthropicClient.ts:49,68`; `claudeExtraction.ts:279`; `sbcExtraction.ts:1034` | yes | GCP Secret Manager | Setting it triggers the `ANTHROPIC_BAA_ACTIVE` requirement in prod. |
+| `ANTHROPIC_BAA_ACTIVE` | conditional: prod + `ANTHROPIC_API_KEY` set — `config/index.ts:381-394` | `false` | bool (`'true'`) | `config/index.ts:245`; gate `:381-394` | no | Cloud Run env | Gates Claude calls. Prod hard-fails if key set + flag unset; dev/staging warn (runtime gate still blocks). |
+| `AI_DAILY_BUDGET_USD` | optional | `50` | number (USD; `0` disables) | `config/index.ts:256` | no | Cloud Run env | Global rolling daily AI spend cap (M-4). NaN/neg → warn + default. |
+| `AI_USER_DAILY_BUDGET_USD` | optional | `5` | number (USD; `0` disables) | `config/index.ts:257` | no | Cloud Run env | Per-user rolling daily cap (M-4). |
+| `QUEST_FHIR_CLIENT_ID` | optional (feature-gate) | `''` | string | `config/index.ts:266` | yes | GCP Secret Manager | Feature disabled unless set ("Connect Quest" returns 503). |
+| `QUEST_FHIR_CLIENT_SECRET` | optional | `''` | secret | `config/index.ts:267` | yes | GCP Secret Manager | |
+| `QUEST_FHIR_BASE_URL` | optional | `https://api.questdiagnostics.com/fhir/r4` | url | `config/index.ts:268-269` | no | Cloud Run env | Set to mock URL `http://localhost:3001/api/v1/mock-fhir/r4` for local dev. |
+| `QUEST_FHIR_REDIRECT_URI` | optional | `https://api.ownmyhealth.io/api/v1/fhir/callback` | url | `config/index.ts:270-272` | no | Cloud Run env | Default unsafe for non-prod. |
+| `QUEST_FHIR_SUCCESS_REDIRECT` | optional | `http://localhost:5173/settings?labConnected=quest` | url | `config/index.ts:273-275` | no | Cloud Run env | Default points at localhost — set per-env. |
+| `QUEST_FHIR_AUTH_HOSTS` | optional | `''` (→ empty list) | csv of hostnames | `config/index.ts:280` | no | Cloud Run env | SSRF/exfil allowlist (see [Quest FHIR](#quest-diagnostics-smart-on-fhir-lab-sync)). |
+
+### Backend — read directly via `process.env` (NOT in the `config` object)
+
+| Name | Required? | Default | Format | Consumer(s) (file:line) | Secret? | Where stored (prod) | Notes |
+|---|---|---|---|---|---|---|---|
+| `DATABASE_POOL_SIZE` | optional | `10` | int | `database.ts:108` | no | Cloud Run env | pg pool `max`. |
+| `GCP_LOCATION` | optional | `us` | string | `ocrService.ts:117` | no | Cloud Run env | Document AI processor location. NOT `GOOGLE_DOCUMENT_AI_LOCATION`. |
+| `DISABLE_CSRF` | optional (dev only) | unset | bool (`'true'`) | `csrf.ts:159`; `app.ts:215` | no | not set in prod | Only honored when `config.isDevelopment` (`csrf.ts:159`). |
+
+### Frontend — build-time (`import.meta.env.VITE_*`)
+
+| Name | Required? | Default | Format | Consumer(s) (file:line) | Secret? | Where stored (prod) | Notes |
+|---|---|---|---|---|---|---|---|
+| `VITE_API_URL` | build-time | `http://localhost:3001/api/v1` | url | `src/services/api/client.ts:10`; `src/services/uploadUtils.ts:8`; `vite.config.ts:74` | no | Set in CI build step (`deploy.yml:330`) | Baked into `dist/` at build time; also rewrites the CSP `connect-src` (`vite.config.ts:32-56`). |
+| `VITE_DEBUG` | build-time | unset | bool (`'true'`) | `src/utils/logger.ts:17` | no | Build env (unset in prod) | Re-enables debug/info logs in a prod build. |
+| `VITE_DEMO_MODE` | build-time | unset | bool (`'true'`) | `src/App.tsx:281`; `src/components/dashboard/DashboardHeader.tsx:90`; `src/hooks/useBiomarkerData.ts:19` | no | Build env (unset in prod) | Shows the demo login + banner; demo data path requires `import.meta.env.DEV` too (`useBiomarkerData.ts:19`). |
+| `import.meta.env.DEV` / `import.meta.env.PROD` | build-time (Vite built-in) | derived from `--mode` | bool | `src/utils/logger.ts:14`; `src/components/auth/LoginPage.tsx:79,90`; `src/services/api/client.ts:129,248` | no | n/a (Vite internal) | Vite-injected mode flags, not user-set env vars. |
+
+### CI/CD — GitHub Secret (deploy time only, never read at runtime)
+
+| Name | Required? | Format | Consumer(s) (file:line) | Secret? | Where stored | Notes |
+|---|---|---|---|---|---|---|
+| `secrets.GCP_SA_KEY` | required for deploy | JSON service-account key | `deploy.yml:79,259,310`; `deploy-staging.yml` | yes | GitHub repository Secret | Authenticates `google-github-actions/auth` to GCP. Never read by the running app. |
+
+---
+
+## By category
+
+### Critical secrets
+
+| Var | Why critical | Boot behavior | Source |
+|---|---|---|---|
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Sign/verify all auth tokens | `requireEnv` throws if missing (`config/index.ts:120,124`); blocklist + ≥32 chars | `:120,124,315-351` |
+| `PHI_ENCRYPTION_KEY` | Master key for AES-256-GCM PHI encryption | prod/staging required + 64-hex/format validated | `:427-464`; `encryption.ts:182` |
+| `AUDIT_LOG_SALT` | Salts audit-log PHI snapshot encryption | hard-fail if missing or `<16` chars (all envs) | `:358-366` |
+| `DATABASE_URL` | DB connection (Cloud SQL) | prod/staging required (config) + always required at runtime (`database.ts:58`) | `:426`; `database.ts:58` |
+| `ANTHROPIC_API_KEY`, `SENDGRID_API_KEY`, `QUEST_FHIR_CLIENT_SECRET`, `REDIS_URL`, `AUDIT_CLEANUP_TOKEN` | Third-party / shared-store secrets | optional / feature-gated | see master table |
+
 ### Database & persistence
 
-- `DATABASE_URL` — Cloud SQL Postgres connection string. Read at `database.ts:60`; throws `DATABASE_URL environment variable is not set` if absent (`database.ts:62-64`). Accepts `postgres://`, `postgresql://`, and `prisma+postgres://` (the last is base64-decoded for local Prisma dev, `database.ts:68-82`).
-- `DATABASE_POOL_SIZE` — pg `Pool.max`, default `10` (`database.ts:110`). Read directly from `process.env`, **not** through `config`.
-
 ```ts
-// Source: backend/src/services/database.ts:108-114
-pool = new Pool({
-  connectionString,
-  max: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 30000, // 30s for Cloud SQL Auth Proxy
-  statement_timeout: 30000, // 30s statement timeout
-});
+// Source: backend/src/services/database.ts:58-62
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
 ```
+
+- `DATABASE_URL` — required at runtime in every env (`database.ts:58`); also in the prod/staging required-list (`config/index.ts:426`).
+- `DATABASE_POOL_SIZE` — pg pool `max`, default `10` (`database.ts:108`).
 
 ### Auth & sessions
 
-| Var | Default | Effect | Source |
-|---|---|---|---|
-| `JWT_ACCESS_EXPIRES_SECONDS` | `900` | Access-token lifetime (seconds) | `index.ts:62` |
-| `JWT_REFRESH_EXPIRES_SECONDS` | `604800` | Refresh-token lifetime (seconds) | `index.ts:66` |
-| `BCRYPT_ROUNDS` | `13` | Password hash cost (`authService.ts:195`) | `index.ts:100` |
-| `MAX_LOGIN_ATTEMPTS` | `5` | Lockout threshold (`authService.ts:545-548`) | `index.ts:97` |
-| `LOCKOUT_DURATION_MINUTES` | `30` | Lockout window (`authService.ts:549`) | `index.ts:98` |
-| `COOKIE_SAME_SITE` | derived | Cookie `SameSite` (`authController.ts:97`) | `index.ts:86` |
-| `COOKIE_DOMAIN` | `undefined` | Cross-subdomain cookie scope (`authController.ts:100`) | `index.ts:88` |
-
-`COOKIE_SAME_SITE` resolution is a precedence chain — explicit env wins, else `none` if `COOKIE_DOMAIN` is set, else `strict` in prod / `lax` in dev:
+- `JWT_ACCESS_EXPIRES_SECONDS` (900) / `JWT_REFRESH_EXPIRES_SECONDS` (604800) — integer seconds (`config/index.ts:121,125`).
+- `BCRYPT_ROUNDS` (13), `MAX_LOGIN_ATTEMPTS` (5), `LOCKOUT_DURATION_MINUTES` (30) — `config/index.ts:157-160`.
+- Cookie config `COOKIE_SAME_SITE` / `COOKIE_DOMAIN` — resolved together with a `secure` derivation (M7). There is **no `CSRF_SECRET`** — CSRF is a stateless double-submit cookie (`csrf.ts`), toggled only by `DISABLE_CSRF`.
 
 ```ts
-// Source: backend/src/config/index.ts:86-88
-sameSite: (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
-  (process.env.COOKIE_DOMAIN ? 'none' : (process.env.NODE_ENV === 'production' ? 'strict' : 'lax')),
-domain: process.env.COOKIE_DOMAIN || undefined,
+// Source: backend/src/config/index.ts:88-95
+const resolvedSameSite: 'strict' | 'lax' | 'none' =
+  (process.env.COOKIE_SAME_SITE as 'strict' | 'lax' | 'none') ||
+  (process.env.COOKIE_DOMAIN ? 'none' : (isProductionEnv ? 'strict' : 'lax'));
+const resolvedCookieSecure =
+  isProductionEnv ||
+  isStagingEnv ||
+  resolvedSameSite === 'none' ||
+  !!process.env.COOKIE_DOMAIN;
 ```
 
-There is **no `CSRF_SECRET`**. CSRF is a stateless double-submit cookie (`csrf.ts`) with no server-side secret — the only knob is `DISABLE_CSRF` (dev only). See [Feature flags / toggles](#feature-flags--baa-gates--toggles).
+A boot invariant rejects the impossible `SameSite=None` without `Secure` combination in every env (`config/index.ts:301-307`).
 
 ### Rate limiting
 
-```mermaid
-flowchart LR
-  A[8 named limiters<br/>rateLimiter.ts] --> B{REDIS_URL set?}
-  B -- no --> C[MemoryStore<br/>per-instance counters<br/>ceiling = N x limit]
-  B -- yes --> D[Redis shared store<br/>rateLimitStore.ts<br/>consistent across instances]
-  D -- Redis unreachable --> E[requests ERROR<br/>fail-closed<br/>enableOfflineQueue:false]
-```
-
-- `RATE_LIMIT_WINDOW_MS` (`900000`) and `RATE_LIMIT_MAX_REQUESTS` (`100`) feed `config.rateLimit` (`index.ts:117-118`).
-- `REDIS_URL` (default `''`) backs all limiters with a shared store when set (`rateLimitStore.ts:33`). Unset → in-process `MemoryStore`, so the effective ceiling is N×limit across N Cloud Run instances (bounded today by `--max-instances=3`, `deploy.yml:88`). **Failure mode:** if `REDIS_URL` is set but unreachable, rate-limited requests **error** rather than silently skip the limit — the client is built with `maxRetriesPerRequest: 2, enableOfflineQueue: false` (`rateLimitStore.ts:44-45`).
+- `RATE_LIMIT_WINDOW_MS` (900000) / `RATE_LIMIT_MAX_REQUESTS` (100) — `config/index.ts:177-178`.
+- `REDIS_URL` (optional) — shared store backing all 8 rate limiters across Cloud Run instances (`config/index.ts:186`). Unset → per-instance in-memory `MemoryStore`; set-but-unreachable → rate-limited requests **error** rather than silently skip the limit (`backend/.env.example:154-155`).
 
 ### AI — Anthropic + spend circuit breaker + Google Document AI
 
-| Var | Default | Gates / drives | Source |
-|---|---|---|---|
-| `ANTHROPIC_API_KEY` | `''` | All Claude calls; unset = AI off | `index.ts:181`; `anthropicClient.ts:49` |
-| `ANTHROPIC_BAA_ACTIVE` | `false` | PHI→Claude runtime gate | `index.ts:185`; `claudeExtraction.ts:106`; `sbcExtraction.ts:767` |
-| `AI_DAILY_BUDGET_USD` | `50` | Global daily spend cap | `index.ts:196` |
-| `AI_USER_DAILY_BUDGET_USD` | `5` | Per-user daily spend cap | `index.ts:197` |
-| `GCP_PROCESSOR_ID` | `undefined` | Document AI processor name | `ocrService.ts:117` |
-| `GCP_LOCATION` | `us` | Document AI region | `ocrService.ts:116` |
-| `GOOGLE_BAA_ACTIVE` | `false` | Image-OCR runtime gate | `index.ts:176`; `ocrService.ts:274` |
+- `ANTHROPIC_API_KEY` (`config/index.ts:241`) + `ANTHROPIC_BAA_ACTIVE` (`:245`) — the BAA flag gates `claudeExtraction`/`sbcExtraction` and all Claude calls.
+- `AI_DAILY_BUDGET_USD` (50) / `AI_USER_DAILY_BUDGET_USD` (5) — rolling per-UTC-day spend caps enforced by `aiSpendGuard`, accumulator updated by `aiCostTracker`; `0` disables a scope (`config/index.ts:256-257`).
+- `GCP_PROCESSOR_ID` (`ocrService.ts:88`), `GCP_LOCATION` (`ocrService.ts:117`, default `us`), `GOOGLE_APPLICATION_CREDENTIALS` (`ocrService.ts:91`) + `GOOGLE_BAA_ACTIVE` (`config/index.ts:236`) — gate Document AI image OCR.
 
-The model is **pinned in code, not configurable** — there is no `ANTHROPIC_MODEL` var. Models in use: `claude-haiku-4-5-20251001` (biomarker guidance / extraction — `biomarkerRoutes.ts:233`, `claudeExtraction.ts:146`, `aiChatController.ts:39`) and `claude-sonnet-4-5-20250929` (SBC extraction / cost analysis — `sbcExtraction.ts:804`, `expenseController.ts:689`).
-
-BAA runtime gate (the load-bearing check in dev/staging, where boot only warns):
-
-```ts
-// Source: backend/src/services/claudeExtraction.ts:106-110
-if (!config.anthropic.baaActive) {
-  throw new InternalServerError(
-    'Claude API calls with PHI require an active BAA. ' +
-    'Set ANTHROPIC_BAA_ACTIVE=true after confirming BAA coverage. See SECURITY_STATUS.md C-7.'
-  );
-}
-```
-
-```ts
-// Source: backend/src/services/ocrService.ts:274-279 (Document AI image gate)
-if (!config.gcp.documentAiBaaActive) {
-  throw new InternalServerError(
-    'Document AI image OCR requires an active BAA. Image bytes contain patient ' +
-    'demographics that redaction cannot scrub. Set GOOGLE_BAA_ACTIVE=true after ' +
-    'confirming Google Cloud BAA coverage for Document AI. See SECURITY_STATUS.md.'
-  );
-}
-```
-
-**Spend circuit breaker caveat:** the accumulator is in-memory per Cloud Run instance (`config/index.ts:188-194` comment; `aiSpendGuard.ts:30` reads `isAISpendExceeded`). Under autoscale the effective ceiling is N×budget. `aiSpendGuard` is wired onto AI routes after `aiLimiter` (`expenseRoutes.ts:113-114`, `aiRoutes.ts:31-32`, `biomarkerRoutes.ts:30`) and fails closed with 503 when exceeded (`aiSpendGuard.ts:41-47`).
+**Per-instance caveat (acceptance Q11):** the AI spend accumulator is in-memory per Cloud Run instance, so under autoscale the effective ceiling is N×budget (bounded by `--max-instances=3`, `deploy.yml:189`). The fix is to back it with `REDIS_URL` (`config/index.ts:250-254`).
 
 ### Quest Diagnostics SMART-on-FHIR lab sync
 
 | Var | Default | Source |
 |---|---|---|
-| `QUEST_FHIR_CLIENT_ID` | `''` | `index.ts:206` |
-| `QUEST_FHIR_CLIENT_SECRET` | `''` | `index.ts:207` |
-| `QUEST_FHIR_BASE_URL` | `https://api.questdiagnostics.com/fhir/r4` | `index.ts:208` |
-| `QUEST_FHIR_REDIRECT_URI` | `https://api.ownmyhealth.io/api/v1/fhir/callback` | `index.ts:210` |
-| `QUEST_FHIR_SUCCESS_REDIRECT` | `http://localhost:5173/settings?labConnected=quest` | `index.ts:213` |
-| `QUEST_FHIR_AUTH_HOSTS` | `''` | `index.ts:220` |
-
-The feature is **disabled unless `QUEST_FHIR_CLIENT_ID` is set** — `fhir/labSyncService.ts:56-57` throws `Quest FHIR integration is not configured: QUEST_FHIR_CLIENT_ID missing`. To run against the **mock FHIR server locally**, set `QUEST_FHIR_BASE_URL=http://localhost:3001/api/v1/mock-fhir/r4` (`.env.example:224`, `config/index.ts:202-204` comment); the mock server refuses to load when `NODE_ENV=production` (`fhir/mockFhirServer.ts:195`).
-
-`QUEST_FHIR_AUTH_HOSTS` is an **SSRF / token-exfil allowlist** (`config/index.ts:216-223`). The patient Bearer token and OAuth `client_secret` are only ever sent to the FHIR base host plus these extra hosts; empty means the authorize/token/revoke endpoints must live on the FHIR base host. Wired into the SMART config at `fhir/labSyncService.ts:64` (`allowedAuthHosts: config.quest.authHosts`).
+| `QUEST_FHIR_CLIENT_ID` | `''` (feature disabled unless set) | `config/index.ts:266` |
+| `QUEST_FHIR_CLIENT_SECRET` | `''` | `config/index.ts:267` |
+| `QUEST_FHIR_BASE_URL` | `https://api.questdiagnostics.com/fhir/r4` | `config/index.ts:268-269` |
+| `QUEST_FHIR_REDIRECT_URI` | `https://api.ownmyhealth.io/api/v1/fhir/callback` | `config/index.ts:270-272` |
+| `QUEST_FHIR_SUCCESS_REDIRECT` | `http://localhost:5173/settings?labConnected=quest` | `config/index.ts:273-275` |
+| `QUEST_FHIR_AUTH_HOSTS` | `''` (→ empty list) | `config/index.ts:280` |
 
 ```ts
-// Source: backend/src/config/index.ts:220-223
+// Source: backend/src/config/index.ts:280-283
 authHosts: (process.env.QUEST_FHIR_AUTH_HOSTS || '')
   .split(',')
   .map((h) => h.trim().toLowerCase())
   .filter(Boolean),
 ```
 
-> `LabConnection.accessTokenEncrypted` / `refreshTokenEncrypted` hold the resulting OAuth tokens — treated as PHI (a stolen token reaches live lab PHI). See [PHI_TAXONOMY.md](./PHI_TAXONOMY.md).
+`QUEST_FHIR_AUTH_HOSTS` is an **SSRF / token-exfiltration allowlist**: the patient Bearer token and the OAuth `client_secret` are only ever sent to the FHIR base host or a host on this list (`config/index.ts:276-279`). Empty list means the SMART authorize/token/revoke endpoints must live on the FHIR base host. **Local dev / mock**: set `QUEST_FHIR_BASE_URL=http://localhost:3001/api/v1/mock-fhir/r4` and leave `QUEST_FHIR_CLIENT_ID` empty/sandbox to exercise the flow without real Quest credentials (`backend/.env.example:285-300`).
 
 ### Email (SendGrid)
 
-- `SENDGRID_API_KEY` (`''`) — presence flips `config.email.enabled` (`index.ts:149`); unset = email disabled (`emailService.ts:294`).
-- `EMAIL_FROM` (`noreply@ownmyhealth.com`) / `EMAIL_FROM_NAME` (`OwnMyHealth`) — sender identity (`emailService.ts:313-314`). The var is `EMAIL_FROM`, not `SENDGRID_FROM_EMAIL`.
-- `SENDGRID_SANDBOX_MODE` (`false`, auto-`true` in staging) — validates but never delivers (`emailService.ts:323,329`). **Prod refuses to boot if `"true"`** (`index.ts:421-427`).
+- `SENDGRID_API_KEY` (`config/index.ts:210`; `config.email.enabled` derived at `:209`), `EMAIL_FROM` (default `noreply@ownmyhealth.com`, `:211`), `EMAIL_FROM_NAME` (`:212`), `SENDGRID_SANDBOX_MODE` (`:218`).
+- Staging forces `SENDGRID_SANDBOX_MODE=true` (`:218`); production boot hard-fails if it is `true` (`:502-508`).
 
 ### File storage (GCS)
 
-- `GCS_BUCKET_NAME` — default `ownmyhealth-user-files` (`index.ts:168`), consumed at `storageService.ts:25`. **Prod must set it explicitly** (`index.ts:399-405`) — the default is dev/staging-only to avoid PHI landing in the wrong namespace.
-- `GCP_PROJECT_ID` — `storageService.ts:17`, `ocrService.ts:83,115`.
-- `GOOGLE_APPLICATION_CREDENTIALS` — file path **or** inline JSON (`ocrService.ts:90-96`); on Cloud Run usually unset (the service identity is used).
+- `GCS_BUCKET_NAME` (prod required, `:480-486`), `GCP_PROJECT_ID` (`:229`), `GOOGLE_APPLICATION_CREDENTIALS` (`:231` / `ocrService.ts:91`).
 
 ### Scheduled maintenance / ops
 
-`AUDIT_CLEANUP_TOKEN` (`''`) enables `POST /api/v1/internal/audit-cleanup`:
-
-```mermaid
-flowchart TD
-  A{AUDIT_CLEANUP_TOKEN set?} -- no --> B[endpoint returns 404<br/>internalRoutes.ts:45-52]
-  A -- no --> C[in-process 24h setInterval<br/>auditLog.ts:587 else-branch]
-  A -- yes --> D[in-process interval DISABLED<br/>auditLog.ts:587]
-  A -- yes --> E[Cloud Scheduler POSTs<br/>X-Cleanup-Token header<br/>constant-time match]
-```
-
-When set, the in-process interval is skipped (`auditLog.ts:584-587`) and the endpoint authenticates a `X-Cleanup-Token` header via constant-time compare (`internalRoutes.ts:43-62`); 404 when unset, 401 on bad token (`internalRoutes.ts:38`). The interval rarely fires on scale-to-zero Cloud Run, which is why the token-driven path exists (`config/index.ts:129-134`).
+- `AUDIT_CLEANUP_TOKEN` (`config/index.ts:196`) — see [acceptance Q14](#acceptance-questions).
 
 ### CORS & frontend URLs
 
-- `CORS_ORIGIN` — read in both `config/index.ts:105` and `app.ts:80` (`getSafeCorsOrigins`). Prod requires it and rejects localhost (`app.ts:82-92`); the actual allow-list unions env origins with hardcoded production hosts (`app.ts:65,90`). Staging: `https://staging.ownmyhealth.io` (`.env.staging.example:53`); prod: `https://ownmyhealth.io` (`.env.production.example:58`).
-- `FRONTEND_URL` — used to build email links (`emailService.ts:350,372,395`).
+- `CORS_ORIGIN` (`config/index.ts:165`; `app.ts:80`, prod-required at `app.ts:83-84`), `FRONTEND_URL` (`config/index.ts:213`).
+
+```ts
+// Source: backend/src/app.ts:80-91
+const envValue = process.env.CORS_ORIGIN;
+if (config.isProduction) {
+  if (!envValue) {
+    throw new Error('CORS_ORIGIN must be set in production');
+  }
+  const envOrigins = envValue.split(',').map(o => o.trim()).filter(Boolean);
+  if (envOrigins.some(o => o.includes('localhost') || o.includes('127.0.0.1'))) {
+    throw new Error('CORS_ORIGIN cannot contain localhost in production');
+  }
+  const origins = Array.from(new Set([...envOrigins, ...HARDCODED_PRODUCTION_ORIGINS]));
+  return origins.length === 1 ? origins[0] : origins;
+}
+```
 
 ### Demo mode
 
-`DEMO_ACCOUNT_ENABLED` / `DEMO_EMAIL` / `DEMO_PASSWORD` (`index.ts:142-144`). **Prod refuses to boot with demo enabled** (`index.ts:408-414`); staging enables it for smoke tests (`.env.staging.example:86-88`).
+- `DEMO_ACCOUNT_ENABLED` (prod-blocked, `:489`), `DEMO_EMAIL`, `DEMO_PASSWORD` (`config/index.ts:202-204`).
 
-### Feature flags / BAA gates / toggles
+### Feature flags / BAA gates
 
-| Var | Role | Prod behavior |
-|---|---|---|
-| `ANTHROPIC_BAA_ACTIVE` | Gate PHI→Claude | Throws if API key set + flag false (`index.ts:300-306`) |
-| `GOOGLE_BAA_ACTIVE` | Gate image OCR | Throws if `GCP_PROCESSOR_ID` set + flag false (`index.ts:320-326`) |
-| `DISABLE_CSRF` | Bypass CSRF | Honored only in dev (`csrf.ts:146`); ignored in prod |
-| `SENDGRID_SANDBOX_MODE` | Suppress email delivery | Throws if `"true"` (`index.ts:421-427`) |
+- `ANTHROPIC_BAA_ACTIVE`, `GOOGLE_BAA_ACTIVE` (BAA gates), `DISABLE_CSRF` (dev-only CSRF off), `OMH_DEPLOY_ENFORCE_PROD` (deploy-tier guard).
 
-### CI/CD-only (GitHub Secrets — deploy time, never read at runtime)
+### Frontend build-time
 
-| Secret | Used at | Source |
-|---|---|---|
-| `secrets.GCP_SA_KEY` | `google-github-actions/auth@v2` in all deploy jobs | `deploy.yml:43,156,202`; `deploy-staging.yml:31,93` |
-
-CI also injects build-time env inline (not GitHub Secrets): `VITE_API_URL` (`ci.yml:40`, `deploy.yml:222`), and CI test fixtures set `DATABASE_URL` / `PHI_ENCRYPTION_KEY` / `SUPERUSER_DATABASE_URL` for the RLS job (`ci.yml:163-169`).
-
-### Frontend build-time (`VITE_*`)
-
-Embedded into the JS bundle at `npm run build`; changing them requires a rebuild, not a redeploy of env. `VITE_API_URL` (`client.ts:10`, `uploadUtils.ts:8`), `VITE_DEMO_MODE` (`App.tsx:281`, `useBiomarkerData.ts:18`), `VITE_DEBUG` (`logger.ts:17`). Prod build sets only `VITE_API_URL=https://api.ownmyhealth.io/api/v1` (`deploy.yml:222`).
+- `VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG` (see master table).
 
 ---
 
 ## Startup validation
 
-All boot-time throws live in `backend/src/config/index.ts`, executed at module load (imported transitively by `app.ts`). Order and triggers:
+All startup checks execute at module load of `backend/src/config/index.ts` (importing it triggers them; `app.ts` does no env validation except the prod `CORS_ORIGIN` check in `app.ts`). Order and behavior:
 
-| # | Check | Scope | Throws when | Line |
-|---|---|---|---|---|
-| 1 | `requireEnv('JWT_ACCESS_SECRET')` | every env | missing/empty | `index.ts:61` |
-| 2 | `requireEnv('JWT_REFRESH_SECRET')` | every env | missing/empty | `index.ts:65` |
-| 3 | `BLOCKED_JWT_VALUES` | every env | secret is a known placeholder | `index.ts:250-261` |
-| 4 | `MIN_JWT_SECRET_LENGTH` (32) | every env | secret <32 chars | `index.ts:264-277` |
-| 5 | `AUDIT_LOG_SALT` ≥16 | every env | missing or too short | `index.ts:284-293` |
-| 6 | Anthropic BAA gate | prod throws / dev+staging warn | API key set + BAA false | `index.ts:300-313` |
-| 7 | Document AI BAA gate | prod throws / dev+staging warn | `GCP_PROCESSOR_ID` set + BAA false | `index.ts:320-333` |
-| 8 | `requiredEnvVars` (`DATABASE_URL`, `PHI_ENCRYPTION_KEY`) | prod+staging | either missing | `index.ts:344-352` |
-| 9 | `PHI_ENCRYPTION_KEY` 64-hex + placeholder | prod+staging | <64 / non-hex / placeholder | `index.ts:355-383` |
-| 10 | `GCS_BUCKET_NAME` set | prod only | unset | `index.ts:399-405` |
-| 11 | `DEMO_ACCOUNT_ENABLED` false | prod only | `true` | `index.ts:408-414` |
-| 12 | `SENDGRID_SANDBOX_MODE` not true | prod only | `"true"` | `index.ts:421-427` |
-
-```ts
-// Source: backend/src/config/index.ts:344-352 (prod/staging required-vars gate)
-const requiredEnvVars = [
-  'DATABASE_URL',
-  'PHI_ENCRYPTION_KEY',
-];
-const missing = requiredEnvVars.filter(key => !process.env[key]);
-
-if (missing.length > 0) {
-  throw new Error(`Missing required environment variables for ${envLabel}: ${missing.join(', ')}`);
-}
+```
+import config/index.ts
+   │
+   ├─ OMH_DEPLOY_ENFORCE_PROD=true + dev-tier?  → throw (:53-60)
+   ├─ requireEnv('JWT_ACCESS_SECRET')           → throw if missing (:120)
+   ├─ requireEnv('JWT_REFRESH_SECRET')          → throw if missing (:124)
+   ├─ cookie SameSite=None without Secure?      → throw (:301-307)
+   ├─ JWT secret in BLOCKED_JWT_VALUES?         → throw (:324,330)
+   ├─ JWT secret length < 32?                   → throw (:338,345)
+   ├─ AUDIT_LOG_SALT missing or < 16 chars?     → throw (:358-366)
+   ├─ ANTHROPIC_API_KEY set + BAA off?          → prod: throw / dev,staging: warn (:381-394)
+   ├─ GCP_PROCESSOR_ID set + GOOGLE_BAA off?    → prod: throw / dev,staging: warn (:401-414)
+   └─ if prod OR staging (:422):
+        ├─ DATABASE_URL / PHI_ENCRYPTION_KEY missing? → throw (:429-433)
+        ├─ PHI_ENCRYPTION_KEY < 64 / non-hex / placeholder? → throw (:439-464)
+        ├─ CORS_ORIGIN contains localhost?      → warn to stderr (:470-472)
+        ├─ prod + GCS_BUCKET_NAME unset?         → throw (:480-486)
+        ├─ prod + DEMO_ACCOUNT_ENABLED=true?     → throw (:489-495)
+        ├─ prod + SENDGRID_SANDBOX_MODE=true?    → throw (:502-508)
+        └─ ANTHROPIC/SENDGRID/GCP key unset?     → warn to stderr (:512-520)
 ```
 
-```ts
-// Source: backend/src/config/index.ts:284-293 (audit-salt gate — NOT rotatable)
-const MIN_AUDIT_SALT_LENGTH = 16;
-if (!config.auditSalt || config.auditSalt.length < MIN_AUDIT_SALT_LENGTH) {
-  throw new Error(
-    `AUDIT_LOG_SALT must be set and at least ${MIN_AUDIT_SALT_LENGTH} characters. ` +
-    `Historic audit logs are encrypted with this salt — rotating it breaks decryption. ` +
-    `For new environments, generate with: openssl rand -hex 32. ` +
-    `For existing production envs, extract the plaintext salt from ` +
-    `system_config.audit_encryption_salt (decrypt with PHI_ENCRYPTION_KEY) ` +
-    `before setting AUDIT_LOG_SALT.`
-  );
-}
-```
+### JWT secrets — `requireEnv` (throws at module load)
 
 ```ts
-// Source: backend/src/config/index.ts:355-363 (PHI key 64-hex gate, prod/staging)
+// Source: backend/src/config/index.ts:120,124
+accessSecret: requireEnv('JWT_ACCESS_SECRET'),
+...
+refreshSecret: requireEnv('JWT_REFRESH_SECRET'),
+```
+
+If omitted, `requireEnv` throws `Missing required environment variable: JWT_ACCESS_SECRET. ...` (`config/index.ts:21-25`) — boot crash, every environment.
+
+### Prod/staging required-vars gate
+
+```ts
+// Source: backend/src/config/index.ts:422-433
+if (config.isProduction || config.isStaging) {
+  const envLabel = config.isProduction ? 'production' : 'staging';
+  const requiredEnvVars = [
+    'DATABASE_URL',
+    'PHI_ENCRYPTION_KEY',
+  ];
+  const missing = requiredEnvVars.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables for ${envLabel}: ${missing.join(', ')}`);
+  }
+```
+
+### PHI_ENCRYPTION_KEY format gate
+
+```ts
+// Source: backend/src/config/index.ts:436-450
 const phiKey = process.env.PHI_ENCRYPTION_KEY!;
 const hexRegex = /^[0-9a-fA-F]+$/;
-
 if (phiKey.length < 64) {
   throw new Error(
     `PHI_ENCRYPTION_KEY must be at least 64 hex characters (256 bits). Current length: ${phiKey.length}. ` +
     `Generate with: openssl rand -hex 32`
   );
 }
+if (!hexRegex.test(phiKey)) {
+  throw new Error('PHI_ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F)');
+}
 ```
 
-Reproduce a boot failure locally (missing JWT secret):
+Known placeholder keys are also rejected (`config/index.ts:453-464`).
 
-```bash
-cd backend
-# With no JWT_ACCESS_SECRET set, importing config throws at module load:
-node -e "require('./dist/config/index.js')"
-# → Error: Missing required environment variable: JWT_ACCESS_SECRET. ...
+### AUDIT_LOG_SALT length gate
+
+```ts
+// Source: backend/src/config/index.ts:357-366
+const MIN_AUDIT_SALT_LENGTH = 16;
+if (!config.auditSalt || config.auditSalt.length < MIN_AUDIT_SALT_LENGTH) {
+  throw new Error(
+    `AUDIT_LOG_SALT must be set and at least ${MIN_AUDIT_SALT_LENGTH} characters. ` +
+    `Historic audit logs are encrypted with this salt — rotating it breaks decryption. ...`
+  );
+}
 ```
 
-Generate the secrets the gates demand:
+### BAA gates (Anthropic + Document AI)
 
-```bash
-openssl rand -base64 32   # JWT_ACCESS_SECRET, JWT_REFRESH_SECRET (≥32 chars)
-openssl rand -hex 32      # PHI_ENCRYPTION_KEY (64 hex), AUDIT_LOG_SALT (64 hex)
+```ts
+// Source: backend/src/config/index.ts:381-394 (Anthropic)
+if (config.anthropic.apiKey && !config.anthropic.baaActive) {
+  if (config.isProduction) {
+    throw new Error(
+      'ANTHROPIC_BAA_ACTIVE must be set to "true" in production when ANTHROPIC_API_KEY is configured. ...'
+    );
+  } else {
+    process.stderr.write('⚠️  ANTHROPIC_BAA_ACTIVE is not set to "true". Claude calls will be blocked ...\n');
+  }
+}
+
+// Source: backend/src/config/index.ts:401-414 (Google Document AI)
+if (process.env.GCP_PROCESSOR_ID && !config.gcp.documentAiBaaActive) {
+  if (config.isProduction) {
+    throw new Error(
+      'GOOGLE_BAA_ACTIVE must be set to "true" in production when GCP_PROCESSOR_ID is configured. ...'
+    );
+  } else {
+    process.stderr.write('⚠️  GOOGLE_BAA_ACTIVE is not set to "true". Document AI image OCR will be blocked ...\n');
+  }
+}
 ```
+
+`ANTHROPIC_BAA_ACTIVE` gates `claudeExtraction` / `sbcExtraction` (Claude PDF extraction) and Claude calls generally; `GOOGLE_BAA_ACTIVE` gates `ocrService.processImageWithDocumentAI` (the runtime gate is the load-bearing check in dev/staging).
+
+### Prod-only prohibitions
+
+`DEMO_ACCOUNT_ENABLED=true` (`:489-495`), `SENDGRID_SANDBOX_MODE=true` (`:502-508`), and missing `GCS_BUCKET_NAME` (`:480-486`) each hard-fail boot in production.
 
 ---
 
 ## Secret rotation policy
 
-| Secret | Rotatable? | Cadence | Where it lives (prod) | Procedure / caveat |
+| Secret | Rotatable? | Cadence | Where it lives (prod) | Notes |
 |---|---|---|---|---|
-| `JWT_ACCESS_SECRET` | yes | TBD (external: cadence not recorded in repo — resolve via [RUNBOOK.md](./RUNBOOK.md) / GCP Secret Manager) | GCP Secret Manager → Cloud Run env | Rotating invalidates all live access tokens (15-min TTL — low blast radius). |
-| `JWT_REFRESH_SECRET` | yes | TBD (external: cadence not recorded in repo — resolve via [RUNBOOK.md](./RUNBOOK.md)) | GCP Secret Manager → Cloud Run env | Rotating logs everyone out (refresh tokens become invalid). |
-| `PHI_ENCRYPTION_KEY` | **NO — not freely rotatable** | n/a | GCP Secret Manager → Cloud Run env | Master key for all per-user PHI. Rotation requires re-encrypting every PHI row. No in-repo rotation procedure exists. TBD (external: documented re-encryption migration does not exist in repo — resolve by designing one, see [SECURITY_STATUS.md](./SECURITY_STATUS.md)). |
-| `AUDIT_LOG_SALT` | **NO — not freely rotatable** | n/a | GCP Secret Manager → Cloud Run env | Historic audit-log PHI is encrypted with this salt; rotating makes 7-yr-retained logs undecryptable. Gate hard-fails (`index.ts:284-293`). Migration note for existing prod: extract from `system_config.audit_encryption_salt` (`index.ts:48-53`). |
-| `ANTHROPIC_API_KEY` | yes | TBD (external: cadence in ops runbook outside repo) | GCP Secret Manager → Cloud Run env | After rotation, `anthropicClient.reset()` rebuilds the singleton (`anthropicClient.ts:75-77`). |
-| `SENDGRID_API_KEY` | yes | TBD (external: cadence not in repo) | GCP Secret Manager → Cloud Run env | — |
-| `QUEST_FHIR_CLIENT_SECRET` | yes | TBD (external: governed by Quest app registration) | GCP Secret Manager → Cloud Run env | — |
-| `AUDIT_CLEANUP_TOKEN` | yes | TBD (external: cadence not in repo) | GCP Secret Manager → Cloud Run env | `openssl rand -base64 32` (`.env.example:163`). |
-| `DATABASE_URL` (password) | yes | TBD (external: tied to Cloud SQL user) | GCP Secret Manager → Cloud Run env | Rotate the Cloud SQL password, then update the secret. |
-| `DEMO_PASSWORD` | yes (staging) | as needed | GCP Secret Manager (staging only) | `openssl rand -base64 16` (`.env.example:178`). |
+| `JWT_ACCESS_SECRET` | yes | rotate freely; in-flight access tokens (≤15 min) invalidate naturally | GCP Secret Manager → Cloud Run secret ref | Rotating logs everyone out as cached tokens expire. |
+| `JWT_REFRESH_SECRET` | yes | rotate on suspected compromise; invalidates all refresh tokens (forces re-login) | GCP Secret Manager | |
+| `PHI_ENCRYPTION_KEY` | **NO — not rotatable in place** | n/a | GCP Secret Manager | Rotating orphans every encrypted PHI column (`config/index.ts:436` / `encryption.ts:182`). A rotation requires bulk decrypt-with-old / re-encrypt-with-new — TBD (external: no in-repo re-encryption procedure exists; resolve via an ops runbook + a maintenance Cloud Run job modeled on `backfill-userfile-filenames` in `maintenance.yml`). |
+| `AUDIT_LOG_SALT` | **NO — not rotatable in place** | n/a | GCP Secret Manager | Rotating makes historic audit-log PHI undecryptable (`config/index.ts:358-366`). For existing prod, extract the historic salt from `system_config.audit_encryption_salt` (decrypt with `PHI_ENCRYPTION_KEY`) before first setting it (`config/index.ts:362-365`). |
+| `DATABASE_URL` | yes | rotate DB password per ops policy | GCP Secret Manager (`DATABASE_URL:latest`, `deploy.yml:144`) | Migrate job + service both read this secret ref. |
+| `ANTHROPIC_API_KEY`, `SENDGRID_API_KEY`, `QUEST_FHIR_CLIENT_SECRET` | yes | per third-party provider policy | GCP Secret Manager | No re-encryption impact. |
+| `AUDIT_CLEANUP_TOKEN`, `REDIS_URL`, `DEMO_PASSWORD` | yes | rotate freely | GCP Secret Manager / Cloud Run env | |
+| `secrets.GCP_SA_KEY` | yes | rotate per ops policy (or migrate to Workload Identity Federation, `deploy.yml:22-24`) | GitHub repository Secret | Deploy-time only. |
 
-> **Where stored (prod) caveat:** the repo confirms production runs on **GCP Cloud Run** (`deploy.yml`, `PROJECT_ID: ownmyhealth-prod`), and that secrets are GitHub Secret (`GCP_SA_KEY`) for CI plus Cloud Run runtime env for the rest. The repo does **not** record which specific Secret Manager secret names map to which env var. TBD (external: secret-name → env-var mapping and rotation cadence live in GCP Console / ops runbook — resolve via GCP Secret Manager in project `ownmyhealth-prod`).
+**Exact rotation cadence numbers** (e.g. "every 90 days") are **TBD (external: rotation cadence lives in an ops runbook outside the repo — resolve via GCP Secret Manager UI / the owner's password vault).** No file in the repo records a numeric cadence.
 
 ---
 
 ## Local vs staging vs prod
 
-| Var | Local (dev) | Staging | Prod |
-|---|---|---|---|
-| `NODE_ENV` | `development` | `staging` | `production` |
-| `DATABASE_URL` | local Postgres / `prisma+postgres://` | staging Cloud SQL | prod Cloud SQL (Secret Manager) |
-| `CORS_ORIGIN` | localhost list (default) | `https://staging.ownmyhealth.io` | `https://ownmyhealth.io` |
-| `COOKIE_DOMAIN` / `COOKIE_SAME_SITE` | unset / `lax` | `.ownmyhealth.io` / `none` | usually unset / `strict` |
-| `ANTHROPIC_BAA_ACTIVE` | `false` (warn) | `false` (Claude blocked by gate) | `true` (required if key set) |
-| `SENDGRID_SANDBOX_MODE` | optional | `true` (no real email) | must be false (boot-fail if true) |
-| `DEMO_ACCOUNT_ENABLED` | `true` (optional) | `true` | must be false (boot-fail if true) |
-| `GCS_BUCKET_NAME` | default fallback | `ownmyhealth-user-files-staging` | must be set explicitly |
-| `DISABLE_CSRF` | may be `true` | honored only if dev | ignored |
-| `VITE_API_URL` (build) | `http://localhost:3001/api/v1` | `https://api-staging.ownmyhealth.io/api/v1` | `https://api.ownmyhealth.io/api/v1` |
+| Var | Local (dev) | Staging | Production | Source |
+|---|---|---|---|---|
+| `NODE_ENV` | unset → `development` | `staging` | `production` | `config/index.ts:34-36`; `Dockerfile:53` |
+| `OMH_DEPLOY_ENFORCE_PROD` | unset | `true` (image) | `true` (image + deploy) | `Dockerfile:54`; `deploy.yml:190` |
+| `DATABASE_URL` | local Prisma Postgres | Cloud SQL | Cloud SQL (Secret Manager) | `backend/.env.example:30`; `deploy.yml:144` |
+| `PHI_ENCRYPTION_KEY` | placeholder fails validation in dev examples; set a real hex32 to run | required | required (Secret Manager) | `backend/.env.example:82`; `config/index.ts:427` |
+| `CORS_ORIGIN` | localhost array default | staging frontend domain | `https://ownmyhealth.io` (+ hardcoded prod origins) | `config/index.ts:165`; `backend/.env.production.example:67`; `app.ts:82-91` |
+| `SENDGRID_SANDBOX_MODE` | `false` | forced `true` (`isStagingEnv`) | must NOT be `true` (boot hard-fails) | `config/index.ts:218,502` |
+| `ANTHROPIC_BAA_ACTIVE` | warn if key set + off | warn (no real PHI) | hard-fail if key set + off | `config/index.ts:381-394` |
+| `GCS_BUCKET_NAME` | falls back to `ownmyhealth-user-files` | falls back | required explicit (`ownmyhealth-prod` bucket) | `config/index.ts:228,480` |
+| `DEMO_ACCOUNT_ENABLED` | allowed | allowed (testing) | hard-fail if `true` | `config/index.ts:489` |
+| `VITE_API_URL` (build) | `http://localhost:3001` | `https://api-staging.ownmyhealth.io/api/v1` | `https://api.ownmyhealth.io/api/v1` | `.env.example:15`; `.env.staging:5`; `deploy.yml:330` (prod build env); staging via `--mode staging` (`deploy-staging.yml:131`) |
 
-Evidence: `.env.staging.example` (lines 17,23,48,53,58-59,78,86,94,99-103), `.env.production.example` (lines 17,53,58), `.env.staging` (line 5), `deploy.yml:222`, `deploy-staging.yml:113`.
+**Defaults safe for local dev that must NEVER be left as default in prod (acceptance Q8):** `GCS_BUCKET_NAME` (boot hard-fails in prod if unset, but a wrong-namespace value silently mis-routes PHI), `EMAIL_FROM` (`noreply@ownmyhealth.com` is a default; prod needs a verified sender), and the Quest FHIR redirect URIs `QUEST_FHIR_REDIRECT_URI` / `QUEST_FHIR_SUCCESS_REDIRECT` (defaults point at `localhost:5173` and the prod callback host).
+
+---
+
+## How DATABASE_URL is provisioned for a Cloud Run deploy (acceptance Q5)
+
+Production runs on **GCP Cloud Run** (not Railway — `backend/railway.toml` is a legacy/alternate target, `railway.toml:9-13`). `DATABASE_URL` is a **GCP Secret Manager** secret. The deploy pipeline wires it into both the migrate job and the service:
+
+```yaml
+# Source: .github/workflows/deploy.yml:139-150 (migrate job)
+gcloud run jobs deploy ${{ env.MIGRATE_JOB }} \
+  --image "$IMAGE" \
+  --region "${{ env.REGION }}" \
+  --project "${{ env.PROJECT_ID }}" \
+  --set-cloudsql-instances "${{ env.CLOUDSQL_INSTANCE }}" \
+  --set-secrets "DATABASE_URL=DATABASE_URL:latest" \
+  ...
+  --command npx \
+  --args prisma,migrate,deploy \
+  --max-retries 0 ...
+```
+
+Migrations run as the `ownmyhealth-migrate` Cloud Run **job** AFTER image push and BEFORE the new revision is staged (`deploy.yml:106-161`). The container image `CMD` is `["node", "dist/app.js"]` only — **no boot-migrate** (`Dockerfile:93`). The service itself reads `DATABASE_URL` from the same Secret Manager ref (wired out-of-band on the Cloud Run service; the deploy step uses `--update-env-vars=NODE_ENV=production` to merge one key without wiping the secret refs, `deploy.yml:179-191`). The whole deploy is gated on CI (`needs: ci`, `deploy.yml:57-66`).
+
+```
+push master ──▶ ci.yml (lint/test/audit/RLS) ──needs──▶ build-and-stage
+                                                          ├─ docker build + push :sha
+                                                          ├─ jobs deploy ownmyhealth-migrate (DATABASE_URL secret) + execute --wait
+                                                          └─ run deploy --no-traffic --tag staging-<sha>
+                                                                   │
+                                                          smoke-test (/health) ──▶ promote (100% traffic) ──▶ deploy-frontend (VITE_API_URL)
+```
 
 ---
 
 ## Drift findings
 
-Generated by grepping `process\.env\.[A-Z_]+` / `import\.meta\.env\.[A-Z_]+` across `backend/src/**`, `src/**`, workflows, then diffing against `.env*.example` files.
+Generated by grepping `process\.env\.[A-Z_]+` (backend), `import\.meta\.env\.[A-Z_]+` (frontend), and reading the example env files.
 
-| Env var | Declared in `config/index.ts`? | In an `.env*.example`? | Code usage (grep)? | Notes |
+| Env var | Declared in `config/index.ts`? | In example env file? | Code usage (grep) | Notes |
 |---|---|---|---|---|
-| `CMS_API_KEY` | no | yes (`backend/.env.example:196`, `.env.production.example:89`) | **0 hits** (`*.ts/.tsx/.js`) | Leftover from removed CMS Marketplace feature — safe to delete. |
-| `CMS_API_BASE_URL` | no | yes (`backend/.env.example:198`) | **0 hits** | Same — dead. |
-| `CMS_API_TIMEOUT_MS` | no | yes (`backend/.env.example:200`) | **0 hits** | Same — dead. |
-| `OPENAI_API_KEY` | no | yes (`backend/.env.example:203`) | **0 hits** | App uses Anthropic, not OpenAI — dead. |
-| `RLS_ENFORCEMENT` | no | yes (`backend/.env.example:95`, `.env.staging.example:41`) | only a doc comment (`database.ts:210`), never read | Strict-mode flag removed at the `omh_app` NOBYPASSRLS cutover — dead var in examples. |
-| `VITE_SUPABASE_URL` | n/a (frontend) | yes (`.env.example:32`, `.env.production.example:14`) | **0 hits** | App does not use Supabase — dead. |
-| `VITE_SUPABASE_ANON_KEY` | n/a (frontend) | yes (`.env.example:33`, `.env.production.example:15`) | **0 hits** | Same — dead. |
-| `GCP_LOCATION` | **no** (read only in `ocrService.ts:116`) | no | 1 hit | Read directly from `process.env`, defaulted to `us`. Not drift — just not in `config`. |
-| `DATABASE_POOL_SIZE` | **no** (read only in `database.ts:110`) | no | 1 hit | Read directly from `process.env`. Not in any example; consider documenting. |
-| `BCRYPT_ROUNDS` default mismatch | yes (`index.ts:100`, default `13`) | yes (`.env.example:109` says `12`) | — | Comment/example says 12; code default is 13. Example is stale. |
+| `DATABASE_POOL_SIZE` | no | yes (`backend/.env.example:34`, commented) | `database.ts:108` | Read directly via `process.env`, not surfaced in `config`. Working, not drift. |
+| `GCP_LOCATION` | no | yes (`backend/.env.example:238`, commented) | `ocrService.ts:117` | Read directly via `process.env`. Working, not drift. |
+| `DISABLE_CSRF` | no | yes (`backend/.env.example:191`, commented) | `csrf.ts:159`; `app.ts:215` | Read directly via `process.env`. Working, not drift. |
+| `RLS_ENFORCEMENT` | no | comment-only in two files | **0 code hits** | **Dead flag.** Removed at the `omh_app` NOBYPASSRLS cutover; no longer read by any code (`database.ts:209-210`). In `backend/.env.example:95-98` it is an explanatory "Do not re-add" removal comment (not a settable `key=value`). In `backend/.env.staging.example:39-41` a stale commented `# RLS_ENFORCEMENT=strict` still lingers with outdated "flip to strict after omh_app is live" guidance that now contradicts the unconditional posture — safe to delete the commented line. |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | n/a (frontend) | yes (`.env.example:32-33`, commented) | **0 code hits** | Legacy/unused Supabase placeholders; never read by `src/**`. Safe to delete from `.env.example`. |
 
-Grep counts run 2026-06-01: `CMS_API|OPENAI|VITE_SUPABASE|RLS_ENFORCEMENT` → 1 total hit across `**/*.{ts,tsx,js,jsx}`, and that single hit is the `RLS_ENFORCEMENT` doc comment at `database.ts:210` (not an actual read).
+No env var declared in `config/index.ts` is unread by code, and (aside from the dead/unused entries above) no settable example-file entry lacks a code reader. The legacy CMS/OpenAI vars (`CMS_API_KEY`, `CMS_API_BASE_URL`, `CMS_API_TIMEOUT_MS`, `OPENAI_API_KEY`) are **not present** in `backend/.env.example` — nothing to flag.
 
 ---
 
-## Acceptance questions (self-answered)
+## Acceptance questions
 
-1. **Strictly required to boot in production?** `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `AUDIT_LOG_SALT` (every env), plus `DATABASE_URL`, `PHI_ENCRYPTION_KEY` (prod/staging). Also `GCS_BUCKET_NAME` and `CORS_ORIGIN` in prod. See [Startup validation](#startup-validation).
-2. **If `JWT_ACCESS_SECRET` is omitted?** `requireEnv` throws at module load — `config/index.ts:18-28`, called at `index.ts:61`.
-3. **PHI-adjacent secrets / not rotatable?** PHI-adjacent: `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`, plus `LabConnection` token-derived secrets via `QUEST_FHIR_CLIENT_SECRET`. NOT rotatable: `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`. See [Secret rotation policy](#secret-rotation-policy).
-4. **Build-time vs runtime?** Build-time: `VITE_API_URL`, `VITE_DEMO_MODE`, `VITE_DEBUG` (baked into the bundle). Everything else is runtime. See [Frontend build-time](#frontend-build-time-vite_).
-5. **Where is `DATABASE_URL` stored / provisioned?** GCP Secret Manager → Cloud Run env. A new deploy gets it via the Cloud Run service config (set with `gcloud run ... --set-env-vars` / Secret Manager reference); CI only authenticates with `GCP_SA_KEY`. See [Master table](#master-table) and [Secret rotation policy](#secret-rotation-policy).
-6. **Anthropic / Document AI BAA gates?** `ANTHROPIC_BAA_ACTIVE` → `claudeExtraction.ts:106` + `sbcExtraction.ts:767`; `GOOGLE_BAA_ACTIVE` → `ocrService.ts:274` (`processImageWithDocumentAI`). See [AI category](#ai--anthropic--spend-circuit-breaker--google-document-ai).
-7. **CORS origin staging vs prod / which file?** Staging `https://staging.ownmyhealth.io`, prod `https://ownmyhealth.io`; read in `config/index.ts:105` and `app.ts:80`. See [CORS & frontend URLs](#cors--frontend-urls).
-8. **Defaults safe for dev but not prod?** `GCS_BUCKET_NAME` (default reserved for dev/staging), `EMAIL_FROM` (`noreply@ownmyhealth.com` — must be a verified sender), the Quest FHIR redirect URIs (default points at prod host). See [Local vs staging vs prod](#local-vs-staging-vs-prod).
-9. **`PHI_ENCRYPTION_KEY` rotation procedure?** None exists in the repo — flagged `TBD (external: re-encryption migration does not exist)` in [Secret rotation policy](#secret-rotation-policy).
-10. **GitHub Actions secrets used at deploy only?** `secrets.GCP_SA_KEY` (`deploy.yml:43`). See [CI/CD-only](#cicd-only-github-secrets--deploy-time-never-read-at-runtime).
-11. **AI spend breaker config + caveat?** `AI_DAILY_BUDGET_USD` (50) / `AI_USER_DAILY_BUDGET_USD` (5), enforced by `aiSpendGuard` reading `aiCostTracker`; accumulator is in-memory per Cloud Run instance, so effective ceiling is N×budget. See [AI category](#ai--anthropic--spend-circuit-breaker--google-document-ai).
-12. **Quest enable vs mock + what `QUEST_FHIR_AUTH_HOSTS` protects?** Enable: set `QUEST_FHIR_CLIENT_ID` (+secret); mock: set `QUEST_FHIR_BASE_URL=http://localhost:3001/api/v1/mock-fhir/r4`. `QUEST_FHIR_AUTH_HOSTS` is an SSRF/token-exfil allowlist for the authorize/token/revoke endpoints. See [Quest FHIR](#quest-diagnostics-smart-on-fhir-lab-sync).
-13. **Rate-limit state across instances + failure mode?** `REDIS_URL` backs a shared store; if set but unreachable, requests fail closed (error) because `enableOfflineQueue:false` (`rateLimitStore.ts:44-45`). See [Rate limiting](#rate-limiting).
-14. **`AUDIT_CLEANUP_TOKEN` — what it enables / absence behavior?** Enables `POST /api/v1/internal/audit-cleanup` (Cloud Scheduler driven) and disables the in-process interval; unset → endpoint 404s and an in-process 24h `setInterval` runs. See [Scheduled maintenance / ops](#scheduled-maintenance--ops).
+Self-answered from this doc alone.
+
+**Q1. Which env vars are strictly required to boot the backend in production?**
+`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `AUDIT_LOG_SALT` (all envs); plus `DATABASE_URL`, `PHI_ENCRYPTION_KEY`, and `GCS_BUCKET_NAME` in production. See [Startup validation](#startup-validation) and the [Master table](#master-table). `CORS_ORIGIN` is also required in prod (`app.ts:83-84`).
+
+**Q2. What happens if `JWT_ACCESS_SECRET` is omitted?**
+`requireEnv('JWT_ACCESS_SECRET')` throws at module load: `Missing required environment variable: JWT_ACCESS_SECRET. ...` (`backend/src/config/index.ts:120` calling the helper at `:18-28`). Boot crashes in every environment.
+
+**Q3. Which env vars hold PHI-adjacent secrets, and which are NOT rotatable without re-encrypting data?**
+`PHI_ENCRYPTION_KEY` and `AUDIT_LOG_SALT` are PHI-adjacent and **not rotatable in place** — see [Secret rotation policy](#secret-rotation-policy). Rotating either orphans existing encrypted PHI / audit logs.
+
+**Q4. Which vars are build-time vs runtime?**
+Build-time: `VITE_API_URL`, `VITE_DEBUG`, `VITE_DEMO_MODE` (+ Vite built-ins `import.meta.env.DEV/PROD`) — baked into `dist/` at build time. Everything else is runtime. See [Frontend build-time](#frontend--build-time-importmetaenvvite_) in the master table.
+
+**Q5. Where is `DATABASE_URL` stored in production and how is it provisioned for a new Cloud Run deploy?**
+GCP Secret Manager (`DATABASE_URL:latest`); the migrate job and service both reference it. See [How DATABASE_URL is provisioned](#how-database_url-is-provisioned-for-a-cloud-run-deploy-acceptance-q5) (`deploy.yml:144`).
+
+**Q6. Which vars control Anthropic / Google Document AI BAA protections, and what do they gate?**
+`ANTHROPIC_BAA_ACTIVE` → gates `claudeExtraction` / `sbcExtraction` and Claude calls (`config/index.ts:381-394`). `GOOGLE_BAA_ACTIVE` → gates `ocrService.processImageWithDocumentAI` (`config/index.ts:401-414`). Both hard-fail prod boot when the corresponding key/processor is set but the flag is off.
+
+**Q7. What's the CORS origin in staging vs prod, and which file reads it?**
+Prod: `https://ownmyhealth.io` (+ hardcoded prod origins, `backend/.env.production.example:67`); staging: the staging frontend domain. Read in `config/index.ts:165` and `app.ts:80` (prod-required at `app.ts:83-84`). See [CORS & frontend URLs](#cors--frontend-urls).
+
+**Q8. Which vars have local-safe defaults that must never be left as default in prod?**
+`GCS_BUCKET_NAME`, `EMAIL_FROM`, `QUEST_FHIR_REDIRECT_URI`, `QUEST_FHIR_SUCCESS_REDIRECT`. See [Local vs staging vs prod](#local-vs-staging-vs-prod).
+
+**Q9. Does `PHI_ENCRYPTION_KEY` have a rotation procedure?**
+No in-repo procedure exists; rotation is not supported in place. Flagged `TBD (external: ...)` in [Secret rotation policy](#secret-rotation-policy).
+
+**Q10. Which GitHub Actions secrets are used at deploy time but never read at runtime?**
+`secrets.GCP_SA_KEY` (`deploy.yml:79,259,310`). See [CI/CD — GitHub Secret](#cicd--github-secret-deploy-time-only-never-read-at-runtime).
+
+**Q11. How is the AI spend circuit breaker configured, and what's the per-instance caveat?**
+`AI_DAILY_BUDGET_USD` (50) / `AI_USER_DAILY_BUDGET_USD` (5), enforced by `aiSpendGuard`; in-memory per Cloud Run instance → effective ceiling N×budget under autoscale (bounded by `--max-instances=3`). See [AI category](#ai--anthropic--spend-circuit-breaker--google-document-ai) (`config/index.ts:256-257,250-254`).
+
+**Q12. What's required to enable Quest lab sync vs run the mock locally, and what does `QUEST_FHIR_AUTH_HOSTS` protect against?**
+Live sync needs `QUEST_FHIR_CLIENT_ID` (+ secret); local/mock needs `QUEST_FHIR_BASE_URL=http://localhost:3001/api/v1/mock-fhir/r4` with no real credentials. `QUEST_FHIR_AUTH_HOSTS` is an SSRF / token-exfiltration allowlist. See [Quest FHIR](#quest-diagnostics-smart-on-fhir-lab-sync).
+
+**Q13. How is rate-limit state shared across Cloud Run instances, and what's the failure mode if `REDIS_URL` is set but unreachable?**
+`REDIS_URL` backs a shared store for all 8 limiters; if set but unreachable, rate-limited requests **error** (fail-closed) rather than silently skip the limit. See [Rate limiting](#rate-limiting) (`config/index.ts:186`; `backend/.env.example:154-155`).
+
+**Q14. What does `AUDIT_CLEANUP_TOKEN` enable, and what runs in its absence?**
+When set, it enables `POST /api/v1/internal/audit-cleanup` (authenticated by this shared secret for Cloud Scheduler) and disables the in-process 24h `setInterval`. When unset, the endpoint returns 404 and the in-process interval runs (rarely fires on scale-to-zero Cloud Run). See `config/index.ts:189-197` and the master-table notes.
 
 ---
 
 ## Related Documents
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — how these vars wire into the middleware stack, CORS, and the Cloud Run deployment topology.
-- [RUNBOOK.md](./RUNBOOK.md) — operational procedures for setting and rotating secrets in production (Secret Manager / Cloud Run).
-- [LOCAL_DEV.md](./LOCAL_DEV.md) — how to populate `.env` for a local stack (mock FHIR, demo account, dev defaults).
-- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — context for `PHI_ENCRYPTION_KEY`, `AUDIT_LOG_SALT`, and Quest OAuth-token PHI.
-- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open secret-management findings (C-7 BAA gates, C-8 audit-salt move, PHI key rotation gap).
-- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — diagnosing boot failures from missing/invalid env vars.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — how env vars wire into the middleware stack and the Cloud Run deployment topology.
+- [RUNBOOK.md](./RUNBOOK.md) — operational procedures for setting and rotating secrets in production (GCP Secret Manager / Cloud Run).
+- [LOCAL_DEV.md](./LOCAL_DEV.md) — how to populate `.env` locally and run against the mock FHIR server.
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — every PHI field × encryption; context for `PHI_ENCRYPTION_KEY` and `AUDIT_LOG_SALT`.
+- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open secret-management findings and the BAA-gate / NOBYPASSRLS posture.
 
 ---
 
 ## Prompt drift log
 
-- `./35-env-vars-doc.md` lists `BCRYPT_ROUNDS` default as the spec's "Account security" set without a value; the **code default is `13`** (`config/index.ts:100`), while `backend/.env.example:109` still documents `12`. The example file is stale — prompt/example author should bump it to 13.
-- `./35-env-vars-doc.md` references `.env.staging` (repo root) as a frontend env file — confirmed it contains only `VITE_API_URL` (`.env.staging:5`). No drift, noted for completeness. There is **no** root `.env.staging.example`; the staging frontend file is `.env.staging` (un-suffixed), loaded via `vite build --mode staging` (`deploy-staging.yml:113`).
-- `RLS_ENFORCEMENT` lingers in **both** `backend/.env.example:95` and `backend/.env.staging.example:41` (spec mentions `.env.example` / `.env.staging.example`) — confirmed dead in code (only the `database.ts:210` doc comment). Logged in the [Drift table](#drift-findings).
-- Spec's master-table guidance lists `GCP_LOCATION` and `DATABASE_POOL_SIZE` as read directly from `process.env` (not `config`) — confirmed (`ocrService.ts:116`, `database.ts:110`). No `config` field exists for either; documented as such rather than inventing one.
+- `./35-env-vars-doc.md` says the master table covers "~42 vars". The live count is **41 distinct backend env vars** (the 38 read in `config/index.ts` + `DATABASE_POOL_SIZE`, `GCP_LOCATION`, `DISABLE_CSRF` read directly) plus **3 active frontend `VITE_*`** vars (`VITE_API_URL`, `VITE_DEBUG`, `VITE_DEMO_MODE`) — close enough to "~42" but documented exactly here. The two commented Supabase `VITE_*` placeholders are dead (see [Drift findings](#drift-findings)).
+- `./35-env-vars-doc.md` "Files to review" lists `backend/src/services/*.ts` as "27 non-test top-level modules". Confirmed against the fact digest (27 top-level non-test services). No drift.
+- `CLAUDE.md` (repo root) still lists `uploadController.ts` as a controller and says "services (18 files)" / "config (20+ variables)". Live state: the single-file `uploadController.ts` is gone (upload handlers now live under `backend/src/controllers/upload/`), there are 27 top-level services, and `config/index.ts` reads ~38 vars directly plus 3 more read elsewhere. This is repo-CLAUDE drift, not prompt drift, but noted because a reader may cross-check against it.
+- `backend/.env.staging.example:39-41` still carries a commented `# RLS_ENFORCEMENT=strict` with stale "flip to strict after omh_app is live" guidance; the flag was **removed**, not pending (`database.ts:209-210`). Recommend deleting the commented line. (Already captured in [Drift findings](#drift-findings).)

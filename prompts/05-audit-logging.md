@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Audit Logging Review (HIPAA Required)
@@ -17,16 +17,16 @@ updated: 2026-06-01
 
 ## Files to Review
 - `backend/src/services/auditLog.ts` — `AuditLogService` + `getAuditLogService(prisma)` singleton, `startAuditCleanup`/`stopAuditCleanup` scheduler, `RETENTION_DAYS = 2555`
-- `backend/prisma/schema.prisma` — `AuditLog` model (line ~458), `ActorType` enum (~581), `AuditAction` enum (~589)
+- `backend/prisma/schema.prisma` — `AuditLog` model (line ~515), `ActorType` enum (~644), `AuditAction` enum (~652)
 - `backend/src/routes/internalRoutes.ts` — `POST /api/v1/internal/audit-cleanup`, the Cloud Scheduler retention endpoint gated by `AUDIT_CLEANUP_TOKEN`
-- `backend/src/config/index.ts` — `config.scheduler.auditCleanupToken` (~line 136), `config.auditSalt` (AUDIT_LOG_SALT, the salt used to encrypt audit values)
-- All controllers in `backend/src/controllers/` (10 controllers + the `upload/` subdir: `labUploadController.ts`, `sbcUploadController.ts`) — every PHI access must produce an audit row. Provider/admin audit calls also live in `routes/providerRoutes.ts` and `routes/adminRoutes.ts`, not just controllers.
+- `backend/src/config/index.ts` — `config.scheduler.auditCleanupToken` (~line 196, `process.env.AUDIT_CLEANUP_TOKEN`), `config.auditSalt` (AUDIT_LOG_SALT, the salt used to encrypt audit values)
+- All controllers in `backend/src/controllers/` (12 non-test top-level controllers — incl. `fhirController.ts` and `aiChatController.ts`, plus `index.ts`/`testHelpers.ts` — and the `upload/` subdir: `labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`, `index.ts`) — every PHI access must produce an audit row. Provider/admin audit calls also live in `routes/providerRoutes.ts` and `routes/adminRoutes.ts`, not just controllers.
 
 ## OwnMyHealth Audit Architecture
 - **Singleton Service**: `getAuditLogService(prisma)` returning `AuditLogService`. The constructor `prisma` param is now unused at runtime — all DB access goes through `withRLSContext` against the module-level client.
-- **Retention**: 7 years (`RETENTION_DAYS = 2555` days) per HIPAA, enforced by `cleanupOldLogs()`.
-- **Encryption**: `previousValue`/`newValue` encrypted with the system salt (`config.auditSalt` from `AUDIT_LOG_SALT`, no longer read from `system_config`) before storage.
-- **Immutability**: No UPDATE/DELETE operations on audit logs (except retention cleanup).
+- **Retention**: 7 years (`RETENTION_DAYS = 2555` days) per HIPAA, enforced app-side by `cleanupOldLogs()` AND DB-side: the `audit_logs_delete` RLS policy was rewritten to `USING (is_admin_session() AND created_at < now() - interval '7 years')`, so even an admin-context bug cannot purge recent audit rows — retention is no longer only an app-scheduler guarantee (`migrations/20260613_force_rls_and_audit_retention/migration.sql:41-44`).
+- **Encryption**: `previousValue`/`newValue` **and `metadata`** are all encrypted with the system salt (`config.auditSalt` from `AUDIT_LOG_SALT`, no longer read from `system_config`) before storage. `metadata` is now field-level AES-256-GCM-encrypted into `metadataEncrypted` because it can carry PHI (e.g. uploaded filenames logged on download/export) — there is no plaintext `metadata` column anymore (`auditLog.ts:299-301,314`; `schema.prisma:527-533`).
+- **Immutability**: No UPDATE/DELETE operations on audit logs (except retention cleanup), now DB-hardened: `audit_logs` has **FORCE ROW LEVEL SECURITY** (owner-bypass closure, `migrations/20260613_force_rls_and_audit_retention/migration.sql:25`) and the `audit_logs_insert` policy was tightened from `WITH CHECK (true)` to `WITH CHECK (user_id = current_user_id() OR is_admin_session() OR current_user_id() IS NULL)` so rows can't be forged to arbitrary users (L40, `migration 20260615_provider_consent_immutable_audit_insert_check`; comment at `auditLog.ts:323-331`).
 - **Fail-closed writes**: `log()` re-throws an `InternalServerError` when `failClosed` is set (create/update/delete/export via `logCreate`/`logUpdate`/`logDelete`/`logExport`). Read (`logAccess`) and auth (`logAuth`) audits are best-effort (logged but not fatal). A failed value encryption (#28) re-throws rather than persisting a counterfeit `[ENCRYPTION_FAILED]` ciphertext.
 - **Atomic with operation**: when a `tx` (from an enclosing `withRLSContext`/`withRLSTransaction`) is threaded into the entry, the audit row commits/rolls back on the same connection (#17); otherwise it opens a standalone admin context.
 
@@ -44,7 +44,7 @@ updated: 2026-06-01
   - `ipAddress` (string, `@db.VarChar(45)`)
   - `userAgent` (string)
   - `sessionId` (string, `@db.VarChar(100)`)
-  - `metadata` (String JSON — encrypted only if it carries PHI; most metadata is non-PHI counts/operation tags)
+  - `metadataEncrypted` (AES-256-GCM ciphertext of the metadata JSON, system salt — metadata is ALWAYS encrypted because it can carry PHI such as filenames; the legacy plaintext `metadata` column was DROPPED in `20260615_drop_legacy_audit_metadata`, `schema.prisma:527-533`)
   - `success` (Boolean, default true) and `errorMessage` (string)
   - `createdAt` (`@db.Timestamptz(6)`)
 - [ ] No `updatedAt` field (immutable records)
@@ -69,7 +69,7 @@ updated: 2026-06-01
   - Health goal access/create/update/delete
   - Health need access/create/update/delete
   - Expense data access/create/update/delete
-  - Lab connection / FHIR lab sync (Quest SMART-on-FHIR) — sync (`operation: 'SYNC'`/`'SYNC_FAILED'`), disconnect (`operation: 'DISCONNECT'`), AND the successful OAuth connect callback (`operation: 'CONNECT'` written by `persistConnection()` at `services/fhir/labSyncService.ts:172-177`) ARE audited via `logAccess` (called by `fhirController.ts`). The real gaps are narrower: connect **initiation** (`buildConnectRedirect`, `labSyncService.ts:95-103`) emits no audit row, and callback **failures** (`handleCallback` catch, `fhirController.ts:100-106`) have no `CONNECT_FAILED` row analogous to `SYNC_FAILED`. See [[41-fhir-lab-integration]] §4 for the full audit-parity review.
+  - Lab connection / FHIR lab sync (Quest SMART-on-FHIR) — sync (`operation: 'SYNC'`/`'SYNC_FAILED'`), disconnect (`operation: 'DISCONNECT'`), the successful OAuth connect callback (`operation: 'CONNECT'` written by `persistConnection()` at `services/fhir/labSyncService.ts:181-186`), connect **initiation** (`operation: 'CONNECT_INITIATED'` via `buildConnectRedirect`, `labSyncService.ts:104-109`), AND callback **failures** (`operation: 'CONNECT_FAILED'` in `handleCallback`'s catch, `fhirController.ts:116-124`) ARE all audited via `logAccess`. The two earlier connect-audit gaps are now CLOSED. The remaining caveats are narrower: `CONNECT_FAILED` has no `userId` binding (`userId: undefined` — the PKCE-bound userId is consumed inside `handleOAuthCallback` and only surfaced on success), and the OAuth-denial / missing-param redirect branches return un-audited (`fhirController.ts:84-97`). See [[41-fhir-lab-integration]] §4 for the full audit-parity review.
   - NOTE: DNA/Genetics import was REMOVED (DNAVariant/GeneticTrait dropped in migration `20260423_drop_dna_genetics`) — there is no DNA audit path to check anymore.
 - [ ] Cross-user access events:
   - Provider access to patient biomarkers
@@ -104,8 +104,8 @@ updated: 2026-06-01
 - [ ] API keys redacted
 
 ### 5. Log Integrity
-- [ ] No UPDATE operations on audit_logs table
-- [ ] No DELETE except retention policy (`cleanupOldLogs()` deleteMany older than `RETENTION_DAYS`)
+- [ ] No UPDATE operations on audit_logs table — DB-hardened by **FORCE ROW LEVEL SECURITY** on `audit_logs` (owner-bypass closure) plus the tightened `audit_logs_insert` `WITH CHECK (user_id = current_user_id() OR is_admin_session() OR current_user_id() IS NULL)` so rows can't be forged to arbitrary users (L40)
+- [ ] No DELETE except retention policy — enforced app-side (`cleanupOldLogs()` deleteMany older than `RETENTION_DAYS`) AND DB-side: the `audit_logs_delete` RLS policy is `USING (is_admin_session() AND created_at < now() - interval '7 years')`, so even admin context cannot purge recent rows (`20260613_force_rls_and_audit_retention/migration.sql:41-44`)
 - [ ] Timestamps are server-generated (not client-provided)
 - [ ] `failClosed` set for all PHI mutations so a failed audit write aborts the operation (`logCreate`/`logUpdate`/`logDelete`/`logExport`)
 - [ ] Encryption failure on audit values re-throws (no fabricated `[ENCRYPTION_FAILED]` ciphertext, #28)
@@ -130,7 +130,7 @@ Two-step (replaces `grep -L`):
 1. Are all PHI access events being logged? Cross-check every route under `biomarkerRoutes`, `insuranceRoutes`, `expenseRoutes`, `fileRoutes`, `healthGoalsRoutes`, `healthNeedsRoutes`, `providerRoutes`, `patientRoutes`.
 2. Is the IP address source secure? `getClientIp()` uses `req.ip`, which respects `app.set('trust proxy', 1)` in `app.ts` — confirm the hop count matches the actual Cloud Run / LB topology so X-Forwarded-For can't be spoofed.
 3. Is exactly one retention path active? In prod, `AUDIT_CLEANUP_TOKEN` should be set (disabling the in-process `setInterval` and enabling `/api/v1/internal/audit-cleanup`); in dev the interval runs. What happens if the server crashes mid-sweep, or if neither path is wired in a given environment?
-4. Can an admin tamper with audit rows via Prisma Studio or direct SQL? If so, is there an offline backup / append-only mirror?
+4. Can an admin tamper with audit rows via Prisma Studio or direct SQL? If so, is there an offline backup / append-only mirror? Also review the admin **read/decrypt** surface: `AuditLogService.decryptMetadata()` (`auditLog.ts:275-288`) decrypts `metadataEncrypted` for authorized viewers, and `queryLogs()` (used by `adminRoutes` `/audit-logs`, `auditLog.ts:598-607`) strips the raw ciphertext column and returns decrypted `metadata`. Confirm this decrypt path is admin-gated and that pre-2026-06-06 rows surface `null` metadata (the plaintext column was dropped).
 5. If a user is deleted, do their audit rows remain readable (system salt `config.auditSalt`, not per-user salt)?
 6. Are AI/FHIR PHI paths (`aiChatController.ts`, `fhirController.ts`, biomarker guidance) audited? These ship PHI to external APIs (Anthropic, Quest) and are newer than the rest of the audit coverage.
 7. Is the `/api/v1/internal/audit-cleanup` token rotated and stored only as a secret? A leaked `AUDIT_CLEANUP_TOKEN` lets an attacker trigger retention deletion.

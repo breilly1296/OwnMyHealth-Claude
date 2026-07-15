@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # CSRF Protection Review
@@ -19,7 +19,7 @@ updated: 2026-06-01
 
 ## OwnMyHealth CSRF Architecture
 - **Method**: Stateless double-submit cookie pattern (no server-side CSRF secret/store)
-- **Token Location**: `csrf_token` cookie (`httpOnly: false`, readable by JS; `maxAge` 24h)
+- **Token Location**: `csrf_token` cookie (`httpOnly: false`, readable by JS). `maxAge` is tied to the refresh-token (session) lifetime = 7 days — NOT a fixed 24h (L26 change); re-issued on every successful `/refresh` and cleared on logout (`csrf.ts:47-51`, `config/index.ts:149-152` `refreshToken: 7*24*60*60*1000`)
 - **Header**: `X-CSRF-Token` (validated case-insensitively as `x-csrf-token`) required on mutating requests
 - **Validation**: Cookie and header are each SHA-256 hashed, then compared with `crypto.timingSafeEqual` (the pre-hash normalizes length so unequal-length inputs don't leak timing). Cookie value must match header value.
 - **Cookie attributes**: `secure` and `sameSite` come from `config.cookie` (env: `COOKIE_SAME_SITE`, `COOKIE_DOMAIN`); domain set only when `COOKIE_DOMAIN` is configured.
@@ -37,10 +37,10 @@ updated: 2026-06-01
 ### 2. CSRF Token Generation
 - [ ] Cryptographically random token (`crypto.randomBytes(32).toString('hex')` → 64 hex chars)
 - [ ] Sufficient length (32 bytes / 256 bits)
-- [ ] Token persisted client-side via cookie (24h `maxAge`); double-submit pattern needs no per-session server store. NOTE: because there is no server-side secret, the token is NOT rotated on login — confirm that is acceptable given `sameSite` cookie + auth-token defenses, otherwise flag fixation risk.
+- [ ] Token persisted client-side via cookie whose `maxAge` equals the refresh-token (session) lifetime = 7 days (NOT a fixed 24h); double-submit pattern needs no per-session server store. The cookie is re-issued on every successful `/refresh` and cleared on logout via `clearAuthCookies` (L26 — so the double-submit token never outlives the session it protects; `csrf.ts:47-51`). NOTE: because there is no server-side secret, the token is NOT rotated on login — confirm that is acceptable given `sameSite` cookie + auth-token defenses, otherwise flag fixation risk.
 
 ### 3. Frontend Token Handling
-- [ ] `client.ts` `getCsrfToken()` reads `csrf_token` from `document.cookie` (regex `csrf[_-]?token`, `decodeURIComponent`)
+- [ ] `client.ts` `getCsrfToken()` reads `csrf_token` from `document.cookie` using a name-boundary-anchored regex `/(?:^|;\s*)csrf_token=([^;]+)/` (matches exactly `csrf_token`, so a same-suffix cookie like `xsrf_csrf_token`/`notcsrf_token` can't inject a value — deliberate hardening), then `decodeURIComponent` (`client.ts:122-127`)
 - [ ] `apiFetch` attaches `x-csrf-token` header on POST/PUT/PATCH/DELETE only
 - [ ] `uploadUtils.ts` reads `csrf_token` cookie and attaches `X-CSRF-Token` on multipart uploads
 - [ ] Token retrieved fresh for each request (not cached in JS state)
@@ -49,7 +49,8 @@ updated: 2026-06-01
 ### 4. Exempt Routes
 The middleware exempts a fixed allowlist (`backend/src/middleware/csrf.ts`). Verify each is still safe:
 - [ ] Safe methods (GET/HEAD/OPTIONS) — skipped by design
-- [ ] Public auth endpoints (no session to protect yet): `/auth/login`, `/auth/register`, `/auth/demo`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`
+- [ ] Public auth endpoints (no session to protect yet): `/auth/login`, `/auth/register`, `/auth/demo`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`
+- [ ] `/auth/refresh` is NOT exempt (and verify it never reappears in `EXEMPT_PATHS`): it is cookie-authenticated and state-changing (rotates the refresh session + re-issues cookies), so exempting it was a real CSRF hole. The SPA double-submits `X-CSRF-Token` on `/refresh`, and the handler re-issues a fresh `csrf_token` via `setCsrfCookie(res)` on every successful refresh so the double-submit invariant survives rotation (`csrf.ts:113-145` allowlist + comment; raw recovery fetch attaches the token in `client.ts:149-159`)
 - [ ] Bearer-only SSE streaming: `/ai/chat` (EventSource can't send custom headers) — MUST be mounted with `requireBearerAuth` (verify in `aiRoutes.ts`), so cookie-auth is rejected at the route layer and no CSRF hole opens
 - [ ] Scheduler maintenance trigger: `/internal/audit-cleanup` — authenticated by shared-secret `X-Cleanup-Token` (constant-time compared in `internalRoutes.ts`), 404s unless the secret is configured
 - [ ] File upload endpoints are NOT exempt anymore — they fail closed unless the client routes through `uploadUtils.ts` (the old `uploadRoutes` exemption + TODO was removed)

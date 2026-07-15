@@ -4,7 +4,7 @@ tags:
   - changelog
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Generate CHANGELOG.md
@@ -36,7 +36,7 @@ Produce `New Project Documents/CHANGELOG.md` — a **[Keep-a-Changelog](https://
 | `backend/prisma/migrations/` | Schema changes, each migration is a user-visible change if it adds/removes fields. |
 | `.github/workflows/*` (history) | CI/CD changes. |
 | `CLAUDE.md` "Removed Features" + "Current Features" | Reconcile against git log — each removal should have a commit. |
-| Project memory (e.g., PR #30 ships C-1/F-14/F-15, Anthropic BAA 2026-04-16; later backlog PRs #113–#134 ship FHIR lab connect, AI chat, onboarding, plan gating, email-change) | Record cross-sanity. |
+| Project memory (e.g., PR #30 ships C-1/F-14/F-15, Anthropic BAA 2026-04-16; mid-history PRs #113–#134 ship FHIR lab connect, AI chat, onboarding, plan gating, email-change; the **recent** frontier is the teardown-remediation wave #142–#160 and the security/a11y/interaction wave #174–#182, plus the migrate-job / CI-gating / Node-22 infra changes — do not anchor the cutoff at #134) | Record cross-sanity. |
 
 ---
 
@@ -89,7 +89,7 @@ Every PR since the cutoff gets a row. Sort descending.
 The codebase has grown well past the 2026-04-16 baseline. When reconstructing history from git, expect — and explicitly classify — these landed feature lines. Each is verifiable in code (cite real files when describing it):
 
 - **Quest FHIR / lab connections** (Added) — SMART-on-FHIR OAuth lab sync. Code: `backend/src/routes/fhirRoutes.ts`, `fhirController.ts`, `services/fhir/` (`fhirClient`, `labSyncService`, `loincMapper`, `smartAuth`, `urlSafety` SSRF guard), Prisma `LabConnection` model, migration `20260418_add_lab_connections`, env vars `QUEST_FHIR_*`. PR #115 (`feat/fhir-lab-connect`) and #119 (`fix/fhir-ui-review-followups`); SSRF hardening in PR #110 (`fix/fhir-ssrf-token-exfil`, closes finding #26).
-- **AI chat + AI spend control** (Added/Security) — `aiRoutes.ts`, `aiChatController.ts`, `services/anthropicClient.ts`, `aiCostTracker.ts`, `usageTracker.ts`, `middleware/aiSpendGuard.ts`; env vars `AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`, `ANTHROPIC_BAA_ACTIVE`.
+- **AI chat + AI spend control** (Added/Security) — `aiRoutes.ts`, `aiChatController.ts`, `services/anthropicClient.ts`, `aiCostTracker.ts`, `usageTracker.ts`, `middleware/aiSpendGuard.ts`; env vars `AI_DAILY_BUDGET_USD`, `AI_USER_DAILY_BUDGET_USD`, `ANTHROPIC_BAA_ACTIVE`. NOTE: the spend cap was subsequently **reworked** (M11/L33, post-06-01) — `isAISpendExceeded` was deleted in favor of `admitAISpend()` reserve/settle with a fixed `RESERVATION_USD = 0.05` reservation (`aiCostTracker.ts:67`) and a pluggable `SpendStore` (`InMemorySpendStore` default / `RedisSpendStore` when `REDIS_URL` set), failing **closed with 503** on budget reached or shared-store error. Record this as a Changed/Security entry; `aiSpendGuard` now has **8 mount points across 5 route files** (`aiRoutes`, `biomarkerRoutes`, `expenseRoutes`, `insuranceRoutes`×2, `uploadRoutes`×3).
 - **Onboarding wizard** (Added) — `onboardingRoutes.ts`, `services/onboardingService.ts`, `components/onboarding/`, migration `20260420_add_onboarding`.
 - **Plan gating / billing tiers** (Added) — `planRoutes.ts`, `middleware/planGating.ts`, `config/plans.ts`, `PlanType` enum, migration `20260420_add_user_plan`.
 - **Verified email-change flow** (Added) — request → confirm. PRs #133/#134, migration `20260601_add_email_change`.
@@ -97,6 +97,20 @@ The codebase has grown well past the 2026-04-16 baseline. When reconstructing hi
 - **Redis-backed rate limiting** (Infrastructure) — `middleware/rateLimitStore.ts` (Redis via `REDIS_URL`, in-memory fallback), now **8** named limiters in `rateLimiter.ts`. PR #125 (`feat/redis-rate-limit-store`).
 - **DNA / Genetics removal** (Removed) — `DNAVariant` / `GeneticTrait` models and their encrypted fields dropped in migration `20260423_drop_dna_genetics`. This is a Removed-section entry; reconcile against `CLAUDE.md` "Removed Features".
 - **`CostAnalysis.claudeResponse` → `claudeResponseEncrypted` rename** (Changed/Security) — migration `20260424_align_uuid_defaults_and_rename_claude_response`. The field is now encrypted-suffixed; the old un-suffixed name is gone.
+
+### Post-2026-06-01 wave (the recent frontier — DO NOT stop the changelog at #134)
+
+The bullets above stop at the 2026-06-01 baseline. The following landed AFTER that (PRs ~#142–#160 teardown remediation and #174–#182 security/a11y/interaction, plus infra) and a current changelog MUST record them. Each is verifiable in code (cite real files):
+
+- **Migrations no longer run at container boot → dedicated Cloud Run migrate job** (Infrastructure — biggest pipeline change). The Dockerfile CMD is now `CMD ["node", "dist/app.js"]` (was `prisma migrate deploy && node`); `prisma migrate deploy` runs once per deploy as the Cloud Run **job `ownmyhealth-migrate`** (`backend/Dockerfile:86-93`; `deploy.yml:43` `MIGRATE_JOB: ownmyhealth-migrate`, run in the "Run database migrations" step `deploy.yml:106-161`). Record as an Infrastructure entry; cross-link `RUNBOOK.md` (root cause of the 10-day silent outage resolved 2026-06-12).
+- **Deploy gated on full CI** (Infrastructure) — `deploy.yml` invokes `ci.yml` as a reusable workflow (`deploy.yml:57-58` `ci: uses: ./.github/workflows/ci.yml`) and `build-and-stage` has `needs: ci` (`deploy.yml:65-66`); a commit that fails lint/test/build/gitleaks/audit/RLS is never built or staged. Also: 0%-traffic staged deploy + smoke-test + named-revision promote with `--to-revisions` rollback; `deploy-frontend` now `needs: [ci, promote]`.
+- **Node 20 → Node 22 LTS** (Infrastructure, M15 — Node 20 EOL Apr 2026) — `backend/Dockerfile:11-15` (`# M15: bumped from node:20-alpine … to node:22-alpine`), `FROM node:22-alpine` digest-pinned both stages (`:15,:37`); `ci.yml` `NODE_VERSION: '22'`; `deploy.yml:321` frontend setup-node `node-version: '22'`; `package.json` `engines`. Record as an Infrastructure entry.
+- **Cross-instance access-token revocation** (Security) — NEW `revoked_access_tokens` table + Prisma model `RevokedAccessToken` and `users.tokens_valid_after` cutoff; access JWTs now carry a `jti`; logout records the jti, logout-all/password-change/reset/email-change/admin-deactivate stamp `tokensValidAfter`; refresh-reuse within the grace window revokes the whole token family (pentest M-1). Migrations `20260613_revoked_access_tokens`, `20260606000002_add_tokens_valid_after`. `pdfRedaction.ts` was DELETED (pdf-lib now unused).
+- **FORCE ROW LEVEL SECURITY + DB-enforced 7-year audit retention** (Security) — migration `20260613_force_rls_and_audit_retention` adds `FORCE ROW LEVEL SECURITY` on all 19 RLS tables and rewrites the audit DELETE policy to require `created_at < now() - interval '7 years'`; `database.ts` `assertRLSForced()` boot check hard-fails (prod) if any RLS table isn't FORCE-protected. Consent-immutability trigger + tightened `audit_logs_insert` WITH CHECK in `20260615_provider_consent_immutable_audit_insert_check`. Cross-link `SECURITY_STATUS.md`.
+- **PHI encryption expanded** (Security/Changed) — `UserFile.originalFilenameEncrypted` (L24, migration `20260615_encrypt_userfile_original_filename`); `HealthGoal.currentValueEncrypted` + `startValueEncrypted` and `GoalProgressHistory.valueEncrypted` (M4, `20260613_encrypt_goal_values`); `AuditLog.metadataEncrypted` (M6, `20260606000001_encrypt_audit_metadata`). PHI_FIELDS now covers 14 models / 39 fields.
+- **IRREVERSIBLE removal of plaintext audit metadata** (Removed/Security) — migration `20260615_drop_legacy_audit_metadata` DROPs the `audit_logs.metadata` plaintext column (already applied in prod; legacy plaintext content lost). This is a Removed-section entry; flag it as breaking-irreversible.
+- **Biomarker time-series merge** (Changed — headline behavioral fix) — NEW `services/biomarkerSeries.ts` `upsertBiomarkerReading()` routes all create/bulk/FHIR paths into one appended series (was: every write made a disconnected single-point row, so trends were silently dead). NEW `services/biomarkerConsolidation.ts` + one-time consolidation job.
+- **Plan-limit bypass closed** (Security, M12/M13) — `maxBiomarkers` per-upload truncation and `insurancePlans` quota re-check on archived-plan reactivation now enforced; planGating fails CLOSED to FREE on DB error.
 
 ---
 
@@ -130,7 +144,7 @@ Before marking anything TBD:
 - **PRs**: this repo uses **two** merge styles, so `--grep="Merge pull request"` alone WILL miss PRs. Capture both:
   - Classic merge commits: `git log --grep="Merge pull request"` (e.g. `Merge pull request #132 from …`).
   - Squash merges with a trailing `(#N)` in the subject: `git log --oneline | grep -E "\(#[0-9]+\)"` (e.g. `feat: verified email-change flow (request → confirm) (#133)`, `fix(auth): … (#134)`). These have NO "Merge pull request" line.
-  Union both lists. PR numbers currently run past #130 (HEAD = #134 `fix(auth): fire one-time-token confirmation exactly once`). If a PR title truly isn't in the commit, read GitHub (external) and mark `TBD (external: fill PR title from GitHub)` only then.
+  Union both lists. PR numbers now run well past #134 — the security/UX waves merged through **#182** (e.g. the teardown-remediation wave #142–#160 and the security/a11y/interaction wave #174–#182). Do NOT anchor the cutoff at #134; run the commit-set commands and let git define the upper bound. If a PR title truly isn't in the commit, read GitHub (external) and mark `TBD (external: fill PR title from GitHub)` only then.
 - **Schema changes**: list every directory added under `backend/prisma/migrations/` since cutoff.
 - **Session summary integration**: if session summary files exist in the repo (e.g., `session-summaries/*.md`), read them and cross-reference to commit dates. If they live in an external doc store, mark and provide the locator.
 

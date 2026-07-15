@@ -5,7 +5,7 @@ tags:
   - medium
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Rate Limiting Review
@@ -103,8 +103,8 @@ Verify all **8** are exported from `backend/src/middleware/rateLimiter.ts` (ever
 - [ ] `strictAuthLimiter` on `POST /auth/login` (also on resend-verification / forgot / reset routes to prevent enumeration)
 - [ ] `authLimiter` registered globally in `authRoutes.ts` via `router.use(authLimiter)` (covers register etc.)
 - [ ] `uploadLimiter` on every route in `uploadRoutes.ts` (via `router.use(uploadLimiter)`)
-- [ ] `aiLimiter` **+ `aiSpendGuard`** on `POST /biomarkers/:id/guidance`, `POST /expenses/analyze`, `POST /ai/chat`, and the two AI-backed insurance routes (`POST /insurance/upload-sbc`, `PUT /insurance/plans/:id/reanalyze`) — these are the only five routes that pair the count limiter with the dollar-cap guard
-- [ ] `aiLimiter` **only (NO `aiSpendGuard`)** on `POST /upload/lab-report`, `POST /upload/insurance-sbc`, `POST /upload/lab-results-ocr`, `GET /health-goals/suggestions`, `GET /health-needs/analyze`. These still trigger Claude/Document AI calls but the dollar circuit breaker is NOT attached — **flag this gap**: a runaway loop on an upload route counts against `aiLimiter` but bypasses the budget guard until the count cap (10/hr) trips
+- [ ] `aiLimiter` **+ `aiSpendGuard`** now covers **8 mount points across 5 route files** (not five routes): `POST /ai/chat` (`aiRoutes.ts:32`), `POST /biomarkers/:id/guidance` (`biomarkerRoutes.ts:136`), `POST /expenses/analyze` (`expenseRoutes.ts:114`), the two AI-backed insurance routes `POST /insurance/upload-sbc` and `PUT /insurance/plans/:id/reanalyze` (`insuranceRoutes.ts:125,138`), **and all three `/upload/*` routes** `POST /upload/lab-report`, `POST /upload/insurance-sbc`, `POST /upload/lab-results-ocr` (`uploadRoutes.ts:82,104,135`, each `aiSpendGuard` immediately after `aiLimiter`). The dollar circuit breaker is now attached to every upload route — the old "upload routes bypass the budget guard" gap is **closed**.
+- [ ] `aiLimiter` **only (NO `aiSpendGuard`)** remains on `GET /health-goals/suggestions` (`healthGoalsRoutes.ts:48`) and `GET /health-needs/analyze` (`healthNeedsRoutes.ts:49`). These still trigger Claude calls but the dollar guard is not attached — **flag**: a runaway loop here counts against `aiLimiter` but bypasses the budget guard until the count cap (10/hr) trips. (Note: a subtler residual concern is that Document AI / OCR cost on the upload path is not dollar-accounted by `aiSpendGuard` — its reservation/settle model tracks the Claude estimate, not Document AI billing — but that is a different issue from the now-closed upload-route coverage gap.)
 - [ ] `sensitiveLimiter` on `GET /settings/export-data`, `DELETE /settings/delete-data`, `DELETE /settings/delete-account`, file download in `fileRoutes.ts`, FHIR routes in `fhirRoutes.ts`, and the admin sensitive route
 - [ ] `providerAccessRequestLimiter` on `POST /provider/patients/request`
 - [ ] `bulkOperationLimiter` on `POST /biomarkers/batch`
@@ -119,8 +119,8 @@ Every limiter passes `store: createRateLimitStore('<prefix>')`. This is the mult
 
 ### AI dollar-cap circuit breaker (`aiSpendGuard.ts`)
 `aiLimiter` caps request *count*; `aiSpendGuard` caps *spend*. The two are complementary — both should be present on AI routes.
-- [ ] `aiSpendGuard` reads the rolling daily accumulator from `aiCostTracker` (`isAISpendExceeded`), enforcing both a global (`AI_DAILY_BUDGET_USD`, default 50) and per-user (`AI_USER_DAILY_BUDGET_USD`, default 5) budget.
-- [ ] It runs AFTER `authenticate` (so the per-user budget can resolve) and falls through when there is no user; it fails closed with **503 SERVICE_UNAVAILABLE** when the budget is reached.
+- [ ] `aiSpendGuard` calls `admitAISpend(userId)` (`aiSpendGuard.ts:24,37`), which **atomically RESERVES** a conservative `$0.05` estimate (`RESERVATION_USD`, `aiCostTracker.ts:67`) against the rolling daily accumulator and returns an `Admission { admitted, scope, settle }`. The guard registers `admission.settle` on both response `'finish'` and `'close'` (`aiSpendGuard.ts:74-75`) to back the in-flight reservation out; the **real** per-call cost is added later by `trackAIUsage`. This is a reserve/settle model — the old `isAISpendExceeded` read is **gone** (deleted; zero occurrences in `backend/src`). The store is pluggable (`InMemorySpendStore`, or `RedisSpendStore` when `REDIS_URL` is set) and enforces both a global (`AI_DAILY_BUDGET_USD`, default 50) and per-user (`AI_USER_DAILY_BUDGET_USD`, default 5) budget; `admission.scope` reports which one tripped (`'global'` vs `'user'`).
+- [ ] It runs AFTER `authenticate` (so the per-user budget can resolve) and falls through when there is no user (`aiSpendGuard.ts:30-33`); it fails closed with **503 SERVICE_UNAVAILABLE** both when the budget is reached AND when the shared store (Redis) errors (`aiSpendGuard.ts:38-52` — a billing breaker must not uncap spend during a store blip).
 - [ ] Verify `aiSpendGuard` is attached alongside `aiLimiter` on every Claude-backed route (it does NOT live in `rateLimiter.ts`; it's a separate middleware in `aiSpendGuard.ts`).
 
 ## Questions to Ask

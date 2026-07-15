@@ -5,7 +5,7 @@ tags:
   - medium
 type: prompt
 priority: 3
-updated: 2026-06-01
+updated: 2026-06-16
 ---
 
 # Dependency Health Check
@@ -14,7 +14,7 @@ updated: 2026-06-01
 - `package.json` (frontend/root)
 - `backend/package.json` (backend)
 - `package-lock.json` (root) and `backend/package-lock.json` (two separate lockfiles — frontend and backend are NOT an npm workspace; audit each tree independently)
-- `.github/workflows/ci.yml` (the `security` job already runs `npm audit --audit-level=high` for both trees, gitleaks secret scan, and the RLS wrapper guard)
+- `.github/workflows/ci.yml` (the `security` job already runs `npm audit --audit-level=high` for both trees, gitleaks secret scan, and the RLS wrapper guard; note the High/Critical gate has recently required reactive, lockfile-only `npm audit fix` to clear NEW High advisories — see Automated Updates below, `ci.yml:129-143`)
 
 ## Commands to Run
 ```bash
@@ -80,8 +80,8 @@ Run `npm audit` and categorize:
 | Package | Purpose | Risk Level |
 |---------|---------|------------|
 | express | HTTP server | High |
-| @prisma/client / prisma | Database ORM | High |
-| @prisma/adapter-pg | Prisma driver adapter over `pg` | High |
+| @prisma/client / prisma | Database ORM (now Prisma **7** — `@prisma/client ^7.7.0`, `backend/package.json:27`) | High |
+| @prisma/adapter-pg | Prisma driver adapter over `pg` (`^7.8.0`, `backend/package.json:26`) | High |
 | pg | PostgreSQL driver | High |
 | jsonwebtoken | JWT auth | Critical |
 | bcryptjs | Password hashing | Critical |
@@ -97,22 +97,24 @@ Run `npm audit` and categorize:
 | cookie-parser | Cookie handling | Medium |
 | multer | Multipart file upload parsing | High |
 | pdf-parse | Lab-report PDF text extraction | High |
-| pdf-lib | PDF redaction / generation | Medium |
+| ~~pdf-lib~~ | **UNUSED — flag for removal.** Was PDF redaction; its only consumer `pdfRedaction.ts` was DELETED post-2026-06-01. Still declared (`backend/package.json:41`, `^1.17.1`) but has ZERO import sites repo-wide. | Low |
 | compression | Response compression | Low |
 | uuid | ID generation | Low |
 
 > **`pdf-parse` is intentionally pinned to the EXACT version `1.1.1` (no `^`).** Do NOT let `npm update`/Dependabot bump it to the 2.x line — `pdf-parse@2` is a different, problematic package. If Dependabot opens a PR for it, close it.
 
+> **Node-version baseline:** the backend stack moved to the Prisma 7 / Node-22 generation. `backend/package.json:76-77` engines is `node ^20.19 || ^22.12 || >=24`, and CI is standardized on **Node 22** (`ci.yml:20`, after Node 20 EOL in Apr 2026). Keep Dependabot/major bumps within this engine range and verify on Node 22.
+
 ### Frontend (Critical/High)
 | Package | Purpose | Risk Level |
 |---------|---------|------------|
 | react / react-dom | UI framework | Medium |
-| vite | Build tool (devDependency, v7.x) | Medium |
+| vite | Build tool (devDependency, v8.x — bumped 7→8 post-2026-06-01, PR #140; `package.json:58` `^8.0.16`) | Medium |
 | tesseract.js | Client-side OCR | Medium |
 | pdfjs-dist | PDF parsing | Medium |
-| jspdf / jspdf-autotable | PDF generation (data export) | Low |
+| jspdf / jspdf-autotable | PDF generation (data export) — now major `jspdf ^4.2.1` (`package.json:24`), past the 2026-06-01 baseline | Low |
 | html2canvas-pro | Canvas/screenshot capture for PDF export | Low |
-| recharts | Charting | Low |
+| recharts | Charting — now major `recharts ^3.5.0` (`package.json:30`), past the 2026-06-01 baseline | Low |
 | lucide-react | Icon set | Low |
 | serve | Static file server for `npm start` (Cloud Run) | Low |
 
@@ -136,7 +138,9 @@ Current state: Dependabot IS enabled (`.github/dependabot.yml`); Renovate is not
 - [ ] Review open Dependabot PRs; merge safe patch/minor bumps
 - [ ] Reject/close any Dependabot PR that bumps `pdf-parse` off the `1.1.1` pin (the 2.x trap)
 - [ ] Confirm the `rollup` → `@rollup/wasm-node` overrides survive Dependabot bumps
-- [ ] CI `security` job gates merges on `npm audit --audit-level=high` (both trees)
+- [ ] CI `security` job gates merges on `npm audit --audit-level=high` (both trees, `ci.yml:129-143`)
+- [ ] Be aware this gate has recently required a reactive, **lockfile-only** backend `npm audit fix` (no major bumps) to clear NEW High advisories (form-data CRLF, vite) that were tripping the Security Audit gate. When the gate fails on a fresh transitive High, prefer the non-breaking `npm audit fix` over `--force`.
+- [ ] ~8 backend **moderate** advisories are KNOWINGLY DEFERRED (their only "fixes" are breaking downgrades): `uuid`/`teeny-request`/`retry-request` transitively via `@google-cloud/storage`, and `@hono/node-server` via Prisma 7's `@prisma/dev` dev tooling. Do NOT run `npm audit fix --force` (pulls breaking majors — `uuid@14`, `prisma@6.x`). Track these for upstream patches via Dependabot. (`ci.yml:129-143` documents the rationale inline.)
 
 ## Questions to Ask
 1. Are there any critical/high vulnerabilities?

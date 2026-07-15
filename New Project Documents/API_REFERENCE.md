@@ -1,103 +1,71 @@
 # API_REFERENCE.md
 
-> Contract-facing reference for every OwnMyHealth backend endpoint. A reader with only this doc can call any endpoint with a working `curl`, know the request/response shapes, the errors it can return, and what PHI it exposes. The middleware-chain lens (per-route security stack) lives in [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
+> **Contract-facing reference for every OwnMyHealth API endpoint.** A reader with only this doc can call any endpoint with a working `curl`, knows the request + response shapes, the errors it can return, and what PHI it exposes.
+>
+> The **middleware-chain lens** (security stack per route) lives in [`ROUTING_TABLE.md`](./ROUTING_TABLE.md); the two docs cross-link heavily. The **per-field PHI lens** lives in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
+>
+> Source HEAD: `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`.
 
-**Generated:** 2026-06-01 · **Repo root:** `C:/Users/breil/Projects/OwnMyHealth/` · **API version:** `v1` (`backend/src/config/index.ts:227`)
+---
+
+## Required reading before generating
+
+Before writing a single line, read:
+
+1. [`_doc-quality.md`](../prompts/_doc-quality.md) — self-containedness, citation, TBD, cross-link, and format rules.
+2. [`_verification-tools.md`](../prompts/_verification-tools.md) — Grep/Glob/Read cheat sheet.
+3. [`_phi-inventory.md`](../prompts/_phi-inventory.md) — when PHI surface touches this doc.
+
+This doc passes the five tests in `_doc-quality.md` (question-answering, path-and-line, snippet, diagram, reproducibility).
 
 ---
 
 ## 1. Base URL + auth model
 
-### Base URLs per environment
+### 1.1 Base URL per environment
 
 | Env | Base URL | Source |
 |---|---|---|
-| Production | `https://api.ownmyhealth.io/api/v1` | health probe + `VITE_API_URL` in `.github/workflows/deploy.yml:176,222` |
-| Staging | `https://api-staging.ownmyhealth.io/api/v1` | health probe in `.github/workflows/deploy-staging.yml:73` |
-| Local dev | `http://localhost:3001/api/v1` | `PORT` default 3001 (`backend/src/config/index.ts:41`); mount prefix `/api/${config.apiVersion}` (`backend/src/app.ts:265`) |
+| Production | `https://api.ownmyhealth.io/api/v1` | `.github/workflows/deploy.yml:279` (health probe) + `:330` (`VITE_API_URL`) |
+| Staging | `https://api-staging.ownmyhealth.io/api/v1` | `.github/workflows/deploy-staging.yml:94` |
+| Local dev | `http://localhost:3001/api/v1` | `PORT` default `3001` (`config/index.ts:100`); frontend default `VITE_API_URL=http://localhost:3001` (`.env.example:15`) |
 
-Cloud Run service: `ownmyhealth-backend` in project `ownmyhealth-prod`, region `us-central1` (`.github/workflows/deploy.yml:21,23` + `REGION` env). The exact `*.run.app` URL is fronted by the custom domain above — `TBD (external: raw Cloud Run service URL, resolve via gcloud run services describe ownmyhealth-backend --region us-central1)`.
+All routes are mounted under `/api/${config.apiVersion}` where `apiVersion` is `v1` — `app.ts:265` (`app.use(\`/api/${config.apiVersion}\`, routes)`). The internal/maintenance router is mounted separately at `/api/v1/internal` — `app.ts:269`.
 
-All API routes are mounted under `/api/v1`:
+### 1.2 Credentials: cookie vs Bearer
 
-```ts
-// Source: backend/src/app.ts:L264-L269
-// API routes
-app.use(`/api/${config.apiVersion}`, routes);
-// Internal/maintenance routes (Cloud Scheduler — audit #38). Shared-secret
-// auth, CSRF-exempt; each endpoint 404s unless its secret is configured.
-app.use(`/api/${config.apiVersion}/internal`, internalRoutes);
-```
+OwnMyHealth uses **HTTP-only cookies** for the browser SPA and supports a **Bearer access token** for the SSE AI-chat endpoint. Cookie names (set in `authController.ts:95-153`):
 
-> Note: `internalRoutes` is mounted directly in `app.ts:269`, **not** via `routes/index.ts`. Its base path is therefore `/api/v1/internal`.
+| Cookie | httpOnly | Set by | Lifetime | Purpose |
+|---|---|---|---|---|
+| `access_token` | yes | login/refresh | 15 min (`config/index.ts:121,149`) | Access JWT (HS256, `JWT_ACCESS_SECRET`) |
+| `refresh_token` | yes | login/refresh | 7 days (30 days demo) (`config/index.ts:125,152`) | Refresh JWT; DB-backed `sessions` row keyed by its `jti` |
+| `csrf_token` | **no** (JS-readable) | login/refresh/`/csrf-token` | tied to refresh lifetime (`csrf.ts:47-51`) | CSRF double-submit value |
 
-### Auth model — cookies vs Bearer
+`secure` and `sameSite` are resolved together: `sameSite` = explicit `COOKIE_SAME_SITE` → else `'none'` if `COOKIE_DOMAIN` set → else `'strict'` in production same-domain → else `'lax'` in dev (`config/index.ts:88-90, 140-147`); `secure` is forced `true` in production/staging/`sameSite==='none'`/any `COOKIE_DOMAIN` deploy (`config/index.ts:91-95, 138`). See [`ARCHITECTURE.md#auth-flow`](./ARCHITECTURE.md) and [`ENV_VARS.md`](./ENV_VARS.md).
 
-Authentication is JWT-based. `authenticate` reads the **cookie first**, then falls back to the `Authorization: Bearer` header:
+### 1.3 How `X-CSRF-Token` flows (double-submit cookie)
 
-```ts
-// Source: backend/src/middleware/auth.ts:L34-L47
-function extractToken(req: AuthenticatedRequest): string | null {
-  // 1. Check HTTP-only cookie first (more secure)
-  if (req.cookies?.access_token) {
-    return req.cookies.access_token;
-  }
-  // 2. Fall back to Authorization header (for API clients)
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-}
-```
-
-| Token | Cookie name | Lifetime | Set by |
-|---|---|---|---|
-| Access JWT | `access_token` (HttpOnly) | 15 min (`config.cookie.maxAge.accessToken`, `config/index.ts:90`) | `setAccessTokenCookie` (`authController.ts:94`) |
-| Refresh JWT | `refresh_token` (HttpOnly) | 7 days (`config.cookie.maxAge.refreshToken`, `config/index.ts:91`) | `setRefreshTokenCookie` (`authController.ts:113`) |
-| CSRF | `csrf_token` (readable by JS, `httpOnly:false`) | 24 h | `setCsrfCookie` (`csrf.ts:32-58`) |
-
-`requireBearerAuth` (`auth.ts:180`) is a **Bearer-only** variant used by `POST /ai/chat`: it ignores the cookie so an SSE route can be CSRF-exempt without reopening a CSRF hole (`auth.ts:L59-L65`).
-
-### How `X-CSRF-Token` flows (double-submit cookie)
-
-There is **no server-side CSRF secret**. The pattern is double-submit: the server sets a random `csrf_token` cookie; the browser reads it and echoes it in the `X-CSRF-Token` header on every state-changing request.
+CSRF is a **stateless double-submit cookie** — there is no server-side CSRF secret (`csrf.ts`). On a state-changing request (`POST/PUT/PATCH/DELETE`), the client must send the `X-CSRF-Token` header equal to the `csrf_token` cookie value; `validateCsrfToken` compares them constant-time (SHA-256 then `timingSafeEqual`) — `csrf.ts:172-183`. The SPA reads `csrf_token` via `document.cookie` (it is `httpOnly:false`, `csrf.ts:43`) and echoes it back in the header.
 
 ```
-GET /api/v1/csrf-token ──▶ Set-Cookie: csrf_token=<hex>   (csrf.ts:204 csrfTokenHandler)
-        │
-        ▼
-Browser reads csrf_token cookie (httpOnly:false)
-        │
-        ▼
-POST/PUT/PATCH/DELETE  ── header X-CSRF-Token: <hex> ──▶ validateCsrfToken
-        │                                                  (csrf.ts:86)
-        ▼
-SHA-256(cookie) timingSafeEqual SHA-256(header)  → 403 FORBIDDEN if mismatch/missing
+Browser                              Backend (app.ts global middleware)
+  │  POST /api/v1/biomarkers
+  │  Cookie: access_token=…; csrf_token=T   csrfProtection (app.ts:216)
+  │  X-CSRF-Token: T                ───────▶  header === cookie?  (csrf.ts:172-183)
+  │                                            ├─ no  → 403 FORBIDDEN ("CSRF token missing" / "Invalid CSRF token")
+  │                                            └─ yes → authenticate → route handler
 ```
 
-```ts
-// Source: backend/src/middleware/csrf.ts:L164-L170
-const cookieDigest = crypto.createHash('sha256').update(cookieToken).digest();
-const headerDigest = crypto.createHash('sha256').update(headerToken).digest();
-const tokensMatch = crypto.timingSafeEqual(cookieDigest, headerDigest);
-if (!tokensMatch) {
-  throw new ForbiddenError('Invalid CSRF token');
-}
-```
+**CSRF-exempt routes** (strict `===` match on the normalized path, hardened in M-2 — `csrf.ts:100-156`): `/auth/login`, `/auth/register`, `/auth/demo`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`, marketplace search, `/ai/chat` (Bearer-only via `requireBearerAuth`), and `/internal/audit-cleanup` (shared secret). Note **`/auth/refresh` is NOT exempt** (RT-Low — `csrf.ts:114-123`) and **upload routes are NOT exempt** (`csrf.ts:147-152`). A fresh token is available at `GET /api/v1/csrf-token` (`app.ts:284`, returns `{ success, data: { csrfToken } }` — `csrf.ts:217-226`).
 
-`csrfProtection` is applied globally in `app.ts:215-217` (skippable only when `config.isDevelopment && DISABLE_CSRF=true`). It is a no-op on `GET/HEAD/OPTIONS` (`csrf.ts:92,191`). **CSRF-exempt routes** (`csrf.ts:98-139`):
-- Public auth routes: `/auth/login`, `/auth/register`, `/auth/demo`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification` (path-suffix match).
-- Bearer-only streaming: `/ai/chat` (`csrf.ts:116-118`).
-- Scheduler: `/internal/audit-cleanup` (`csrf.ts:139`).
-
-> Several routers ALSO declare `csrfProtection` per-route (e.g. `expenseRoutes.ts:9`, `fhirRoutes.ts:7`) for defense-in-depth, but the global middleware already covers all mutations.
+> The global `csrfProtection` runs before routes (`app.ts:216`). It can be skipped only in dev when `DISABLE_CSRF=true` (`app.ts:215`, `csrf.ts:159`). A few routers additionally apply `csrfProtection` inline as belt-and-suspenders (expenses, FHIR sync/delete) — that is redundant with the global gate, not a second mechanism.
 
 ---
 
 ## 2. Error envelope
 
-Every error response is shaped by the centralized handler:
+Every error response uses one shape, built in `errorHandler` (`errorHandler.ts:199-210`):
 
 ```ts
 // Source: backend/src/middleware/errorHandler.ts:L199-L210
@@ -113,903 +81,789 @@ const response: ApiResponse = {
 res.status(statusCode).json(response);
 ```
 
-> Some controllers ship error bodies that **omit** the top-level `code`/wrap differently — e.g. the FHIR controller returns `{ error: { code, message } }` **without** `success: false` (`fhirController.ts:44-51,158,170-176,197-203`), and the AI/biomarker BAA-gate paths return `{ error: { code, message } }` (`aiChatController.ts:133-141`, `biomarkerRoutes.ts:144-150`). These are hand-rolled, not run through `errorHandler`. The canonical envelope above applies to every error thrown via `AppError`/`asyncHandler`.
+In production the `message` for any non-`AppError` (unexpected 500) is replaced by the generic `'An unexpected error occurred. Please try again later.'` (`errorHandler.ts:105, 144`); `stack` is never included outside development.
 
-### Distinct error `code` values
+### 2.1 All error `code` values
 
-There are **36 distinct `code` values** across the API (grep of `code: '...'` in `backend/src` minus test files yields 32 literal codes, plus 4 `AppError` subclass defaults that never appear as object literals — `AUTHENTICATION_FAILED`, `FORBIDDEN`, `INTERNAL_ERROR`, `EXTERNAL_SERVICE_ERROR`; see `rateLimiter.ts` and `errorHandler.ts`). The four tables below enumerate all 36 (some codes — e.g. `NOT_FOUND`, `BAD_REQUEST`, `CONFLICT`, `RATE_LIMIT_EXCEEDED` — appear both as a subclass default and as a literal/mapped code; counted once).
+Derived from the `AppError` subclasses (`errorHandler.ts:29-102`), the Prisma/JWT/JSON/Multer maps (`errorHandler.ts:109-175`), the 8 rate-limiter `code` strings (`rateLimiter.ts`), the plan-gating gate (`planGating.ts`), and inline controller throws. **30 distinct codes** (see [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) for recovery playbooks). Note CSRF failures reuse `FORBIDDEN`, so there is no dedicated CSRF code:
 
-**Core `AppError` subclasses** (`errorHandler.ts:29-102`):
-
-| `code` | HTTP | Class | Source |
+| `code` | HTTP | Origin (file:line) | When |
 |---|---|---|---|
-| `BAD_REQUEST` | 400 | `BadRequestError` | `errorHandler.ts:29` |
-| `UNAUTHORIZED` | 401 | `UnauthorizedError` | `errorHandler.ts:35` |
-| `AUTHENTICATION_FAILED` | 401 | `AuthenticationError` | `errorHandler.ts:41` |
-| `FORBIDDEN` | 403 | `ForbiddenError` | `errorHandler.ts:47` |
-| `NOT_FOUND` | 404 | `NotFoundError` | `errorHandler.ts:53` |
-| `CONFLICT` | 409 | `ConflictError` | `errorHandler.ts:59` |
-| `VALIDATION_ERROR` | 422 | `ValidationError` (carries `details`) | `errorHandler.ts:65` |
-| `RATE_LIMIT_EXCEEDED` | 429 | `RateLimitError` | `errorHandler.ts:74` |
-| `INTERNAL_ERROR` | 500 | `InternalServerError` | `errorHandler.ts:80` |
-| `SERVICE_UNAVAILABLE` | 503 | `ServiceUnavailableError` | `errorHandler.ts:86` |
-| `DATABASE_ERROR` | 500 | `DatabaseError` | `errorHandler.ts:92` |
-| `EXTERNAL_SERVICE_ERROR` | 502 | `ExternalServiceError` | `errorHandler.ts:98` |
+| `BAD_REQUEST` | 400 | `errorHandler.ts:31` (`BadRequestError`) | Malformed request, also Prisma `P2003`/`P2014` (`errorHandler.ts:112-113`) |
+| `UNAUTHORIZED` | 401 | `errorHandler.ts:37` (`UnauthorizedError`) | Missing/invalid auth, default JWT failure (`errorHandler.ts:127`) |
+| `AUTHENTICATION_FAILED` | 401 | `errorHandler.ts:43` (`AuthenticationError`) | Auth verification failed |
+| `FORBIDDEN` | 403 | `errorHandler.ts:49` (`ForbiddenError`) | RBAC denial, demo block, consent failure |
+| `NOT_FOUND` | 404 | `errorHandler.ts:55` (`NotFoundError`); Prisma `P2025` (`errorHandler.ts:111`) | Resource not found / unknown route (`errorHandler.ts:215`) |
+| `CONFLICT` | 409 | `errorHandler.ts:61` (`ConflictError`); Prisma `P2002` (`errorHandler.ts:110`) | Unique-constraint clash |
+| `VALIDATION_ERROR` | 422 | `errorHandler.ts:69` (`ValidationError`) | Zod schema fails (carries `details`) |
+| `RATE_LIMIT_EXCEEDED` | 429 | `errorHandler.ts:76` (`RateLimitError`); `standardLimiter` (`rateLimiter.ts:73`) | Global limiter exceeded |
+| `INTERNAL_ERROR` | 500 | `errorHandler.ts:82` (`InternalServerError`), default (`errorHandler.ts:143`) | Unhandled server error |
+| `SERVICE_UNAVAILABLE` | 503 | `errorHandler.ts:88` (`ServiceUnavailableError`) | `aiSpendGuard` budget/store fail-closed (`aiSpendGuard.ts:60-67`); BAA gate (`biomarkerRoutes.ts:160`) |
+| `DATABASE_ERROR` | 500 | `errorHandler.ts:94` (`DatabaseError`); Prisma default (`errorHandler.ts:116`) | DB op failed |
+| `EXTERNAL_SERVICE_ERROR` | 502 | `errorHandler.ts:100` (`ExternalServiceError`) | Upstream (Claude/GCS/FHIR) failure |
+| `INVALID_TOKEN` | 401 | `errorHandler.ts:123` (`JsonWebTokenError`) | Malformed JWT |
+| `TOKEN_EXPIRED` | 401 | `errorHandler.ts:124` (`TokenExpiredError`) | Expired JWT |
+| `INVALID_JSON` | 400 | `errorHandler.ts:164` (`SyntaxError` body) | Body is not valid JSON |
+| `FILE_TOO_LARGE` | 413 | `errorHandler.ts:171` (Multer `LIMIT_FILE_SIZE`) | Upload > 10 MB |
+| `UPLOAD_ERROR` | 400 | `errorHandler.ts:173` (other Multer error) | Wrong field / too many files |
+| `PLAN_LIMIT_EXCEEDED` | 403 | `planGating.ts:104` | Plan limit/feature gate (carries `limit`, `current`, `feature`, `upgradeRequired`) |
+| `AUTH_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:95` (`authLimiter`) | Auth-router limiter |
+| `LOGIN_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:112` (`strictAuthLimiter`) | Login brute-force limiter |
+| `UPLOAD_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:141` (`uploadLimiter`) | Upload limiter |
+| `SENSITIVE_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:158` (`sensitiveLimiter`) | Export/delete/FHIR limiter |
+| `AI_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:184` (`aiLimiter`) | AI endpoints limiter |
+| `PROVIDER_REQUEST_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:218` (`providerAccessRequestLimiter`) | Provider access-request limiter |
+| `BULK_RATE_LIMIT_EXCEEDED` | 429 | `rateLimiter.ts:247` (`bulkOperationLimiter`) | Batch creates/imports |
+| `EMAIL_NOT_VERIFIED` | 403 | `authController.ts:297` | Login with unverified email |
+| `ACCOUNT_LOCKED` | 423 | `authController.ts:318` | Login with correct creds while locked |
+| `GATEWAY_TIMEOUT` | 504 | `biomarkerRoutes.ts:303` | AI guidance call timed out |
+| `AI_GUIDANCE_FAILED` | 500 | `biomarkerRoutes.ts:312` | AI guidance call failed |
+| `STORAGE_READ_FAILED` | 502 | `fileController.ts:295` | GCS stream error during file download |
 
-**Mapped from non-AppError errors** (`errorHandler.ts:109-175`):
-
-| `code` | HTTP | Trigger | Source |
-|---|---|---|---|
-| `CONFLICT` | 409 | Prisma `P2002` (unique) | `errorHandler.ts:110` |
-| `NOT_FOUND` | 404 | Prisma `P2025` | `errorHandler.ts:111` |
-| `BAD_REQUEST` | 400 | Prisma `P2003`/`P2014` | `errorHandler.ts:112-113` |
-| `INVALID_TOKEN` | 401 | `JsonWebTokenError` | `errorHandler.ts:123` |
-| `TOKEN_EXPIRED` | 401 | `TokenExpiredError` | `errorHandler.ts:124` |
-| `INVALID_JSON` | 400 | body-parser `SyntaxError` | `errorHandler.ts:164` |
-| `FILE_TOO_LARGE` | 413 | Multer `LIMIT_FILE_SIZE` | `errorHandler.ts:171` |
-| `UPLOAD_ERROR` | 400 | other Multer errors | `errorHandler.ts:173` |
-
-**Rate-limiter codes** (`rateLimiter.ts`, all HTTP 429):
-
-| `code` | Limiter | Source |
-|---|---|---|
-| `RATE_LIMIT_EXCEEDED` | `standardLimiter` | `rateLimiter.ts:24` |
-| `AUTH_RATE_LIMIT_EXCEEDED` | `authLimiter` | `rateLimiter.ts:44` |
-| `LOGIN_RATE_LIMIT_EXCEEDED` | `strictAuthLimiter` | `rateLimiter.ts:60` |
-| `UPLOAD_RATE_LIMIT_EXCEEDED` | `uploadLimiter` | `rateLimiter.ts:83` |
-| `SENSITIVE_RATE_LIMIT_EXCEEDED` | `sensitiveLimiter` | `rateLimiter.ts:99` |
-| `AI_RATE_LIMIT_EXCEEDED` | `aiLimiter` | `rateLimiter.ts:115` |
-| `PROVIDER_REQUEST_RATE_LIMIT_EXCEEDED` | `providerAccessRequestLimiter` | `rateLimiter.ts:140` |
-| `BULK_RATE_LIMIT_EXCEEDED` | `bulkOperationLimiter` | `rateLimiter.ts:164` |
-
-**Domain/controller-specific codes:**
-
-| `code` | HTTP | Where | Source |
-|---|---|---|---|
-| `PLAN_LIMIT_EXCEEDED` | 403 | plan gate (`upgradeRequired:true`) | `planGating.ts:93` |
-| `EMAIL_NOT_VERIFIED` | 403 | login, unverified | `authController.ts:284` |
-| `ACCOUNT_LOCKED` | 423 | login, lockout (`details.lockedUntil`) | `authController.ts:303` |
-| `VERIFICATION_FAILED` | 400 | verify-email failure | `authController.ts:658` |
-| `RESEND_FAILED` | 400 | resend-verification failure | `authController.ts:704` |
-| `RESET_FAILED` | 400 | reset-password failure | `authController.ts:799` |
-| `EMAIL_CHANGE_FAILED` | 400 | confirm-email-change failure | `authController.ts:915` |
-| `STORAGE_READ_FAILED` | 502 | GCS stream error on download | `fileController.ts:274` |
-| `CONNECT_FAILED` | 500 | FHIR connect redirect build | `fhirController.ts:65` |
-| `SYNC_FAILED` | 500 | FHIR sync failure | `fhirController.ts:172` |
-| `DISCONNECT_FAILED` | 500 | FHIR disconnect failure | `fhirController.ts:199` |
-| `CONTEXT_ASSEMBLY_FAILED` | 500 | AI chat health-context build | `aiChatController.ts:152` |
-
-See [`ERROR_RECOVERY.md`](./ERROR_RECOVERY.md) for the recovery playbook per code.
+> **CSRF failures use the generic `FORBIDDEN` (403) code**, not a custom code: a missing/mismatched `X-CSRF-Token` throws `ForbiddenError('CSRF token missing')` / `ForbiddenError('Invalid CSRF token')` (`csrf.ts:169,182`), which the error handler maps to `code: 'FORBIDDEN'`. The distinguishing signal is the `message`, not the `code`.
 
 ---
 
-## 3. Global rate limits (8 limiters)
+## 3. Global rate limits
 
-All limiters are backed by `createRateLimitStore(...)` — a shared Redis store when `REDIS_URL` is set, otherwise a per-instance `MemoryStore`. On Cloud Run with N instances and no Redis, the effective ceiling is **N × limit** (`rateLimiter.ts:7-14`).
+All 8 limiters are backed by `rateLimitStore.ts` — a shared Redis store when `REDIS_URL` is set, otherwise per-instance `MemoryStore`, so on Cloud Run with N instances the effective ceiling is N×limit (`rateLimiter.ts:56-63`). `standardLimiter` is applied globally to every `/api` request (`app.ts:220`); the rest are per-route.
 
 | Limiter | Window | Max | Key | File:line | Applied to |
 |---|---|---|---|---|---|
-| `standardLimiter` | `RATE_LIMIT_WINDOW_MS` (15 min) | `RATE_LIMIT_MAX_REQUESTS` (100) | IP | `rateLimiter.ts:17` | global, all `/api` (`app.ts:220`) |
-| `authLimiter` | 15 min | 20 | IP | `rateLimiter.ts:37` | all `/auth/*` (`authRoutes.ts:34`) |
-| `strictAuthLimiter` | 15 min | 5 (failed-only, `skipSuccessfulRequests`) | `email:IP` | `rateLimiter.ts:53` | `/auth/login`, `/forgot-password`, `/reset-password`, `/resend-verification`, `/confirm-email-change`, `/change-email` |
-| `uploadLimiter` | 1 hour | 20 | IP | `rateLimiter.ts:76` | all `uploadRoutes` (`uploadRoutes.ts:26`), insurance upload/reanalyze |
-| `sensitiveLimiter` | 1 hour | 10 | IP | `rateLimiter.ts:92` | settings, file download, FHIR connect/sync/delete, admin permanent-delete |
-| `aiLimiter` | 1 hour | 10 | user ID → IP | `rateLimiter.ts:108` | Claude-calling routes (`/ai/chat`, guidance, uploads, analyze, suggestions, analyze health needs) |
-| `providerAccessRequestLimiter` | 1 hour | 10 | user ID → IP | `rateLimiter.ts:133` | `POST /provider/patients/request` |
-| `bulkOperationLimiter` | 1 hour | 30 | IP | `rateLimiter.ts:157` | `POST /biomarkers/batch` |
+| `standardLimiter` | `RATE_LIMIT_WINDOW_MS` (def 15 min) | `RATE_LIMIT_MAX_REQUESTS` (def 100) | IP (/64 for IPv6) | `rateLimiter.ts:66` | All `/api/*` globally (`app.ts:220`) |
+| `authLimiter` | 15 min | 20 | IP | `rateLimiter.ts:88` | Whole `authRoutes` router (`authRoutes.ts:34`) |
+| `strictAuthLimiter` | 15 min | 5 (failed-only, `skipSuccessfulRequests`) | `email:IP` | `rateLimiter.ts:105` | `/auth/login`, `/forgot-password`, `/reset-password`, `/resend-verification`, `/confirm-email-change`, `/change-email` |
+| `uploadLimiter` | 1 hour | 20 | IP | `rateLimiter.ts:134` | All `uploadRoutes` (`uploadRoutes.ts:27`) + insurance SBC/reanalyze |
+| `sensitiveLimiter` | 1 hour | 10 | user ID → IP | `rateLimiter.ts:151` | Settings export/delete, file download, FHIR connect/sync/delete, admin permanent-delete |
+| `aiLimiter` | 1 hour | 10 | user ID → IP | `rateLimiter.ts:177` | `/ai/chat`, uploads, biomarker guidance, expense analyze, SBC upload/reanalyze, goal suggestions, health-needs analyze |
+| `providerAccessRequestLimiter` | 1 hour | 10 | user ID → IP | `rateLimiter.ts:211` | `POST /provider/patients/request` |
+| `bulkOperationLimiter` | 1 hour | 30 | IP | `rateLimiter.ts:240` | `POST /biomarkers/batch` |
 
-Every limiter returns HTTP **429** with the envelope `{ success:false, error:{ code, message } }`. Rate-limit headers use `standardHeaders: true` (RateLimit-* headers), `legacyHeaders: false`.
-
----
-
-## 4. At-a-glance mega-table (all endpoints)
-
-**Total: 112 mega-table rows** — 110 across 16 user-facing route modules + 1 internal cleanup endpoint, plus the 2 `routes/index.ts` health/version endpoints (`GET /health`, `GET /`). 4 further utility endpoints in `app.ts` (`GET /`, `GET /health`, `GET /api/health/db`, `GET /api/v1/csrf-token`) are listed beneath the table, not as rows. Auth column: `public` = no JWT; `JWT` = `authenticate`; `Bearer` = `requireBearerAuth`; `secret` = `X-Cleanup-Token`. CSRF column reflects whether a mutation requires `X-CSRF-Token` (GETs never do).
-
-| Method | Path (`/api/v1` prefix) | Auth | CSRF | Rate limiter | RBAC | Controller (`file:fn`) | Audit | PHI? |
-|---|---|---|---|---|---|---|---|---|
-| GET | `/health` | public | — | standard | — | inline `routes/index.ts:42` | — | no |
-| GET | `/` | public | — | standard | — | inline `routes/index.ts:54` | — | no |
-| POST | `/auth/register` | public | no (exempt) | auth | — | `authController.register` | `REGISTER` | no |
-| POST | `/auth/login` | public | no (exempt) | auth+strictAuth | — | `authController.login` | `LOGIN`/`LOGIN_FAILED` | no |
-| POST | `/auth/refresh` | public | no (exempt) | auth | — | `authController.refreshToken` | — | no |
-| POST | `/auth/demo` | public | no (exempt) | auth | — | `authController.demoLogin` | — | no |
-| GET | `/auth/verify-email` | public | — | auth | — | `authController.verifyEmail` | `EMAIL_VERIFICATION`† | no |
-| POST | `/auth/resend-verification` | public | no (exempt) | auth+strictAuth | — | `authController.resendVerification` | — | no |
-| POST | `/auth/forgot-password` | public | no (exempt) | auth+strictAuth | — | `authController.forgotPassword` | `PASSWORD_RESET_REQUEST`† | no |
-| POST | `/auth/reset-password` | public | no (exempt) | auth+strictAuth | — | `authController.resetPasswordHandler` | `PASSWORD_RESET_COMPLETE`† | no |
-| GET | `/auth/confirm-email-change` | public | — | auth+strictAuth | — | `authController.confirmEmailChangeHandler` | `EMAIL_CHANGE_COMPLETE`† | no |
-| POST | `/auth/logout` | JWT | yes | auth | — | `authController.logout` | `LOGOUT`† | no |
-| POST | `/auth/logout-all` | JWT | yes | auth | — | `authController.logoutAll` | `LOGOUT`† | no |
-| GET | `/auth/me` | JWT | — | auth | — | `authController.getCurrentUser` | — | no |
-| POST | `/auth/change-password` | JWT | yes | auth | — | `authController.changePassword` | `PASSWORD_CHANGE`† | no |
-| POST | `/auth/change-email` | JWT | yes | auth+strictAuth | — | `authController.changeEmailHandler` | `EMAIL_CHANGE_REQUEST`† | no |
-| GET | `/biomarkers` | JWT | — | standard | — | `biomarkerController.getBiomarkers` | `READ` | **yes** |
-| GET | `/biomarkers/summary` | JWT | — | standard | — | `biomarkerController.getSummary` | `READ` | yes (aggregate) |
-| GET | `/biomarkers/categories` | JWT | — | standard | — | `biomarkerController.getCategories` | — | no |
-| GET | `/biomarkers/:id` | JWT | — | standard | — | `biomarkerController.getBiomarker` | `READ` | **yes** |
-| GET | `/biomarkers/:id/history` | JWT | — | standard | — | `biomarkerController.getHistory` | `READ` | **yes** |
-| POST | `/biomarkers` | JWT | yes | standard | — | `biomarkerController.createBiomarker` | `CREATE` | **yes** |
-| POST | `/biomarkers/batch` | JWT | yes | bulkOperation | — | `biomarkerController.bulkCreateBiomarkers` | `CREATE` | **yes** |
-| PATCH | `/biomarkers/:id` | JWT | yes | standard | — | `biomarkerController.updateBiomarker` | `UPDATE` | **yes** |
-| DELETE | `/biomarkers/:id` | JWT | yes | standard | — | `biomarkerController.deleteBiomarker` | `DELETE` | **yes** |
-| POST | `/biomarkers/:id/guidance` | JWT | yes | ai | — | inline `biomarkerRoutes.ts:120` | `PHI_ACCESS` (external) | **yes** |
-| GET | `/insurance/plans` | JWT | — | standard | — | `insuranceController.getInsurancePlans` | `READ` | **yes** |
-| GET | `/insurance/plans/:id` | JWT | — | standard | — | `insuranceController.getInsurancePlan` | `READ` | **yes** |
-| POST | `/insurance/plans` | JWT | yes | standard | — | `insuranceController.createInsurancePlan` | `CREATE` | **yes** |
-| PATCH | `/insurance/plans/:id` | JWT | yes | standard | — | `insuranceController.updateInsurancePlan` | `UPDATE` | **yes** |
-| DELETE | `/insurance/plans/:id` | JWT | yes | standard | — | `insuranceController.deleteInsurancePlan` | `DELETE` | **yes** |
-| POST | `/insurance/compare` | JWT | yes | standard | — | `insuranceController.comparePlans` | `READ` | **yes** |
-| GET | `/insurance/benefits/search` | JWT | — | standard | — | `insuranceController.searchBenefits` | `READ` | **yes** |
-| PUT | `/insurance/plans/:id/reanalyze` | JWT | yes | upload+ai | — | `upload.reanalyzePlan` | `UPDATE` (external) | **yes** |
-| POST | `/insurance/upload-sbc` | JWT | yes | upload+ai | — | `upload.uploadSBC` | `CREATE` (external) | **yes** |
-| PUT | `/insurance/plans/:id/spending` | JWT | yes | standard | — | `expenseController.updateCurrentSpending` | `UPDATE` | **yes** |
-| GET | `/expenses/projections` | JWT | — | standard | — | `expenseController.getProjections` | `READ` | **yes** |
-| POST | `/expenses/projections` | JWT | yes | standard | — | `expenseController.createProjection` | `CREATE` | **yes** |
-| PUT | `/expenses/projections/:id` | JWT | yes | standard | — | `expenseController.updateProjection` | `UPDATE` | **yes** |
-| DELETE | `/expenses/projections/:id` | JWT | yes | standard | — | `expenseController.deleteProjection` | `DELETE` | **yes** |
-| GET | `/expenses/actuals` | JWT | — | standard | — | `expenseController.getActuals` | `READ` | **yes** |
-| POST | `/expenses/actuals` | JWT | yes | standard | — | `expenseController.createActual` | `CREATE` | **yes** |
-| PUT | `/expenses/actuals/:id` | JWT | yes | standard | — | `expenseController.updateActual` | `UPDATE` | **yes** |
-| DELETE | `/expenses/actuals/:id` | JWT | yes | standard | — | `expenseController.deleteActual` | `DELETE` | **yes** |
-| POST | `/expenses/analyze` | JWT | yes | ai | — | `expenseController.analyzeCosts` | `CREATE` (external) | **yes** |
-| GET | `/expenses/analyses` | JWT | — | standard | — | `expenseController.getAnalyses` | `READ` | **yes** |
-| GET | `/health-needs` | JWT | — | standard | — | `healthNeedsController.getHealthNeeds` | `READ` | **yes** |
-| GET | `/health-needs/analyze` | JWT | — | ai | — | `healthNeedsController.analyzeHealthNeeds` | `PHI_ACCESS` | **yes** |
-| GET | `/health-needs/summary` | JWT | — | standard | — | `healthNeedsController.getHealthNeedsSummary` | `READ` | yes (aggregate) |
-| GET | `/health-needs/:id` | JWT | — | standard | — | `healthNeedsController.getHealthNeed` | `READ` | **yes** |
-| POST | `/health-needs` | JWT | yes | standard | — | `healthNeedsController.createHealthNeed` | `CREATE` | **yes** |
-| PATCH | `/health-needs/:id` | JWT | yes | standard | — | `healthNeedsController.updateHealthNeedStatus` | `UPDATE` | **yes** |
-| DELETE | `/health-needs/:id` | JWT | yes | standard | — | `healthNeedsController.deleteHealthNeed` | `DELETE` | **yes** |
-| GET | `/health-goals/summary` | JWT | — | standard | — | `healthGoalsController.getGoalsSummary` | `READ` | yes (aggregate) |
-| GET | `/health-goals/suggestions` | JWT | — | ai | — | `healthGoalsController.suggestGoals` | `PHI_ACCESS` | **yes** |
-| GET | `/health-goals` | JWT | — | standard | — | `healthGoalsController.getHealthGoals` | `READ` | **yes** |
-| GET | `/health-goals/:id` | JWT | — | standard | — | `healthGoalsController.getHealthGoal` | `READ` | **yes** |
-| POST | `/health-goals` | JWT | yes | standard | — | `healthGoalsController.createHealthGoal` | `CREATE` | **yes** |
-| PUT | `/health-goals/:id` | JWT | yes | standard | — | `healthGoalsController.updateHealthGoal` | `UPDATE` | **yes** |
-| PATCH | `/health-goals/:id/progress` | JWT | yes | standard | — | `healthGoalsController.updateGoalProgress` | `UPDATE` | **yes** |
-| DELETE | `/health-goals/:id` | JWT | yes | standard | — | `healthGoalsController.deleteHealthGoal` | `DELETE` | **yes** |
-| POST | `/upload/lab-report` | JWT | yes | upload+ai | — | `upload.uploadLabReport` | `CREATE` (external) | **yes** |
-| POST | `/upload/insurance-sbc` | JWT | yes | upload+ai | — | `upload.uploadSBC` | `CREATE` (external) | **yes** |
-| POST | `/upload/lab-results-ocr` | JWT | yes | upload+ai | — | `upload.uploadLabResultOCR` | `CREATE` (external) | **yes** |
-| GET | `/files` | JWT | — | standard | — | `fileController.getFiles` | `READ` | metadata |
-| GET | `/files/:id` | JWT | — | standard | — | `fileController.getFile` | `READ` | metadata |
-| GET | `/files/:id/download` | JWT | — | sensitive | — | `fileController.getFileDownloadUrl` | `EXPORT` | **yes (file bytes)** |
-| DELETE | `/files/:id` | JWT | yes | standard | — | `fileController.deleteFile` | `DELETE` | metadata |
-| GET | `/provider/patients` | JWT | — | standard | **PROVIDER/ADMIN** | inline `providerRoutes.ts:32` | `READ` | patient email |
-| POST | `/provider/patients/request` | JWT | yes | providerAccessRequest | **PROVIDER/ADMIN** | inline `providerRoutes.ts:150` | `CREATE` | no (uniform) |
-| GET | `/provider/patients/:patientId` | JWT | — | standard | **PROVIDER/ADMIN** | inline `providerRoutes.ts:292` | `PHI_ACCESS` | **yes (patient)** |
-| GET | `/provider/patients/:patientId/biomarkers` | JWT | — | standard | **PROVIDER/ADMIN** | inline `providerRoutes.ts:415` | `PHI_ACCESS` | **yes (patient)** |
-| GET | `/provider/patients/:patientId/health-needs` | JWT | — | standard | **PROVIDER/ADMIN** | inline `providerRoutes.ts:559` | `PHI_ACCESS` | **yes (patient)** |
-| DELETE | `/provider/patients/:patientId` | JWT | yes | standard | **PROVIDER/ADMIN** | inline `providerRoutes.ts:690` | `DELETE` | no |
-| GET | `/patient/providers` | JWT | — | standard | **PATIENT** | inline `patientRoutes.ts:30` | `READ` | provider email |
-| GET | `/patient/providers/pending` | JWT | — | standard | **PATIENT** | inline `patientRoutes.ts:109` | `READ` | provider email |
-| POST | `/patient/providers/:id/approve` | JWT | yes | standard | **PATIENT** | inline `patientRoutes.ts:180` | `PERMISSION_CHANGE` | no |
-| POST | `/patient/providers/:id/deny` | JWT | yes | standard | **PATIENT** | inline `patientRoutes.ts:271` | `PERMISSION_CHANGE` | no |
-| PATCH | `/patient/providers/:id` | JWT | yes | standard | **PATIENT** | inline `patientRoutes.ts:328` | `PERMISSION_CHANGE` | no |
-| POST | `/patient/providers/:id/revoke` | JWT | yes | standard | **PATIENT** | inline `patientRoutes.ts:418` | `PERMISSION_CHANGE` | no |
-| DELETE | `/patient/providers/:id` | JWT | yes | standard | **PATIENT** | inline `patientRoutes.ts:482` | `DELETE` | no |
-| GET | `/settings/profile` | JWT | — | sensitive | — | `settingsController.getProfile` | `READ` | **yes** |
-| PATCH | `/settings/profile` | JWT | yes | sensitive | — | `settingsController.updateProfile` | `UPDATE` | **yes** |
-| GET | `/settings/notifications` | JWT | — | sensitive | — | `settingsController.getNotifications` | `READ` | no |
-| PATCH | `/settings/notifications` | JWT | yes | sensitive | — | `settingsController.updateNotifications` | `UPDATE` | no |
-| GET | `/settings/health-profile` | JWT | — | sensitive | — | `settingsController.getHealthProfile` | `READ` | **yes** |
-| PATCH | `/settings/health-profile` | JWT | yes | sensitive | — | `settingsController.updateHealthProfile` | `UPDATE` | **yes** |
-| GET | `/settings/export-data` | JWT | — | sensitive | — | `settingsController.exportUserData` | `PHI_EXPORT` | **yes (all)** |
-| DELETE | `/settings/delete-data` | JWT | yes | sensitive | — | `settingsController.deleteAllData` | `DELETE` | **yes** |
-| DELETE | `/settings/delete-account` | JWT | yes | sensitive | — | `settingsController.deleteAccount` | `DELETE` | **yes** |
-| GET | `/admin/users` | JWT | — | standard | **ADMIN** | inline `adminRoutes.ts:41` | `READ` | email/role |
-| GET | `/admin/users/:id` | JWT | — | standard | **ADMIN** | inline `adminRoutes.ts:130` | `READ` | email/role |
-| POST | `/admin/users` | JWT | yes | standard | **ADMIN** | inline `adminRoutes.ts:200` | `CREATE` | email/role |
-| PATCH | `/admin/users/:id` | JWT | yes | standard | **ADMIN** | inline `adminRoutes.ts:266` | `UPDATE`/`PERMISSION_CHANGE` | email/role |
-| DELETE | `/admin/users/:id` | JWT | yes | standard | **ADMIN** | inline `adminRoutes.ts:383` | `UPDATE` (soft) | email/role |
-| DELETE | `/admin/users/:id/permanent` | JWT | yes | sensitive | **ADMIN** | inline `adminRoutes.ts:466` | `DELETE` | email/role |
-| PATCH | `/admin/users/:id/plan` | JWT | yes | standard | **ADMIN** | inline `adminRoutes.ts:564` | `UPDATE` | no |
-| GET | `/admin/provider-relationships` | JWT | — | standard | **ADMIN** | inline `adminRoutes.ts:653` | `READ` | no |
-| PATCH | `/admin/provider-relationships/:id` | JWT | yes | standard | **ADMIN** | inline `adminRoutes.ts:693` | `UPDATE` | no |
-| GET | `/admin/stats` | JWT | — | standard | **ADMIN** | inline `adminRoutes.ts:775` | `READ` | no |
-| GET | `/admin/audit-logs` | JWT | — | standard | **ADMIN** | inline `adminRoutes.ts:868` | `READ` | no (meta) |
-| GET | `/onboarding/status` | JWT | — | standard | — | inline `onboardingRoutes.ts:22` | — | no |
-| POST | `/onboarding/complete` | JWT | yes | standard | — | inline `onboardingRoutes.ts:32` | — | no |
-| GET | `/fhir/callback` | public | no (no session) | standard | — | `fhirController.handleCallback` | — | no (token exch.) |
-| GET | `/fhir/connect/quest` | JWT | — | sensitive | — | `fhirController.initiateQuestConnect` | — | no |
-| GET | `/fhir/connections` | JWT | — | standard | — | `fhirController.listConnections` | — | no |
-| POST | `/fhir/sync/:connectionId` | JWT | yes | sensitive | — | `fhirController.triggerSync` | (in syncLabResults) | **yes (lab import)** |
-| DELETE | `/fhir/connections/:id` | JWT | yes | sensitive | — | `fhirController.deleteConnection` | (in disconnect) | no |
-| POST | `/ai/chat` | **Bearer** | no (exempt) | ai | — | `aiChatController.handleAIChat` | `PHI_ACCESS` (external) | **yes (SSE)** |
-| GET | `/plan/available` | public | — | standard | — | inline `planRoutes.ts:32` | — | no |
-| GET | `/plan` | JWT | — | standard | — | inline `planRoutes.ts:52` | — | no |
-| POST | `/internal/audit-cleanup` | **secret** | no (exempt) | standard | — | inline `internalRoutes.ts:40` | — | no |
-
-† Auth-event audits are written via `auditService.logAuth(...)` which maps to the `AuditAction` enum (default `UPDATE`) — see `auditLog.ts:419-425`.
-
-Plus utility endpoints outside `/api/v1` routing: `GET /` (`app.ts:287`), `GET /health` (Docker liveness, `app.ts:301`), `GET /api/health/db` (legacy DB check, `app.ts:318`), `GET /api/v1/csrf-token` (`app.ts:284`).
+```ts
+// Source: backend/src/middleware/rateLimiter.ts:L105-L118 (strictAuthLimiter)
+export const strictAuthLimiter = rateLimit({
+  store: createRateLimitStore('strict-auth'),
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Only 5 login attempts per window
+  message: { success: false, error: { code: 'LOGIN_RATE_LIMIT_EXCEEDED', message: 'Too many login attempts. Please try again in 15 minutes.' } } as ApiResponse,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed attempts
+```
 
 ---
 
-## 5. Per-endpoint-group sections
+## 4. At-a-glance mega-table
 
-### 5.1 Auth (`authRoutes.ts`)
+All 111 endpoints (one row each; the `GET /ai/chat` line is an annotation, not an endpoint). **RLS wrap** = handler wraps DB calls in `withRLSContext`/`withRLSTransaction` (patient context) or admin context `withRLSContext(null, …, { isAdmin: true })`. **Audit** = the typed wrapper called (`logCreate`→`CREATE`, `logRead`/`logAccess`→`READ`/`VIEW`/`PHI_ACCESS`, `logUpdate`→`UPDATE`, `logDelete`→`DELETE`, `logAuth`→`LOGIN`/`LOGOUT`/`CREATE`/`UPDATE`, `logExport`→`EXPORT`; the `AuditAction` enum is generic — `schema.prisma:652-671` — there are no domain actions like `BIOMARKER_CREATE`).
 
-Router-wide `authLimiter` (`authRoutes.ts:34`). 14 endpoints. Public auth routes are CSRF-exempt (`csrf.ts:98-108`).
+| Method | Path | Auth | CSRF | Rate limiter | RBAC | RLS wrap | Handler (`file:line`) | Audit | PHI ret? |
+|---|---|---|---|---|---|---|---|---|---|
+| POST | `/auth/register` | public | exempt | `authLimiter` | — | admin | `authController.register:175` | `REGISTER`→CREATE | none |
+| POST | `/auth/login` | public | exempt | `authLimiter`+`strictAuthLimiter` | — | — | `authController.login:270` | `LOGIN` | none |
+| POST | `/auth/refresh` | cookie | **yes** | `authLimiter` | — | tx | `authController.refreshToken:395` | `LOGIN_FAILED` on reuse | none |
+| POST | `/auth/demo` | public | exempt | `authLimiter` | — | — | `authController.demoLogin:659` | — | none |
+| GET | `/auth/verify-email` | public | exempt(GET) | `authLimiter` | — | — | `authController.verifyEmail:706` | `EMAIL_VERIFICATION`→UPDATE | none |
+| POST | `/auth/resend-verification` | public | exempt | `authLimiter`+`strictAuthLimiter` | — | — | `authController.resendVerification:760` | — | none |
+| POST | `/auth/forgot-password` | public | exempt | `authLimiter`+`strictAuthLimiter` | — | — | `authController.forgotPassword:800` | `PASSWORD_RESET_REQUEST`→UPDATE | none |
+| POST | `/auth/reset-password` | public | exempt | `authLimiter`+`strictAuthLimiter` | — | — | `authController.resetPasswordHandler:839` | `PASSWORD_RESET_COMPLETE`→UPDATE | none |
+| GET | `/auth/confirm-email-change` | public | exempt(GET) | `authLimiter`+`strictAuthLimiter` | — | — | `authController.confirmEmailChangeHandler:960` | `EMAIL_CHANGE_COMPLETE`→UPDATE | none |
+| POST | `/auth/logout` | optional | yes | `authLimiter` | — | — | `authController.logout:439` | `LOGOUT` | none |
+| POST | `/auth/logout-all` | yes | yes | `authLimiter` | — | — | `authController.logoutAll:508` | `LOGOUT` | none |
+| GET | `/auth/me` | yes | no(GET) | `authLimiter` | — | — | `authController.getCurrentUser:542` | — | none |
+| POST | `/auth/change-password` | yes | yes | `authLimiter` | — | — | `authController.changePassword:569` | `PASSWORD_CHANGE`→UPDATE | none |
+| POST | `/auth/change-email` | yes | yes | `authLimiter`+`strictAuthLimiter` | — | — | `authController.changeEmailHandler:901` | `EMAIL_CHANGE_REQUEST`→UPDATE | none |
+| GET | `/biomarkers` | yes | no(GET) | `standardLimiter` | — | tx | `biomarkerController.getBiomarkers:143` | `logAccess`→READ | **yes** |
+| GET | `/biomarkers/summary` | yes | no(GET) | `standardLimiter` | — | tx | `biomarkerController.getSummary` | `logAccess`→READ | derived |
+| GET | `/biomarkers/categories` | yes | no(GET) | `standardLimiter` | — | tx | `biomarkerController.getCategories` | — | none |
+| GET | `/biomarkers/:id` | yes | no(GET) | `standardLimiter` | — | tx | `biomarkerController.getBiomarker` | `logAccess`→READ | **yes** |
+| GET | `/biomarkers/:id/history` | yes | no(GET) | `standardLimiter` | — | tx | `biomarkerController.getHistory` | `logAccess`→READ | **yes** |
+| POST | `/biomarkers` | yes | yes | `standardLimiter` | — | tx | `biomarkerController.createBiomarker:260` | `logCreate`→CREATE | **yes** |
+| POST | `/biomarkers/batch` | yes | yes | `bulkOperationLimiter` | — | tx | `biomarkerController.bulkCreateBiomarkers:498` | `logCreate`→CREATE | **yes** |
+| PATCH | `/biomarkers/:id` | yes | yes | `standardLimiter` | — | tx | `biomarkerController.updateBiomarker:323` | `logUpdate`→UPDATE | **yes** |
+| DELETE | `/biomarkers/:id` | yes | yes | `standardLimiter` | — | tx | `biomarkerController.deleteBiomarker` | `logDelete`→DELETE | none |
+| POST | `/biomarkers/:id/guidance` | yes | yes | `aiLimiter`+`aiSpendGuard` | — | tx | `biomarkerRoutes.ts:140` (inline) | `logAccess`→PHI_ACCESS | educational |
+| GET | `/insurance/plans` | yes | no(GET) | `standardLimiter` | — | ctx | `insuranceController.getInsurancePlans` | `logAccess`→READ | **yes** |
+| GET | `/insurance/plans/:id` | yes | no(GET) | `standardLimiter` | — | ctx | `insuranceController.getInsurancePlan` | `logAccess`→READ | **yes** |
+| POST | `/insurance/plans` | yes | yes | `standardLimiter`+plan(`insurancePlans`) | — | ctx | `insuranceController.createInsurancePlan:507` | `logCreate`→CREATE | **yes** |
+| PATCH | `/insurance/plans/:id` | yes | yes | `standardLimiter` | — | ctx | `insuranceController.updateInsurancePlan` | `logUpdate`→UPDATE | **yes** |
+| DELETE | `/insurance/plans/:id` | yes | yes | `standardLimiter` | — | ctx | `insuranceController.deleteInsurancePlan` | `logDelete`→DELETE | none |
+| POST | `/insurance/compare` | yes | yes | `standardLimiter` | — | ctx | `insuranceController.comparePlans` | `logAccess`→READ | **yes** |
+| GET | `/insurance/benefits/search` | yes | no(GET) | `standardLimiter` | — | ctx | `insuranceController.searchBenefits` | `logAccess`→READ | **yes** |
+| PUT | `/insurance/plans/:id/reanalyze` | yes | yes | `uploadLimiter`+`aiLimiter`+`aiSpendGuard`+plan | — | ctx | `upload/sbcUploadController.reanalyzePlan` | `logUpdate`→UPDATE | **yes** |
+| POST | `/insurance/upload-sbc` | yes | yes | `uploadLimiter`+`aiLimiter`+`aiSpendGuard`+plan | — | ctx | `upload/sbcUploadController.uploadSBC` | `logCreate`→CREATE | **yes** |
+| PUT | `/insurance/plans/:id/spending` | yes | yes | `standardLimiter` | — | ctx | `expenseController.updateCurrentSpending` | `logUpdate`→UPDATE | **yes** |
+| GET | `/expenses/projections` | yes | no(GET) | `standardLimiter` | — | ctx | `expenseController.getProjections` | `logAccess`→READ | **yes** |
+| POST | `/expenses/projections` | yes | yes (inline) | `standardLimiter` | — | ctx | `expenseController.createProjection` | `logCreate`→CREATE | **yes** |
+| PUT | `/expenses/projections/:id` | yes | yes (inline) | `standardLimiter` | — | ctx | `expenseController.updateProjection` | `logUpdate`→UPDATE | **yes** |
+| DELETE | `/expenses/projections/:id` | yes | yes (inline) | `standardLimiter` | — | ctx | `expenseController.deleteProjection` | `logDelete`→DELETE | none |
+| GET | `/expenses/actuals` | yes | no(GET) | `standardLimiter` | — | ctx | `expenseController.getActuals` | `logAccess`→READ | **yes** |
+| POST | `/expenses/actuals` | yes | yes (inline) | `standardLimiter` | — | ctx | `expenseController.createActual` | `logCreate`→CREATE | **yes** |
+| PUT | `/expenses/actuals/:id` | yes | yes (inline) | `standardLimiter` | — | ctx | `expenseController.updateActual` | `logUpdate`→UPDATE | **yes** |
+| DELETE | `/expenses/actuals/:id` | yes | yes (inline) | `standardLimiter` | — | ctx | `expenseController.deleteActual` | `logDelete`→DELETE | none |
+| POST | `/expenses/analyze` | yes | yes (inline) | `aiLimiter`+`aiSpendGuard`+plan(`costAnalysisPerMonth`) | — | ctx | `expenseController.analyzeCosts` | `logCreate`→CREATE | **yes** |
+| GET | `/expenses/analyses` | yes | no(GET) | `standardLimiter` | — | ctx | `expenseController.getAnalyses` | `logAccess`→READ | **yes** |
+| GET | `/health-needs` | yes | no(GET) | `standardLimiter` | — | ctx | `healthNeedsController.getHealthNeeds` | `logAccess`→READ | **yes** |
+| GET | `/health-needs/analyze` | yes | no(GET) | `aiLimiter` | — | ctx | `healthNeedsController.analyzeHealthNeeds` | `logAccess`→READ | **yes** |
+| GET | `/health-needs/summary` | yes | no(GET) | `standardLimiter` | — | ctx | `healthNeedsController.getHealthNeedsSummary` | — | derived |
+| GET | `/health-needs/:id` | yes | no(GET) | `standardLimiter` | — | ctx | `healthNeedsController.getHealthNeed` | `logAccess`→READ | **yes** |
+| POST | `/health-needs` | yes | yes | `standardLimiter` | — | ctx | `healthNeedsController.createHealthNeed` | `logCreate`→CREATE | **yes** |
+| PATCH | `/health-needs/:id` | yes | yes | `standardLimiter` | — | ctx | `healthNeedsController.updateHealthNeedStatus` | `logUpdate`→UPDATE | **yes** |
+| DELETE | `/health-needs/:id` | yes | yes | `standardLimiter` | — | ctx | `healthNeedsController.deleteHealthNeed` | `logDelete`→DELETE | none |
+| GET | `/health-goals/summary` | yes | no(GET) | `standardLimiter` | — | ctx | `healthGoalsController.getGoalsSummary` | — | derived |
+| GET | `/health-goals/suggestions` | yes | no(GET) | `aiLimiter` | — | ctx | `healthGoalsController.suggestGoals` | `logAccess`→READ | educational |
+| GET | `/health-goals` | yes | no(GET) | `standardLimiter` | — | ctx | `healthGoalsController.getHealthGoals` | `logAccess`→READ | **yes** |
+| GET | `/health-goals/:id` | yes | no(GET) | `standardLimiter` | — | ctx | `healthGoalsController.getHealthGoal` | `logAccess`→READ | **yes** |
+| POST | `/health-goals` | yes | yes | `standardLimiter` | — | ctx | `healthGoalsController.createHealthGoal` | `logCreate`→CREATE | **yes** |
+| PUT | `/health-goals/:id` | yes | yes | `standardLimiter` | — | ctx | `healthGoalsController.updateHealthGoal` | `logUpdate`→UPDATE | **yes** |
+| PATCH | `/health-goals/:id/progress` | yes | yes | `standardLimiter` | — | ctx | `healthGoalsController.updateGoalProgress` | `logUpdate`→UPDATE | **yes** |
+| DELETE | `/health-goals/:id` | yes | yes | `standardLimiter` | — | ctx | `healthGoalsController.deleteHealthGoal` | `logDelete`→DELETE | none |
+| POST | `/upload/lab-report` | yes | yes | `uploadLimiter`+`aiLimiter`+`aiSpendGuard`+plan×2 | — | ctx | `upload/labUploadController.uploadLabReport` | `logCreate`→CREATE | **yes** |
+| POST | `/upload/insurance-sbc` | yes | yes | `uploadLimiter`+`aiLimiter`+`aiSpendGuard`+plan | — | ctx | `upload/sbcUploadController.uploadSBC` | `logCreate`→CREATE | **yes** |
+| POST | `/upload/lab-results-ocr` | yes | yes | `uploadLimiter`+`aiLimiter`+`aiSpendGuard`+plan×2 | — | ctx | `upload/labUploadController.uploadLabResultOCR` | `logCreate`→CREATE | **yes** |
+| GET | `/files` | yes | no(GET) | `standardLimiter` | — | tx | `fileController.getFiles:44` | `logAccess`→READ | **yes (filename)** |
+| GET | `/files/:id` | yes | no(GET) | `standardLimiter` | — | tx | `fileController.getFile:138` | `logAccess`→READ | **yes (filename)** |
+| GET | `/files/:id/download` | yes | no(GET) | `sensitiveLimiter` | — | tx | `fileController.getFileDownloadUrl:212` | `logExport`→EXPORT | **yes (file bytes)** |
+| DELETE | `/files/:id` | yes | yes | `standardLimiter` | — | tx | `fileController.deleteFile:310` | `logDelete`→DELETE | none |
+| GET | `/provider/patients` | yes | no(GET) | `standardLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:53` (inline) | `logAccess`→READ | patient email |
+| POST | `/provider/patients/request` | yes | yes | `providerAccessRequestLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:171` (inline) | `logCreate`→CREATE | none (uniform) |
+| GET | `/provider/patients/:patientId` | yes | no(GET) | `standardLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:319` (inline) | `logAccess`→READ | patient email |
+| GET | `/provider/patients/:patientId/biomarkers` | yes | no(GET) | `standardLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:442` (inline) | `logAccess`→PHI_ACCESS | **yes** |
+| GET | `/provider/patients/:patientId/health-needs` | yes | no(GET) | `standardLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:526` (inline) | `logAccess`→PHI_ACCESS | **yes** |
+| GET | `/provider/patients/:patientId/insurance` | yes | no(GET) | `standardLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:602` (inline) | `logAccess`→PHI_ACCESS | **yes** |
+| DELETE | `/provider/patients/:patientId` | yes | yes | `standardLimiter` | **PROVIDER/ADMIN** | ctx | `providerRoutes.ts:659` (inline) | `logDelete`→DELETE | none |
+| GET | `/patient/providers` | yes | no(GET) | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:30` (inline) | `logAccess`→READ | provider email |
+| GET | `/patient/providers/pending` | yes | no(GET) | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:109` (inline) | `logAccess`→READ | provider email |
+| POST | `/patient/providers/:id/approve` | yes | yes | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:180` (inline) | `logUpdate`→UPDATE | none |
+| POST | `/patient/providers/:id/deny` | yes | yes | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:273` (inline) | `logUpdate`→UPDATE | none |
+| PATCH | `/patient/providers/:id` | yes | yes | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:330` (inline) | `logUpdate`→UPDATE | none |
+| POST | `/patient/providers/:id/revoke` | yes | yes | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:422` (inline) | `logUpdate`→UPDATE | none |
+| DELETE | `/patient/providers/:id` | yes | yes | `standardLimiter` | **PATIENT** | ctx | `patientRoutes.ts:486` (inline) | `logDelete`→DELETE | none |
+| GET | `/admin/users` | yes | no(GET) | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:42` (inline) | `logAccess`→READ | user email |
+| GET | `/admin/users/:id` | yes | no(GET) | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:136` (inline) | `logAccess`→READ | user email |
+| POST | `/admin/users` | yes | yes | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:206` (inline) | `logCreate`→CREATE | user email |
+| PATCH | `/admin/users/:id` | yes | yes | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:272` (inline) | `logUpdate`→UPDATE | user email |
+| DELETE | `/admin/users/:id` | yes | yes | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:406` (inline) | `logUpdate`→UPDATE | none |
+| DELETE | `/admin/users/:id/permanent` | yes | yes | `sensitiveLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:500` (inline) | `logDelete`→DELETE | none |
+| PATCH | `/admin/users/:id/plan` | yes | yes | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:598` (inline) | `logUpdate`→UPDATE | user email |
+| GET | `/admin/provider-relationships` | yes | no(GET) | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:687` (inline) | `logAccess`→READ | none |
+| PATCH | `/admin/provider-relationships/:id` | yes | yes | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:727` (inline) | `logUpdate`→UPDATE | none |
+| GET | `/admin/stats` | yes | no(GET) | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:860` (inline) | `logAccess`→VIEW | none |
+| GET | `/admin/audit-logs` | yes | no(GET) | `standardLimiter` | **ADMIN** + demo-block | admin | `adminRoutes.ts:953` (inline) | `logAccess`→VIEW | metadata decrypted |
+| GET | `/settings/profile` | yes | no(GET) | `sensitiveLimiter` | — | ctx | `settingsController.getProfile:1061` | `logAccess`→READ | **yes (name)** |
+| PATCH | `/settings/profile` | yes | yes | `sensitiveLimiter` + demo-block | — | ctx | `settingsController.updateProfile` | `logUpdate`→UPDATE | **yes (name)** |
+| GET | `/settings/notifications` | yes | no(GET) | `sensitiveLimiter` | — | ctx | `settingsController.getNotifications` | — | none |
+| PATCH | `/settings/notifications` | yes | yes | `sensitiveLimiter` + demo-block | — | ctx | `settingsController.updateNotifications` | `logUpdate`→UPDATE | none |
+| GET | `/settings/health-profile` | yes | no(GET) | `sensitiveLimiter` | — | ctx | `settingsController.getHealthProfile` | `logAccess`→READ | **yes** |
+| PATCH | `/settings/health-profile` | yes | yes | `sensitiveLimiter` + demo-block + plan(`healthProfile`) | — | ctx | `settingsController.updateHealthProfile` | `logUpdate`→UPDATE | **yes** |
+| GET | `/settings/export-data` | yes | no(GET) | `sensitiveLimiter` | — | ctx | `settingsController.exportUserData:334` | `logExport`→EXPORT | **yes (all PHI)** |
+| DELETE | `/settings/delete-data` | yes | yes | `sensitiveLimiter` + demo-block | — | tx | `settingsController.deleteAllData:762` | `logDelete`→DELETE | none |
+| DELETE | `/settings/delete-account` | yes | yes | `sensitiveLimiter` + demo-block | — | tx | `settingsController.deleteAccount:939` | `logDelete`→DELETE | none |
+| GET | `/ai/chat` … | — | — | — | — | — | (no GET) | — | — |
+| POST | `/ai/chat` | **Bearer** | exempt | `aiLimiter`+`aiSpendGuard`+plan(`aiChatsPerDay`) | — | ctx | `aiChatController.handleAIChat:135` | `logAccess`→PHI_ACCESS | educational (SSE) |
+| GET | `/fhir/callback` | **public** | exempt | none | — | ctx | `fhirController.handleCallback:80` | — | none (302 redirect) |
+| GET | `/fhir/connect/quest` | yes | no(GET) | `sensitiveLimiter`+plan(`questFhirIntegration`) | — | ctx | `fhirController.initiateQuestConnect:40` | — | none |
+| GET | `/fhir/connections` | yes | no(GET) | `standardLimiter` | — | ctx | `fhirController.listConnections:139` | — | none |
+| POST | `/fhir/sync/:connectionId` | yes | yes | `sensitiveLimiter`+plan(`questFhirIntegration`) | — | ctx | `fhirController.triggerSync:171` | `logCreate`→CREATE (imports) | **yes (labs)** |
+| DELETE | `/fhir/connections/:id` | yes | yes | `sensitiveLimiter` | — | ctx | `fhirController.deleteConnection:209` | — | none (204) |
+| GET | `/plan/available` | **public** | no(GET) | `standardLimiter` | — | — | `planRoutes.ts:32` (inline) | — | none |
+| GET | `/plan` | yes | no(GET) | `standardLimiter` | — | ctx | `planRoutes.ts:52` (inline) | — | none |
+| GET | `/onboarding/status` | yes | no(GET) | `standardLimiter` | — | (service) | `onboardingRoutes.ts:24` (inline) | — | none |
+| POST | `/onboarding/complete` | yes | yes | `standardLimiter` | — | (service) | `onboardingRoutes.ts:34` (inline) | — | none |
+| POST | `/internal/audit-cleanup` | **`X-Cleanup-Token`** | exempt | none | — | admin | `internalRoutes.ts:40` (inline) | — | none |
 
-#### `POST /api/v1/auth/login`
+**Total: 111 user-facing + internal endpoints** (16 user-facing route modules = 110 endpoints + the 1 internal cleanup endpoint), verified via `Grep "router\.(get|post|put|patch|delete)\("` over `backend/src/routes/**` = 113 hits minus the 2 health/info handlers in `routes/index.ts` (counted in §22). Health checks (§22) are separate. RBAC: **7 endpoints require PROVIDER** (all under `/provider`, gated by `requireRole('PROVIDER','ADMIN')` at `providerRoutes.ts:28`).
 
-Authenticate a user; on success sets `access_token`, `refresh_token`, and a fresh `csrf_token` cookie.
+---
 
-1. **Route**: `backend/src/routes/authRoutes.ts:L48-L53`
-2. **Middleware** (in order): `authLimiter` (router-wide), `strictAuthLimiter`, `validate(schemas.auth.login)`, `asyncHandler(login)`.
-3. **Controller**: `authController.login` (`backend/src/controllers/authController.ts:257`).
-4. **RLS wrap**: none at controller; login flow is in `authService.attemptLogin`.
-5. **Request (Zod)**:
+## 5. Auth (`authRoutes.ts`)
 
+Router-wide `authLimiter` (`authRoutes.ts:34`). All routes mount under `/api/v1/auth`.
+
+### `POST /api/v1/auth/login`
+
+Authenticate by email + password; sets `access_token`, `refresh_token`, `csrf_token` cookies and returns the user identity.
+
+1. **Route**: `authRoutes.ts:48`
+2. **Middleware** (in order): `authLimiter` (router), `strictAuthLimiter`, `validate(schemas.auth.login)`, `asyncHandler(login)`.
+3. **Controller**: `authController.login` (`authController.ts:270`).
+4. **RLS wrap**: none (auth lookups run via `attemptLogin` in `authService`).
+5. **Request (Zod)** — `validation.ts:355-358`:
    ```ts
-   // Source: backend/src/middleware/validation.ts:L254-L257
-   login: z.object({
-     email: email,
-     password: z.string().min(1, 'Password is required').max(128),
-   }),
+   login: z.object({ email: email, password: z.string().min(1, 'Password is required').max(128) })
    ```
-
-6. **Response (200)**:
-
+6. **Response (200)** — `authController.ts:381-388`:
    ```json
    { "success": true, "data": { "user": { "id": "uuid", "email": "a@b.com", "role": "PATIENT" } } }
    ```
-
-   Body shape from `authController.ts:L355-L360`; `Set-Cookie` for `access_token`, `refresh_token`, `csrf_token`.
-
+   plus `Set-Cookie: access_token`, `refresh_token`, `csrf_token`.
 7. **Errors**:
 
-   | HTTP | `code` | When | Source |
+   | HTTP | `code` | Origin | When |
    |---|---|---|---|
-   | 422 | `VALIDATION_ERROR` | malformed email / empty password | `errorHandler.ts:65` |
-   | 401 | `UNAUTHORIZED` | invalid credentials (uniform, no `remainingAttempts` leak) | `authController.ts:326,335` |
-   | 403 | `EMAIL_NOT_VERIFIED` | account not verified | `authController.ts:284` |
-   | 423 | `ACCOUNT_LOCKED` | lockout (`details.lockedUntil`) | `authController.ts:303` |
-   | 429 | `LOGIN_RATE_LIMIT_EXCEEDED` | >5 failed attempts/15 min | `rateLimiter.ts:60` |
+   | 422 | `VALIDATION_ERROR` | `errorHandler.ts:69` | email/password missing or malformed |
+   | 401 | `UNAUTHORIZED` | `authController.ts:352,361` | wrong creds / unknown email (uniform, no oracle) |
+   | 403 | `EMAIL_NOT_VERIFIED` | `authController.ts:297` | email not verified |
+   | 423 | `ACCOUNT_LOCKED` | `authController.ts:318` | correct creds while locked (carries `lockedUntil`) |
+   | 429 | `LOGIN_RATE_LIMIT_EXCEEDED` | `rateLimiter.ts:112` | >5 failed attempts/15 min for `email:IP` |
 
 8. **Working curl**:
-
    ```bash
    curl -X POST https://api.ownmyhealth.io/api/v1/auth/login \
      -H "Content-Type: application/json" \
      -c cookies.txt \
-     -d '{"email":"user@example.com","password":"Sup3rSecret!Pass"}'
+     -d '{"email":"user@example.com","password":"CorrectHorse9!"}'
    ```
+9. **Audit**: `auditService.logAuth('LOGIN', { req, userId }, { email })` — `authController.ts:377`; maps to `AuditAction.LOGIN` via `AUTH_ACTION_MAP` (`auditLog.ts:496-502`).
+10. **PHI exposure**: none — only `{ id, email, role }`.
 
-9. **Audit**: `auditService.logAuth('LOGIN', ...)` on success (`authController.ts:351`); `'LOGIN_FAILED'` / `'ACCOUNT_LOCKOUT'` on failure (`authController.ts:276,295,321,330`).
-10. **PHI exposure**: none in body — only `{ id, email, role }` (`formatUserResponse`, `authController.ts:146`).
+**Related**: [`ROUTING_TABLE.md`](./ROUTING_TABLE.md), [`ARCHITECTURE.md#auth-flow`](./ARCHITECTURE.md).
+
+### Refresh-token flow (end-to-end)
 
 ```mermaid
 sequenceDiagram
-  participant C as Client
-  participant R as authRoutes.ts
-  participant Ctl as authController.login
-  participant S as authService.attemptLogin
-  C->>R: POST /auth/login (email, password)
-  R->>Ctl: authLimiter, strictAuthLimiter, validate(login)
-  Ctl->>S: attemptLogin(email, password)
-  S-->>Ctl: { success, user } | lockout | emailNotVerified
-  Ctl-->>C: 200 + Set-Cookie access_token/refresh_token/csrf_token
+  participant C as SPA
+  participant R as authRoutes
+  participant Ctl as authController
+  participant S as authService
+  C->>R: POST /auth/login (email,pwd)
+  R->>Ctl: login (authLimiter+strictAuthLimiter)
+  Ctl-->>C: 200 + cookies (access 15m, refresh 7d, csrf)
+  Note over C: access_token expires after 15 min
+  C->>R: POST /auth/refresh (cookie: refresh_token, X-CSRF-Token)
+  R->>Ctl: refreshToken (NOT CSRF-exempt — csrf.ts:114)
+  Ctl->>S: refreshTokens(refresh, meta) — rotate single-use (authService.ts:700-853)
+  S-->>Ctl: { tokens, isDemo } | null
+  Ctl-->>C: 200 { data: { token } } + rotated cookies
+  Note over S: token reuse outside 10s grace → revokeAllUserTokens (family revoke)
 ```
 
-#### `POST /api/v1/auth/refresh`
+`POST /auth/refresh` rotates the refresh token atomically (`SELECT … FOR UPDATE`, delete, insert — `authService.ts:730-744`) and returns `{ success:true, data:{ token } }` (`authController.ts:425-430`) plus fresh cookies. A reused refresh token outside the 10s grace window triggers `revokeAllUserTokens` (`authService.ts:795-806`) and a `LOGIN_FAILED` audit row.
 
-Rotates the refresh token and re-issues all cookies. Public + CSRF-exempt (no session yet).
+### Other auth endpoints (request → response)
 
-- **Route**: `authRoutes.ts:56`. **Controller**: `authController.refreshToken` (`authController.ts:369`).
-- **Request**: none in body — reads `refresh_token` cookie (`authController.ts:374`).
-- **Response (200)**: `{ "success": true, "data": { "token": "<new access JWT>" } }` (`authController.ts:399-404`) + new `access_token`/`refresh_token`/`csrf_token` cookies.
-- **Errors**: 401 `UNAUTHORIZED` ("Refresh token not provided" / "Invalid or expired refresh token", clears cookies) — `authController.ts:377,387`.
-
-**Refresh-token flow end-to-end:**
-
-```
-1. Browser holds refresh_token cookie (7-day, HttpOnly).
-2. access_token expires (15 min) → API returns 401 UNAUTHORIZED ("Token has expired") (auth.ts:113).
-3. Client POSTs /auth/refresh (cookie auto-sent; CSRF-exempt).
-4. refreshTokens() verifies + ROTATES the refresh token (new refresh issued, old revoked).
-5. Server sets new access_token + refresh_token + csrf_token; returns { data:{ token } }.
-6. Client retries the original request with the new access cookie/Bearer.
-```
-
-#### Other auth endpoints (summary)
-
-| Endpoint | Auth | Body / Query | Success body | Source |
-|---|---|---|---|---|
-| `POST /auth/register` | public | `{ email, password, firstName?, lastName? }` (`validation.ts:259`) | `{ success:true, data:{ message } }` (generic, 201) | `authController.ts:243-250` |
-| `POST /auth/demo` | public | none | `{ data:{ user } }` (or 400 if `DEMO_ACCOUNT_ENABLED` false) | `authController.ts:592,620` |
-| `GET /auth/verify-email?token=` | public | `{ token }` query | `{ data:{ message } }` | `authController.ts:674-680` |
-| `POST /auth/resend-verification` | public | `{ email }` | generic success message | `authController.ts:718-724` |
-| `POST /auth/forgot-password` | public | `{ email }` | generic success message | `authController.ts:757-763` |
-| `POST /auth/reset-password` | public | `{ token, newPassword }` (`validation.ts:275`) | `{ data:{ message } }` | `authController.ts:815-821` |
-| `GET /auth/confirm-email-change?token=` | public | `{ token }` query | `{ data:{ message } }` | `authController.ts:929-936` |
-| `POST /auth/logout` | JWT | none | `{ success:true }` | `authController.ts:446` |
-| `POST /auth/logout-all` | JWT | none | `{ success:true }` | `authController.ts:480` |
-| `GET /auth/me` | JWT | none | `{ data:{ id, email, role } }` | `authController.ts:506` |
-| `POST /auth/change-password` | JWT | `{ currentPassword, newPassword }` (`validation.ts:266`) | `{ success:true }` + new cookies (revokes all sessions) | `authController.ts:573` |
-| `POST /auth/change-email` | JWT | `{ newEmail, currentPassword }` (`validation.ts:288`) | `{ data:{ message } }` | `authController.ts:875-882` |
-
-`strongPassword` rule (register/reset/change): ≥12 chars, upper, lower, digit, special (`validation.ts:117-123`).
-
-**Related**: [`ROUTING_TABLE.md#authroutes`](./ROUTING_TABLE.md), [`ARCHITECTURE.md#auth-flow`](./ARCHITECTURE.md).
+| Endpoint | Request (Zod, `validation.ts`) | Response (`authController.ts`) |
+|---|---|---|
+| `POST /auth/register` | `register` (`:360`): `email`, `password` (strong), `firstName?`, `lastName?` | 201 `{ data: { user:{ id,email,role } } }` (`:230/263`) |
+| `POST /auth/refresh` | none (reads `refresh_token` cookie) | 200 `{ data: { token } }` (`:425`) |
+| `POST /auth/logout` | none | 200 `{ success:true }` (`:497`), clears cookies |
+| `POST /auth/logout-all` | none | 200 `{ success:true }` (`:531`) |
+| `GET /auth/me` | none | 200 `{ data:{ id,email,role } }` (`:557`) |
+| `POST /auth/change-password` | `changePassword` (`:367`): `currentPassword`, `newPassword` | 200 `{ success:true }` (`:649`) |
+| `GET /auth/verify-email?token=` | `verifyEmailQuery` (`:385`) | 200 / 400 `EMAIL_VERIFICATION` (`:734/753`) |
+| `POST /auth/resend-verification` | `resendVerification` (`:381`): `email` | 200 `{ success:true }` (`:793`) |
+| `POST /auth/forgot-password` | `forgotPassword` (`:372`): `email` | 200 (uniform, no oracle) (`:832`) |
+| `POST /auth/reset-password` | `resetPassword` (`:376`): `token`, `newPassword` | 200 / 400 (`:871/890`) |
+| `POST /auth/change-email` | `changeEmail` (`:389`): `newEmail`, `currentPassword` | 200 (`:950`) |
+| `GET /auth/confirm-email-change?token=` | `confirmEmailChangeQuery` (`:394`) | 200 / 400 (`:987/1004`) |
+| `POST /auth/demo` | none | 200 + cookies (dev/staging only) (`:699`) |
 
 ---
 
-### 5.2 Biomarkers (`biomarkerRoutes.ts`)
+## 6. Biomarkers (`biomarkerRoutes.ts`)
 
-Router-wide `authenticate` (`biomarkerRoutes.ts:47`). 10 endpoints. All data RLS-scoped via `withRLSTransaction(userId, ...)`.
+Router-wide `authenticate` (`biomarkerRoutes.ts:48`). PHI: `value` (from `valueEncrypted`), `notes` (from `notesEncrypted`) — `unit` is NOT encrypted (`PHI_FIELDS.Biomarker`, `encryption.ts:488-489`). See [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md).
 
-#### `POST /api/v1/biomarkers`
+### `POST /api/v1/biomarkers`
 
-Create a biomarker reading. `value` and `notes` are encrypted before write.
+Create a biomarker reading. Writes go through the **time-series merge** service — a reading APPENDS to a single per-name series rather than creating a disconnected one-shot row, so the response carries a `history` array and the status code reflects create vs. merge.
 
-1. **Route**: `biomarkerRoutes.ts:L83-L87`
-2. **Middleware**: `authenticate` (router-wide), `validate(schemas.biomarker.create)`. (No `blockDemoAI` — demo can create manual biomarkers; AI guidance is what's gated.)
-3. **Controller**: `biomarkerController.createBiomarker` (`biomarkerController.ts:226`).
-4. **RLS wrap**: `withRLSTransaction(userId, async (tx) => tx.biomarker.create(...))` — `biomarkerController.ts:L247-L269`.
-5. **Request (Zod)**:
-
+1. **Route**: `biomarkerRoutes.ts:85`
+2. **Middleware**: `authenticate` (router), `requirePlanLimit('maxBiomarkers')`, `validate(schemas.biomarker.create)`, `asyncHandler(createBiomarker)`.
+3. **Controller**: `biomarkerController.createBiomarker` (`biomarkerController.ts:260`).
+4. **RLS wrap**: `withRLSTransaction(userId, async (tx) => upsertBiomarkerReading(tx, …))` — `biomarkerController.ts:283-300`.
+5. **Request (Zod)** — `validation.ts:403-419` (note: field is `date`, and `normalRange` is an object — there is no `measuredAt`/`measurementDate` in the body):
    ```ts
-   // Source: backend/src/middleware/validation.ts:L302-L318
    create: z.object({
-     name: sanitizedString(1, 100),
-     value: finiteNumber.pipe(z.number().min(0, 'Value must be non-negative')),
-     unit: sanitizedString(1, 20),
-     category: sanitizedString(1, 50),
-     date: dateString,
+     name: sanitizedString(1,100), value: finiteNumber.pipe(z.number().min(0)),
+     unit: sanitizedString(1,20), category: sanitizedString(1,50), date: dateString,
      normalRange: z.object({ min: finiteNumber, max: finiteNumber, source: optionalSanitizedString(100) }),
-     notes: optionalSanitizedString(1000),
-     sourceType: z.enum(['MANUAL','LAB_UPLOAD','EHR_IMPORT','DEVICE_SYNC','API_IMPORT']).optional(),
-     ...
-   }),
+     notes: optionalSanitizedString(1000), sourceType: z.enum([...]).optional(), ...
+   })
    ```
-
-6. **Response (201)**:
-
+6. **Response (201 created / 200 merged)** — `biomarkerController.ts:312-319`; body shape from `BiomarkerResponse` (`biomarkerController.ts:63-86`) with a `history: { date; value }[]`:
    ```json
-   {
-     "success": true,
-     "data": {
-       "id": "uuid", "userId": "uuid", "category": "Lipids", "name": "LDL",
-       "unit": "mg/dL", "value": 120, "notes": null,
-       "normalRange": { "min": 0, "max": 100, "source": null },
-       "date": "2026-04-24", "sourceType": "MANUAL", "isOutOfRange": true,
-       "isAcknowledged": false, "history": [], "createdAt": "...", "updatedAt": "..."
-     }
-   }
+   { "success": true, "data": { "id": "uuid", "name": "LDL", "value": 120, "unit": "mg/dL",
+     "category": "Lipids", "date": "2026-04-24", "history": [{ "date": "2026-01-10", "value": 130 }] } }
    ```
-
-   Shape from `BiomarkerResponse` (`biomarkerController.ts:32-55`), decrypted via `toResponse` (`biomarkerController.ts:60`).
-
-7. **Errors**: 422 `VALIDATION_ERROR`, 401 `UNAUTHORIZED`, 403 `FORBIDDEN` (missing CSRF), 429 `RATE_LIMIT_EXCEEDED`.
+   Status is **201 when a new series is created, 200 when the reading merged** (`biomarkerController.ts:319`).
+7. **Errors**: 422 `VALIDATION_ERROR`; 401 `UNAUTHORIZED`; 403 `PLAN_LIMIT_EXCEEDED` (at `maxBiomarkers`); 403 `FORBIDDEN` (CSRF missing/invalid); 429 `RATE_LIMIT_EXCEEDED`.
 8. **Working curl**:
-
    ```bash
    curl -X POST https://api.ownmyhealth.io/api/v1/biomarkers \
-     -b cookies.txt \
-     -H "X-CSRF-Token: $(grep csrf_token cookies.txt | awk '{print $7}')" \
+     -b cookies.txt -H "X-CSRF-Token: $(grep csrf_token cookies.txt | awk '{print $7}')" \
      -H "Content-Type: application/json" \
      -d '{"name":"LDL","value":120,"unit":"mg/dL","category":"Lipids","date":"2026-04-24","normalRange":{"min":0,"max":100}}'
    ```
-
-9. **Audit**: `auditService.logCreate('Biomarker', biomarker.id, { name, category, value }, { req, userId })` — `biomarkerController.ts:L273-L277` → `AuditAction.CREATE`.
-10. **PHI exposure**: writes encrypted `valueEncrypted`, `notesEncrypted` (`biomarkerController.ts:238-241`); `unit`, `category`, `name` are **not** encrypted (`PHI_FIELDS.Biomarker = ['valueEncrypted','notesEncrypted']`, `encryption.ts:421-424`). See [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md).
-
-#### `GET /api/v1/biomarkers`
-
-List, most-recent-first, paginated. **Route**: `biomarkerRoutes.ts:50`. **Controller**: `getBiomarkers` (`biomarkerController.ts:111`).
-
-```ts
-// Source: backend/src/controllers/biomarkerController.ts:L137-L147
-const { total, biomarkers } = await withRLSTransaction(userId, async (tx) => {
-  const total = await tx.biomarker.count({ where });
-  const biomarkers = await tx.biomarker.findMany({
-    where, include: { history: true },
-    skip: pagination.skip, take: pagination.take,
-    orderBy: { measurementDate: 'desc' },
-  });
-  return { total, biomarkers };
-});
-```
-
-- **Query**: `?category=&page=&limit=` (`schemas.biomarker.listQuery`, `validation.ts:354`); default limit 50 (`biomarkerController.ts:126`), max 100.
-- **Response (200)**: `{ success:true, data: BiomarkerResponse[], pagination:{ page, limit, total, totalPages } }` (`biomarkerController.ts:182-186`).
-- **PHI returned**: `value` (from `valueEncrypted`), `notes` (from `notesEncrypted`), and history values — decrypted in `toResponse` via the per-user salt (`getUserEncryptionSalt`, `biomarkerController.ts:122`).
-- **Audit**: `logAccess('Biomarker', undefined, ..., { operation:'LIST' })` → `AuditAction.READ` (`biomarkerController.ts:160`).
-
-#### `POST /api/v1/biomarkers/:id/guidance`
-
-AI educational guidance for one biomarker (Claude Haiku). This is the limiter for the spec's Q6.
-
-- **Route + middleware**: `biomarkerRoutes.ts:L120-L127` — `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('aiGuidancePerDay')`, `validate(uuidParam)`.
-- **Rate limiter**: `aiLimiter` — **1-hour window, max 10** per user (`rateLimiter.ts:108-111`).
-- **BAA gate (503)**: blocked unless `ANTHROPIC_API_KEY` set AND `ANTHROPIC_BAA_ACTIVE=true` — returns `503 SERVICE_UNAVAILABLE` (`biomarkerRoutes.ts:L137-L151`).
-- **Response (200)**: `{ success:true, data:{ guidance: "..." } }` (`biomarkerRoutes.ts:274-277`); guidance is PHI-scrubbed via `stripPHIFromText` (`biomarkerRoutes.ts:244`).
-- **Audit**: `logAccess('biomarker_ai_guidance', id, ..., { operation:'PHI_ACCESS', externalApiCall:true, provider:'anthropic' })` (`biomarkerRoutes.ts:266-272`).
-- **PHI exposure**: biomarker `name/value/unit/normalRange/status/history` disclosed to Anthropic (`phiDisclosedFields`, `biomarkerRoutes.ts:271`). Biomarker is loaded under RLS, never from `req.body` (IDOR fix F-3, `biomarkerRoutes.ts:160-171`).
-
-Other biomarker endpoints: `GET /summary`, `GET /categories`, `GET /:id`, `GET /:id/history`, `POST /batch` (`bulkOperationLimiter`, 30/hr, max 100 items via `schemas.biomarker.batchCreate`), `PATCH /:id`, `DELETE /:id`.
+9. **Audit**: `auditService.logCreate(RESOURCE_TYPE, biomarker.id, { name, category, value, seriesOutcome }, …)` — `biomarkerController.ts:305` → generic `CREATE`.
+10. **PHI exposure**: writes encrypted `valueEncrypted`, `notesEncrypted`; response decrypts via `toResponse` (`biomarkerController.ts:91`).
 
 **Related**: [`DATA_MODEL.md#biomarker`](./DATA_MODEL.md), [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md), [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
 
----
+### `GET /api/v1/biomarkers`
 
-### 5.3 Insurance (`insuranceRoutes.ts`)
+List the user's biomarkers (paginated), values decrypted in the response.
 
-Router-wide `authenticate` (`insuranceRoutes.ts:64`). 10 endpoints. Multer caps uploads at 10 MB, single PDF file (`insuranceRoutes.ts:38-51`).
+- **Route**: `biomarkerRoutes.ts:51`; **Controller**: `getBiomarkers` (`biomarkerController.ts:143`); **RLS**: `withRLSTransaction` count+findMany (history included oldest-first).
+- **Request (Zod)**: `schemas.biomarker.listQuery` (`validation.ts:460-464`): `category?`, `page?`, `limit?`.
+- **Response (200)**: `{ data: Array<{ id, value, unit, notes?, date, category, history[] }>, pagination }` — decrypted via `toResponse` (`biomarkerController.ts:91`).
+- **Audit**: `logAccess`→`READ`. **PHI**: `value`, `notes` — see [`PHI_TAXONOMY.md#biomarker`](./PHI_TAXONOMY.md).
 
-| Endpoint | Body | Notes | Source |
-|---|---|---|---|
-| `GET /insurance/plans` | — | list plans | `insuranceRoutes.ts:67` |
-| `GET /insurance/plans/:id` | `uuidParam` | single plan | `insuranceRoutes.ts:73` |
-| `POST /insurance/plans` | `schemas.insurancePlan.create` (`validation.ts:382`) | manual create | `insuranceRoutes.ts:80` |
-| `PATCH /insurance/plans/:id` | `schemas.insurancePlan.update` | edit | `insuranceRoutes.ts:87` |
-| `DELETE /insurance/plans/:id` | `uuidParam` | delete | `insuranceRoutes.ts:95` |
-| `POST /insurance/compare` | `{ planIds: uuid[2..5] }` (`insuranceRoutes.ts:54`) | side-by-side | `insuranceRoutes.ts:102` |
-| `GET /insurance/benefits/search` | `{ query:string, planId?:uuid }` (`insuranceRoutes.ts:58`) | benefit search | `insuranceRoutes.ts:109` |
-| `PUT /insurance/plans/:id/reanalyze` | `file` (multipart) | re-extract from new PDF | `insuranceRoutes.ts:117` |
-| `POST /insurance/upload-sbc` | `file` (multipart) | SBC upload | `insuranceRoutes.ts:131` |
-| `PUT /insurance/plans/:id/spending` | `{ deductibleMet, oopMet }` (`validation.ts:647`) | update spending | `insuranceRoutes.ts:143` |
+### `POST /api/v1/biomarkers/:id/guidance`
 
-#### `POST /api/v1/insurance/upload-sbc` (also `POST /api/v1/upload/insurance-sbc`)
+AI educational guidance for one biomarker (Claude Haiku). Inline handler in the route file.
 
-Upload + parse an SBC PDF; Claude extracts plan fields. Answers spec Q13.
+- **Route**: `biomarkerRoutes.ts:133`; **Middleware**: `authenticate`, `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('aiGuidancePerDay')`, `validate(uuidParam)`.
+- **BAA gate**: refuses with 503 `SERVICE_UNAVAILABLE` unless `ANTHROPIC_API_KEY` set AND `ANTHROPIC_BAA_ACTIVE=true` (`biomarkerRoutes.ts:150-163`).
+- **IDOR-safe**: biomarker loaded under RLS by `{ id, userId }`; null → 404 (`biomarkerRoutes.ts:173-191`).
+- **Response (200)**: `{ success:true, data:{ guidance } }` (`biomarkerRoutes.ts:292`); server-appends the educational disclaimer (L33, `biomarkerRoutes.ts:260-261`).
+- **Errors**: 503 `SERVICE_UNAVAILABLE` (BAA off / spend cap), 504 `GATEWAY_TIMEOUT` (`:303`), 500 `AI_GUIDANCE_FAILED` (`:312`), 429 `AI_RATE_LIMIT_EXCEEDED`, 403 `PLAN_LIMIT_EXCEEDED`/`FORBIDDEN` (demo).
+- **Audit**: `logAccess(…, { operation:'PHI_ACCESS', externalApiCall:true, provider:'anthropic' })` (`biomarkerRoutes.ts:284`).
+- The rate limiter guarding this endpoint is **`aiLimiter`** — window **1 hour**, max 10 (`rateLimiter.ts:177`).
 
-- **Middleware** (`insuranceRoutes.ts:L131-L140`): `blockDemoAI`, `uploadLimiter`, `aiLimiter`, `aiSpendGuard`, `requirePlanLimit('pdfUploadsPerMonth')`, `upload.single('file')`.
-- **Body**: `multipart/form-data` with a single `file` field; **PDF only**, **max 10 MB** (`insuranceRoutes.ts:38-50`). Oversize → 413 `FILE_TOO_LARGE`; non-PDF → 400 `BAD_REQUEST` ("Only PDF files are accepted").
-- **Controller**: `upload.uploadSBC` (`controllers/upload/sbcUploadController.ts:33`).
-- **Response (201)**: `{ success:true, data:{ id, planName, insurerName, planType, deductibleIndividual, oopMaxIndividual, ..., usedClaudeExtraction, file } }` (`sbcUploadController.ts:L182-L215`).
-- **Audit**: `logCreate` with `externalApiCall` metadata (`sbcUploadController.ts:175-180`).
-- **PHI**: encrypted `memberIdEncrypted`, `groupIdEncrypted` (`PHI_FIELDS.InsurancePlan`, `encryption.ts:430-433`); PDF bytes sent to Claude. See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
+### Other biomarker endpoints
 
-```bash
-curl -X POST https://api.ownmyhealth.io/api/v1/insurance/upload-sbc \
-  -b cookies.txt -H "X-CSRF-Token: <csrf_token>" \
-  -F "file=@my-sbc.pdf;type=application/pdf"
-```
-
-**Related**: [`DATA_MODEL.md#insuranceplan`](./DATA_MODEL.md), [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
-
----
-
-### 5.4 Expenses (`expenseRoutes.ts`)
-
-Router-wide `authenticate` (`expenseRoutes.ts:32`). Each mutation also declares `csrfProtection` per-route. 10 endpoints (projections CRUD, actuals CRUD, analyze, analyses).
-
-| Endpoint | Body schema | Source |
+| Endpoint | Request | Response |
 |---|---|---|
-| `GET /expenses/projections` | `expense.projectionsQuery` | `expenseRoutes.ts:39` |
-| `POST /expenses/projections` | `expense.createProjection` (`validation.ts:575`) | `expenseRoutes.ts:46` |
-| `PUT /expenses/projections/:id` | `expense.updateProjection` | `expenseRoutes.ts:54` |
-| `DELETE /expenses/projections/:id` | `uuidParam` | `expenseRoutes.ts:63` |
-| `GET /expenses/actuals` | `expense.actualsQuery` | `expenseRoutes.ts:75` |
-| `POST /expenses/actuals` | `expense.createActual` (`validation.ts:607`) | `expenseRoutes.ts:82` |
-| `PUT /expenses/actuals/:id` | `expense.updateActual` | `expenseRoutes.ts:90` |
-| `DELETE /expenses/actuals/:id` | `uuidParam` | `expenseRoutes.ts:99` |
-| `POST /expenses/analyze` | `{ planId:uuid }` (`validation.ts:592`) | `expenseRoutes.ts:111` |
-| `GET /expenses/analyses` | `expense.analysesQuery` | `expenseRoutes.ts:123` |
-
-`POST /expenses/analyze` is the AI cost-analysis call: `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('costAnalysisPerMonth')`, `csrfProtection` (`expenseRoutes.ts:111-120`). Result stored in `CostAnalysis.claudeResponseEncrypted` (encrypted). All monetary expense fields are encrypted strings (`PHI_FIELDS.ExpenseActual/ExpenseProjection`, see [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md)).
+| `GET /biomarkers/summary` | none | counts by category, in/out of range (`getSummary`) |
+| `GET /biomarkers/categories` | none | `{ data: string[] }` (`getCategories`) |
+| `GET /biomarkers/:id` | `uuidParam` | single `BiomarkerResponse` |
+| `GET /biomarkers/:id/history` | `uuidParam` | `{ data: { date, value }[] }` |
+| `POST /biomarkers/batch` | `schemas.biomarker.batchCreate` (`validation.ts:437-458`, 1–100 items) | created/merged series (gated `bulkOperationLimiter` 30/hr) |
+| `PATCH /biomarkers/:id` | `uuidParam` + `schemas.biomarker.update` | updated `BiomarkerResponse` (old value rolled to history) |
+| `DELETE /biomarkers/:id` | `uuidParam` | `{ success:true }` |
 
 ---
 
-### 5.5 Health goals (`healthGoalsRoutes.ts`)
+## 7. Insurance (`insuranceRoutes.ts`)
 
-Router-wide `authenticate` (`healthGoalsRoutes.ts:42`). 8 endpoints. `GET /summary` and `GET /suggestions` declared **before** `/:id` to avoid param capture (`healthGoalsRoutes.ts:45-48`).
+Router-wide `authenticate` (`insuranceRoutes.ts:64`). PHI: `memberId` (from `memberIdEncrypted`), `groupId` (from `groupIdEncrypted`) — `encryption.ts:503-504`. SBC uploads accept a single PDF, **max 10 MB** (`insuranceRoutes.ts:38-51`).
 
-| Endpoint | Limiter | Body | Source |
-|---|---|---|---|
-| `GET /health-goals/summary` | standard | — | `healthGoalsRoutes.ts:45` |
-| `GET /health-goals/suggestions` | `aiLimiter` | — | `healthGoalsRoutes.ts:48` |
-| `GET /health-goals` | standard | `healthGoal.listQuery` | `healthGoalsRoutes.ts:51` |
-| `GET /health-goals/:id` | standard | `uuidParam` | `healthGoalsRoutes.ts:58` |
-| `POST /health-goals` | standard | `healthGoal.create` (`validation.ts:497`) | `healthGoalsRoutes.ts:65` |
-| `PUT /health-goals/:id` | standard | `healthGoal.update` | `healthGoalsRoutes.ts:72` |
-| `PATCH /health-goals/:id/progress` | standard | `{ value, note? }` (`validation.ts:531`) | `healthGoalsRoutes.ts:80` |
-| `DELETE /health-goals/:id` | standard | `uuidParam` | `healthGoalsRoutes.ts:88` |
+### `POST /api/v1/insurance/upload-sbc`
 
-PHI: `descriptionEncrypted`, `targetValueEncrypted`, and `GoalProgressHistory.noteEncrypted` (`encryption.ts:444-450`).
+Upload + Claude-extract a Summary of Benefits & Coverage PDF into an insurance plan. Also reachable at `POST /api/v1/upload/insurance-sbc` (same `uploadSBC` handler, `uploadRoutes.ts:100-109`).
 
----
+- **Route**: `insuranceRoutes.ts:133`; **Middleware**: `authenticate`, `blockDemoAI`, `uploadLimiter`, `aiLimiter`, `aiSpendGuard`, `requirePlanLimit('pdfUploadsPerMonth')`, `upload.single('file')`.
+- **Request**: `multipart/form-data` with a single `file` field, `application/pdf` only (`insuranceRoutes.ts:44-49`), max **10 MB** (`insuranceRoutes.ts:41`).
+- **Response (201)**: created `InsurancePlan` with extracted benefits (`upload/sbcUploadController.uploadSBC`).
+- **Errors**: 400 `BAD_REQUEST` (non-PDF), 413 `FILE_TOO_LARGE` (>10 MB), 503 `SERVICE_UNAVAILABLE` (spend cap), 429 `UPLOAD_RATE_LIMIT_EXCEEDED`/`AI_RATE_LIMIT_EXCEEDED`, 403 `PLAN_LIMIT_EXCEEDED`.
+- **Working curl**:
+  ```bash
+  curl -X POST https://api.ownmyhealth.io/api/v1/insurance/upload-sbc \
+    -b cookies.txt -H "X-CSRF-Token: <csrf>" -F "file=@sbc.pdf"
+  ```
+- **Audit**: `logCreate`→`CREATE`. **PHI**: writes encrypted `memberId`/`groupId`; response decrypts.
 
-### 5.6 Health needs (`healthNeedsRoutes.ts`)
+### Other insurance endpoints
 
-Router-wide `authenticate` (`healthNeedsRoutes.ts:39`). 7 endpoints. `GET /analyze` (`aiLimiter`) and `GET /summary` declared before `/:id` (`healthNeedsRoutes.ts:49,53`).
-
-| Endpoint | Limiter | Body | Source |
-|---|---|---|---|
-| `GET /health-needs` | standard | `healthNeed.listQuery` | `healthNeedsRoutes.ts:42` |
-| `GET /health-needs/analyze` | `aiLimiter` | — (AI-generated needs) | `healthNeedsRoutes.ts:49` |
-| `GET /health-needs/summary` | standard | — | `healthNeedsRoutes.ts:53` |
-| `GET /health-needs/:id` | standard | `uuidParam` | `healthNeedsRoutes.ts:56` |
-| `POST /health-needs` | standard | `healthNeed.create` (`validation.ts:463`) | `healthNeedsRoutes.ts:63` |
-| `PATCH /health-needs/:id` | standard | `healthNeed.update` | `healthNeedsRoutes.ts:70` |
-| `DELETE /health-needs/:id` | standard | `uuidParam` | `healthNeedsRoutes.ts:78` |
-
-PHI: `descriptionEncrypted` (`encryption.ts:439-441`).
+| Endpoint | Request | Response |
+|---|---|---|
+| `GET /insurance/plans` | none | `{ data: InsurancePlan[] }` decrypted (`insurancePlanToResponse`) |
+| `GET /insurance/plans/:id` | `uuidParam` | single plan |
+| `POST /insurance/plans` | `schemas.insurancePlan.create` (`validation.ts:487`) | 201 plan (`insuranceController.ts:603`); gated `requirePlanLimit('insurancePlans')` |
+| `PATCH /insurance/plans/:id` | `uuidParam` + `insurancePlan.update` | updated plan |
+| `DELETE /insurance/plans/:id` | `uuidParam` | `{ success:true }` |
+| `POST /insurance/compare` | `{ planIds: uuid[2..5] }` (`insuranceRoutes.ts:54-56`) | side-by-side comparison |
+| `GET /insurance/benefits/search` | `{ query, planId? }` (`insuranceRoutes.ts:58-61`) | matching benefits |
+| `PUT /insurance/plans/:id/reanalyze` | `uuidParam` + PDF | re-extracted plan (AI-gated) |
+| `PUT /insurance/plans/:id/spending` | `uuidParam` + `expense.updateSpending` | updated deductible/OOP (handler `expenseController.updateCurrentSpending`) |
 
 ---
 
-### 5.7 Uploads (`uploadRoutes.ts`)
+## 8. Expenses (`expenseRoutes.ts`)
 
-Router-wide `uploadLimiter` (`uploadRoutes.ts:26`). 3 endpoints; all `authenticate`, `aiLimiter`, `blockDemoAI`, `requirePlanLimit('pdfUploadsPerMonth')`, `upload.single('file')`. Handlers in `controllers/upload/` (the old monolithic `uploadController.ts` is gone).
+Router-wide `authenticate` (`expenseRoutes.ts:32`). Mutations apply `csrfProtection` inline (redundant with the global gate). PHI: encrypted `serviceType`, `estimatedCost`/`billedAmount`/`patientPaid`/`insurancePaid`/etc., `notes` (`encryption.ts:534-546`).
 
-| Endpoint | Accepts | Handler | Source |
+| Endpoint | Request (`validation.ts`) | Response | Notes |
 |---|---|---|---|
-| `POST /upload/lab-report` | PDF, ≤10 MB | `uploadLabReport` (Claude extraction) | `uploadRoutes.ts:77` / `labUploadController.ts:36` |
-| `POST /upload/insurance-sbc` | PDF, ≤10 MB | `uploadSBC` | `uploadRoutes.ts:94` / `sbcUploadController.ts:33` |
-| `POST /upload/lab-results-ocr` | PDF + PNG/JPEG/TIFF/GIF/WebP, ≤10 MB | `uploadLabResultOCR` (Document AI OCR) | `uploadRoutes.ts:124` / `labUploadController.ts` |
-
-OCR allowed MIME types: `application/pdf, image/png, image/jpeg, image/tiff, image/gif, image/webp` (`uploadRoutes.ts:54-61`). Image OCR is gated by the Google BAA flag at runtime (`GOOGLE_BAA_ACTIVE`, `config/index.ts:176`).
+| `GET /expenses/projections` | `expense.projectionsQuery` | `{ data: ExpenseProjection[] }` | |
+| `POST /expenses/projections` | `expense.createProjection` (`:691`) | 201 created | `csrfProtection` inline (`:48`) |
+| `PUT /expenses/projections/:id` | `uuidParam` + `expense.updateProjection` | updated | |
+| `DELETE /expenses/projections/:id` | `uuidParam` | `{ success:true }` | |
+| `GET /expenses/actuals` | `expense.actualsQuery` | `{ data: ExpenseActual[] }` | |
+| `POST /expenses/actuals` | `expense.createActual` | 201 created | |
+| `PUT /expenses/actuals/:id` | `uuidParam` + `expense.updateActual` | updated | |
+| `DELETE /expenses/actuals/:id` | `uuidParam` | `{ success:true }` | |
+| `POST /expenses/analyze` | `expense.analyzeCosts` | AI cost analysis | `aiLimiter`+`aiSpendGuard`+`requirePlanLimit('costAnalysisPerMonth')` (`:113-116`) |
+| `GET /expenses/analyses` | `expense.analysesQuery` | `{ data: CostAnalysis[] }` | |
 
 ---
 
-### 5.8 Files (`fileRoutes.ts`)
+## 9. Health goals (`healthGoalsRoutes.ts`)
 
-Router-wide `authenticate` (`fileRoutes.ts:42`). 4 endpoints. Ownership enforced by controller `where:{ id, userId }` + `withRLSTransaction` + `user_files` RLS policy (`fileRoutes.ts:28-41`).
+Router-wide `authenticate` (`healthGoalsRoutes.ts:42`). PHI: encrypted `description`, `targetValue`, `currentValue`, `startValue` + progress `value`/`note` (`encryption.ts:517-524`).
 
-| Endpoint | Limiter | Returns | Source |
+| Endpoint | Route | Request | Response |
 |---|---|---|---|
-| `GET /files` | standard | paginated metadata list | `fileController.getFiles:41` |
-| `GET /files/:id` | standard | single file **metadata only** | `fileController.getFile:131` |
-| `GET /files/:id/download` | `sensitiveLimiter` | **raw file bytes** (streamed proxy) | `fileController.getFileDownloadUrl:201` |
-| `DELETE /files/:id` | standard | `{ success:true }` | `fileController.deleteFile:289` |
+| `GET /health-goals/summary` | `:45` | none | summary stats |
+| `GET /health-goals/suggestions` | `:48` | none (`aiLimiter`) | AI-suggested goals |
+| `GET /health-goals` | `:51` | `healthGoal.listQuery` (`:604`) | `{ data: HealthGoal[] }` |
+| `GET /health-goals/:id` | `:58` | `uuidParam` | single goal + progress history |
+| `POST /health-goals` | `:65` | `healthGoal.create` | 201 created |
+| `PUT /health-goals/:id` | `:72` | `uuidParam` + `healthGoal.update` | updated |
+| `PATCH /health-goals/:id/progress` | `:80` | `uuidParam` + `healthGoal.updateProgress` | progress appended |
+| `DELETE /health-goals/:id` | `:88` | `uuidParam` | `{ success:true }` |
 
-> **Spec Q9 drift — there is no signed-URL endpoint anymore.** The download path used to mint a 15-minute GCS signed URL; it was replaced by an authenticated proxy stream because the signed URL was an unbound capture-replay PHI-egress vector. `getFileDownloadUrl` now pipes bytes through the backend with `Cache-Control: no-store`:
+---
 
-```ts
-// Source: backend/src/controllers/fileController.ts:L248-L259
-res.set({
-  'Content-Type': file.fileType || 'application/octet-stream',
-  'Content-Disposition': `attachment; filename="${safeFilename}"`,
-  'Cache-Control': 'no-store, no-cache, private, must-revalidate',
-  Pragma: 'no-cache',
-  'X-Content-Type-Options': 'nosniff',
-});
-...
-const stream = getFileStream(file.storageKey);
+## 10. Health needs (`healthNeedsRoutes.ts`)
+
+Router-wide `authenticate` (`healthNeedsRoutes.ts:39`). PHI: encrypted `description` (`encryption.ts:512`).
+
+| Endpoint | Route | Request | Response |
+|---|---|---|---|
+| `GET /health-needs` | `:42` | `healthNeed.listQuery` (`:568`) | `{ data: HealthNeed[] }` |
+| `GET /health-needs/analyze` | `:49` | none (`aiLimiter`) | AI-generated needs |
+| `GET /health-needs/summary` | `:53` | none | counts by status/urgency/type |
+| `GET /health-needs/:id` | `:56` | `uuidParam` | single need |
+| `POST /health-needs` | `:63` | `healthNeed.create` | 201 created |
+| `PATCH /health-needs/:id` | `:70` | `uuidParam` + `healthNeed.update` | updated status |
+| `DELETE /health-needs/:id` | `:78` | `uuidParam` | `{ success:true }` |
+
+---
+
+## 11. Uploads (`uploadRoutes.ts`)
+
+Router-wide `uploadLimiter` (`uploadRoutes.ts:27`). Handlers live in `controllers/upload/` (the monolithic `uploadController.ts` is gone). All three accept a single `file`, max **10 MB** (`uploadRoutes.ts:33`).
+
+| Endpoint | Route | Accepts | Middleware (after `uploadLimiter`) | Handler |
+|---|---|---|---|---|
+| `POST /upload/lab-report` | `:78` | PDF only (`:38`) | `authenticate`, `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('pdfUploadsPerMonth')`, `requirePlanLimit('maxBiomarkers')`, `upload.single('file')` | `uploadLabReport` |
+| `POST /upload/insurance-sbc` | `:100` | PDF only | `authenticate`, `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('pdfUploadsPerMonth')`, `upload.single('file')` | `uploadSBC` |
+| `POST /upload/lab-results-ocr` | `:131` | PDF + PNG/JPEG/TIFF/GIF/WebP (`:55-62`) | `authenticate`, `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('pdfUploadsPerMonth')`, `requirePlanLimit('maxBiomarkers')`, `uploadOCR.single('file')` | `uploadLabResultOCR` (Google Document AI OCR) |
+
+- **Request**: `multipart/form-data` with `file`. **Response**: created biomarkers + extraction metadata.
+- **Errors**: 400 `BAD_REQUEST` (wrong mimetype), 413 `FILE_TOO_LARGE`, 503 `SERVICE_UNAVAILABLE`, 429 upload/AI limiters, 403 `PLAN_LIMIT_EXCEEDED`.
+
+---
+
+## 12. Files (`fileRoutes.ts`) — PHI returned
+
+Router-wide `authenticate` (`fileRoutes.ts:42`). **Marked PHI-returning**: the file's `originalFilename` is encrypted at rest (`UserFile.originalFilenameEncrypted`, L24) and decrypted on every response via `decryptOriginalFilename(file, encryption, userSalt)` (`fileController.ts:89,172,258`). A raw client filename can itself be PHI (e.g. "PSA_results_2026.pdf").
+
+> **Drift correction vs. prompt:** the prompt's acceptance Q9 asks which endpoint returns a **signed GCS URL and for how long**. The signed-URL path was **removed** — `getFile` and `getFileDownloadUrl` no longer mint a 15-minute GCS signed URL (the unbound capture-replay vector). `GET /files/:id` now returns metadata only (`fileController.ts:128-137`), and `GET /files/:id/download` **proxies the raw bytes through the backend** with `Cache-Control: no-store` (`fileController.ts:198-302`), forcing every download through `authenticate` + RLS. **No endpoint returns a signed URL; there is no validity window to quote.** See the Prompt drift log.
+
+### `GET /api/v1/files/:id/download`
+
+Stream a file's bytes (audited PHI egress).
+
+- **Route**: `fileRoutes.ts:59`; **Middleware**: `authenticate`, `sensitiveLimiter`, `validate(uuidParam)`; **Controller**: `getFileDownloadUrl` (`fileController.ts:212`).
+- **RLS**: `withRLSTransaction(userId, tx => userFile.findFirst({ id, userId }))` (`fileController.ts:221-234`); null → 404.
+- **Response (200)**: raw file body; headers set at `fileController.ts:269-275`:
+  ```
+  Content-Type: <fileType>
+  Content-Disposition: attachment; filename="<decrypted-original>"; filename*=UTF-8''<encoded>
+  Cache-Control: no-store, no-cache, private, must-revalidate
+  X-Content-Type-Options: nosniff
+  ```
+- **Errors**: 404 `NOT_FOUND`, 502 `STORAGE_READ_FAILED` (GCS stream error, `fileController.ts:295`), 429 `SENSITIVE_RATE_LIMIT_EXCEEDED`.
+- **Audit**: `auditService.logExport('UserFile', [id], 'FILE_DOWNLOAD', { req, userId }, { filename })` — logged BEFORE streaming (`fileController.ts:244-250`) → `EXPORT`.
+
+```
+GET /files/:id/download
+   │ authenticate + sensitiveLimiter + uuidParam
+   ▼
+fileController.getFileDownloadUrl   (fileController.ts:212)
+   │ withRLSTransaction → userFile.findFirst({ id, userId })   (RLS + WHERE = defense in depth, fileRoutes.ts:28-41)
+   │ logExport(...)  BEFORE stream                              (fileController.ts:244)
+   ▼
+storageService.getFileStream(storageKey) ──pipe──▶ client (no-store)   (storageService.ts:108)
 ```
 
-Download is audited as an EXPORT **before** streaming, so a mid-stream abort still records disclosure (`fileController.ts:L232-L238`). On GCS read failure: 502 `STORAGE_READ_FAILED` (`fileController.ts:272-275`).
+### Other files endpoints
+
+| Endpoint | Route | Request | Response |
+|---|---|---|---|
+| `GET /files` | `:45` | `schemas.pagination` | `{ data: UserFileResponse[], pagination }`, `originalFilename` decrypted (`fileController.ts:82-102`) |
+| `GET /files/:id` | `:52` | `uuidParam` | single `UserFileResponse` (metadata only — no download URL) |
+| `DELETE /files/:id` | `:67` | `uuidParam` | `{ success:true }`; GCS object deleted first, then DB row (F-22, `fileController.ts:339-371`) |
+
+**Related**: [`PHI_TAXONOMY.md#userfile`](./PHI_TAXONOMY.md), [`DATA_MODEL.md#userfile`](./DATA_MODEL.md).
 
 ---
 
-### 5.9 Provider (`providerRoutes.ts`)
+## 13. Provider (`providerRoutes.ts`) — PROVIDER/ADMIN
 
-Router-wide `authenticate` + `requireRole('PROVIDER', 'ADMIN')` (`providerRoutes.ts:25-26`). 6 endpoints — handlers inline. Cross-patient PHI access is gated by consent (`status==='ACTIVE'`, unexpired, capability flag) AND backed by RLS provider policies.
+Router-wide `authenticate` then `requireRole('PROVIDER','ADMIN')` (`providerRoutes.ts:27-28`). All 7 endpoints require the PROVIDER role. Every cross-patient read resolves consent through the single choke point `resolveProviderAccess(tx, providerId, patientId, flag)` (`providerRoutes.ts:30-47`).
 
-| Endpoint | Limiter | Returns | Source |
+| Endpoint | Route | Consent flag | Response | PHI |
+|---|---|---|---|---|
+| `GET /provider/patients` | `:53` | ACTIVE consent | relationships + patient email (active only) | patient email |
+| `POST /provider/patients/request` | `:171` | — | 201 `{ relationshipId, status:'PENDING' }`; uniform body (`:204-209`) | none (anti-enumeration) |
+| `GET /provider/patients/:patientId` | `:319` | ACTIVE consent | patient identity + permissions | patient email |
+| `GET /provider/patients/:patientId/biomarkers` | `:442` | `canViewBiomarkers` | decrypted biomarkers (patient key) | **yes** |
+| `GET /provider/patients/:patientId/health-needs` | `:526` | `canViewHealthNeeds` | decrypted health needs | **yes** |
+| `GET /provider/patients/:patientId/insurance` | `:602` | `canViewInsurance` (M3) | decrypted plans + benefits | **yes** |
+| `DELETE /provider/patients/:patientId` | `:659` | ACTIVE consent | `{ message }` (hard delete) | none |
+
+`POST /provider/patients/request` is **how a provider requests access**: it upserts a `ProviderPatient` row to status **PENDING** (`providerRoutes.ts:267-302`); the patient later approves it (state transition `PENDING → ACTIVE`, section 14). Gated by `providerAccessRequestLimiter` (10/hr, user-keyed). `canEditData` is intentionally never consumed — providers are read-only (`providerRoutes.ts:38-43`).
+
+---
+
+## 14. Patient (`patientRoutes.ts`) — PATIENT
+
+Router-wide `authenticate` then `requireRole('PATIENT')` (`patientRoutes.ts:22-24`). Patients manage their own provider consent.
+
+| Endpoint | Route | Request | State transition / response |
 |---|---|---|---|
-| `GET /provider/patients` | standard | relationships (email only for ACTIVE/unexpired) | `providerRoutes.ts:32` |
-| `POST /provider/patients/request` | `providerAccessRequestLimiter` (10/hr) | uniform success body (201 if created) | `providerRoutes.ts:150` |
-| `GET /provider/patients/:patientId` | standard | patient detail (consented) | `providerRoutes.ts:292` |
-| `GET /provider/patients/:patientId/biomarkers` | standard | decrypted patient biomarkers | `providerRoutes.ts:415` |
-| `GET /provider/patients/:patientId/health-needs` | standard | decrypted patient health needs | `providerRoutes.ts:559` |
-| `DELETE /provider/patients/:patientId` | standard | `{ message }` (hard delete) | `providerRoutes.ts:690` |
-
-#### `POST /api/v1/provider/patients/request` (spec Q15)
-
-A provider requests access to a patient by email. **State transition: creates/updates a `ProviderPatient` row to `status: PENDING`.**
-
-```ts
-// Source: backend/src/routes/providerRoutes.ts:L246-L266
-return tx.providerPatient.upsert({
-  where: { providerId_patientId: { providerId, patientId: patient.id } },
-  create: { providerId, patientId: patient.id,
-    relationshipType: relationshipType || 'PRIMARY_CARE',
-    status: 'PENDING', notesEncrypted: encryptedNotes },
-  update: { status: 'PENDING',
-    relationshipType: relationshipType || 'PRIMARY_CARE',
-    notesEncrypted: encryptedNotes },
-});
-```
-
-- **Request**: `{ patientEmail, relationshipType?, message? }` (`schemas.providerPatient.request`, `validation.ts:549`).
-- **Response**: 201 `{ success:true, data:{ relationshipId, status:'PENDING' } }` (`providerRoutes.ts:277-284`). For a non-existent / non-PATIENT email the API returns a **uniform** 200 generic message to prevent enumeration (`providerRoutes.ts:183-209`); the audit log retains the real reason.
-- **Errors**: 403 `FORBIDDEN` if already ACTIVE or already PENDING (`providerRoutes.ts:238-243`); 429 `PROVIDER_REQUEST_RATE_LIMIT_EXCEEDED`.
-
-The patient then approves/denies via `/patient/providers/:id/approve|deny` (§5.10) — the consent lifecycle is `PENDING → ACTIVE → REVOKED` (or hard-deleted).
+| `GET /patient/providers` | `:30` | none | list relationships + provider email |
+| `GET /patient/providers/pending` | `:109` | none | list PENDING requests |
+| `POST /patient/providers/:id/approve` | `:180` | `providerPatient.approve` | **PENDING → ACTIVE** + permission flags (`:227-237`); `canEditData` ignored (L37) |
+| `POST /patient/providers/:id/deny` | `:273` | `uuidParam` | PENDING row deleted (`:315`) |
+| `PATCH /patient/providers/:id` | `:330` | `providerPatient.updatePermissions` | update view flags on ACTIVE relationship |
+| `POST /patient/providers/:id/revoke` | `:422` | `uuidParam` | **ACTIVE → REVOKED** (`:468-471`) |
+| `DELETE /patient/providers/:id` | `:486` | `uuidParam` | relationship hard-deleted |
 
 ```mermaid
 stateDiagram-v2
-  [*] --> PENDING: provider POST /patients/request
+  [*] --> PENDING: provider POST /provider/patients/request
   PENDING --> ACTIVE: patient POST /providers/:id/approve
   PENDING --> [*]: patient POST /providers/:id/deny (deleted)
   ACTIVE --> REVOKED: patient POST /providers/:id/revoke
-  ACTIVE --> [*]: provider DELETE /patients/:patientId (hard delete)
-  REVOKED --> [*]: patient DELETE /providers/:id
+  ACTIVE --> ACTIVE: patient PATCH /providers/:id (perms)
+  REVOKED --> [*]: terminal — admin cannot reactivate; patient must initiate a new share
 ```
 
-**Related**: [`DATA_MODEL.md#providerpatient`](./DATA_MODEL.md), [`ROUTING_TABLE.md`](./ROUTING_TABLE.md).
+Each consent change writes a `logUpdate`→`UPDATE` audit row with `operation: CONSENT_GRANTED/DENIED/REVOKED/PERMISSIONS_UPDATED` (e.g. `patientRoutes.ts:240-253`).
 
 ---
 
-### 5.10 Patient (`patientRoutes.ts`)
+## 15. Settings (`settingsRoutes.ts`)
 
-Router-wide `authenticate` + `requireRole('PATIENT')` (`patientRoutes.ts:22-24`). 7 endpoints — handlers inline. Patient manages provider consent.
+Router-wide `authenticate` (`settingsRoutes.ts:31`); every route uses `sensitiveLimiter`; mutations add `blockDemoProfileUpdate`. PHI: `firstName`/`lastName` (encrypted), `healthProfileEncrypted`.
 
-| Endpoint | Body | State change | Source |
+### `GET /api/v1/settings/export-data`
+
+Export the full decrypted health record as JSON (HIPAA data-portability).
+
+- **Route**: `settingsRoutes.ts:86`; **Controller**: `exportUserData` (`settingsController.ts:334`).
+- **Response (200)**: `{ success:true, data: <full export> }` with `Cache-Control: no-store, no-cache, private, must-revalidate` (`settingsController.ts:746-752`). Includes decrypted file `originalFilename` (`settingsController.ts:651`).
+- **Audit**: `logExport`→`EXPORT`. **PHI**: all of the user's PHI.
+
+### `DELETE /api/v1/settings/delete-account`
+
+Permanently delete the account and all data (re-auth via password).
+
+- **Route**: `settingsRoutes.ts:107`; **Controller**: `deleteAccount` (`settingsController.ts:939`).
+- **Request (Zod)**: `schemas.settings.deleteAccount` (`validation.ts:828-830`): `{ password }`.
+- **Response (200)**: `{ success: true }` (`settingsController.ts:1050-1054`) — cascade-deletes the `User` row inside `withRLSTransaction` (`settingsController.ts:1045`).
+- **Errors**: 422 `VALIDATION_ERROR` (no password), 401/403 (wrong password / demo block), 429 `SENSITIVE_RATE_LIMIT_EXCEEDED`.
+- **Audit**: `logDelete`→`DELETE` (`settingsController.ts:~1039`).
+
+### Other settings endpoints
+
+| Endpoint | Route | Request | Response |
 |---|---|---|---|
-| `GET /patient/providers` | — | — (list) | `patientRoutes.ts:30` |
-| `GET /patient/providers/pending` | — | — (list PENDING) | `patientRoutes.ts:109` |
-| `POST /patient/providers/:id/approve` | `providerPatient.approve` (`validation.ts:555`) | `PENDING → ACTIVE` (+ permissions, `consentExpiresAt`) | `patientRoutes.ts:180` |
-| `POST /patient/providers/:id/deny` | `uuidParam` | `PENDING → deleted` | `patientRoutes.ts:271` |
-| `PATCH /patient/providers/:id` | `providerPatient.updatePermissions` (`validation.ts:563`) | edit permissions on ACTIVE | `patientRoutes.ts:328` |
-| `POST /patient/providers/:id/revoke` | `uuidParam` | `ACTIVE → REVOKED` | `patientRoutes.ts:418` |
-| `DELETE /patient/providers/:id` | `uuidParam` | permanent delete | `patientRoutes.ts:482` |
-
-Approve body defaults: `canViewBiomarkers:true`, `canViewInsurance:false`, `canViewHealthNeeds:true`, `canEditData:false`, optional `consentDurationDays` 1–365 (`validation.ts:555-561`). Consent events audit as `PERMISSION_CHANGE` with `operation:'CONSENT_GRANTED'/'CONSENT_REVOKED'/'PERMISSIONS_UPDATED'` (`patientRoutes.ts:237-251,449-462`).
+| `GET /settings/profile` | `:34` | none | decrypted `{ firstName, lastName, … }` |
+| `PATCH /settings/profile` | `:41` | `settings.updateProfile` (`:792`) | updated profile (demo-blocked) |
+| `GET /settings/notifications` | `:50` | none | notification prefs |
+| `PATCH /settings/notifications` | `:57` | `settings.updateNotifications` (`:800`) | updated prefs |
+| `GET /settings/health-profile` | `:66` | none | decrypted health profile |
+| `PATCH /settings/health-profile` | `:76` | `settings.updateHealthProfile` (`:832`) | updated (gated `requirePlanFeature('healthProfile')`) |
+| `DELETE /settings/delete-data` | `:98` | `settings.deleteData` (`:822`): `{ password }` | `{ success:true }`; wipes health data, keeps account |
 
 ---
 
-### 5.11 Settings (`settingsRoutes.ts`)
+## 16. Admin (`adminRoutes.ts`) — ADMIN
 
-Router-wide `authenticate` (`settingsRoutes.ts:31`). 9 endpoints, all `sensitiveLimiter` (10/hr). Mutations carry `blockDemoProfileUpdate` (`settingsRoutes.ts:23`). `PATCH /health-profile` additionally gated by `requirePlanFeature('healthProfile')` (`settingsRoutes.ts:80`).
+Router-wide `authenticate` → `blockDemoAdminAccess` → `requireRole('ADMIN')` (`adminRoutes.ts:30-32`). The demo block runs **before** the role check so a demo account is rejected even if its role were ever elevated (F-5).
 
-| Endpoint | Body | Returns | Source |
+| Endpoint | Route | Request | Response |
 |---|---|---|---|
-| `GET /settings/profile` | — | decrypted profile + prefs | `settingsRoutes.ts:34` |
-| `PATCH /settings/profile` | `settings.updateProfile` (`validation.ts:675`) | updated profile | `settingsRoutes.ts:41` |
-| `GET /settings/notifications` | — | prefs | `settingsRoutes.ts:50` |
-| `PATCH /settings/notifications` | `settings.updateNotifications` (`validation.ts:683`) | updated prefs | `settingsRoutes.ts:57` |
-| `GET /settings/health-profile` | — | health profile | `settingsRoutes.ts:66` |
-| `PATCH /settings/health-profile` | `settings.updateHealthProfile` (`validation.ts:715`) | updated | `settingsRoutes.ts:76` |
-| `GET /settings/export-data` | — | full JSON export | `settingsRoutes.ts:86` |
-| `DELETE /settings/delete-data` | `{ password }` (`validation.ts:705`) | `{ success:true }` | `settingsRoutes.ts:98` |
-| `DELETE /settings/delete-account` | `{ password }` (`validation.ts:711`) | `{ success:true }` | `settingsRoutes.ts:107` |
-
-#### `DELETE /api/v1/settings/delete-account` (spec Q14)
-
-Deletes the account and all data. Requires password re-auth (`schemas.settings.deleteAccount`, `validation.ts:711`). **Success body: `{ "success": true }`** (the standard `ApiResponse` with no `data` — `settingsController.deleteAccount`). Errors: 401 `UNAUTHORIZED` (wrong password), 403 `FORBIDDEN` (demo account, via `blockDemoProfileUpdate`), 429 `SENSITIVE_RATE_LIMIT_EXCEEDED`. `GET /settings/export-data` (HIPAA right-to-export) audits as `PHI_EXPORT` and is available on every plan (`plans.ts:56`).
+| `GET /admin/users` | `:42` | `admin.listUsersQuery` (`:880`) | paginated users (`+plan`, `+_count`) |
+| `GET /admin/users/:id` | `:136` | `uuidParam` | user detail + `_count` |
+| `POST /admin/users` | `:206` | `admin.createUser` (`:865`) | 201 created user |
+| `PATCH /admin/users/:id` | `:272` | `uuidParam` + `admin.updateUser` (`:873`) | updated user; role/pwd/deactivate also wipes sessions + stamps `tokensValidAfter` (`:308-343`) |
+| `DELETE /admin/users/:id` | `:406` | `uuidParam` | soft delete (`isActive:false` + `tokensValidAfter`) (`:470-483`) |
+| `DELETE /admin/users/:id/permanent` | `:500` | `uuidParam` + `admin.permanentDelete` (`confirmEmail`) | cascade hard delete (`sensitiveLimiter`) |
+| `PATCH /admin/users/:id/plan` | `:598` | `uuidParam` + `admin.updateUserPlan` | `{ plan, expiresAt }` |
+| `GET /admin/provider-relationships` | `:687` | `?status=` | relationships (cap 100) |
+| `PATCH /admin/provider-relationships/:id` | `:727` | `uuidParam` + `admin.updateProviderRelationship` | update status / view perms; REVOKED is terminal — admin cannot reactivate (always 403); `canEditData` no longer accepted |
+| `GET /admin/stats` | `:860` | none | system stats (7 counts, one tx) |
+| `GET /admin/audit-logs` | `:953` | `admin.auditLogQuery` | paginated logs; `metadata` decrypted, encrypted PHI columns never returned (`:1000-1032`); lookback capped at 1 yr (`:971`) |
 
 ---
 
-### 5.12 Admin (`adminRoutes.ts`)
+## 17. Onboarding (`onboardingRoutes.ts`)
 
-Router-wide `authenticate` → `blockDemoAdminAccess` → `requireRole('ADMIN')` (`adminRoutes.ts:29-31`). 11 endpoints — handlers inline, all wrapped in admin RLS context (`withRLSContext(null, ..., { isAdmin: true })`).
+Router-wide `authenticate` (`onboardingRoutes.ts:22`). Delegates to `onboardingService`.
 
-| Endpoint | Body / Query | Source |
-|---|---|---|
-| `GET /admin/users` | `admin.listUsersQuery` (`validation.ts:763`) | `adminRoutes.ts:41` |
-| `GET /admin/users/:id` | `uuidParam` | `adminRoutes.ts:130` |
-| `POST /admin/users` | `admin.createUser` (`validation.ts:748`) | `adminRoutes.ts:200` |
-| `PATCH /admin/users/:id` | `admin.updateUser` (`validation.ts:756`) | `adminRoutes.ts:266` |
-| `DELETE /admin/users/:id` | `uuidParam` (soft delete) | `adminRoutes.ts:383` |
-| `DELETE /admin/users/:id/permanent` | `{ confirmEmail }` (`validation.ts:790`) + `sensitiveLimiter` | `adminRoutes.ts:466` |
-| `PATCH /admin/users/:id/plan` | `admin.updateUserPlan` (`validation.ts:782`) | `adminRoutes.ts:564` |
-| `GET /admin/provider-relationships` | `?status=` | `adminRoutes.ts:653` |
-| `PATCH /admin/provider-relationships/:id` | `uuidParam` + body | `adminRoutes.ts:693` |
-| `GET /admin/stats` | — | `adminRoutes.ts:775` |
-| `GET /admin/audit-logs` | `admin.auditLogQuery` (`validation.ts:771`) | `adminRoutes.ts:868` |
+| Endpoint | Route | Request | Response |
+|---|---|---|---|
+| `GET /onboarding/status` | `:24` | none | `{ data: <step completion + suggested next step> }` (pure read; `getOnboardingStatus`) |
+| `POST /onboarding/complete` | `:34` | none | `{ data: { completed:true, completedAt } }` (`:39-42`); persists the durable stamp |
 
-Self-protection: admin cannot change own role (`adminRoutes.ts:277`), cannot delete self (`adminRoutes.ts:394,480`). Password reset via `PATCH /users/:id` wipes the target's sessions (`adminRoutes.ts:322-326`). Role hierarchy: `PATIENT=1 < PROVIDER=2 < ADMIN=3` (`rbac.ts:16-20`).
+`GET /status` reports `completed:true` for users with existing data without writing — the durable `onboardingCompletedAt` stamp is persisted only by the CSRF-protected POST (`onboardingRoutes.ts:6-12`).
 
 ---
 
-### 5.13 Onboarding (`onboardingRoutes.ts`)
+## 18. FHIR (`fhirRoutes.ts`) — SMART-on-FHIR / Quest
 
-Router-wide `authenticate` (`onboardingRoutes.ts:20`). 2 endpoints; handlers inline, delegating to `onboardingService`.
+`GET /callback` is mounted BEFORE `router.use(authenticate)` (`fhirRoutes.ts:24,27`) — it is the one public route (OAuth providers redirect the browser here as a plain GET). All other routes require auth + `requirePlanFeature('questFhirIntegration')` + `sensitiveLimiter`.
 
-| Endpoint | Returns | Source |
-|---|---|---|
-| `GET /onboarding/status` | `{ success:true, data: <step state> }` from `getOnboardingStatus` | `onboardingRoutes.ts:22` |
-| `POST /onboarding/complete` | `{ success:true, data:{ completed:true, completedAt } }` | `onboardingRoutes.ts:32-42` |
-
-Status auto-heals: accounts with existing data auto-complete without a client POST (`onboardingRoutes.ts:6-9`).
-
----
-
-### 5.14 FHIR (`fhirRoutes.ts`) — Quest SMART-on-FHIR lab sync
-
-5 endpoints. `GET /callback` is declared **before** `authenticate` (public). The rest require auth; connect/sync/delete are gated by `sensitiveLimiter` + `blockDemoAI`, and connect/sync by `requirePlanFeature('questFhirIntegration')`.
-
-| Endpoint | Auth | Gates | Returns | Source |
+| Endpoint | Route | Auth | Request | Response |
 |---|---|---|---|---|
-| `GET /fhir/callback` | **public** | — | 302 redirect to frontend | `fhirRoutes.ts:24` / `fhirController.handleCallback:76` |
-| `GET /fhir/connect/quest` | JWT | `sensitiveLimiter`, `blockDemoAI`, `requirePlanFeature('questFhirIntegration')` | `{ data:{ redirectUrl } }` | `fhirRoutes.ts:30` / `:38` |
-| `GET /fhir/connections` | JWT | — | `{ data: ConnectionSummary[] }` | `fhirRoutes.ts:39` / `:113` |
-| `POST /fhir/sync/:connectionId` | JWT | `sensitiveLimiter`, `blockDemoAI`, `requirePlanFeature(...)`, `csrfProtection` | `{ data: SyncResult }` | `fhirRoutes.ts:42` / `:145` |
-| `DELETE /fhir/connections/:id` | JWT | `sensitiveLimiter`, `blockDemoAI`, `csrfProtection` | 204 No Content | `fhirRoutes.ts:53` / `:183` |
-
-#### Quest flow end-to-end (spec Q17)
+| `GET /fhir/callback` | `:24` | **public** | `?code&state` (or `?error`) | **302 redirect** to `${FRONTEND_URL}?labConnected=quest` on success, or `?error=…` (`fhirController.ts:87,107,131`) |
+| `GET /fhir/connect/quest` | `:30` | yes | none | `{ data: { redirectUrl } }` (`fhirController.ts:58-62`); 503 if Quest not configured (`:46`) |
+| `GET /fhir/connections` | `:39` | yes | none | `{ data: LabConnection[] }` (`fhirController.ts:164`) |
+| `POST /fhir/sync/:connectionId` | `:54` | yes | `connectionIdParam` | `{ data: <import summary> }` (`fhirController.ts:194`); 404 if no connection (`:184`) |
+| `DELETE /fhir/connections/:id` | `:65` | yes | `uuidParam` | **204 No Content** (`fhirController.ts:218`) |
 
 ```mermaid
 sequenceDiagram
-  participant C as Client (SPA)
-  participant API as fhirController
-  participant Q as Quest Authorization Server
-  C->>API: GET /fhir/connect/quest (JWT)
-  API->>API: buildConnectRedirect(userId, 'quest') — PKCE + state, 10-min TTL
-  API-->>C: { redirectUrl }
-  C->>Q: browser → redirectUrl (authorize)
-  Q-->>C: redirect → GET /fhir/callback?code&state (PUBLIC)
-  C->>API: GET /fhir/callback?code=..&state=..
-  API->>Q: handleOAuthCallback('quest', code, state) → token exchange (PKCE)
-  API->>API: persistConnection (encrypt access/refresh tokens)
-  API-->>C: 302 → frontendSuccessRedirect?labConnected=quest
-  C->>API: POST /fhir/sync/:connectionId (JWT + CSRF)
-  API->>Q: syncLabResults → pulls Observations → biomarkers
-  API-->>C: { data: SyncResult }
+  participant B as Browser
+  participant API as fhirRoutes
+  participant Q as Quest FHIR
+  B->>API: GET /fhir/connect/quest (cookie auth)
+  API->>API: requirePlanFeature(questFhirIntegration) + buildConnectRedirect (PKCE+state)
+  API-->>B: { redirectUrl }  (smartAuth.ts:170-189)
+  B->>Q: follow redirectUrl, authenticate + consent
+  Q-->>B: 302 → GET /fhir/callback?code=…&state=…
+  B->>API: GET /fhir/callback (PUBLIC, no session)
+  API->>Q: exchange code (consume PKCE verifier by state)  (smartAuth.ts:194-232)
+  API-->>B: 302 → FRONTEND_URL?labConnected=quest
+  B->>API: POST /fhir/sync/:connectionId (cookie + X-CSRF-Token)
+  API->>Q: paginated Observation/DiagnosticReport pull → biomarkers
+  API-->>B: { import summary }
 ```
 
-- **Gating env vars** (`config/index.ts:205-224`): `QUEST_FHIR_CLIENT_ID` (feature off if empty — `fhirController.ts:30-32`), `QUEST_FHIR_CLIENT_SECRET`, `QUEST_FHIR_BASE_URL`, `QUEST_FHIR_REDIRECT_URI` (default `https://api.ownmyhealth.io/api/v1/fhir/callback`), `QUEST_FHIR_SUCCESS_REDIRECT`, `QUEST_FHIR_AUTH_HOSTS` (SSRF allowlist). Plan feature: `questFhirIntegration` (FREE=false, PRO/TEAM=true — `plans.ts:57,76,95`).
-- **Callback safety**: public but bound to a user via the 24-byte random `state` (10-min TTL) + PKCE (`fhirRoutes.ts:17-23`). Not CSRF-protected because OAuth providers redirect a plain browser GET.
-- **PHI**: `LabConnection.accessTokenEncrypted` / `refreshTokenEncrypted` are encrypted OAuth tokens (a stolen token reaches live PHI at Quest). Imported lab results land as encrypted biomarkers. See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
-- **Errors**: 503 `SERVICE_UNAVAILABLE` (not configured), 500 `CONNECT_FAILED`/`SYNC_FAILED`/`DISCONNECT_FAILED`, 404 `NOT_FOUND` (connection not owned).
+**Gating env vars** (`config/index.ts:266-280`): `QUEST_FHIR_CLIENT_ID` (feature off unless set), `QUEST_FHIR_CLIENT_SECRET`, `QUEST_FHIR_BASE_URL`, `QUEST_FHIR_REDIRECT_URI` (default `https://api.ownmyhealth.io/api/v1/fhir/callback`), `QUEST_FHIR_SUCCESS_REDIRECT`, `QUEST_FHIR_AUTH_HOSTS` (SSRF allowlist). The callback is public-but-safe because PKCE + a 24-byte random `state` with a 10-minute single-use TTL bind it to the initiating user (`fhirRoutes.ts:17-23`, `smartAuth.ts:361-414`). See [`ENV_VARS.md`](./ENV_VARS.md).
 
 ---
 
-### 5.15 AI chat (`aiRoutes.ts`) — Health Guide (SSE)
+## 19. AI chat (`aiRoutes.ts`)
 
-1 endpoint. **Bearer-only** (`requireBearerAuth`, `aiRoutes.ts:21`), CSRF-exempt for SSE.
+Router-wide `requireBearerAuth` — **not** `authenticate` — because the route is CSRF-exempt for SSE and must not also accept cookie auth (`aiRoutes.ts:17-21`).
 
-#### `POST /api/v1/ai/chat` (spec Q16)
+### `POST /api/v1/ai/chat`
 
-- **Middleware** (`aiRoutes.ts:L29-L37`): `requireBearerAuth` (router-wide) → `aiLimiter` → `aiSpendGuard` → `blockDemoAI` → `requirePlanLimit('aiChatsPerDay')` → `validate(schemas.ai.chat)`.
-- **Request**: `{ message: string (1..2000), conversationHistory?: {role,content}[] (≤20) }` (`schemas.ai.chat`, `validation.ts:657`).
-- **Response**: `text/event-stream` (SSE). Chunks emitted as `data: {json}\n\n` (`aiChatController.ts:114-115,180-184`). PHI is scrubbed across chunk boundaries via a trailing buffer (`aiChatController.ts:201-208`).
-- **Auth header**: must use `Authorization: Bearer <access JWT>` — the cookie path is rejected by design (`auth.ts:180-220`).
+Streaming conversational Health Guide (Server-Sent Events).
 
-**Gate ordering for spec Q16** — what blocks before the rate limiter, in order:
-1. `aiLimiter` — 1-hr window, max 10/user. Exceeded → **429** `{ error:{ code:'AI_RATE_LIMIT_EXCEEDED', message:'Too many AI requests. Please try again later.' } }` (`rateLimiter.ts:108-120`). No explicit `Retry-After`; `RateLimit-*` standard headers convey the reset window.
-2. `aiSpendGuard` — 503 `SERVICE_UNAVAILABLE` once the rolling daily USD budget (global `AI_DAILY_BUDGET_USD` default 50, per-user `AI_USER_DAILY_BUDGET_USD` default 5) is exhausted (`aiSpendGuard.ts:23-48`, `config/index.ts:195-198`).
-3. `blockDemoAI` — 403 `FORBIDDEN` for the demo account (`demoProtection.ts:164-175`).
-4. `requirePlanLimit('aiChatsPerDay')` — 403 `PLAN_LIMIT_EXCEEDED` with `upgradeRequired:true` when the per-day cap is hit (FREE=3, PRO=50, TEAM=unlimited — `plans.ts:48,67,86`).
+- **Route**: `aiRoutes.ts:29`; **Middleware**: `requireBearerAuth` (router), `aiLimiter`, `aiSpendGuard`, `blockDemoAI`, `requirePlanLimit('aiChatsPerDay')`, `validate(schemas.ai.chat)`.
+- **Auth**: `Authorization: Bearer <access_token>` only (`auth.ts:197-243`). CSRF-exempt via the path allowlist (`csrf.ts:124-145`).
+- **Request (Zod)** — `validation.ts:773-786`: `{ message: string(1..2000), conversationHistory?: { role, content }[] (≤20) }`.
+- **Response (200)**: `Content-Type: text/event-stream` (`aiChatController.ts:221-225`), token frames `data: {…}\n\n` (`aiChatController.ts:131-132`), then `res.end()` (`:306`).
+- **Errors before the stream**: 429 `AI_RATE_LIMIT_EXCEEDED` (`aiLimiter`); **503 `SERVICE_UNAVAILABLE`** from `aiSpendGuard` (budget cap or Redis store error, fail-closed — `aiSpendGuard.ts:60-67`, surfaced `aiChatController.ts:156`); 403 `PLAN_LIMIT_EXCEEDED` (`requirePlanLimit('aiChatsPerDay')`); 403 `FORBIDDEN` (demo); 500 (`aiChatController.ts:175`).
+- **Working curl**:
+  ```bash
+  curl -N -X POST https://api.ownmyhealth.io/api/v1/ai/chat \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -H "Accept: text/event-stream" \
+    -d '{"message":"What does an elevated LDL mean?"}'
+  ```
+- **Audit**: `logAccess`→`PHI_ACCESS`. **AI spend**: `aiSpendGuard` reserves `$0.05` then settles on `finish`/`close`; real token cost added by `trackAIUsage` (`aiCostTracker.ts:302-323`).
 
-Plus a runtime BAA gate inside the controller: 503 `SERVICE_UNAVAILABLE` if `ANTHROPIC_BAA_ACTIVE` is not `true` (`aiChatController.ts:129-141`).
-
-```bash
-curl -N -X POST https://api.ownmyhealth.io/api/v1/ai/chat \
-  -H "Authorization: Bearer <access JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"What does my LDL trend mean?"}'
 ```
-
----
-
-### 5.16 Plan (`planRoutes.ts`)
-
-2 endpoints. `GET /available` is **public**; `GET /` requires auth (per-route `authenticate`, `planRoutes.ts:54`).
-
-#### `GET /api/v1/plan/available` (public) — spec Q19
-
-```ts
-// Source: backend/src/routes/planRoutes.ts:L38-L46
-const order: PlanTier[] = ['FREE', 'PRO', 'TEAM'];
-const plans = order.map((tier) => PLANS[tier]);
-const response: ApiResponse<{ plans: typeof plans }> = {
-  success: true, data: { plans },
-};
-res.json(response);
-```
-
-Returns the full plan catalog `{ data:{ plans: [FREE, PRO, TEAM] } }` — each entry is the `PlanConfig` (tier, name, description, price/annualPrice in cents, full `limits` object — `plans.ts:40-98`). No auth, no usage.
-
-#### `GET /api/v1/plan` (authenticated)
-
-Adds the user's current tier + **live usage + limits** (read from DB, not the JWT — `planRoutes.ts:59-70`):
-
-```json
-{
-  "success": true,
-  "data": {
-    "currentPlan": "FREE", "planName": "Free",
-    "expiresAt": null, "updatedAt": null,
-    "usage": { "...": "from getUserUsage()" },
-    "limits": { "aiChatsPerDay": 3, "pdfUploadsPerMonth": 2, "...": "..." },
-    "upgradeAvailable": true
-  }
-}
-```
-
-Shape from `planRoutes.ts:L76-L84`; `usage` via `getUserUsage(userId)`, `limits` via `getPlanConfig(tier).limits`.
-
----
-
-### 5.17 Internal (`internalRoutes.ts`) — Cloud Scheduler
-
-Mounted at `/api/v1/internal` directly in `app.ts:269`. 1 endpoint.
-
-#### `POST /api/v1/internal/audit-cleanup` (spec Q18)
-
-Runs the HIPAA audit-log retention cleanup. **Authenticated by the `X-Cleanup-Token` shared secret (NOT JWT, NOT CSRF).** CSRF-exempt because Cloud Scheduler can't carry the double-submit cookie (`csrf.ts:139`).
-
-```ts
-// Source: backend/src/routes/internalRoutes.ts:L43-L62
-const expected = config.scheduler.auditCleanupToken;
-if (!expected) {           // feature disabled — hide the endpoint
-  res.status(404).json({ success:false, error:{ code:'NOT_FOUND', message:'Not found' } });
-  return;
-}
-const provided = req.get('X-Cleanup-Token') || '';
-if (!tokenMatches(provided, expected)) {   // constant-time compare
-  res.status(401).json({ success:false, error:{ code:'UNAUTHORIZED', message:'Unauthorized' } });
-  return;
-}
-```
-
-- **404** when `AUDIT_CLEANUP_TOKEN` is unset (`config.scheduler.auditCleanupToken`, `config/index.ts:135-137`) — so the endpoint reveals nothing until enabled.
-- **401** `UNAUTHORIZED` on bad/missing token (constant-time `timingSafeEqual`, `internalRoutes.ts:27-33`).
-- **200** `{ success:true, data:{ deletedCount } }` on success (`internalRoutes.ts:70`).
-
-```bash
-curl -X POST https://api.ownmyhealth.io/api/v1/internal/audit-cleanup \
-  -H "X-Cleanup-Token: <AUDIT_CLEANUP_TOKEN>"
+POST /ai/chat
+   │ requireBearerAuth (Bearer only — CSRF-safe)        auth.ts:197
+   │ aiLimiter (10/hr)  → 429 AI_RATE_LIMIT_EXCEEDED    rateLimiter.ts:177
+   │ aiSpendGuard.admitAISpend (reserve $0.05)          aiSpendGuard.ts → 503 if over budget
+   │ blockDemoAI                                         → 403
+   │ requirePlanLimit('aiChatsPerDay')                   → 403 PLAN_LIMIT_EXCEEDED
+   ▼
+aiChatController.handleAIChat (SSE)  aiChatController.ts:135  →  text/event-stream
 ```
 
 ---
 
-## 6. Health checks
+## 20. Plan (`planRoutes.ts`)
 
-| Endpoint | Auth | Returns | Source |
+| Endpoint | Route | Auth | Request | Response |
+|---|---|---|---|---|
+| `GET /plan/available` | `:32` | **public** | none | `{ data: { plans: [FREE, PRO, TEAM] } }` from `PLANS` (`planRoutes.ts:38-45`) |
+| `GET /plan` | `:52` | yes | none | `{ data: { currentPlan, planName, expiresAt, updatedAt, usage, limits, upgradeAvailable } }` (`planRoutes.ts:85-93`) |
+
+`GET /plan` reports the **effective** tier — a lapsed `planExpiresAt` downgrades to FREE at request time so the UI matches what `requirePlanLimit` enforces (`planRoutes.ts:78-82`). `usage` comes from `getUserUsage` (`usageTracker.ts`). See [`ENV_VARS.md`](./ENV_VARS.md) for `AI_*_BUDGET_USD`.
+
+---
+
+## 21. Internal (`internalRoutes.ts`)
+
+Mounted in `app.ts` (NOT `routes/index.ts`) at `/api/v1/internal` — `app.ts:269`. Authenticated by the `X-Cleanup-Token` shared secret, NOT the session JWT / CSRF.
+
+### `POST /api/v1/internal/audit-cleanup`
+
+Runs HIPAA audit-log retention cleanup (called by Cloud Scheduler).
+
+- **Route**: `internalRoutes.ts:40`; no `authenticate`/`csrfProtection`.
+- **Auth**: `X-Cleanup-Token` header compared constant-time to `config.scheduler.auditCleanupToken` (`AUDIT_CLEANUP_TOKEN`) — `internalRoutes.ts:27-33,54-55`.
+- **Response (200)**: `{ success:true, data:{ deletedCount } }` (`internalRoutes.ts:70`).
+- **Errors**: **404 `NOT_FOUND`** when `AUDIT_CLEANUP_TOKEN` is unset (don't reveal the endpoint exists, `internalRoutes.ts:45-52`); 401 `UNAUTHORIZED` on a bad/missing token (`internalRoutes.ts:57-61`).
+- **Working curl**:
+  ```bash
+  curl -X POST https://api.ownmyhealth.io/api/v1/internal/audit-cleanup \
+    -H "X-Cleanup-Token: $AUDIT_CLEANUP_TOKEN"
+  ```
+
+It is CSRF-exempt because a scheduler can't carry the double-submit cookie; the shared secret + constant-time compare is the auth (`internalRoutes.ts:5-9`).
+
+---
+
+## 22. Health checks
+
+| Endpoint | Source | Auth | Response |
 |---|---|---|---|
-| `GET /api/v1/health` | public | `{ success:true, data:{ status:'healthy', timestamp } }` | `routes/index.ts:42` |
-| `GET /api/v1/` | public | `{ success:true, data:{ version:'v1', endpoints:[...] } }` | `routes/index.ts:54` |
-| `GET /health` (Docker liveness) | public | `{ status, timestamp, checks:{ database } }`; 503 if DB down | `app.ts:301` |
-| `GET /api/health/db` (legacy) | public | `{ success, data }` (DB health); 503 if down | `app.ts:318` |
-| `GET /` (root) | public | `{ success:true, data:{ name, version, environment } }` | `app.ts:287` |
-| `GET /api/v1/csrf-token` | public | `{ success:true, data:{ csrfToken } }` + sets `csrf_token` cookie | `app.ts:284` / `csrf.ts:204` |
+| `GET /api/v1/health` | `routes/index.ts:42` | none | `{ success:true, data:{ status:'healthy', timestamp } }` |
+| `GET /api/v1/` | `routes/index.ts:54` | none | `{ success:true, data:{ version:'v1', endpoints:[…] } }` |
+| `GET /health` | `app.ts:301` | none | `{ status, timestamp, checks:{ database } }` — 200/503 by DB connectivity (Docker/Cloud Run probe) |
+| `GET /api/health/db` | `app.ts:318` | none (`standardLimiter`) | `{ success, data: <db health> }` (legacy) |
+| `GET /` | `app.ts:287` | none | `{ success:true, data:{ name:'OwnMyHealth API', version, environment, documentation } }` |
+| `GET /api/v1/csrf-token` | `app.ts:284` | none | `{ success:true, data:{ csrfToken } }` (`csrf.ts:217-226`) |
 
-The production deploy gates on `GET https://api.ownmyhealth.io/api/v1/health` returning 200 (`.github/workflows/deploy.yml:176`).
-
----
-
-## 7. Webhooks / external callbacks
-
-| Callback | Auth model | Purpose | Source |
-|---|---|---|---|
-| `GET /api/v1/fhir/callback` | none (PKCE + `state` token binding) | Quest OAuth redirect target; exchanges `code` for tokens, persists connection, 302s to frontend | `fhirController.handleCallback:76` |
-| `POST /api/v1/internal/audit-cleanup` | `X-Cleanup-Token` shared secret | Cloud Scheduler maintenance trigger | `internalRoutes.ts:40` |
-
-No SendGrid/Stripe inbound webhooks exist in the repo. SendGrid is **outbound only** (verification, password reset — `emailService`). Plan assignment is manual today via `PATCH /admin/users/:id/plan`; the Stripe webhook path is planned but not implemented (`planRoutes.ts:8-11`, `plans.ts:5-6`).
+The Cloud Run deploy probes `GET /api/v1/health` (`deploy.yml:279`); `GET /health` (top-level) is the container/liveness probe.
 
 ---
 
-## Acceptance questions (self-check)
+## 23. Webhooks / external callbacks
 
-1. **Base URL prod vs staging?** Prod `https://api.ownmyhealth.io/api/v1`; staging `https://api-staging.ownmyhealth.io/api/v1` — §1.
-2. **How does a browser attach credentials?** `access_token`/`refresh_token` HttpOnly cookies (auto-sent) + `X-CSRF-Token` header echoing the `csrf_token` cookie on mutations — §1.
-3. **`POST /auth/login` response shape?** `{ success:true, data:{ user:{ id, email, role } } }` + Set-Cookie — §5.1.
-4. **Which endpoints require PROVIDER role?** The 6 `/provider/*` endpoints (`requireRole('PROVIDER','ADMIN')`) — §5.9 + mega-table.
-5. **Which endpoints are blocked for demo accounts?** All `blockDemoAI` routes (biomarker guidance, uploads ×3, insurance upload/reanalyze, expense analyze, FHIR connect/sync/delete, `/ai/chat`), `blockDemoAdminAccess` (all `/admin/*`), and `blockDemoProfileUpdate` (all settings mutations incl. delete-data/delete-account) — §3, §5.11, §5.12, `demoProtection.ts`.
-6. **Limiter on `/biomarkers/:id/guidance` + window?** `aiLimiter` — 1-hour window, max 10/user — §5.2.
-7. **Zod-failure error shape + code?** `{ success:false, error:{ code:'VALIDATION_ERROR', message:'Validation failed', details:[{field,message,code}] } }`, HTTP 422 — §2.
-8. **Omitting the CSRF header?** 403 `FORBIDDEN` ("CSRF token missing"/"Invalid CSRF token") — §1, §2.
-9. **Signed-URL endpoint + TTL?** None — replaced by the authenticated proxy stream `GET /files/:id/download` (no signed URL, `no-store`); flagged as prompt drift — §5.8 + Prompt drift log.
-10. **PHI returned by `GET /biomarkers` + decryption path?** `value` (←`valueEncrypted`), `notes` (←`notesEncrypted`), history values; decrypted in `toResponse` via `getUserEncryptionSalt(userId)` → `encryptionService.decrypt` — §5.2.
-11. **Refresh flow end-to-end?** 401 on expiry → `POST /auth/refresh` (cookie, CSRF-exempt) → rotate refresh, reissue cookies, return `{ data:{ token } }` → retry — §5.1.
-12. **Which produces `BIOMARKER_CREATE`?** `POST /biomarkers` → `logCreate('Biomarker', ...)` → `AuditAction.CREATE` (there is no literal `BIOMARKER_CREATE` enum value; the enum is `CREATE`) — §5.2 + Prompt drift log.
-13. **`POST /insurance/upload-sbc` body + max size?** `multipart/form-data` single `file` field, PDF only, 10 MB max; also at `/upload/insurance-sbc` — §5.3, §5.7.
-14. **`DELETE /settings/delete-account` success body?** `{ "success": true }` — §5.11.
-15. **Provider→patient access request + transition?** `POST /provider/patients/request` upserts a `ProviderPatient` to `status: PENDING` — §5.9.
-16. **AI rate-limit exceeded + what else blocks `/ai/chat`?** 429 `AI_RATE_LIMIT_EXCEEDED`; before it: `aiSpendGuard` (503), `blockDemoAI` (403), `requirePlanLimit('aiChatsPerDay')` (403 `PLAN_LIMIT_EXCEEDED`), plus runtime BAA gate (503) — §5.15.
-17. **Quest SMART-on-FHIR flow?** connect/quest → redirect → public callback (PKCE+state) → sync; gated by `QUEST_FHIR_*` env vars + `questFhirIntegration` plan feature — §5.14.
-18. **`/internal/audit-cleanup` auth + CSRF + unset token?** `X-Cleanup-Token` shared secret, CSRF-exempt (scheduler can't carry the cookie), **404** when `AUDIT_CLEANUP_TOKEN` unset — §5.17.
-19. **`/plan/available` vs `/plan`?** `/available` (public) returns the FREE/PRO/TEAM catalog; `/plan` (auth) adds `currentPlan`, live `usage`, `limits`, `upgradeAvailable` — §5.16.
-20. **How many distinct error `code` values?** 36 (32 literal `code:` strings + 4 `AppError` subclass defaults: `AUTHENTICATION_FAILED`, `FORBIDDEN`, `INTERNAL_ERROR`, `EXTERNAL_SERVICE_ERROR`) — §2.
-21. **Total endpoint count?** 112 mega-table rows — 110 across the 16 user-facing modules + 1 internal, plus 2 `routes/index.ts` health/version endpoints; 4 further `app.ts` utility endpoints are listed beneath the table — §4.
+- **FHIR OAuth callback** — `GET /api/v1/fhir/callback` (`fhirRoutes.ts:24`, controller `fhirController.handleCallback:80`). Public GET; OAuth provider redirects the browser here. Responds with a **302 redirect** to the frontend (`?labConnected=quest` on success, `?error=…` on failure). PKCE + 24-byte `state` (10-min single-use TTL) bind it to the initiating user — no session auth.
+- **No SendGrid/Stripe inbound webhooks exist.** SendGrid is used outbound only (`emailService.ts`); billing is manual (`PATCH /admin/users/:id/plan`) — plan assignment "will be driven by Stripe webhooks later" but no inbound webhook endpoint is implemented today (`planRoutes.ts:8-11`). Verified: `Grep "router\.(get|post)\(.*webhook"` over `backend/src/routes/**` returns no hits.
+
+---
+
+## Acceptance questions (self-answered from this doc)
+
+1. **Base URL prod vs staging?** Prod `https://api.ownmyhealth.io/api/v1`; staging `https://api-staging.ownmyhealth.io/api/v1` (§1.1).
+2. **How does a browser attach credentials?** `access_token` + `refresh_token` + `csrf_token` cookies, plus `X-CSRF-Token` header == `csrf_token` cookie on state-changing requests (§1.2–1.3).
+3. **Exact response of `POST /auth/login`?** `{ success:true, data:{ user:{ id, email, role } } }` + 3 Set-Cookie headers (§5, `authController.ts:381-388`).
+4. **Which endpoints require PROVIDER?** 7 — all under `/provider` (§13); gated by `requireRole('PROVIDER','ADMIN')`.
+5. **Which endpoints are demo-blocked?** AI/upload routes (`blockDemoAI`), settings mutations + delete-data/account (`blockDemoProfileUpdate`), all admin routes (`blockDemoAdminAccess`) — see mega-table CSRF/RBAC columns and §11/§15/§16/§18/§19.
+6. **Limiter on `POST /biomarkers/:id/guidance` + window?** `aiLimiter`, **1 hour** window, max 10 (§6, `rateLimiter.ts:177`).
+7. **Error shape on Zod failure?** `{ success:false, error:{ code:'VALIDATION_ERROR', message, details } }`, HTTP 422 (§2).
+8. **Error omitting CSRF header on a state-changing request?** 403 `FORBIDDEN` with message "CSRF token missing" (or "Invalid CSRF token" if mismatched) — `csrf.ts:169,182` (§1.3, §2).
+9. **Which endpoint returns a signed GCS URL and for how long?** **None** — the signed-URL path was removed; `GET /files/:id/download` proxies bytes through the backend with `no-store` (§12, drift log).
+10. **PHI returned by `GET /biomarkers` + decryption path?** `value` (from `valueEncrypted`), `notes` (from `notesEncrypted`); decrypted via `toResponse` (`biomarkerController.ts:91`) using the per-user salt (§6).
+11. **Refresh-token flow end-to-end?** login → cookies → on 15-min expiry POST `/auth/refresh` (with CSRF) → single-use rotation → `{ token }` + rotated cookies; reuse → family revoke (§5 sequence diagram).
+12. **Which endpoint produces a biomarker CREATE audit + what action?** `POST /biomarkers` via `auditService.logCreate` → generic `CREATE` (no `BIOMARKER_CREATE`) (§6, `biomarkerController.ts:305`).
+13. **Body + max size of `POST /insurance/upload-sbc`?** `multipart/form-data`, single `file` PDF, max **10 MB** (§7); also at `POST /upload/insurance-sbc`.
+14. **`DELETE /settings/delete-account` success response?** `{ success: true }` (§15, `settingsController.ts:1050`).
+15. **Provider requests access — endpoint + state transition?** `POST /provider/patients/request` → creates/upserts `ProviderPatient` to **PENDING** (§13–14).
+16. **AI rate-limit exceeded behavior + extra blockers on `/ai/chat`?** 429 `{ code:'AI_RATE_LIMIT_EXCEEDED' }`; additionally `aiSpendGuard` (503 fail-closed) and `requirePlanLimit('aiChatsPerDay')` (403) gate it first (§19).
+17. **Quest SMART-on-FHIR flow + gating?** `connect/quest` → provider consent → public `/fhir/callback` (PKCE+state) → `/fhir/sync/:connectionId`; gated by `QUEST_FHIR_*` env + `requirePlanFeature('questFhirIntegration')` (§18).
+18. **`/internal/audit-cleanup` auth + CSRF + unset-token status?** `X-Cleanup-Token` shared secret (constant-time), CSRF-exempt (scheduler can't carry the cookie); **404** when `AUDIT_CLEANUP_TOKEN` unset (§21).
+19. **`/plan/available` vs `/plan`?** `available` = public plan catalog (FREE/PRO/TEAM); `/plan` adds the authed user's effective tier + `usage` + `limits` (§20).
+20. **How many distinct error `code` values?** 30 (§2.1) — CSRF failures reuse `FORBIDDEN`, no dedicated CSRF code.
+21. **Total endpoint count?** 111 (110 across the 16 user-facing route modules + the internal cleanup endpoint), excluding the 2 health/info handlers in `routes/index.ts` (§4, §22).
 
 ---
 
 ## Related Documents
 
-- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — same routes, full middleware-chain lens per route.
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — request lifecycle, middleware stack, auth/RLS data flow.
+- [ROUTING_TABLE.md](./ROUTING_TABLE.md) — same routes, middleware-chain / security-stack lens.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — request lifecycle, middleware order, auth flow.
 - [DATA_MODEL.md](./DATA_MODEL.md) — backing tables, RLS policies, cascade behavior for each endpoint.
-- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — every PHI field returned, encryption + audit coverage.
-- [ERROR_RECOVERY.md](./ERROR_RECOVERY.md) — recovery playbook per error code.
-- [ENV_VARS.md](./ENV_VARS.md) — CORS, base-URL, Quest, AI-budget, and scheduler env vars.
-- [SECURITY_STATUS.md](./SECURITY_STATUS.md) — the C-7 BAA gates and F-series fixes referenced inline.
+- [PHI_TAXONOMY.md](./PHI_TAXONOMY.md) — every PHI field × encryption × write/read sites returned by these endpoints.
+- [ERROR_RECOVERY.md](./ERROR_RECOVERY.md) — recovery playbooks per error `code`.
+- [ENV_VARS.md](./ENV_VARS.md) — CORS, base-URL, CSRF, AI-budget, Quest-FHIR, and cleanup-token env vars.
 
 ---
 
 ## Prompt drift log
 
-- **Signed-URL endpoint is gone.** `./17-api-reference-doc.md` acceptance Q9 ("Which endpoint returns a signed GCS URL, and how long is it valid for?") assumes a signed-URL download. The code no longer returns one: `getFileDownloadUrl` (`backend/src/controllers/fileController.ts:201-281`) proxies the file bytes through the backend with `Cache-Control: no-store`; the prior 15-minute signed URL was removed as a capture-replay PHI-egress vector (`fileController.ts:121-130,187-200`). Q9 should be re-scoped to "the authenticated download proxy."
-- **No `BIOMARKER_CREATE` audit value.** The spec's mega-table example and Q12 reference a `BIOMARKER_CREATE` audit event. The actual `AuditAction` enum (`backend/prisma/schema.prisma:589-608`) has no resource-specific values — biomarker creation logs `AuditAction.CREATE` with `resourceType:'Biomarker'` via `auditService.logCreate` (`biomarkerController.ts:273`). The audit "event" is `(action=CREATE, resourceType=Biomarker)`, not a `BIOMARKER_CREATE` literal.
-- **Cookie names are `access_token` / `refresh_token`, not `access` / `refresh`.** The spec mega-table example shows `Cookie: access=<jwt>; csrfToken=<token>` and header `X-CSRF-Token`. Actual cookie names: `access_token`, `refresh_token` (`authController.ts:94,113`), and the CSRF cookie is `csrf_token` (`csrf.ts:17`). Header name lowercases to `x-csrf-token` (`csrf.ts:18`).
-- **Biomarker batch path is `/batch`, not `/bulk`.** The spec example row uses `/biomarkers/:id/guidance` with `standardLimiter`; the bulk-create route is `POST /api/v1/biomarkers/batch` (`biomarkerRoutes.ts:91`) guarded by `bulkOperationLimiter`. Guidance uses `aiLimiter` + `requirePlanLimit('aiGuidancePerDay')`, not `standardLimiter`.
-- **`requirePlanLimit` key for guidance is `aiGuidancePerDay`** (`biomarkerRoutes.ts:125`), distinct from `aiChatsPerDay` used by `/ai/chat`. Both exist in `PlanLimits` (`plans.ts:19-23`).
-- **Endpoint count.** The spec frames "16 user-facing route modules + the internal cleanup endpoint." Counting actual `router.(get|post|put|patch|delete)` declarations across `backend/src/routes/*.ts` yields **112** addressable endpoints (mega-table, §4): 110 across the 16 user-facing modules + the internal cleanup route, plus the 2 health/version endpoints in `routes/index.ts`. Per-module counts: auth 14, biomarker 10, insurance 10, expense 10, settings 9, healthGoals 8, healthNeeds 7, patient 7, provider 6, fhir 5, file 4, upload 3, onboarding 2, plan 2, ai 1, admin 11; internal 1; index 2. The prompt's "60+ endpoints" (CLAUDE.md) is a floor, now exceeded.
+- **`./17-api-reference-doc.md` (and `_doc-quality.md` worked example) assume a 15-minute GCS signed URL on the Files endpoints** (acceptance Q9; the example "Which endpoint returns a signed GCS URL, and how long is it valid for?"). The signed-URL path was **removed**: `getFile` returns metadata only (`fileController.ts:128-137`) and `getFileDownloadUrl` now **proxies bytes through the backend** with `Cache-Control: no-store` (`fileController.ts:198-302`); `storageService.getSignedUrl(..., 'read')` is explicitly deprecated in favor of `getFileStream` (`storageService.ts:94-112`). No endpoint returns a signed URL — Q9 is answered as "none." Prompt author should update Q9.
+- **The prompt's per-endpoint biomarker example uses `"measuredAt":"…"` in the request body.** The real `schemas.biomarker.create` field is `date` (a `dateString`) with a nested `normalRange` object (`validation.ts:403-419`); there is no `measuredAt`. The curl in §6 uses the real shape.
+- **The prompt lists `internalRoutes.ts` as one of "18 non-test route files" but says the per-endpoint sections are "16 user-facing route-group files + 1 internal."** Confirmed: 18 route files = 16 user-facing modules + `internalRoutes.ts` + `index.ts` (aggregator/health, covered in §22). Counts match the digest.
+- **Endpoint count is 111, not the "~60" implied by CLAUDE.md** ("API route definitions (13 files, 60+ endpoints)"). Direct enumeration (`Grep "router\.(get|post|put|patch|delete)\("` over `backend/src/routes/**`) = 113 hits across 18 files; subtracting the 2 health/info handlers in `routes/index.ts` leaves 111 contract endpoints. The prompt's mega-table caption ("every endpoint, one row") is satisfied with 111 rows.
+- **CLAUDE.md is stale** on several auth points (still implies `/auth/refresh` and upload routes are CSRF-exempt, and lists 13 route files / `uploadController.ts`). The live code un-exempts both (`csrf.ts:114-152`); upload handlers live in `controllers/upload/`. Documented here from code, not CLAUDE.md.
