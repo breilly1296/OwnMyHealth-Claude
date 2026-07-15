@@ -4,145 +4,175 @@
 > Every other document (`SECURITY_STATUS.md`, `KNOWN_ISSUES.md`, security reviews, GTM readiness) **links here and must not restate severities**. If another doc disagrees with this ledger, this ledger wins and the other doc is stale.
 >
 > Created 2026-07-11 to close scrutiny finding **P0-6** (severity ledgers contradicted each other: `SECURITY_STATUS.md` claimed 0 open High while `KNOWN_ISSUES.md` listed H-1/H-2/H-3; the 2026-06-21 assessment's Critical appeared in neither).
+>
+> Severities are posture-dependent (impact × exposure under the **current posture** — see §Posture). Re-triaged 2026-07-14 for the sandbox posture; the full old→new disposition is in §Re-triage disposition.
 
 | Field | Value |
 |---|---|
-| **Last updated** | 2026-07-11 |
-| **Code state** | HEAD `762ce62` + working tree (uncommitted OMH-L03 consent validation + `secret-history-scan.yml`) |
-| **Sources reconciled** | `SECURITY_STATUS.md` (fb2cd32), `KNOWN_ISSUES.md` (fb2cd32), `security/assessment-2026-06-20/`, `security/assessment-2026-06-21/`, `analysis/codebase-scrutiny-2026-07/` |
-| **Open counts** | **1 Critical · 3 High · 8 Medium · 8 Low** (20 open; OF-02 closed 2026-07-11) |
+| **Last updated** | 2026-07-14 (sandbox-posture re-triage) |
+| **Posture** | **Sandbox — no GCP** (see §Posture) |
+| **Code state** | `2656a82` + this commit (ledger re-triage + `backend/.gitignore` leak-shape patterns, branch `security/sandbox-retriage-2026-07-14`); docs reorg still uncommitted in the working tree |
+| **Sources reconciled** | This ledger @ `2656a82`; founder posture decision (2026-07-14 session); repo re-verification 2026-07-14 (OF-01 blob presence via `git cat-file -e`, commits `8ec3989`/`0456c50`, migrations through `20260712`, PR #227 state) |
+| **Open counts** | **Live: 0 Critical · 1 High · 1 Medium · 10 Low** (12 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7** · OF-20 merged into OF-08 · OF-23 added · OF-11 closed 2026-07-14 |
+
+---
+
+## Posture: sandbox, no GCP (declared 2026-07-14)
+
+**Facts.** The founder decided 2026-07-14 that OwnMyHealth will not use Google Cloud for the time being (cost); the project is a pre-launch sandbox for a hopeful future launch. GCP billing on project `#1046989989964` has been disabled since ~2026-07-12 (verified: deploys fail at image push), which suspends the deployed stack (Cloud Run backend, Cloud SQL prod DB, GCS buckets); Google eventually deletes resources on billing-disabled projects. There is no deployment target and no real users.
+
+**Explicit assumption.** All data ever stored in the prod stack was founder/test data. **If any real third-party PHI was ever stored, this re-triage is invalid** and the affected findings (OF-01, OF-03, OF-12) revert to their pre-2026-07-14 severities.
+
+**What this changes.** Exposure is now "local sandbox, single process, founder-only data." Findings that only exist when deployed move to **Dormant (launch checklist)** below — they are not current risks, but each carries the severity it re-acquires at launch so nothing is forgotten.
+
+**Global reactivation triggers (hard).** Any one of the following reopens every dormant item at its reactivation severity and forces a full re-triage of this ledger:
+- re-enabling GCP billing on any project this repo's history can authenticate to — **OF-01's key deletion is a precondition for this**;
+- deploying the app anywhere (any cloud, any tier);
+- any real user, or any non-founder PHI entering any database;
+- marketing/making the product available to others.
 
 ---
 
 ## Severity rubric (the ONE rubric)
 
-Severity = worst realistic impact × exposure, on a single scale regardless of class (security, cost, availability, compliance, product trust). A cost-DoS or compliance gap can be High; "not a classic vuln" is not a reason to downgrade.
+Severity = worst realistic impact × exposure **under the current posture**, on a single scale regardless of class (security, cost, availability, compliance, product trust). A cost-DoS or compliance gap can be High; "not a classic vuln" is not a reason to downgrade.
 
 | Severity | Meaning |
 |---|---|
 | **Critical** | PHI exposure or credential-compromise path exercisable **now** |
-| **High** | Material harm likely if the product launches / is marketed as-is (uncapped spend, prod PHI residue, trivial account takeover, core feature broken under normal ops) |
+| **High** | Material harm likely on the current path (e.g. a hazard that silently re-arms on a foreseeable event, a core flow broken under normal ops) |
 | **Medium** | Harmful under specific conditions; accepted races with backstops; missing detection |
 | **Low** | Hardening, documented-accepted residuals, tech debt |
 
-Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accepted** (with a written re-evaluation trigger) · **External-ops** (action lives outside the repo — GCP console, vendor paperwork).
-
----
-
-## Critical
-
-### OF-01 — Production GCP service-account private key recoverable from git history
-- **Class**: security / compliance · **Status**: Open (External-ops + repo work) · **Alias**: OMH-C01 (assessment 2026-06-21)
-- **Fact**: commit `202f2dd` (2026-01-07) committed `backend/gcp-ocr-key.json.json` containing the real private key for `ocr-service@ownmyhealth-prod.iam.gserviceaccount.com`. It was removed from HEAD ~37s later (`528d5f9`) but **`git show 202f2dd:backend/gcp-ocr-key.json.json` still returns the full key — re-verified 2026-07-11**. Anyone with repo read access (clone, fork, CI cache, backup) can recover it.
-- **Why Critical**: if the key has not been revoked in GCP IAM, it authenticates as a prod service account with Document AI (and possibly GCS/PHI-bucket) access. Key-rotation status is **unverified** — treat as live until proven dead.
-- **Done when** (all four):
-  1. Key id `109ec48bab8a95f27168f8d6e406ce28ac4794bc` deleted/disabled in GCP IAM (prefer switching OCR to Workload Identity so no JSON key exists) — **external, GCP console**;
-  2. Cloud Logging / GCS access logs audited for use of the key since 2026-01-07;
-  3. History purged (`git filter-repo` / BFG + force-push) **or** a dated determination recorded here that the key is dead and the historical copy inert;
-  4. Nightly full-history gitleaks scan (OF-11) committed and green (it will correctly fail until 1–3 land).
-- **Owner**: founder (GCP console + repo).
+Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accepted** (with a written re-evaluation trigger) · **External-ops** (action lives outside the repo — GCP console, vendor paperwork) · **Dormant (launch checklist)** (not a current risk under this posture; carries a reactivation severity + trigger).
 
 ---
 
 ## High
 
-### OF-03 — Legacy plaintext filenames still in production rows
-- **Class**: compliance / ops · **Status**: Open (External-ops) · **Aliases**: L-3 (KNOWN_ISSUES — was rated Low), L24 ops follow-up (SECURITY_STATUS §3), scrutiny P0-1
-- **Fact**: new uploads encrypt `user_files.original_filename`; legacy prod rows remain plaintext until the `backfill-userfile-filenames` maintenance job runs (DRY RUN → `--apply`) and a DROP migration lands. Re-verified 2026-07-11: latest migration is `20260620_add_registration_consent` — no drop migration exists.
-- **Why High** (raised from Low): this is known plaintext PHI residue in production while docs and marketing say "encrypted at rest" — a compliance/honesty exposure, not a minor annoyance.
-- **Done when**: prod dry-run → apply completed; DROP migration applied; run evidence recorded in `RUNBOOK.md`.
-
-### OF-04 — No MFA
-- **Class**: product security · **Status**: Open · **Aliases**: scrutiny P0-4, GTM readiness checklist (absent from both prior ledgers)
-- **Fact**: no TOTP/second-factor library exists in backend dependencies (re-verified 2026-07-11). Auth is password + lockout + email reset.
-- **Why High**: a medical record is a high-value account; account takeover via credential stuffing/phishing is the simplest PHI-exposure path and MFA is the standard consumer mitigation.
-- **Done when**: optional TOTP + recovery codes shipped; enforced on sensitive operations; recovery flow tested.
-
-### OF-05 — FHIR PKCE verifier store is per-process (connect fails under autoscale)
-- **Class**: availability (feature-scoped) · **Status**: Open — deferred into Redis work · **Aliases**: H-2 (KNOWN_ISSUES), L-39 (SECURITY_STATUS), scrutiny P1-2
-- **Fact**: PKCE `code_verifier` Map is per-process (`backend/src/services/fhir/smartAuth.ts:374` — "SHARED STORE REQUIRED", re-verified 2026-07-11); a callback routed to a different Cloud Run instance drops the connect. Availability, not forgeable state.
-- **Mitigations**: feature off by default (`QUEST_FHIR_CLIENT_ID` empty → disabled); pin `--max-instances=1` while enabled.
-- **Why High**: the feature is structurally broken under the platform's default scaling model; it must not be marketed or enabled multi-instance until fixed.
-- **Done when**: shared Redis/Memorystore verifier store (ships with OF-07's Redis provisioning); multi-instance OAuth verified.
+### OF-01 — Production GCP service-account private key recoverable from git history
+- **Class**: security / compliance · **Status**: Open (External-ops + repo work) · **Alias**: OMH-C01 (assessment 2026-06-21) · **Critical → High 2026-07-14**
+- **Fact**: commit `202f2dd` (2026-01-07) committed `backend/gcp-ocr-key.json.json` containing the real private key for `ocr-service@ownmyhealth-prod.iam.gserviceaccount.com` (key id `109ec48bab8a95f27168f8d6e406ce28ac4794bc`). It was removed from HEAD ~37s later (`528d5f9`) but the blob is still reachable — **re-verified 2026-07-14** via `git cat-file -e 202f2dd:backend/gcp-ocr-key.json.json` (exists; contents not printed). Anyone with repo read access (clone, fork, CI cache, backup) can recover it.
+- **Why High (was Critical)**: rubric-Critical requires a path exercisable *now*. Billing on the project has been disabled since ~2026-07-12, which suspends the billed APIs this SA could reach (Document AI, GCS) — the key still authenticates to IAM but currently has nothing live behind it. The remaining hazard is **silent re-arm**: re-enabling billing instantly revives the key with whatever access it retained, and nothing would force anyone to remember it at that moment. IAM deletion status is **unverified — treat the key as alive**.
+- **Hard gate**: deleting this key is a **precondition for ever re-enabling GCP billing** (posture §Global reactivation triggers).
+- **Done when**:
+  1. Key `109ec48b…` deleted — or the `ocr-service` SA deleted, or the GCP project shut down — in GCP IAM. Free, works with billing disabled, ~5 minutes — **external, GCP console**;
+  2. A dated determination recorded here that the key is dead (this downgrades the historical blob to inert);
+  3. Best-effort: check Cloud Logging for use of the key since 2026-01-07 while console access lasts; if logs are unavailable or data-access logs were never enabled, record that instead. (Sandbox assumption — founder/test data only — lowers the stakes of this step.)
+  4. History purged (`git filter-repo` / BFG + force-push) **before the repo ever gains collaborators, forks, or goes public** — hygiene once 1–2 are done. Until purged, the OF-11 nightly history scan stays red **by design** (it is this finding's regression guard). Alternative after step 2 only: a narrowly-scoped, dated `.gitleaks.toml` allowlist entry for the dead key.
+- **Owner**: founder (GCP console + repo).
 
 ---
 
 ## Medium
 
-### OF-06 — Plan-limit / AI-quota TOCTOU race (count-then-allow)
-- **Class**: correctness · **Status**: Accepted (re-eval trigger below) · **Aliases**: H-1 (KNOWN_ISSUES — was High), M-L34/L36 (SECURITY_STATUS — was Medium), scrutiny P1-7
-- **Fact**: `checkPlanLimit` is read-only; the caller writes later, so N concurrent requests can overshoot a finite limit by N−1 (`backend/src/services/usageTracker.ts:179` KNOWN RACE comment, re-verified 2026-07-11). Highest-cost path backstopped by the fail-closed dollar `aiSpendGuard`.
-- **Severity resolution**: **Medium while billing is not live** (overshooting a free-tier count has bounded blast radius behind the dollar cap). **Automatically becomes High the day plan limits guard paid entitlements** — atomic reservation (`UPDATE … WHERE n < :limit RETURNING n` inside `withRLSTransaction`) is a launch prerequisite for billing (scrutiny P0-5).
-- **Re-eval trigger**: observed abuse, or billing/hard plan-limit SLA ships.
-
-### OF-07 — Rate-limit + AI-spend stores are per-process without `REDIS_URL`
-- **Class**: cost / abuse control · **Status**: Open (External-ops: provision Memorystore) · **Aliases**: M-1 (KNOWN_ISSUES), L-M11 (SECURITY_STATUS — was Low), scrutiny P1-1
-- **Fact**: default `InMemorySpendStore` / per-instance rate limits; under N instances the effective AI ceiling is N×budget and per-IP limits are per-instance (`backend/src/services/aiCostTracker.ts`, `backend/src/middleware/rateLimitStore.ts`). Code is Redis-pluggable; store failure fails closed (503).
-- **Done when**: Redis/Memorystore provisioned, `REDIS_URL` set in staging + prod, documented as **required** before `max-instances > 1`.
-
-### OF-08 — No HSTS / HTTPS-redirect codified on the SPA (PHI) origin
-- **Class**: transit security · **Status**: Open (External-ops: LB/CDN config) · **Aliases**: OMH-M02 (2026-06-21), OMH-M01 (2026-06-20), L-M16 (SECURITY_STATUS — was Low), scrutiny P1-8
-- **Fact**: SPA deploy is a plain `gsutil rsync` to a bucket; HSTS/redirect exist only as a manual runbook step (`DEPLOY.md`), leaving an SSL-strip window on first navigation. API origin has Helmet; frontend origin does not.
-- **Done when**: HTTPS LB/CDN with HTTP→HTTPS redirect + HSTS (+ nosniff, frame-ancestors) response-header policy, asserted by a post-deploy smoke check.
-
-### OF-09 — Access-token staleness check fails OPEN on DB error
-- **Class**: security (fail-open) · **Status**: Accepted (availability trade-off) · **Alias**: M-3 (KNOWN_ISSUES)
-- **Fact**: `isAccessTokenStale` returns `false` if the revocation-cutoff read throws (`backend/src/services/authService.ts` fail-open branch); a just-revoked token could be accepted during a DB outage. Bounded by 15-min access-token lifetime + 15s cache TTL.
-- **Re-eval trigger**: any real incident involving revocation, or a move to sessions with longer lifetimes.
-
-### OF-10 — CSP allows `'unsafe-inline'` styles
-- **Class**: hardening · **Status**: Open · **Aliases**: M-4 (KNOWN_ISSUES), scrutiny P2-6
-- **Fact**: `styleSrc: ["'self'", "'unsafe-inline'"]` with `TODO(csp-nonce)` (`backend/src/app.ts:130`); Tailwind + third-party runtime style injection block a nonce CSP today.
-- **Done when**: nonce-based CSP migration; `'unsafe-inline'` removed.
-
-### OF-11 — CI secret scan is working-tree-only (history leaks invisible)
-- **Class**: detection · **Status**: **In progress** — `.github/workflows/secret-history-scan.yml` drafted (untracked, nightly full-history gitleaks) · **Alias**: OMH-M01 (2026-06-21)
-- **Fact**: `ci.yml` runs `gitleaks detect --no-git`, so the OF-01 key in history passes the gate green; `.gitignore` patterns also miss the leaked filename shape (`*.json.json`).
-- **Done when**: workflow committed and running nightly; `.gitignore` tightened (`*key*.json`, `gcp-*.json`); scan goes green after OF-01 closes (it is the regression guard).
-
-### OF-12 — No breach-detection alerting or error-tracking SDK
-- **Class**: detection / ops · **Status**: Open · **Aliases**: scrutiny P0-8 + P2-2, GTM readiness (absent from both prior ledgers)
-- **Fact**: no Sentry/equivalent in any `package.json` (re-verified 2026-07-11); no alerts on audit anomalies or repeated login failures; no named owner. A forensic substrate (audit logs) without detection does not reliably start an HBNR 60-day breach clock.
-- **Done when**: error tracking in prod + alerting on audit/login anomalies + named owner + runbook section.
-
-### OF-13 — SendGrid BAA status unconfirmed; PHI-free email policy unverified
-- **Class**: compliance · **Status**: Open (External-ops: vendor paperwork) · **Aliases**: SECURITY_STATUS §6 BAA inventory "TBD" row, scrutiny P0-7
-- **Fact**: SendGrid is not HIPAA-eligible by default; email today is transactional (verification/reset links), but no gate verifies templates stay PHI-free.
-- **Done when**: SendGrid BAA confirmed **or** SendGrid replaced **or** a documented + tested PHI-free-templates policy in place.
+### OF-23 — File upload hard-depends on GCS; upload flows nonfunctional in the GCP-less sandbox
+- **Class**: availability / product (sandbox ops) · **Status**: Open · **New 2026-07-14** (posture re-triage)
+- **Fact**: `backend/src/services/storageService.ts` instantiates the GCS client at module load and reads/writes the configured bucket directly — no local fallback, no feature gate. The dev config tier boots with warnings only, so lab-report and SBC upload flows fail at runtime on the first GCS call. Image OCR is separately gated off without `GCP_PROCESSOR_ID`; Claude extraction is GCP-independent (Anthropic key + runtime BAA gate).
+- **Why Medium**: a core product flow (document upload → parse → extract) cannot be exercised or developed in the sandbox's only environment. No user harm; development-velocity and test-coverage harm.
+- **Done when**: a storage abstraction with a local-disk backend (upload/download/delete/signed-URL parity) selected by env var — or `fake-gcs-server` documented in `LOCAL_DEV.md` and wired into e2e — and the upload e2e journey passes with no GCP credentials.
 
 ---
 
 ## Low
 
-### OF-14 — In-memory access-token blacklist is per-process
-- **Status**: Accepted · **Alias**: M-2 (KNOWN_ISSUES — was Medium). Largely closed by DB-backed `tokens_valid_after` + `revoked_access_tokens` checked on every replica; only the redundant in-memory map is per-process.
+### OF-03 — Legacy plaintext filenames confined to the suspended prod DB (sunset path)
+- **Class**: compliance / ops · **Status**: Open (External-ops) · **Aliases**: L-3 (KNOWN_ISSUES), L24 ops follow-up (SECURITY_STATUS §3), scrutiny P0-1 · **High → Low 2026-07-14**
+- **Fact**: new uploads encrypt `user_files.original_filename`; legacy plaintext rows exist only in the prod Cloud SQL instance, which is suspended under disabled billing and subject to Google's eventual deletion. No DROP migration in tree (latest: `20260712_add_sessions_update_policy`); **PR #227** (self-guarded drop of the plaintext column) is OPEN/DRAFT — re-verified 2026-07-14.
+- **Why Low (was High)**: the High rationale was plaintext PHI residue *in production while marketed as encrypted-at-rest*. There is no production and no marketing; residual exposure requires GCP account compromise or a billing re-enable before deletion.
+- **Done when** (either path):
+  - (a) **Sunset (expected)**: prod Cloud SQL instance deletion confirmed in the console — deliberate deletion preferred over waiting for Google (clean "no PHI left behind" exit; export anything wanted first) → close this finding; then merge PR #227 (with no legacy rows anywhere, its backfill precondition is vacuous and any future DB is created post-DROP).
+  - (b) **Revival**: if the instance is ever brought back, the original path applies — `backfill-userfile-filenames` DRY RUN → `--apply` → DROP migration, evidence in `RUNBOOK.md`.
 
-### OF-15 — Upgrade button is a billing stub
-- **Class**: product honesty · **Status**: Open (product decision) · **Aliases**: L-1 (KNOWN_ISSUES), scrutiny P0-5. `src/components/settings/PlanSection.tsx` toasts "not available yet"; no Stripe in dependencies (re-verified 2026-07-11). **Done when**: live checkout + webhooks, **or** the CTA is removed.
+### OF-06 — Plan-limit / AI-quota TOCTOU race (count-then-allow)
+- **Class**: correctness · **Status**: Accepted · **Aliases**: H-1 (KNOWN_ISSUES), M-L34/L36 (SECURITY_STATUS), scrutiny P1-7 · **Medium → Low 2026-07-14**
+- **Fact**: `checkPlanLimit` is read-only; N concurrent requests can overshoot a finite limit by N−1 (`backend/src/services/usageTracker.ts` KNOWN RACE comment). Highest-cost path backstopped by the fail-closed dollar `aiSpendGuard`.
+- **Why Low now**: no deployed instance and no third-party users — an overshoot requires the founder racing their own requests, bounded by the dollar cap.
+- **Re-eval trigger (unchanged, sharpened)**: **becomes High and a launch blocker the day plan limits guard paid entitlements** — atomic reservation (`UPDATE … WHERE n < :limit RETURNING n` inside `withRLSTransaction`) is a billing-launch prerequisite (scrutiny P0-5). Also: observed abuse.
+
+### OF-09 — Access-token staleness check fails OPEN on DB error
+- **Class**: security (fail-open) · **Status**: Accepted · **Alias**: M-3 (KNOWN_ISSUES) · **Medium → Low 2026-07-14**
+- **Fact**: `isAccessTokenStale` returns `false` if the revocation-cutoff read throws (`backend/src/services/authService.ts`); a just-revoked token could be accepted during a DB outage. Bounded by 15-min access-token lifetime + 15s cache TTL.
+- **Why Low now**: requires a DB outage + a freshly revoked token + an attacker holding it — negligible in a founder-only sandbox.
+- **Re-eval trigger**: any real incident involving revocation; a move to longer session lifetimes; **re-rate at launch** (was Medium).
+
+### OF-10 — CSP allows `'unsafe-inline'` styles
+- **Class**: hardening · **Status**: Open · **Aliases**: M-4 (KNOWN_ISSUES), scrutiny P2-6 · **Medium → Low 2026-07-14**
+- **Fact**: `styleSrc: ["'self'", "'unsafe-inline'"]` with `TODO(csp-nonce)` (`backend/src/app.ts`); Tailwind + third-party runtime style injection block a nonce CSP today.
+- **Why Low now**: style-injection XSS hardening with a single founder user has ~nil exposure. Still valid sandbox-era code work (no cloud dependency).
+- **Done when**: nonce-based CSP migration; `'unsafe-inline'` removed. **Re-rate Medium at launch.**
+
+### OF-14 — In-memory access-token blacklist is per-process
+- **Status**: Accepted · **Alias**: M-2 (KNOWN_ISSUES) · unchanged Low. Largely closed by DB-backed `tokens_valid_after` + `revoked_access_tokens`; only the redundant in-memory map is per-process — moot single-process anyway.
 
 ### OF-16 — PBKDF2 iteration try-both fallback (no per-ciphertext KDF metadata)
-- **Status**: Open (debt) · **Aliases**: L-2 (KNOWN_ISSUES), scrutiny P2-7. `TODO(key-rotation)` at `backend/src/services/encryption.ts:80`. **Done when**: KDF params stored per row/user; full re-encrypt; fallback removed.
+- **Status**: Open (debt) · **Aliases**: L-2 (KNOWN_ISSUES), scrutiny P2-7 · unchanged Low. `TODO(key-rotation)` in `backend/src/services/encryption.ts`. Environment-independent; fine sandbox-era work. **Done when**: KDF params stored per row/user; full re-encrypt; fallback removed.
 
 ### OF-17 — `pdf-parse@1.1.1` unmaintained on the PHI ingestion path
-- **Status**: Accepted (documented decision) · **Aliases**: L-4 (KNOWN_ISSUES), OMH-L01 (2026-06-21). Exact-pinned, pure-JS, wrapped in `secureParsePdf()` guards. **Re-eval trigger**: a CVE against `pdf-parse`, or a verified `pdfjs-dist` text-only migration on Cloud Run.
+- **Status**: Accepted (documented decision) · **Aliases**: L-4 (KNOWN_ISSUES), OMH-L01 (2026-06-21) · unchanged Low. Exact-pinned, pure-JS, wrapped in `secureParsePdf()` guards. **Re-eval trigger**: a CVE against `pdf-parse`, or a verified `pdfjs-dist` text-only migration on the future deploy platform.
 
 ### OF-18 — FHIR sync has no page/byte budget
-- **Status**: Accepted · **Alias**: L-13 (SECURITY_STATUS). Count-based `sensitiveLimiter` only; one authorized sync can page unboundedly. **Done when**: page/byte budget in `labSyncService.syncLabResults`.
+- **Status**: Accepted · **Alias**: L-13 (SECURITY_STATUS) · unchanged Low. Feature off by default (`QUEST_FHIR_CLIENT_ID` empty). **Done when**: page/byte budget in `labSyncService.syncLabResults`.
 
 ### OF-19 — SSRF allowlist validates host, not resolved IP (DNS-rebind residual)
-- **Status**: Accepted · **Alias**: L-40 (SECURITY_STATUS). Trusted hosts are operator-configured, not user input.
-
-### OF-20 — Staging SPA served via plaintext GCS website config
-- **Status**: Open (External-ops) · **Alias**: OMH-L02 (2026-06-21). Public bucket, no HTTPS LB on staging. Folds into OF-08's edge work.
+- **Status**: Accepted · **Alias**: L-40 (SECURITY_STATUS) · unchanged Low. Trusted hosts are operator-configured, not user input.
 
 ### OF-21 — Transitive npm advisories: 1 high (hono) + 8 moderate (uuid chain)
-- **Status**: Accepted / deferred majors · **Aliases**: M-5 (KNOWN_ISSUES — was Medium), OMH-I01/I02. `hono` advisories are Lambda/Windows-static specific (app is Express on Cloud Run); `uuid` fix is gated on a breaking `@google-cloud/storage` major. Rated Low because none are reachable in the deployed stack.
+- **Status**: Accepted / deferred majors · **Aliases**: M-5 (KNOWN_ISSUES), OMH-I01/I02 · unchanged Low. `hono` advisories are Lambda/Windows-static specific; `uuid` fix gated on a breaking `@google-cloud/storage` major (which OF-23's storage abstraction may make swappable). Nothing is deployed, so reachability is nil.
 
 ---
 
-## Legacy-ID crosswalk
+## Dormant — launch checklist (not current risks; reactivation severity in parentheses)
 
-| Old ID (doc) | This ledger | Severity change |
+These items were open operational risks under the deployed-on-GCP posture. Under the sandbox posture they have no exposure surface. **They reopen automatically at the listed severity on any global reactivation trigger** (§Posture). Platform-specific wording is generalized — the next deploy may not be GCP.
+
+### OF-04 (High) — No MFA
+- **Aliases**: scrutiny P0-4, GTM readiness. No TOTP/second-factor library in backend deps. A medical record is a high-value account; MFA is the standard consumer mitigation for the simplest takeover path. **Pure code, no cloud dependency — recommended sandbox-era build.** Done when: optional TOTP + recovery codes; enforced on sensitive operations; recovery flow tested.
+
+### OF-05 (High, if FHIR is enabled multi-instance) — FHIR PKCE verifier store is per-process
+- **Aliases**: H-2 (KNOWN_ISSUES), L-39 (SECURITY_STATUS), scrutiny P1-2. PKCE `code_verifier` Map is per-process (`backend/src/services/fhir/smartAuth.ts` — "SHARED STORE REQUIRED"); a callback routed to a different instance drops the connect. Feature off by default; single-process sandbox unaffected. Ships with OF-07's shared-store work. Done when: shared verifier store; multi-instance OAuth verified.
+
+### OF-07 (Medium) — Rate-limit + AI-spend stores are per-process without `REDIS_URL`
+- **Aliases**: M-1 (KNOWN_ISSUES), L-M11 (SECURITY_STATUS), scrutiny P1-1. Under N instances the effective AI ceiling is N×budget and per-IP limits are per-instance. Code is Redis-pluggable; store failure fails closed (503). **Hard requirement before `max-instances > 1` on any platform.** Done when: shared Redis provisioned wherever the app next deploys; `REDIS_URL` set; documented as required.
+
+### OF-08 (Medium) — No HSTS / HTTPS-redirect / security headers codified on the SPA (PHI) origin
+- **Aliases**: OMH-M02 (06-21), OMH-M01 (06-20), L-M16 (SECURITY_STATUS), scrutiny P1-8. **Absorbs OF-20 (staging bucket plaintext website) as of 2026-07-14** — both GCS-hosted SPA origins are out of service under this posture; the requirement survives platform choice. Done when: wherever the SPA is next hosted, HTTP→HTTPS redirect + HSTS (+ nosniff, frame-ancestors) response-header policy, asserted by a post-deploy smoke check.
+
+### OF-12 (Medium; expect High at launch re-triage) — No breach-detection alerting or error-tracking SDK
+- **Aliases**: scrutiny P0-8 + P2-2, GTM readiness. No Sentry/equivalent; no alerts on audit anomalies or repeated login failures; no named owner. A forensic substrate without detection does not reliably start an HBNR 60-day breach clock — that clock only matters once real users exist. Done when: error tracking in prod + alerting on audit/login anomalies + named owner + runbook section.
+
+### OF-13 (Medium) — SendGrid BAA status unconfirmed; PHI-free email policy unverified
+- **Aliases**: SECURITY_STATUS §6 BAA "TBD" row, scrutiny P0-7. SendGrid is not HIPAA-eligible by default; sandbox email is transactional to founder/test accounts only. Done when: SendGrid BAA confirmed **or** replaced **or** documented + tested PHI-free-templates policy.
+
+### OF-15 (Low; product decision) — Upgrade button is a billing stub
+- **Aliases**: L-1 (KNOWN_ISSUES), scrutiny P0-5. `src/components/settings/PlanSection.tsx` toasts "not available yet"; no Stripe in deps. Harmful only when non-founder eyes see the app; the billing-or-remove-CTA decision (P0-5) can be made any time. Done when: live checkout + webhooks, **or** the CTA is removed.
+
+---
+
+## Re-triage disposition — 2026-07-14 sandbox posture
+
+| ID | Was (2026-07-12) | Now | Why |
+|---|---|---|---|
+| OF-01 | **Critical**, Open | **High**, Open | Billing disabled suspends the APIs behind the key — not "exercisable now"; hazard is silent re-arm. Key deletion in IAM is a hard gate on any GCP return. |
+| OF-03 | High, Open | **Low**, Open (sunset) | No production, no marketing; residue confined to a suspended, decaying instance. Close on confirmed instance deletion, then merge PR #227. |
+| OF-04 | High, Open | **Dormant (High)** | Takeover exposure requires users. Recommended sandbox build item. |
+| OF-05 | High, Open | **Dormant (High if enabled multi-instance)** | Needs a multi-instance deploy to be broken; feature off by default. |
+| OF-06 | Medium, Accepted | **Low**, Accepted | Overshoot needs concurrent third-party traffic. Trigger unchanged: High + launch blocker when billing ships. |
+| OF-07 | Medium, Open | **Dormant (Medium)** | Per-process stores are correct single-process; required before `max-instances > 1` anywhere. |
+| OF-08 | Medium, Open | **Dormant (Medium)**, absorbs OF-20 | No deployed SPA origin exists. |
+| OF-09 | Medium, Accepted | **Low**, Accepted | DB outage + fresh revocation + attacker-held token ≈ nil in sandbox. Re-rate at launch. |
+| OF-10 | Medium, Open | **Low**, Open | Single-user XSS hardening; still valid code work. Re-rate Medium at launch. |
+| OF-11 | Medium, In progress | **Closed 2026-07-14** | Workflow + root `.gitignore` landed (`8ec3989`); `backend/.gitignore` leak-shape patterns landed with this ledger revision. Scan-green criterion lives in OF-01. |
+| OF-12 | Medium, Open | **Dormant (Medium; likely High at launch)** | Detection matters when there are users to breach. |
+| OF-13 | Medium, Open | **Dormant (Medium)** | Vendor paperwork for real-user PHI email. |
+| OF-14..OF-19, OF-21 | Low | **Low** (unchanged) | Environment-independent debt/accepted residuals; OF-20 merged into OF-08. |
+| OF-15 | Low, Open | **Dormant (Low; product decision)** | CTA honesty matters only with non-founder eyes. |
+| OF-20 | Low, Open | **Merged into OF-08** | Staging GCS website out of service; requirement folded into the launch edge-config item. |
+| OF-23 | — | **Medium**, Open (new) | Upload flows dead in the sandbox: `storageService` is GCS-only with no local fallback. |
+
+## Legacy-ID crosswalk (2026-07-11 reconciliation — severities as of that date)
+
+| Old ID (doc) | This ledger | Severity change (at 2026-07-11) |
 |---|---|---|
 | — (in no ledger; OMH-C01, 2026-06-21 assessment) | **OF-01** | **new Critical** |
 | H-3 (KNOWN_ISSUES) / 🟡 controls note (SECURITY_STATUS) | OF-02 | High (STATUS had no numbered finding) — **CLOSED 2026-07-11**, `1047506` |
@@ -163,18 +193,24 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 
 ## Closed findings
 
+### OF-11 — CI secret scan was working-tree-only (CLOSED 2026-07-14)
+- **Was**: Medium (Low after the 2026-07-14 re-triage) · detection · **Alias**: OMH-M01 (2026-06-21)
+- **Fact**: `ci.yml` runs `gitleaks detect --no-git` (working tree only), so the OF-01 key in history passed the gate green, and the ignore patterns missed the leaked filename shape (`*.json.json`).
+- **Closed by**: `8ec3989` (nightly full-history gitleaks workflow — `.github/workflows/secret-history-scan.yml`, daily 07:17 UTC + `workflow_dispatch`, full-clone scan with `.gitleaks.toml`; root `.gitignore` broadened) **+ the commit landing this ledger revision** (`backend/.gitignore` patterns closing the leaked shape: `*.json.json`, `gcp-*key*.json*`, `*serviceaccount*.json`).
+- **Residual (by design)**: the nightly scan stays **red** until OF-01 closes — it is OF-01's regression guard (OF-01 done-when #4).
+
 ### OF-22 — Refresh-token rotation broken under enforced RLS (FOUND & FIXED 2026-07-12)
 - **Was**: Critical · production availability + spurious mass session revocation · **Found by**: the e2e CI job's first real run (PR #226) — the suite passed locally against a BYPASSRLS dev role and failed in CI against the NOBYPASSRLS role, i.e. the PRODUCTION posture.
 - **Fact**: `sessions` had SELECT/INSERT/DELETE policies but no UPDATE policy. PostgreSQL applies UPDATE-policy checks to `SELECT … FOR UPDATE` row locks, so under FORCE RLS the refresh-rotation lock in `authService.refreshTokens()` saw ZERO rows. Confirmed with psql as `omh_app`: plain SELECT sees the session row, `FOR UPDATE` returns nothing.
 - **Impact**: since the omh_app NOBYPASSRLS cutover, every production token refresh (a) 401'd — logging the user out when the 15-minute access token expired — and (b) was misclassified as token REUSE, firing the M-1 compromise detector: `revokeAllUserTokens()` destroyed ALL the user's sessions and stamped `tokens_valid_after`, killing in-flight access tokens across devices.
 - **Fix**: migration `20260712_add_sessions_update_policy` (+ two live-PG regression tests in `rls.test.ts` pinning the exact lock shape in admin and user contexts); companion frontend fix single-flights `authApi.refreshToken` so parallel boot refreshes (React StrictMode, multi-tab) can't race the single-use rotation.
-- **Deploy note**: prod carries this bug until the next successful deploy (currently blocked on GCP billing). Verify post-deploy: log in, wait >15 min, confirm the session silently renews.
+- **Deploy note (updated 2026-07-14)**: moot under the sandbox posture — there is no live prod (billing disabled). The fix is on master and ships with any future deploy; the post-deploy verification step stands (log in, wait >15 min, confirm the session silently renews).
 
 ### OF-02 — Document AI OCR spend has no dollar cap (CLOSED 2026-07-11)
 - **Was**: High · cost governance · **Aliases**: H-3 (KNOWN_ISSUES), "Document AI dollar accounting 🟡" (SECURITY_STATUS §5), scrutiny P0-2
 - **Closing commit**: `1047506` — `trackDocumentAIUsage()` accrues per-page OCR cost (`DOCUMENT_AI_COST_PER_PAGE_USD`, default $0.0015) into the same daily global + per-user accumulator as Claude spend, recorded the moment Google returns; the existing `aiSpendGuard` 503 fail-closed gate on every OCR entry route now bounds OCR dollars too.
 - **Verification**: tests prove OCR spend trips the global cap (refuse, scope `global`), trips the per-user cap without blocking other users, and small jobs accrue without blocking (`backend/src/services/aiCostTracker.test.ts`); backend tsc clean.
-- **Residual**: the accumulator remains per-process without `REDIS_URL` — that ceiling-inflation is OF-07, unchanged.
+- **Residual**: the accumulator remains per-process without `REDIS_URL` — that ceiling-inflation is OF-07 (now dormant).
 
 ## Closed since the fb2cd32 ledgers (for the avoidance of doubt)
 
@@ -185,7 +221,7 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 | OMH-L04 2026-06-20 (no consent at registration) | `0dadd8d` (+ migration `20260620_add_registration_consent`) |
 | OMH-L05 2026-06-20 (sub-processors undisclosed) | `0dadd8d` (/privacy + /terms pages, DRAFT copy) |
 | OMH-I01 2026-06-20 (no-Origin CORS) | Accepted + documented in `0dadd8d` |
-| OMH-L03 2026-06-21 (consent not validated at API boundary) | **Working tree (uncommitted)** — `schemas.auth.register` now requires `acceptedTerms: z.literal(true)` |
+| OMH-L03 2026-06-21 (consent not validated at API boundary) | `0456c50` — `schemas.auth.register` requires `acceptedTerms: z.literal(true)` |
 
 ---
 
@@ -195,3 +231,4 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 2. **Close** by moving the entry to a dated "Closed" section with the closing commit and verification evidence; update the counts in the header.
 3. **Accepted** findings must carry a written re-evaluation trigger — "accepted" without a trigger is not a status.
 4. Any doc refresh that touches security posture must reconcile against this file at generation time and cite its **Last updated** date.
+5. **Posture changes** (deploy target, user base, cloud provider) get a dated §Posture entry plus a full old→new disposition table; **Dormant** items must each carry a reactivation severity, and the global reactivation triggers must be stated in §Posture. The header names the active posture.
