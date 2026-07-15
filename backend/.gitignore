@@ -34,10 +34,16 @@ __tests__/
 /src/generated/prisma
 
 # Service account keys
+# OMH-C01: a real prod SA key was committed as `gcp-ocr-key.json.json` — the
+# trailing `.json.json` slipped past `*-key.json`. The broader patterns below
+# close that class (double extensions + any gcp key json + generic SA keys).
 gcp-ocr-key.json
 *-key.json
+*.json.json
+gcp-*key*.json*
 *-credentials.json
 service-account*.json
+*serviceaccount*.json
 
 # Certificate files
 *.pem
