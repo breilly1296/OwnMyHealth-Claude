@@ -11,9 +11,9 @@
 |---|---|
 | **Last updated** | 2026-07-14 (sandbox-posture re-triage) |
 | **Posture** | **Sandbox — no GCP** (see §Posture) |
-| **Code state** | `2656a82` + this commit (ledger re-triage + `backend/.gitignore` leak-shape patterns, branch `security/sandbox-retriage-2026-07-14`); docs reorg still uncommitted in the working tree |
+| **Code state** | master `f57061e` (PR #228 merged) + branch `feat/local-storage-backend-2026-07-14` (OF-23 fix + this ledger revision); docs reorg still uncommitted in the working tree |
 | **Sources reconciled** | This ledger @ `2656a82`; founder posture decision (2026-07-14 session); repo re-verification 2026-07-14 (OF-01 blob presence via `git cat-file -e`, commits `8ec3989`/`0456c50`, migrations through `20260712`, PR #227 state) |
-| **Open counts** | **Live: 0 Critical · 1 High · 1 Medium · 10 Low** (12 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7** · OF-20 merged into OF-08 · OF-23 added · OF-11 closed 2026-07-14 |
+| **Open counts** | **Live: 0 Critical · 1 High · 0 Medium · 10 Low** (11 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7** · OF-20 merged into OF-08 · OF-11 & OF-23 closed 2026-07-14 |
 
 ---
 
@@ -66,11 +66,7 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 
 ## Medium
 
-### OF-23 — File upload hard-depends on GCS; upload flows nonfunctional in the GCP-less sandbox
-- **Class**: availability / product (sandbox ops) · **Status**: Open · **New 2026-07-14** (posture re-triage)
-- **Fact**: `backend/src/services/storageService.ts` instantiates the GCS client at module load and reads/writes the configured bucket directly — no local fallback, no feature gate. The dev config tier boots with warnings only, so lab-report and SBC upload flows fail at runtime on the first GCS call. Image OCR is separately gated off without `GCP_PROCESSOR_ID`; Claude extraction is GCP-independent (Anthropic key + runtime BAA gate).
-- **Why Medium**: a core product flow (document upload → parse → extract) cannot be exercised or developed in the sandbox's only environment. No user harm; development-velocity and test-coverage harm.
-- **Done when**: a storage abstraction with a local-disk backend (upload/download/delete/signed-URL parity) selected by env var — or `fake-gcs-server` documented in `LOCAL_DEV.md` and wired into e2e — and the upload e2e journey passes with no GCP credentials.
+*(none open — OF-23 closed 2026-07-14, see Closed findings)*
 
 ---
 
@@ -168,7 +164,7 @@ These items were open operational risks under the deployed-on-GCP posture. Under
 | OF-14..OF-19, OF-21 | Low | **Low** (unchanged) | Environment-independent debt/accepted residuals; OF-20 merged into OF-08. |
 | OF-15 | Low, Open | **Dormant (Low; product decision)** | CTA honesty matters only with non-founder eyes. |
 | OF-20 | Low, Open | **Merged into OF-08** | Staging GCS website out of service; requirement folded into the launch edge-config item. |
-| OF-23 | — | **Medium**, Open (new) | Upload flows dead in the sandbox: `storageService` is GCS-only with no local fallback. |
+| OF-23 | — | **Medium**, Open (new) → **Closed same day** | Upload flows were dead in the sandbox: `storageService` was GCS-only with no local fallback. Fixed by the local encrypted backend — see Closed findings. |
 
 ## Legacy-ID crosswalk (2026-07-11 reconciliation — severities as of that date)
 
@@ -192,6 +188,12 @@ These items were open operational risks under the deployed-on-GCP posture. Under
 | M-5 (KNOWN_ISSUES) | OF-21 | Medium → Low |
 
 ## Closed findings
+
+### OF-23 — File upload hard-depended on GCS; upload flows nonfunctional in the GCP-less sandbox (CLOSED 2026-07-14)
+- **Was**: Medium · availability / product (sandbox ops) · opened earlier the same day by the sandbox re-triage
+- **Closed by**: the commit landing this ledger revision (branch `feat/local-storage-backend-2026-07-14`) — `storageService.ts` became a backend-selecting façade over `services/storage/` (`gcsBackend.ts` = the GCS code moved intact; `localBackend.ts` = AES-256-GCM-encrypted blobs under `backend/.local-storage`, sealed with the master PHI key in an `OMHL | version | iv(16) | tag(16) | ciphertext` envelope; tmp+rename writes; storage-key shape + containment validation). `STORAGE_BACKEND=local|gcs`, dev default `local`; **production/staging refuse `local` at boot** — ephemeral deployed disks must not hold PHI files. Zero caller churn.
+- **Verification (2026-07-14, no GCP credentials, server under the NOBYPASSRLS `omh_app` role)**: SBC upload via the regex fallback → encrypted `OMHL` blob on disk (0 plaintext hits for the plan name; size = plaintext + 37) → byte-identical download (matching SHA-256) → unauthenticated download 401 → tampered-blob probe detected (server-side GCM stream error logged) → delete removes the blob (re-download 404, re-delete 404 — idempotent). Plus 17 unit/guard tests; backend suite 745 green.
+- **Residuals**: (a) no Playwright UI upload spec yet — the verified journey is API-level; (b) the lab-report PDF route hard-requires `ANTHROPIC_API_KEY` (no regex fallback; SBC is the keyless upload path) — an AI-config dependency, not storage.
 
 ### OF-11 — CI secret scan was working-tree-only (CLOSED 2026-07-14)
 - **Was**: Medium (Low after the 2026-07-14 re-triage) · detection · **Alias**: OMH-M01 (2026-06-21)

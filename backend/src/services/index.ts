@@ -58,7 +58,7 @@ export {
   validateBiomarkerValue,
 } from './biomarkerExtractor.js';
 
-// Storage Service (Google Cloud Storage)
+// Storage Service (backend-selecting façade: GCS or encrypted local disk — OF-23)
 export {
   storageService,
   uploadFile,

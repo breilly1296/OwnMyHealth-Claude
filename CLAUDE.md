@@ -12,7 +12,7 @@ Privacy-first HIPAA-compliant health biomarker tracking platform with insurance 
 - **AI**: Anthropic Claude API (biomarker guidance, cost analysis, document extraction)
 - **OCR**: Google Document AI (scanned lab reports)
 - **Email**: SendGrid (verification, password reset)
-- **File Storage**: Google Cloud Storage (lab reports, SBC documents)
+- **File Storage**: backend-selected (OF-23) — GCS in deployed envs; AES-256-GCM-encrypted local disk in the sandbox (`STORAGE_BACKEND=local`, the dev default)
 - **Testing**: Vitest (frontend and backend)
 - **Deployment**: GCP Cloud Run (backend) + GCS bucket (frontend) + Cloud SQL (database)
 
@@ -24,7 +24,7 @@ Privacy-first HIPAA-compliant health biomarker tracking platform with insurance 
 - **Health Goals**: Goal tracking with progress notes and history
 - **Health Needs**: Track health needs with status, type, and urgency
 - **Provider Collaboration**: Consent-based provider-patient data sharing with granular permissions
-- **File Management**: Lab report upload (PDF parsing + OCR), GCS storage, signed URL downloads
+- **File Management**: Lab report upload (PDF parsing + OCR), GCS/local storage backend, audited proxy-stream downloads
 - **Admin Panel**: User management, audit log viewer, system health stats
 - **Demo Mode**: Demo account for development/testing (blocked in production)
 - **Audit Logging**: HIPAA-compliant access logging with 7-year retention
@@ -98,7 +98,7 @@ backend/src/
 │   ├── database.ts     # Prisma client + RLS context
 │   ├── claudeExtraction.ts # Claude AI document extraction
 │   ├── sbcExtraction.ts # SBC-specific Claude extraction
-│   ├── storageService.ts # Google Cloud Storage
+│   ├── storageService.ts # File-storage façade → storage/ (gcsBackend, localBackend)
 │   ├── emailService.ts # SendGrid transactional email
 │   ├── ocrService.ts   # Google Document AI OCR
 │   ├── pdfParser.ts    # PDF text extraction
@@ -184,7 +184,7 @@ const biomarkers = await withRLSContext(userId, async () => {
 | `backend/src/services/auditLog.ts` | HIPAA audit trail + retention cleanup scheduler |
 | `backend/src/services/authService.ts` | Auth logic + session cleanup scheduler |
 | `backend/src/services/claudeExtraction.ts` | Claude AI document extraction |
-| `backend/src/services/storageService.ts` | Google Cloud Storage file operations |
+| `backend/src/services/storageService.ts` | File-storage façade: GCS or AES-256-GCM local disk (OF-23) |
 | `backend/src/services/emailService.ts` | SendGrid transactional email |
 | `backend/src/services/ocrService.ts` | Google Document AI OCR |
 | `backend/src/middleware/auth.ts` | JWT verification, route protection |
@@ -250,6 +250,7 @@ CORS_ORIGIN=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 EMAIL_FROM=<verified-sender>
 GCS_BUCKET_NAME=<bucket-name>
+STORAGE_BACKEND=local|gcs   # dev default: local (encrypted blobs, backend/.local-storage); prod/staging refuse 'local'
 GCP_PROCESSOR_ID=<processor-id>
 GCP_LOCATION=<location>
 

@@ -3097,6 +3097,8 @@ export namespace Prisma {
     onboardingCompletedAt: Date | null
     lastWeeklySummarySent: Date | null
     lastPlanExpiringSent: Date | null
+    termsAcceptedAt: Date | null
+    termsVersion: string | null
     createdAt: Date | null
     updatedAt: Date | null
     lastLoginAt: Date | null
@@ -3132,6 +3134,8 @@ export namespace Prisma {
     onboardingCompletedAt: Date | null
     lastWeeklySummarySent: Date | null
     lastPlanExpiringSent: Date | null
+    termsAcceptedAt: Date | null
+    termsVersion: string | null
     createdAt: Date | null
     updatedAt: Date | null
     lastLoginAt: Date | null
@@ -3168,6 +3172,8 @@ export namespace Prisma {
     onboardingCompletedAt: number
     lastWeeklySummarySent: number
     lastPlanExpiringSent: number
+    termsAcceptedAt: number
+    termsVersion: number
     createdAt: number
     updatedAt: number
     lastLoginAt: number
@@ -3213,6 +3219,8 @@ export namespace Prisma {
     onboardingCompletedAt?: true
     lastWeeklySummarySent?: true
     lastPlanExpiringSent?: true
+    termsAcceptedAt?: true
+    termsVersion?: true
     createdAt?: true
     updatedAt?: true
     lastLoginAt?: true
@@ -3248,6 +3256,8 @@ export namespace Prisma {
     onboardingCompletedAt?: true
     lastWeeklySummarySent?: true
     lastPlanExpiringSent?: true
+    termsAcceptedAt?: true
+    termsVersion?: true
     createdAt?: true
     updatedAt?: true
     lastLoginAt?: true
@@ -3284,6 +3294,8 @@ export namespace Prisma {
     onboardingCompletedAt?: true
     lastWeeklySummarySent?: true
     lastPlanExpiringSent?: true
+    termsAcceptedAt?: true
+    termsVersion?: true
     createdAt?: true
     updatedAt?: true
     lastLoginAt?: true
@@ -3407,6 +3419,8 @@ export namespace Prisma {
     onboardingCompletedAt: Date | null
     lastWeeklySummarySent: Date | null
     lastPlanExpiringSent: Date | null
+    termsAcceptedAt: Date | null
+    termsVersion: string | null
     createdAt: Date
     updatedAt: Date
     lastLoginAt: Date | null
@@ -3462,6 +3476,8 @@ export namespace Prisma {
     onboardingCompletedAt?: boolean
     lastWeeklySummarySent?: boolean
     lastPlanExpiringSent?: boolean
+    termsAcceptedAt?: boolean
+    termsVersion?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
@@ -3514,6 +3530,8 @@ export namespace Prisma {
     onboardingCompletedAt?: boolean
     lastWeeklySummarySent?: boolean
     lastPlanExpiringSent?: boolean
+    termsAcceptedAt?: boolean
+    termsVersion?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
@@ -3550,6 +3568,8 @@ export namespace Prisma {
     onboardingCompletedAt?: boolean
     lastWeeklySummarySent?: boolean
     lastPlanExpiringSent?: boolean
+    termsAcceptedAt?: boolean
+    termsVersion?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
@@ -3586,12 +3606,14 @@ export namespace Prisma {
     onboardingCompletedAt?: boolean
     lastWeeklySummarySent?: boolean
     lastPlanExpiringSent?: boolean
+    termsAcceptedAt?: boolean
+    termsVersion?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     lastLoginAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "pendingEmail" | "emailChangeToken" | "emailChangeExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "tokensValidAfter" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "lastWeeklySummarySent" | "lastPlanExpiringSent" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "firstNameEncrypted" | "lastNameEncrypted" | "dateOfBirthEncrypted" | "phoneEncrypted" | "addressEncrypted" | "emailVerified" | "emailVerificationToken" | "emailVerificationExpires" | "passwordResetToken" | "passwordResetExpires" | "pendingEmail" | "emailChangeToken" | "emailChangeExpires" | "isActive" | "role" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLogin" | "tokensValidAfter" | "notificationPreferences" | "healthProfileEncrypted" | "plan" | "planExpiresAt" | "planUpdatedAt" | "onboardingCompletedAt" | "lastWeeklySummarySent" | "lastPlanExpiringSent" | "termsAcceptedAt" | "termsVersion" | "createdAt" | "updatedAt" | "lastLoginAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     biomarkers?: boolean | User$biomarkersArgs<ExtArgs>
@@ -3663,6 +3685,8 @@ export namespace Prisma {
       onboardingCompletedAt: Date | null
       lastWeeklySummarySent: Date | null
       lastPlanExpiringSent: Date | null
+      termsAcceptedAt: Date | null
+      termsVersion: string | null
       createdAt: Date
       updatedAt: Date
       lastLoginAt: Date | null
@@ -4134,6 +4158,8 @@ export namespace Prisma {
     readonly onboardingCompletedAt: FieldRef<"User", 'DateTime'>
     readonly lastWeeklySummarySent: FieldRef<"User", 'DateTime'>
     readonly lastPlanExpiringSent: FieldRef<"User", 'DateTime'>
+    readonly termsAcceptedAt: FieldRef<"User", 'DateTime'>
+    readonly termsVersion: FieldRef<"User", 'String'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
     readonly lastLoginAt: FieldRef<"User", 'DateTime'>
@@ -28143,6 +28169,8 @@ export namespace Prisma {
     onboardingCompletedAt: 'onboardingCompletedAt',
     lastWeeklySummarySent: 'lastWeeklySummarySent',
     lastPlanExpiringSent: 'lastPlanExpiringSent',
+    termsAcceptedAt: 'termsAcceptedAt',
+    termsVersion: 'termsVersion',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     lastLoginAt: 'lastLoginAt'
@@ -28936,6 +28964,8 @@ export namespace Prisma {
     onboardingCompletedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     lastWeeklySummarySent?: DateTimeNullableFilter<"User"> | Date | string | null
     lastPlanExpiringSent?: DateTimeNullableFilter<"User"> | Date | string | null
+    termsAcceptedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    termsVersion?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
@@ -28987,6 +29017,8 @@ export namespace Prisma {
     onboardingCompletedAt?: SortOrderInput | SortOrder
     lastWeeklySummarySent?: SortOrderInput | SortOrder
     lastPlanExpiringSent?: SortOrderInput | SortOrder
+    termsAcceptedAt?: SortOrderInput | SortOrder
+    termsVersion?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
@@ -29041,6 +29073,8 @@ export namespace Prisma {
     onboardingCompletedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     lastWeeklySummarySent?: DateTimeNullableFilter<"User"> | Date | string | null
     lastPlanExpiringSent?: DateTimeNullableFilter<"User"> | Date | string | null
+    termsAcceptedAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    termsVersion?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
@@ -29092,6 +29126,8 @@ export namespace Prisma {
     onboardingCompletedAt?: SortOrderInput | SortOrder
     lastWeeklySummarySent?: SortOrderInput | SortOrder
     lastPlanExpiringSent?: SortOrderInput | SortOrder
+    termsAcceptedAt?: SortOrderInput | SortOrder
+    termsVersion?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
@@ -29136,6 +29172,8 @@ export namespace Prisma {
     onboardingCompletedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     lastWeeklySummarySent?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     lastPlanExpiringSent?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    termsAcceptedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    termsVersion?: StringNullableWithAggregatesFilter<"User"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
@@ -31384,6 +31422,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -31435,6 +31475,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -31486,6 +31528,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31537,6 +31581,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31588,6 +31634,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -31624,6 +31672,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31660,6 +31710,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -34592,6 +34644,8 @@ export namespace Prisma {
     onboardingCompletedAt?: SortOrder
     lastWeeklySummarySent?: SortOrder
     lastPlanExpiringSent?: SortOrder
+    termsAcceptedAt?: SortOrder
+    termsVersion?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrder
@@ -34631,6 +34685,8 @@ export namespace Prisma {
     onboardingCompletedAt?: SortOrder
     lastWeeklySummarySent?: SortOrder
     lastPlanExpiringSent?: SortOrder
+    termsAcceptedAt?: SortOrder
+    termsVersion?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrder
@@ -34666,6 +34722,8 @@ export namespace Prisma {
     onboardingCompletedAt?: SortOrder
     lastWeeklySummarySent?: SortOrder
     lastPlanExpiringSent?: SortOrder
+    termsAcceptedAt?: SortOrder
+    termsVersion?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     lastLoginAt?: SortOrder
@@ -40088,6 +40146,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40138,6 +40198,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40204,6 +40266,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -40254,6 +40318,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -40304,6 +40370,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40354,6 +40422,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40420,6 +40490,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -40470,6 +40542,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -40520,6 +40594,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40570,6 +40646,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40636,6 +40714,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -40686,6 +40766,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -40736,6 +40818,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40786,6 +40870,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40841,6 +40927,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40891,6 +40979,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -40957,6 +41047,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41007,6 +41099,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41068,6 +41162,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41118,6 +41214,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41224,6 +41322,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41274,6 +41374,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41356,6 +41458,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41406,6 +41510,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41519,6 +41625,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41569,6 +41677,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -41707,6 +41817,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41757,6 +41869,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -41959,6 +42073,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42009,6 +42125,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42230,6 +42348,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42280,6 +42400,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -42886,6 +43008,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -42936,6 +43060,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43002,6 +43128,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43052,6 +43180,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43130,6 +43260,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43180,6 +43312,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43275,6 +43409,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43325,6 +43461,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43499,6 +43637,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43549,6 +43689,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43615,6 +43757,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43665,6 +43809,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -43715,6 +43861,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -43765,6 +43913,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44130,6 +44280,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44180,6 +44332,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44503,6 +44657,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44553,6 +44709,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -44903,6 +45061,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44953,6 +45113,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -45299,6 +45461,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -45349,6 +45513,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -45666,6 +45832,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -45716,6 +45884,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -46023,6 +46193,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -46073,6 +46245,8 @@ export namespace Prisma {
     onboardingCompletedAt?: Date | string | null
     lastWeeklySummarySent?: Date | string | null
     lastPlanExpiringSent?: Date | string | null
+    termsAcceptedAt?: Date | string | null
+    termsVersion?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     lastLoginAt?: Date | string | null
@@ -46139,6 +46313,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -46189,6 +46365,8 @@ export namespace Prisma {
     onboardingCompletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastWeeklySummarySent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     lastPlanExpiringSent?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    termsVersion?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

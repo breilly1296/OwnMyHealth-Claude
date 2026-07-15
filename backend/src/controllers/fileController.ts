@@ -279,7 +279,7 @@ export async function getFileDownloadUrl(
 
   const stream = getFileStream(file.storageKey);
   stream.on('error', (error: Error) => {
-    logger.error('GCS stream error during file download', {
+    logger.error('Storage stream error during file download', {
       data: {
         fileId: id,
         storageKey: file.storageKey,
