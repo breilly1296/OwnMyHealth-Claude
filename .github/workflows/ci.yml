@@ -126,6 +126,30 @@ jobs:
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
           ./gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose
 
+      # Doc guards run BEFORE the dependency audits, deliberately. They are
+      # dependency-free, deterministic, and take ~1s, whereas the audits fail on
+      # transitive advisories whose fix is gated on an upstream major (OF-21) —
+      # so anything sequenced after them gets skipped for reasons unrelated to
+      # what it checks, i.e. it goes silent exactly when the job is unhealthy.
+      # Cheap and self-contained runs first.
+      #
+      # check-docs: relative links resolve, `#anchor`s match real headings by
+      # GitHub's slug rules, and `file.ts:123` points inside a file that has 123
+      # lines. `New Project Documents/` substitutes for repo access in a Claude
+      # Project and `prompts/` regenerates it, so both rot silently — a line
+      # number that moved in a refactor is worse than no citation, because it
+      # looks verified.
+      - name: Documentation integrity
+        run: node scripts/check-docs.mjs
+
+      # check-counts: the "Verified codebase counts" table in prompts/00-index.md
+      # is the prompt library's shared fact base — every prompt is told to trust
+      # it when prompts disagree, so a wrong number there reaches every generated
+      # doc. Derived from the repo, not transcribed. Fix drift with:
+      #   node scripts/check-counts.mjs --write
+      - name: Prompt-library counts
+        run: node scripts/check-counts.mjs
+
       # Gate on High/Critical. (Was =moderate per M-17, but that made the gate
       # un-satisfiable: the only remaining moderates are transitive advisories
       # with no non-breaking fix — uuid/teeny-request/retry-request inside
@@ -147,24 +171,6 @@ jobs:
       # callback. See backend/src/services/database.ts header for details.
       - name: RLS wrapper guard
         run: bash scripts/check-rls-wrappers.sh
-
-      # Fail the build on broken navigation or stale line citations in the doc
-      # set. `New Project Documents/` substitutes for repo access in a Claude
-      # Project and `prompts/` regenerates it, so both rot silently: a dead
-      # anchor sends a reader nowhere, and a line number that moved in a
-      # refactor is worse than no citation because it looks verified.
-      # Introduced 2026-08-01 after a manual pass found 22 broken links and a
-      # single wrong line number that had fanned out into 6 documents.
-      - name: Documentation integrity
-        run: node scripts/check-docs.mjs
-
-      # The "Verified codebase counts" table in prompts/00-index.md is the
-      # prompt library's shared fact base — every prompt is told to trust it
-      # when prompts disagree, so a wrong number there reaches every generated
-      # doc. It is derived from the repo, not transcribed; this fails the build
-      # if the two diverge. Fix with: node scripts/check-counts.mjs --write
-      - name: Prompt-library counts
-        run: node scripts/check-counts.mjs
 
   # RLS regression — runs the tenant-isolation + provider-consent suite against
   # a REAL Postgres connected as a NOBYPASSRLS role, so Row-Level Security
