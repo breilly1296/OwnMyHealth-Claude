@@ -4,10 +4,21 @@ tags:
   - security
 type: prompt
 priority: 1
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Generate SECURITY_STATUS.md
+
+> **Binding change (2026-08-01):** `New Project Documents/OPEN_FINDINGS.md` is now the **single
+> authoritative findings ledger** (created 2026-07-11 to close scrutiny finding P0-6, which existed
+> precisely because *this doc* claimed 0 open High while `KNOWN_ISSUES.md` listed H-1/H-2/H-3).
+>
+> This doc **must not restate severities, open counts, or statuses**. It links to `OF-NN` ids and
+> describes *controls* — what exists, where, and how it is verified. Any sentence here of the form
+> "N open High" is a future contradiction; write "see [OPEN_FINDINGS.md](./OPEN_FINDINGS.md)" instead.
+>
+> Also stamp the posture: sandbox / no GCP since 2026-07-14. A security-status doc written in the
+> present tense about suspended cloud controls overstates the live posture in both directions.
 
 ## Required reading before generating
 

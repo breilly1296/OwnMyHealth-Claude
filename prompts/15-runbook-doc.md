@@ -4,10 +4,23 @@ tags:
   - operations
 type: prompt
 priority: 2
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Generate RUNBOOK.md
+
+> **Posture gate (2026-08-01).** This runbook describes operating a Cloud Run + Cloud SQL + GCS
+> stack that is **currently suspended** — GCP billing was disabled ~2026-07-12 and there is no
+> deployment target (`OPEN_FINDINGS.md` §Posture). Write it as the **launch/restore** runbook and
+> label it as such in the header stamp; do not write present-tense instructions implying a running
+> production service.
+>
+> Two sections become load-bearing under this posture:
+> 1. **Restore-from-suspension** — what must be true before GCP billing is re-enabled. Note the
+>    hard gate from OF-01: the leaked `ocr-service@` key must be deleted in IAM **first**, because
+>    re-enabling billing silently re-arms it.
+> 2. **Sandbox operations** — the procedures that *do* apply today: local Postgres, migrations,
+>    `STORAGE_BACKEND=local` file handling, resetting local state, and running the e2e suite.
 
 ## Required reading before generating
 

@@ -5,10 +5,19 @@ tags:
   - medium
 type: prompt
 priority: 3
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Dependency Health Check
+
+> **Update (2026-08-01):** three dependency waves landed after the 2026-06-16 refresh — SHA-pinned
+> GitHub Actions bumped to latest stable including majors (`a5b38a5`), safe in-range backend updates
+> with majors deliberately held (`2a8dafe`), and a surgical `dompurify` lockfile fix that preserved
+> `@emnapi` (`762ce62`). Re-run `npm audit` rather than reasoning from any advisory list in this
+> prompt, and check whether the majors held in `2a8dafe` are still deliberately held or have quietly
+> become stale. Also note `secret-history-scan.yml` now downloads a gitleaks release tarball over
+> `curl` with a pinned version but **no checksum verification** — a supply-chain surface this prompt
+> should cover alongside npm deps.
 
 ## Files to Review
 - `package.json` (frontend/root)

@@ -4,7 +4,7 @@ tags:
   - meta
 type: prompt
 priority: 2
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Full Documentation Refresh
@@ -19,13 +19,38 @@ Before running any doc prompt, read:
 
 ---
 
+## Before you run this: the regeneration gate (2026-08-01)
+
+**Default to a surgical patch instead of this prompt.** Two findings from
+`analysis/codebase-scrutiny-2026-07/` bind here:
+
+> "**Stop regenerating** full doc sets until P0 engineering closes; prefer surgical updates."
+> — `10-documentation-pathology.md:67`
+
+> Explicit non-goal until P0 clears: "Another full multi-agent 'security theater' doc refresh."
+> — `11-priority-fix-list.md:68`
+
+The doc set already runs to ~24K lines across ~120 files. Past a certain point, regenerating it
+buries the pages that actually changed and re-dates pages whose facts did not.
+
+Run the **full** refresh only when:
+
+- a **posture reactivation** fired (see `OPEN_FINDINGS.md` §Posture) — the deployment framing in
+  `ARCHITECTURE`, `RUNBOOK`, `ENV_VARS`, and `LOCAL_DEV` all invert simultaneously; **or**
+- the doc set is being stood up from an empty/near-empty folder; **or**
+- a full re-read shows **> ~30%** of the set is stale — measured against the current
+  `_drift-audit-*.md`, not assumed.
+
+For anything smaller: read the drift audit, open the 2-4 docs it names, patch the cited sections,
+bump their stamps, and stop. Record what you patched. See `_doc-quality.md` §"Before you generate".
+
 ## Purpose
 
 Orchestrate a full refresh of `New Project Documents/`. The output set, in its entirety, must be rich enough to serve as a Claude.ai Project context **substitute for the full GitHub repo** (which has outgrown Projects' attachment limit).
 
 This prompt is a runner, not a doc generator. It sequences the 19 doc prompts (14-23 plus the 33-40 deep-reference layer and the 46 biomarker-series deep reference) so each run benefits from the context the earlier ones produced.
 
-> **Current state (2026-06-16):** `New Project Documents/` holds the doc set this prompt family produces. Running the 19 doc prompts (14-23, 33-40, 46) writes the named docs here; the 25 security prompts write review reports under `security-reviews/`. On a clean checkout the folder may be **empty** — the first run is a from-scratch generation; subsequent runs are **incremental refreshes** that supersede the existing docs. Do **not** assume any out-of-band reports (e.g. teardown / UX-review files) are present, and cross-link only to docs this prompt family actually produces. Verify what is on disk (`Glob "New Project Documents/*.md"`) before relying on a sibling.
+> **Current state (2026-08-01):** `New Project Documents/` is **populated** — it holds the full doc set plus `OPEN_FINDINGS.md` (the authoritative ledger), a `security-reviews/` subfolder, and a `Go-To-Market/` pack. The 19 doc prompts (14-23, 33-40, 46) write the named docs here; the security prompts write review reports under `security-reviews/`, which currently holds **25 reports covering 01-13, 26-32, 41-45** (all dated 2026-07-14). The new prompts **47-49 have no review report yet** — close that with three targeted runs, not a full refresh. Because the folder is populated, a run is an **incremental refresh that supersedes existing docs** — which is exactly why the regeneration gate above applies. Verify what is on disk (`Glob "New Project Documents/*.md"`) before relying on a sibling. Do **not** assume any out-of-band reports (e.g. teardown / UX-review files) are present, and cross-link only to docs this prompt family actually produces. Verify what is on disk (`Glob "New Project Documents/*.md"`) before relying on a sibling.
 
 Before sequencing, verify the live codebase counts in [`00-index.md`](./00-index.md) ("Verified codebase counts") so each generated doc starts from accurate totals. Several product domains added in the prompt era — Quest FHIR / lab connections, AI chat + AI cost/spend control, onboarding, email-change, notification preferences, and plan gating / billing tiers — are in code and must be reflected across the generated set (especially `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ENV_VARS.md`, `ARCHITECTURE.md`, `API_REFERENCE.md`, and `FRONTEND_MAP.md`).
 

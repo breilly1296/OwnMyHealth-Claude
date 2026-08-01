@@ -5,7 +5,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-01
+updated: 2026-08-01
 ---
 
 # Generate FRONTEND_MAP.md
@@ -203,9 +203,10 @@ After writing the doc, self-answer each **using only the doc**:
 
 Before marking anything TBD:
 
-- **Component enumeration**: `Glob pattern: "src/components/**/*.tsx"` (expect 73 across 14 dirs).
+- **Component enumeration**: `Glob pattern: "src/components/**/*.tsx"` (expect **75 across 15 dirs** as of 2026-08-01 — the 15th is `legal/`, added 2026-06-21 with the registration-consent flow, OMH-L04). Re-derive rather than inheriting.
 - **Contexts**: `Glob pattern: "src/contexts/*.tsx"` + read each (`AuthContext`, `ThemeContext`).
-- **API modules**: `Glob pattern: "src/services/api/*.ts"` + read each (17 + `index.ts`).
+- **API modules**: `Glob pattern: "src/services/api/*.ts"` + read each (**18 + `index.ts`** as of 2026-08-01 — `pagination.ts` was added 2026-06-20 when the provider patient-PHI list endpoints were paginated and the client pager was deduped).
+- **Hooks**: `Glob pattern: "src/hooks/*.ts"` + read each (8 + `index.ts`). `useFocusTrap.ts` (added 2026-06-20) is load-bearing for accessibility — 15 component files consume it (14 bespoke overlays + `common/Modal`). Map its consumers; see prompt [47](./47-accessibility.md).
 - **Consumer mapping**: for each API export, `Grep pattern: "biomarkersApi\\.|insuranceApi\\.|aiApi\\.|fhirApi\\.|onboardingApi\\.|planApi\\." etc.` over `src/**` to enumerate callers.
 - **Context consumers**: `Grep pattern: "useAuth\\(\\)|useRBAC\\(\\)|useContext\\(AuthContext\\)"` over `src/**` (role access flows through the `useRBAC` hook, not direct `useContext`).
 - **Routing**: open `src/App.tsx` (auth view state + special routes) AND `src/components/dashboard/categoryRouting.ts` + `Dashboard.tsx` (in-app SPA paths); there is no react-router.

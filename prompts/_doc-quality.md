@@ -5,18 +5,55 @@ tags:
   - documentation
 type: shared
 priority: 1
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Doc Quality Protocol (shared)
 
-Every **documentation prompt** in `14-23` and `33-40` inherits this protocol. Keep it open (or reference it) while running any of those prompts. It is the counterpart of [`_review-protocol.md`](./_review-protocol.md), which governs the security/audit prompts.
+Every **documentation prompt** in `14-23`, `33-40`, and `46` inherits this protocol. Keep it open (or reference it) while running any of those prompts. It is the counterpart of [`_review-protocol.md`](./_review-protocol.md), which governs the security/audit prompts.
+
+---
+
+## Before you generate: is regeneration the right move? (2026-08-01)
+
+`analysis/codebase-scrutiny-2026-07/` reviewed this documentation set and reached two conclusions
+that bind these prompts:
+
+> "**Stop regenerating** full doc sets until P0 engineering closes; prefer surgical updates."
+> — `10-documentation-pathology.md:67`
+
+> Explicit non-goal until P0 clears: "Another full multi-agent 'security theater' doc refresh."
+> — `11-priority-fix-list.md:68`
+
+The reasoning: ~24K lines of markdown across ~120 files already exists, and volume at this scale
+stops being an asset once it outruns shippable product truth. Regeneration also re-costs tokens to
+restate facts that did not change, and re-introduces snapshot lag on the pages that did.
+
+**Therefore, default to a surgical patch, not a regeneration.** Before running any doc prompt end
+to end, answer:
+
+1. **What specifically changed?** Get the diff (`git log --oneline <last-doc-refresh-date>..HEAD`,
+   plus the current `_drift-audit-*.md`). If the answer is "three routes and a count", patch those
+   three sections and the count. Do not regenerate the file.
+2. **Is the doc's `Last updated` / code-state stamp older than the change?** If the doc has no
+   stamp, adding one is the first patch.
+3. **Would a full regeneration change more than ~30% of the file?** Only then is regenerating
+   cheaper than patching — and say so in your output.
+
+A surgical patch still owes the full evidence bar below: every line you touch cites `file:line`, and
+you update the doc's date stamp and its `## Prompt drift log`. What it does *not* owe is rewriting
+sections whose facts are unchanged.
+
+**Severity language is not yours to write.** `New Project Documents/OPEN_FINDINGS.md` is the single
+authoritative findings ledger. Docs **link** to `OF-NN` ids; they do not restate severities, counts
+of open findings, or status. A doc that says "0 open High" is a doc that will contradict the ledger
+within a month — that exact contradiction is what scrutiny finding P0-6 was about.
 
 ---
 
 ## Purpose
 
-The docs produced by prompts 14-23 and 33-40 land in `New Project Documents/`. That folder is attached to a Claude.ai Project **as a substitute for the GitHub repo itself** — the repo has outgrown Projects' attachment limit. This changes the quality bar:
+The docs produced by prompts 14-23, 33-40, and 46 land in `New Project Documents/`. That folder is attached to a Claude.ai Project **as a substitute for the GitHub repo itself** — the repo has outgrown Projects' attachment limit. This changes the quality bar:
 
 > **A reader who only has the docs (no repo access) must be able to answer real implementation questions about this codebase without guessing.**
 
@@ -293,7 +330,25 @@ These entries drive the quarterly prompt-refresh task.
 | Artifact | Frequency |
 |---|---|
 | This file (`_doc-quality.md`) | Yearly, or when a new doc category is added |
-| Every doc prompt (14-23, 33-40) | On change; re-verify Acceptance Questions quarterly |
-| Generated docs in `New Project Documents/` | Per [`25-full-doc-refresh.md`](./25-full-doc-refresh.md) cadence per doc |
+| Every doc prompt (14-23, 33-40, 46) | On change; re-verify Acceptance Questions quarterly |
+| Generated docs in `New Project Documents/` | **Surgical patch on change** (see "Before you generate" above); full regeneration only per the gate in [`25-full-doc-refresh.md`](./25-full-doc-refresh.md) |
 
-Out-of-date docs produce wrong Claude Project answers. Treat doc drift as a bug.
+Out-of-date docs produce wrong Claude Project answers. Treat doc drift as a bug — and treat
+unnecessary regeneration as a different bug, because it buries the pages that actually moved.
+
+---
+
+## Posture stamp (required, 2026-08-01)
+
+Every generated or patched doc carries a stamp near the top so a reader can tell what world it
+describes:
+
+```markdown
+> **Code state:** {branch} @ `{sha}` · **Generated:** {YYYY-MM-DD} · **Posture:** sandbox (no GCP) — see [OPEN_FINDINGS.md](./OPEN_FINDINGS.md#posture)
+```
+
+The project declared a **sandbox, no-GCP** posture on 2026-07-14: billing disabled, no deployment
+target, no real users, `STORAGE_BACKEND=local` as the development default. Docs that describe
+Cloud Run / Cloud SQL / GCS operations must say plainly that those describe the **launch**
+configuration, not a currently-running system. Present tense about a suspended stack is the same
+overclaim problem in a different costume.

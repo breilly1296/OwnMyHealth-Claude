@@ -5,14 +5,21 @@ tags:
   - high
 type: prompt
 priority: 2
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # CI/CD Security Review
 
+> **Posture note (2026-08-01):** the **deploy** half of this prompt is **Dormant (launch checklist)**
+> — GCP billing was disabled ~2026-07-12 and `deploy.yml` / `deploy-staging.yml` / `maintenance.yml`
+> cannot reach a target (deploys fail at image push). The **CI** half (`ci.yml`,
+> `secret-history-scan.yml`, Dockerfile hygiene, action pinning) is fully live and still gates every
+> merge. Grade per `_review-protocol.md` §Current posture and read `OPEN_FINDINGS.md` first.
+
 ## Files to Review
-There are exactly **four** workflows under `.github/workflows/`:
-- `.github/workflows/ci.yml` (lint/test/build + security + RLS gates)
+There are exactly **five** workflows under `.github/workflows/`:
+- `.github/workflows/ci.yml` (lint/test/build + security + RLS + **e2e** gates)
+- `.github/workflows/secret-history-scan.yml` (**new 2026-07-11**, OMH-M01 — scheduled **full-history** gitleaks scan. The `ci.yml` scan only sees the working tree; this one sees the past. **Expect it red by design** while OF-01's committed GCP key remains reachable at `202f2dd` — it is that finding's regression guard. If it is green, establish *why*: history purged, or a `.gitleaks.toml` allowlist entry added?)
 - `.github/workflows/deploy.yml` (production canary pipeline → Cloud Run + GCS, gated on `ci`, with a dedicated migrate job)
 - `.github/workflows/deploy-staging.yml` (push to `staging` → staging Cloud Run + GCS)
 - `.github/workflows/maintenance.yml` (manual `workflow_dispatch` that runs one-time data migrations — `consolidate-biomarkers`, `backfill-goal-values`, `backfill-userfile-filenames` — as the `ownmyhealth-maintenance` Cloud Run job, DRY-RUN by default, cloning the live service env + Secret Manager mounts; **security-relevant**: it touches prod PHI with the live `PHI_ENCRYPTION_KEY`, so review it like a deploy)
@@ -23,7 +30,8 @@ There are exactly **four** workflows under `.github/workflows/`:
 
 ## OwnMyHealth CI/CD Architecture
 - **Platform**: GitHub Actions
-- **CI Workflow**: `ci.yml` — five jobs: `frontend`, `backend`, `security`, `rls`, plus a commented-out `e2e-tests` job. Also exposes `workflow_call` so `deploy.yml` can invoke it as a reusable workflow. Runs on push to `main`/`master`/`develop`/`claude/**` and PRs to `main`/`master`/`develop`.
+- **CI Workflow**: `ci.yml` — **five live jobs**: `frontend`, `backend`, `security`, `rls`, and **`e2e`** (`ci.yml:24,59,106,155,221`). The e2e job was wired on 2026-07-11 (`919398a`, closing the long-standing TODO); a stale commented-out `e2e-tests` block still sits below it at `ci.yml:313+` and should be deleted. Also exposes `workflow_call` so `deploy.yml` can invoke it as a reusable workflow. Runs on push to `main`/`master`/`develop`/`claude/**` and PRs to `main`/`master`/`develop`.
+- **History-scan Workflow**: `secret-history-scan.yml` — scheduled full-history gitleaks scan (OMH-M01), independent of `ci.yml`. Failing by design until OF-01 is resolved.
 - **Deploy Workflow**: `deploy.yml` — a gated canary, NOT a single all-at-once deploy. Jobs: `ci` (invokes `ci.yml` as a reusable workflow — the ENTIRE deploy is gated on lint+test+build+gitleaks+audit+RLS; `deploy.yml:57-58`) → `build-and-stage` (`needs: ci`; Docker build → Artifact Registry → **runs DB migrations as the `ownmyhealth-migrate` Cloud Run job AFTER image push, BEFORE staging** → Cloud Run at **0% traffic** with a `staging-<sha>` tag) → `smoke-test` (probe tagged URL `/api/v1/health`) → `promote` (shift 100% via explicit `--to-revisions`, then post-promote prod health probe, then remove staging tag); `deploy-frontend` is gated on `needs: [ci, promote]` (ships only AFTER the backend promotes — it does NOT run in parallel; `deploy.yml:300-301`). A top-level `concurrency` group (`deploy-cloudrun-${{ github.ref }}`, `cancel-in-progress: false`; `deploy.yml:33-35`) serializes deploys so two pushes can't interleave around the shared migrate job.
 - **Staging Workflow**: `deploy-staging.yml` — push to `staging`; builds + deploys straight to 100% traffic on `ownmyhealth-backend-staging` (no canary, no gated promote — "staging is the smoke test").
 - **Maintenance Workflow**: `maintenance.yml` — manual `workflow_dispatch` only; runs the chosen one-time data migration as the `ownmyhealth-maintenance` Cloud Run job (same image the service is serving, cloning its env + Secret Manager mounts so re-encrypted PHI is decryptable by the live key). DRY-RUN unless `apply=true`.
@@ -132,8 +140,27 @@ All workflows authenticate with a single secret, `secrets.GCP_SA_KEY` (a JSON ke
 - [ ] `security` job: gitleaks secret scan → `npm audit --audit-level=high` (frontend + backend) → RLS wrapper guard (`scripts/check-rls-wrappers.sh`, fails the build if a controller/service bypasses `withRLSContext`)
 - [ ] `rls` job: spins up `postgres:16` service, applies migrations as superuser, provisions a NOBYPASSRLS `omh_app` role (`prisma/rls-test-role.sql`), runs `npm run test:rls` so RLS policies are actually enforced
 - [ ] Uses Node 22 Maintenance LTS (env `NODE_VERSION: '22'`, single source for every `setup-node`; M15: Node 20 EOL Apr 2026 — `ci.yml:17-20`)
+- [ ] `e2e` job (**live since 2026-07-11**, `ci.yml:221`): boots a real backend against `postgres`, seeds a standing e2e user (`npm run test:e2e:setup`), installs chromium, runs the full Playwright suite, uploads `playwright-report/`
 - [ ] Artifacts uploaded with retention limits (`retention-days: 7`)
-- [ ] `e2e-tests` job is present but commented out (deferred to staging infra; the block now references Node 22 + `postgres:15`, `ci.yml:215-239`) — confirm whether it should be wired now
+- [ ] **e2e job secret hygiene**: the job sets literal `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` values inline (`ci.yml:249-250`). Confirm they are obviously-fake CI-only strings, are never reused in any real environment, and are not shaped like the placeholders `config/index.ts` blocks. Same question for the `PHI_ENCRYPTION_KEY` the job supplies
+- [ ] **e2e job rate-limit knobs**: the job deliberately raises limiter thresholds for the e2e-launched backend (`ci.yml:220`). Verify that relaxation is scoped to the CI process via env only — it must not be reachable by any deployed configuration
+- [ ] `VITE_API_URL` is provided so the meta CSP admits the e2e backend origin (`94b9ccd`) — confirm this does not widen the CSP shipped in a real build
+- [ ] Stale commented-out `e2e-tests` block (`ci.yml:313+`) removed now that the real `e2e` job exists — dead CI config invites resurrection of the wrong one
+
+### 10b. Secret-History Scan (`secret-history-scan.yml`)
+- [ ] Scans **full history**: `fetch-depth: 0` on checkout **and** no `--no-git` on the gitleaks
+      invocation — the `ci.yml` job has both, which is exactly why it cannot see `202f2dd`
+- [ ] Runs nightly (`cron: '17 7 * * *'`) + `workflow_dispatch`, deliberately **not** on push, so a
+      correctly-failing history scan never blocks PR merges. Confirm that separation still holds
+- [ ] Uses `.gitleaks.toml`; verify the "broader key ignore patterns" added in `8ec3989` are narrow
+      enough to still catch a *new* service-account key, not just the known one
+- [ ] **Supply chain**: the job `curl`s a gitleaks release tarball and pipes it to `tar` with a
+      pinned version but **no checksum or signature verification**, then executes it. The
+      `actions/checkout` step is SHA-pinned; this download is not. Is that gap accepted?
+- [ ] Failure is visible to someone: a red *scheduled* run notifies nobody by default — check
+      whether anything (branch protection, notification, dashboard) surfaces it, or whether the
+      regression guard is silently red forever
+- [ ] Cross-check OF-01 before filing anything here as new
 
 ## Questions to Ask
 1. Are all third-party actions still SHA-pinned (F-30 — already complete, no open `TODO(supply-chain)`), and does Renovate/Dependabot keep them current with reviewable diffs?
