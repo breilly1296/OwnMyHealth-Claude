@@ -1,7 +1,8 @@
 ---
 title: Testing Patterns
 audience: Engineers adding a controller / route / service / middleware / component / e2e test
-status: generated from live code at HEAD fb2cd32 (2026-06-16)
+status: refreshed 2026-08-01 against master @ 12b45ae (previous: fb2cd32, 2026-06-16)
+posture: sandbox - no GCP, no deployment target (declared 2026-07-14); see OPEN_FINDINGS.md. The test suites are unaffected - they run identically in the sandbox, and the `rls` and `e2e` jobs are the only place production's NOBYPASSRLS role is exercised.
 ---
 
 # TESTING_PATTERNS.md
@@ -27,27 +28,53 @@ Before writing a single line, read:
 
 ## 1. Test pyramid
 
-As of 2026-06-16 (`Glob` counts, verbatim):
+As of **2026-08-01** (`Glob` counts, verbatim — they moved 54→66 / 25→33 / 5→6 in six weeks, so
+re-derive rather than trusting this table):
 
 | Layer | Count | Glob | Runner / env | What it catches |
 |---|---|---|---|---|
-| Backend unit + integration (colocated `*.test.ts`) | **54** | `backend/src/**/*.test.ts` | Vitest, `node` (`backend/vitest.config.ts:6`) | Controller/service/middleware/route logic, encryption, RLS-wrap usage, security regressions |
-| Frontend unit (`src/__tests__/`) | **25** | `src/__tests__/**/*.test.{ts,tsx}` | Vitest, `jsdom` (`vitest.config.ts:9`) | Component render/interaction, hooks, contexts, util math, PDF/export logic |
-| Live-DB RLS regression | 1 of the 54, **gated** | `backend/src/services/rls.test.ts` | Vitest + real Postgres (NOBYPASSRLS) | Tenant isolation, provider-consent policy, FORCE-RLS, audit retention |
-| E2E (Playwright) | **5 specs** | `e2e/*.spec.ts` | Playwright/Chromium (`playwright.config.ts:19`) | Full auth + biomarker-entry + export + health-guide + settings flows |
+| Backend unit + integration (colocated `*.test.ts`) | **66** | `backend/src/**/*.test.ts` | Vitest, `node` (`backend/vitest.config.ts:6`) | Controller/service/middleware/route logic, encryption, RLS-wrap usage, security regressions |
+| Frontend unit (`src/__tests__/`) | **33** | `src/__tests__/**/*.test.{ts,tsx}` | Vitest, `jsdom` (`vitest.config.ts:9`) | Component render/interaction, hooks, contexts, util math, PDF/export logic |
+| Live-DB RLS regression | 1 of the 66, **gated** | `backend/src/services/rls.test.ts` | Vitest + real Postgres (NOBYPASSRLS) | Tenant isolation, provider-consent policy, FORCE-RLS, audit retention |
+| E2E (Playwright) | **6 specs** | `e2e/*.spec.ts` | Playwright/Chromium (`playwright.config.ts:19`) | auth, biomarker-entry, data-export, **export-delete-journey**, health-guide, settings — **now runs in CI** (`ci.yml:221`) |
 
 ```
         ┌───────────────────────────────────────────────┐
-   E2E  │  5 Playwright specs  (e2e/*.spec.ts)           │  slow, real stack
-        │  auth / biomarker-entry / data-export /        │  NOT yet in CI (ci.yml:215)
-        │  health-guide / settings                       │
+   E2E  │  6 Playwright specs  (e2e/*.spec.ts)           │  slow, real stack
+        │  auth / biomarker-entry / data-export /        │  IN CI since 2026-07-11
+        │  export-delete-journey / health-guide /        │  (ci.yml:221, job `e2e`)
+        │  settings                                      │
         ├───────────────────────────────────────────────┤
-  FE U  │  25 frontend Vitest (jsdom)                    │  components/hooks/utils
-        │  src/__tests__/**                              │
+  FE U  │  33 frontend Vitest (jsdom)                    │  components/hooks/utils
+        │  src/__tests__/**  (incl. dialogA11y.test.tsx) │
         ├───────────────────────────────────────────────┤
-  BE U  │  54 backend Vitest (node) — colocated *.test.ts│  fast, mocked deps
+  BE U  │  66 backend Vitest (node) — colocated *.test.ts│  fast, mocked deps
         │  + 1 live-DB rls.test.ts (skip-if-no-DB)       │  the bulk of the pyramid
         └───────────────────────────────────────────────┘
+
+### What CI actually runs (five jobs, not four)
+
+| Job | Runs | Notes |
+|---|---|---|
+| `frontend` | lint → Vitest → Vite build | |
+| `backend` | lint → `prisma generate` → `npm run test:ci` → build | Excludes `rls.test.ts` **and** the live-PG account-deletion cascade suite (`6cbd829`) |
+| `security` | gitleaks (working tree) → `npm audit --audit-level=high` ×2 → `check-rls-wrappers.sh` | |
+| `rls` | `postgres:16` + NOBYPASSRLS `omh_app` role → `npm run test:rls` | The only job that can catch policy bugs |
+| **`e2e`** *(new 2026-07-11)* | real backend + Postgres → seed standing user → full Playwright suite | `ci.yml:221`; uploads `playwright-report/` |
+
+Separately, `secret-history-scan.yml` runs a **full-history** gitleaks scan nightly. It is red by
+design until OF-01 is resolved and never blocks a merge.
+
+### Why the e2e job earns its cost
+
+Its **first real run** surfaced OF-22: the `sessions` table had no RLS UPDATE policy, and PostgreSQL
+applies UPDATE-policy checks to `SELECT ... FOR UPDATE` row locks — so refresh rotation matched zero
+rows, every refresh 401'd, and the missing row was misread as token reuse, revoking all of the user's
+sessions. Dev and staging connect as a **BYPASSRLS** role, so no amount of local testing could see it.
+
+This is the canonical lesson for this codebase: **tests must run under the same DB role production
+uses.** Mocked unit tests cannot catch a policy bug by construction. When adding a test for anything
+that touches RLS, put it in `rls.test.ts` (which runs under `omh_app`), not in a mocked suite.
 ```
 
 The live-DB integration test (`rls.test.ts`) **skips** when `DATABASE_URL`/
@@ -96,7 +123,7 @@ in the dedicated `rls` CI job against a real Postgres instead (`backend/vitest.c
 | `test:watch` | `vitest` | Watch mode (`package.json:13`) |
 | `test:coverage` | `vitest run --coverage` | Coverage (`package.json:14`) |
 | `test:ui` | `vitest --ui` | Vitest UI (`package.json:15`) |
-| `test:e2e:setup` | `cd backend && npx tsx ../e2e/setup/seed-test-user.ts` | Seed the e2e user (`package.json:16`) |
+| `test:e2e:setup` | `cd backend && npx tsx ../backend/scripts/e2e-db.ts` | Seed the e2e user (`package.json:16`) |
 | `test:e2e` | `npm run test:e2e:setup && playwright test` | **Seeds first, then runs Playwright** (`package.json:17`) |
 | `test:e2e:ui` | `playwright test --ui` | Playwright UI (`package.json:18`) |
 | `test:e2e:install` | `playwright install chromium` | Install the browser (`package.json:19`) |
@@ -609,13 +636,13 @@ test.describe('Biomarker manual entry', () => {
 
 ### Seed-test-user helper
 
-The seed script is at **`e2e/setup/seed-test-user.ts`**. It is idempotent (creates or refreshes
+The seed script is at **`backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`)**. It is idempotent (creates or refreshes
 the user) and is run automatically by `npm run test:e2e` via the `test:e2e:setup` script
 (`package.json:16-17`). It seeds `emailVerified: true`, `plan: 'PRO'`, and
 `onboardingCompletedAt: now` so plan-gating / email-gate / onboarding don't block flow tests:
 
 ```ts
-// Source: e2e/setup/seed-test-user.ts:42-61
+// Source: backend/scripts/e2e-db.ts:42-61
 const existing = await prisma.user.findUnique({ where: { email: EMAIL } });
 if (existing) {
   await prisma.user.update({
@@ -728,7 +755,7 @@ it('rejects the cloud metadata endpoint', () => {
 | Mock audit service | `createMockAuditService()` | `controllers/testHelpers.ts:87-97` |
 | Mock encryption service | `createMockEncryptionService()` | `controllers/testHelpers.ts:106-114` |
 | Inline row builders | per-test `makeBiomarkerRow` / `cannedBiomarkerRow` / `relRow` | `biomarkerController.test.ts`, `biomarkerRoutes.guidance.test.ts:156-170`, `providerAccess.test.ts:22-40` |
-| Seed e2e user | `e2e/setup/seed-test-user.ts` (idempotent, run by `test:e2e`) | `seed-test-user.ts:32-80` |
+| Seed e2e user | `backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`) (idempotent, run by `test:e2e`) | `seed-test-user.ts:32-80` |
 
 There are **no** `fixtures/`, `factories/`, or `__mocks__/` source directories — `e2e/fixtures/`
 holds only a README. The shared factory module is `testHelpers.ts` (named non-`*.test.ts` so
@@ -816,7 +843,7 @@ See [PHI_TAXONOMY.md / DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see pro
 | Service test | Stubs encryption to return plaintext | Real encryption path with a test `PHI_ENCRYPTION_KEY` (`encryption.test.ts:20`) |
 | Middleware test | Stubs `planGating` itself (asserts nothing) | Runs the real middleware against a mocked `withRLSContext` (`planGating.test.ts:25-34`) |
 | RLS test | Adds a `where: { userId }` filter that hides whether RLS works | Omits the filter; gates on `describe.skipIf(!hasLiveDb)` against a live DB (`rls.test.ts:29, 228-242`) |
-| E2E | Hardcodes test creds inline | Imports `TEST_USER`/`loginAsTestUser` from `e2e/helpers/auth.ts`; seeds via `e2e/setup/seed-test-user.ts` (run by `test:e2e`) (`auth.ts:18-45`) |
+| E2E | Hardcodes test creds inline | Imports `TEST_USER`/`loginAsTestUser` from `e2e/helpers/auth.ts`; seeds via `backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`) (run by `test:e2e`) (`auth.ts:18-45`) |
 
 ---
 
@@ -833,15 +860,19 @@ See [PHI_TAXONOMY.md / DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see pro
 
 ## Prompt drift log
 
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
+
 - `../prompts/38-testing-patterns-doc.md` and `_doc-quality.md` instruct cross-linking to
   `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ERROR_RECOVERY.md`, and `LOCAL_DEV.md`. At the time of this
-  generation run (HEAD `fb2cd32`), only `ARCHITECTURE.md` and `KNOWN_ISSUES.md` exist in
-  `New Project Documents/` (`Glob "New Project Documents/*.md"`). Per `_doc-quality.md:270`, the
+  generation run (HEAD `fb2cd32`), only `ARCHITECTURE.md` and `KNOWN_ISSUES.md` existed in
+  `New Project Documents/` (`Glob "New Project Documents/*.md"`). **As of 2026-08-01 all 20 docs
+  exist**, so those cross-links are now live and the `(doc pending …)` form is no longer needed. Per `_doc-quality.md:270`, the
   not-yet-present siblings are written with the `(doc pending — see prompt …)` form rather than as
   live links, to avoid linking to docs that do not yet exist in this run's output set.
-- The prompt's §1 says "54 backend `*.test.ts`, 25 frontend tests, 5 Playwright e2e specs" — all
-  three confirmed exactly by `Glob` (`backend/src/**/*.test.ts` = 54; `src/__tests__/**/*.test.{ts,tsx}`
-  = 25; `e2e/*.spec.ts` = 5). No drift.
+- ~~The prompt's §1 says "54 backend `*.test.ts`, 25 frontend tests, 5 Playwright e2e specs" — all
+  three confirmed exactly by `Glob`. No drift.~~ **Superseded 2026-08-01:** those counts were exact
+  at `fb2cd32` and are now **66 / 33 / 6**. Prompt 38 was corrected in the same pass. See §1.
 - The root `CLAUDE.md` "Testing" / structure section is stale in places the canonical fact digest
   corrects (e.g. it predates `vitest.config.ci.ts`, the `test:ci` script, and the removal of
   `rbac.test.ts`). This doc follows the live code and the fact digest, not `CLAUDE.md`.

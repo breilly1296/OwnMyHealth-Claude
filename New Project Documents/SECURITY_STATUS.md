@@ -4,14 +4,17 @@
 
 | Field | Value |
 |---|---|
-| **Last updated** | 2026-06-16 (ISO) |
-| **Code state** | HEAD `fb2cd32` (2026-06-15) |
+| **Last updated** | 2026-08-01 (ISO) — controls re-verified; severities owned by the ledger |
+| **Code state** | `master` @ `12b45ae` (controls tables re-verified 2026-08-01; previously `fb2cd32`) |
 | **Last audit** | 2026-06-13 full 16-dimension multi-agent teardown (per [`prompts/24-full-security-audit.md`](../prompts/24-full-security-audit.md) orchestration) + 2026-06-15 security long-tail remediation cycle |
 | **Audit tool** | Multi-agent static review (105 agents, per-finding adversarial verification) + hands-on live-PG pentest (throwaway Docker Postgres 16) |
 | **Security grade** | ~~B+ → A-~~ **Superseded** — the 2026-06-21 assessment graded **D** on discovery of OF-01 (prod key in git history, unremediated). The A- reflects the *engineering core* (encryption/RLS/auth), which remains strong; the open-findings picture is owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) (1 C / 3 H / 8 M / 8 L at 2026-07-11) |
-| **Production deploy** | Live; deploy gated on full CI (`needs: ci`, [`deploy.yml`](#infrastructure--deploy)); migrations run as a Cloud Run job, not at boot |
+| **Production deploy** | **None — suspended.** GCP billing disabled ~2026-07-12; no deployment target (see Posture below). The CI-gated pipeline (`needs: ci`, [`deploy.yml`](#infrastructure--deploy-controls)) and migrate-as-a-job model remain the *launch* design |
+| **Posture** | **Sandbox — no GCP**, declared 2026-07-14. No real users; founder/test data only. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md) |
 
-> **⚠️ RECONCILIATION NOTICE (2026-07-11)** — open-finding severities and counts in this document are **superseded by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md)**, the single authoritative ledger. The "0 open Critical / 0 open High" claims below reflect this doc's fb2cd32-era rubric and **predate the 2026-06-21 assessment**, which found a Critical (OF-01: production GCP service-account key recoverable from git history). Posture at 2026-07-11: **1 Critical, 3 High, 8 Medium, 8 Low open** (OF-02, the OCR dollar cap, closed same day by `1047506`) — see the ledger for the list, the unified rubric, and the legacy-ID crosswalk (this doc's L-39/L-M11/L34-L36 map to OF-05/OF-07/OF-06). The controls tables in §5 remain accurate as verified at fb2cd32.
+> **⚠️ SEVERITY IS NOT OWNED BY THIS DOCUMENT (updated 2026-08-01).** [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) is the single authoritative findings ledger and the single severity rubric. This document describes **controls** — what exists, where, and how it is verified. Any open-count or severity claim below is stale by construction; go to the ledger. Current ledger state (2026-07-14 sandbox re-triage): **Live: 0 Critical · 1 High · 0 Medium · 10 Low** (11 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7**. The earlier "0 open Critical / 0 open High" language in this doc reflects an fb2cd32-era rubric and predates the 2026-06-21 assessment that found **OF-01** (production GCP service-account key recoverable from git history — still open, now graded High under the sandbox posture because billing is disabled; it re-arms the instant billing returns). Legacy-ID crosswalk (this doc's L-39 / L-M11 / L34-L36 → OF-05 / OF-07 / OF-06) lives in the ledger. The controls tables in §5 were re-verified at `12b45ae` on 2026-08-01 and remain accurate.
+>
+> **Why this rule exists:** this document claiming "0 open High" while `KNOWN_ISSUES.md` listed H-1/H-2/H-3 *was* scrutiny finding **P0-6**. The fix was to make one document authoritative, not to re-synchronize two.
 
 ---
 
@@ -82,7 +85,7 @@ This doc synthesizes findings under the standard severity rubric ([`prompts/_rev
 - **Remediation plan**: implement atomic usage reservation in the same RLS transaction as the usage write, or a DB constraint/trigger — see `usageTracker.ts:186-198`.
 - **Owner**: backend (product call deferred)
 - **ETA**: deferred — re-evaluate if abuse observed or if a hard plan-limit SLA is introduced.
-- **Cross-link**: [`SECURITY_AUDIT_domain.md`](./SECURITY_AUDIT_domain.md), [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
+- **Cross-link**: [`security-reviews/`](./security-reviews/), [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
 
 ### L-M11 — Per-process rate-limit + AI-spend store (Low → infra-only)
 
@@ -112,7 +115,7 @@ This doc synthesizes findings under the standard severity rubric ([`prompts/_rev
 - **Remediation plan**: add a page/byte budget to `labSyncService.syncLabResults`.
 - **Owner**: backend (deferred)
 - **ETA**: deferred — low risk (provider-rate-limited upstream, plan-gated).
-- **Cross-link**: [`SECURITY_AUDIT_periphery.md`](./SECURITY_AUDIT_periphery.md).
+- **Cross-link**: [`security-reviews/`](./security-reviews/).
 
 ### L-39 / L-40 — FHIR PKCE store multi-instance gap & DNS-rebind residual (Low → accepted)
 
@@ -122,11 +125,11 @@ This doc synthesizes findings under the standard severity rubric ([`prompts/_rev
 - **Remediation plan**: L-39 → shared Redis store for PKCE verifiers (ships with L-M11 Redis work). L-40 → accepted.
 - **Owner**: backend / infra
 - **ETA**: deferred (folds into Redis provisioning).
-- **Cross-link**: [`SECURITY_AUDIT_periphery.md`](./SECURITY_AUDIT_periphery.md).
+- **Cross-link**: [`security-reviews/`](./security-reviews/).
 
 ### Open ops follow-up (not a finding — operational)
 
-- **L24 re-encrypt backfill not yet run in prod.** New uploads encrypt `user_files.original_filename` at rest (`backend/src/services/encryption.ts:499`); reads fall back to the plaintext twin. Legacy prod rows are still plaintext until the `backfill-userfile-filenames` maintenance Cloud Run job is run (DRY RUN → `--apply`), followed by a migration to drop the plaintext column. Run via [`.github/workflows/maintenance.yml`](#infrastructure--deploy) → `ownmyhealth-maintenance` job. See [`RUNBOOK.md`](./RUNBOOK.md).
+- **L24 re-encrypt backfill not yet run in prod.** New uploads encrypt `user_files.original_filename` at rest (`backend/src/services/encryption.ts:499`); reads fall back to the plaintext twin. Legacy prod rows are still plaintext until the `backfill-userfile-filenames` maintenance Cloud Run job is run (DRY RUN → `--apply`), followed by a migration to drop the plaintext column. Run via [`.github/workflows/maintenance.yml`](#infrastructure--deploy-controls) → `ownmyhealth-maintenance` job. See [`RUNBOOK.md`](./RUNBOOK.md).
 
 ---
 
@@ -137,7 +140,7 @@ The 2026-06-15 release (`release/security-ux-2026-06-15`, FF-merged to master `e
 | Finding | Severity | Closing commit / PR | Date | Verification |
 |---|---|---|---|---|
 | **C-7** — PHI-to-Claude minimization / BAA enforcement | Critical | runtime BAA gate (`ANTHROPIC_BAA_ACTIVE`) + per-call re-check; M10 prompt-injection hardening | 2026-04-17 (BAA flip) / -06-15 (hardening) | Prod refuses to boot if `ANTHROPIC_API_KEY` set without `ANTHROPIC_BAA_ACTIVE=true` (`config/index.ts:381-394`); gate re-checked per-call in `biomarkerRoutes`/`aiChatController`/`claudeExtraction`/`sbcExtraction`/`expenseController`; document delimiting + `MAX_EXTRACTION_DOCUMENT_CHARS = 200_000` (`validation.ts`). **Residual**: Claude receives decrypted PHI by design (educational guidance); covered by the active BAA, not field-level minimization — see [§5 AI integration](#ai-integration-controls) |
-| **C-8** — RLS not enforced under BYPASSRLS login | Critical | fix/teardown-blockers-2026-06-12 (`a9fb707`); FORCE-RLS in migration `20260613_force_rls_and_audit_retention` | 2026-06-12 / -13 | `assertNoBypassRLS()` prod hard-exit (`database.ts:247-253`) **+ NEW** `assertRLSForced()` prod hard-exit (`database.ts:299-306`); live-PG RLS regression job in CI ([§Infrastructure](#infrastructure--deploy)) |
+| **C-8** — RLS not enforced under BYPASSRLS login | Critical | fix/teardown-blockers-2026-06-12 (`a9fb707`); FORCE-RLS in migration `20260613_force_rls_and_audit_retention` | 2026-06-12 / -13 | `assertNoBypassRLS()` prod hard-exit (`database.ts:247-253`) **+ NEW** `assertRLSForced()` prod hard-exit (`database.ts:299-306`); live-PG RLS regression job in CI ([§Infrastructure](#infrastructure--deploy-controls)) |
 | **H** — biomarker no time-series (trends structurally dead) | High | `biomarkerSeries.ts` (`upsertBiomarkerReading`) | 2026-06-14 | All create/bulk/FHIR paths append to one series (anchor=newest, history=older), outcomes `created/promoted/archived/corrected` (`backend/src/services/biomarkerSeries.ts:81-190`); `biomarkerSeries.test.ts` |
 | **H** — deploy not gated on tests | High | `deploy.yml` `needs: ci` | 2026-06-14 | `deploy.yml:57-66` invokes `ci.yml` via `workflow_call`; lint+test+build+gitleaks+npm-audit+RLS regression must pass before build/stage |
 | **M1** — single-device cross-instance logout | Medium | migration `20260613_revoked_access_tokens` | 2026-06-13 | `revoked_access_tokens` table + `revokeAccessTokenCrossInstance` (`authService.ts:358-394`); jti checked every request via `isAccessTokenStale` (`auth.ts:106-108`) |
@@ -157,7 +160,7 @@ The 2026-06-15 release (`release/security-ux-2026-06-15`, FF-merged to master `e
 | **L-26** — dead `rbac.ts` parallel-authz cluster | Info | removed | 2026-06-13 | `rbac.ts` trimmed + tests removed; `pdfRedaction.ts` deleted (`pdf-lib` now unused) |
 | **F-28** (prior) — boot guard requires GCS_BUCKET_NAME | (prod outage) | env var set + deploy rerun | 2026-06-12 | Prod must set `GCS_BUCKET_NAME` (`config/index.ts:480`); dev/staging fall back |
 
-**Most-recent closed Critical verification (C-8)**: two independent boot hard-exits now make a BYPASSRLS or non-FORCE-RLS deployment unbootable in production — `assertNoBypassRLS()` (`backend/src/services/database.ts:247-253`) and `assertRLSForced()` (`backend/src/services/database.ts:299-306`), both `process.exit(1)` in prod — plus a CI RLS regression job that runs the tenant-isolation suite against a real Postgres 16 as a NOBYPASSRLS role on every commit ([§Infrastructure](#infrastructure--deploy)).
+**Most-recent closed Critical verification (C-8)**: two independent boot hard-exits now make a BYPASSRLS or non-FORCE-RLS deployment unbootable in production — `assertNoBypassRLS()` (`backend/src/services/database.ts:247-253`) and `assertRLSForced()` (`backend/src/services/database.ts:299-306`), both `process.exit(1)` in prod — plus a CI RLS regression job that runs the tenant-isolation suite against a real Postgres 16 as a NOBYPASSRLS role on every commit ([§Infrastructure](#infrastructure--deploy-controls)).
 
 ---
 
@@ -506,10 +509,7 @@ Re-run [`prompts/24-full-security-audit.md`](../prompts/24-full-security-audit.m
 
 ## Related Documents
 
-- [SECURITY_AUDIT_core.md](./SECURITY_AUDIT_core.md) — per-area findings: auth, CSRF, RBAC, encryption, RLS (the primary findings set this doc synthesizes).
-- [SECURITY_AUDIT_domain.md](./SECURITY_AUDIT_domain.md) — per-area findings: PHI handling, plan gating, AI cost, audit logging.
-- [SECURITY_AUDIT_infrastructure.md](./SECURITY_AUDIT_infrastructure.md) — per-area findings: deploy/CI, migrate job, Redis, edge headers.
-- [SECURITY_AUDIT_periphery.md](./SECURITY_AUDIT_periphery.md) — per-area findings: FHIR/SSRF, file storage, external APIs.
+- [security-reviews/](./security-reviews/) — the 28 per-prompt review reports this doc synthesizes (auth, CSRF, RBAC, encryption, RLS, PHI, plan gating, AI cost, audit logging, deploy/CI, FHIR/SSRF, file storage, accessibility, insurance, calculation correctness). Replaces the four `SECURITY_AUDIT_*.md` files referenced by earlier revisions, which were never carried into this folder.
 - [HIPAA_CHECKLIST.md](./HIPAA_CHECKLIST.md) — safeguard-by-safeguard technical-safeguard mapping.
 - [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) — the documented-accepted residuals (L34/L36 races, L-13, L-40) in product context.
 - [CHANGELOG.md](./CHANGELOG.md) — closing-PR / commit history for this cycle.
@@ -523,6 +523,9 @@ Re-run [`prompts/24-full-security-audit.md`](../prompts/24-full-security-audit.m
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - `prompts/21-security-status-doc.md` (Required sections §5 Encryption) says "PHI_FIELDS (14 models / **39** fields)" in one place and the C-8 example references older line numbers. The **39 fields** figure is correct (counted from `encryption.ts:476-562`: 6+2+1+1+2+1+1+4+2+3+3+8+3+2 = 39). The ground-truth fact digest's PHI table summed to "37" — that was a digest miscount (it omitted 2 of the ExpenseActual/CostAnalysis entries when tallying); the schema has 39 matching `*Encrypted` columns. Used **39**.
 - `prompts/21-security-status-doc.md` "Files to review" lists `utils/phiRedaction.ts` and notes `utils/pdfRedaction.ts` was deleted — confirmed: `Glob`/dir listing of `backend/src/utils/` shows `phiRedaction.ts` present and no `pdfRedaction.ts`; `pdf-lib` is unused. No drift, noted for the reader.

@@ -6,10 +6,24 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Generate LOCAL_DEV.md
+
+> **Materially changed 2026-07-14 (OF-23).** Local development no longer needs **any** GCP
+> credentials for the file flows. With `STORAGE_BACKEND=local` (the development default) plus a
+> valid `PHI_ENCRYPTION_KEY`, a developer can run upload → download → delete end to end against
+> AES-256-GCM-sealed blobs under `backend/.local-storage` (`services/storage/localBackend.ts`).
+>
+> This is now the **primary** environment, not a convenience path — the project declared a
+> sandbox/no-GCP posture on 2026-07-14 and has no deployment target. Weight this doc accordingly:
+> it describes the only place the app currently runs.
+>
+> Must cover: the two new env vars; that the storage root is git-ignored and holds encrypted PHI;
+> what to do when `PHI_ENCRYPTION_KEY` is missing (storage calls fail with a pointed message while
+> the app still boots — `localBackend.ts:44-55`); how to reset local storage safely; and that
+> `STORAGE_BACKEND=local` is rejected at boot in production/staging.
 
 ## Required reading before generating
 

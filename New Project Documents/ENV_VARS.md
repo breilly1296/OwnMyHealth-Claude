@@ -1,6 +1,10 @@
 # ENV_VARS.md — Environment Variable Reference
 
-> Single source of truth for every environment variable consumed by OwnMyHealth (backend runtime, frontend build, CI/CD, Cloud Run). Generated from the live code at HEAD `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`.
+> Single source of truth for every environment variable consumed by OwnMyHealth (backend runtime, frontend build, CI/CD, Cloud Run). Every non-trivial claim cites `file:line`.
+>
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15) · **Posture:** sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md)
+>
+> **Read this first.** GCP billing was disabled ~2026-07-12 and the project has no deployment target. Every var below marked *Cloud Run env* or *GCP Secret Manager* describes the **launch** configuration, not a running system. The only live secret surface today is a local `.env` file. The `STORAGE_BACKEND`/`LOCAL_STORAGE_DIR` pair (new, OF-23) is what makes that work — see [File storage](#file-storage-backend-of-23).
 
 ## Purpose / how to read this doc
 
@@ -87,6 +91,8 @@ Columns: **Name | Required? | Default | Format | Consumer(s) (file:line) | Secre
 | `EMAIL_FROM_NAME` | optional | `OwnMyHealth` | string | `config/index.ts:212` | no | Cloud Run env | |
 | `FRONTEND_URL` | optional | `http://localhost:5173` | url | `config/index.ts:213` | no | Cloud Run env | Builds links inside emails. Default unsafe for prod. |
 | `SENDGRID_SANDBOX_MODE` | optional (prod-blocked) | `false` (forced `true` in staging) | bool (`'true'`) | `config/index.ts:218`; prod-block `:502` | no | Cloud Run env | Boot hard-fails if `true` in production (`:502-508`). |
+| `STORAGE_BACKEND` | optional | `local` in development, `gcs` elsewhere | `'gcs'` \| `'local'` | `config/index.ts:252-253`; dispatch `storageService.ts:33-44` | no | Cloud Run env | **New (OF-23).** Any other value hard-fails boot in EVERY env (`:343-348`). `'local'` hard-fails in prod/staging (`:349-355`). |
+| `LOCAL_STORAGE_DIR` | optional | `backend/.local-storage` | path | `config/index.ts:254-255`; `localBackend.ts:222` | no | local only | **New (OF-23).** Root for AES-256-GCM-sealed blobs. Gitignored (`backend/.gitignore:49`). Blobs are unreadable without `PHI_ENCRYPTION_KEY`. |
 | `GCS_BUCKET_NAME` | prod (required) — `config/index.ts:480-486` | `ownmyhealth-user-files` (dev/staging only) | string | `config/index.ts:228`; `storageService.ts:17` | no | Cloud Run env | F-28: prod must set explicitly or boot hard-fails. |
 | `GCP_PROJECT_ID` | optional (OCR/storage) | `''` | string | `config/index.ts:229`; `ocrService.ts:84,116,502`; `storageService.ts:17` | no | Cloud Run env | NOT `GOOGLE_CLOUD_PROJECT`. Warns at boot in prod if unset (`:518`). |
 | `GOOGLE_APPLICATION_CREDENTIALS` | optional | `''` | path OR inline JSON | `config/index.ts:231`; `ocrService.ts:91,507` | yes (if inline JSON) | Cloud Run env (prefer Workload Identity) | `ocrService` parses inline JSON if value starts with `{` (`ocrService.ts:93`). |
@@ -212,9 +218,46 @@ authHosts: (process.env.QUEST_FHIR_AUTH_HOSTS || '')
 - `SENDGRID_API_KEY` (`config/index.ts:210`; `config.email.enabled` derived at `:209`), `EMAIL_FROM` (default `noreply@ownmyhealth.com`, `:211`), `EMAIL_FROM_NAME` (`:212`), `SENDGRID_SANDBOX_MODE` (`:218`).
 - Staging forces `SENDGRID_SANDBOX_MODE=true` (`:218`); production boot hard-fails if it is `true` (`:502-508`).
 
-### File storage (GCS)
+### File storage backend (OF-23)
 
-- `GCS_BUCKET_NAME` (prod required, `:480-486`), `GCP_PROJECT_ID` (`:229`), `GOOGLE_APPLICATION_CREDENTIALS` (`:231` / `ocrService.ts:91`).
+Storage is **pluggable** as of 2026-07-14. `storageService.ts` is a façade that resolves one of two
+backends on first use (lazily, not at module load — so a partially-mocked test config falls through
+to GCS, the pre-OF-23 behavior those mocks were written against; `storageService.ts:28-44`).
+
+| Var | Values | Effect |
+|---|---|---|
+| `STORAGE_BACKEND` | `gcs` \| `local` | Selects the backend. Default is `local` in development, `gcs` everywhere else (`config/index.ts:252-253`). |
+| `LOCAL_STORAGE_DIR` | path | Root for the local backend, default `backend/.local-storage` (`config/index.ts:254-255`). |
+
+```ts
+// Source: backend/src/config/index.ts:251-256
+storage: {
+  backend: (process.env.STORAGE_BACKEND ||
+    (isDevelopmentEnv ? 'local' : 'gcs')) as 'gcs' | 'local',
+  localDir:
+    process.env.LOCAL_STORAGE_DIR || path.join(__dirname, '../../.local-storage'),
+},
+```
+
+**`local` — the backend actually running today.** Every blob is sealed with AES-256-GCM *before* it
+touches disk, in a versioned envelope `[ 'OMHL' | 0x01 | iv(16) | authTag(16) | ciphertext ]`
+(`localBackend.ts:38-42,86-103`), written tmp-then-rename at mode `0600`, with a `path.resolve`
+containment check so a corrupted DB key cannot escape the root (`localBackend.ts:65-74`).
+
+> **This changes `PHI_ENCRYPTION_KEY`'s blast radius.** Under `STORAGE_BACKEND=local` that key is the
+> at-rest key for uploaded **files** as well as PHI columns — and it is used **directly**, not through
+> the per-user PBKDF2 derivation used for columns. The documented reason: `getFileStream(storageKey)`
+> has no user context, and a 600k-iteration derivation per file op would be pure overhead for an
+> at-rest guarantee (`localBackend.ts:15-19`). One key compromise therefore exposes every user's
+> files at rest. Classify `PHI_ENCRYPTION_KEY` accordingly in any threat model.
+
+The key is resolved **per operation** and validated, so a sandbox without it still boots and only
+storage calls fail with a pointed message (`localBackend.ts:44-55`).
+
+**`gcs` — dormant.** `GCS_BUCKET_NAME` (prod required, `:480-486`), `GCP_PROJECT_ID` (`:229`),
+`GOOGLE_APPLICATION_CREDENTIALS` (`:231` / `ocrService.ts:91`). Suspended under the current posture.
+Note **OF-01**: a real `ocr-service@` private key remains recoverable from git history and its
+deletion is a hard precondition for ever re-enabling GCP billing.
 
 ### Scheduled maintenance / ops
 
@@ -274,6 +317,8 @@ import config/index.ts
         ├─ DATABASE_URL / PHI_ENCRYPTION_KEY missing? → throw (:429-433)
         ├─ PHI_ENCRYPTION_KEY < 64 / non-hex / placeholder? → throw (:439-464)
         ├─ CORS_ORIGIN contains localhost?      → warn to stderr (:470-472)
+        ├─ STORAGE_BACKEND not 'gcs'/'local'?    → throw, EVERY env (:343-348)
+        ├─ prod/staging + STORAGE_BACKEND=local? → throw (:349-355)
         ├─ prod + GCS_BUCKET_NAME unset?         → throw (:480-486)
         ├─ prod + DEMO_ACCOUNT_ENABLED=true?     → throw (:489-495)
         ├─ prod + SENDGRID_SANDBOX_MODE=true?    → throw (:502-508)
@@ -441,6 +486,9 @@ push master ──▶ ci.yml (lint/test/audit/RLS) ──needs──▶ build-an
 ---
 
 ## Drift findings
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 Generated by grepping `process\.env\.[A-Z_]+` (backend), `import\.meta\.env\.[A-Z_]+` (frontend), and reading the example env files.
 

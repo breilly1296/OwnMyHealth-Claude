@@ -6,7 +6,7 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Generate TESTING_PATTERNS.md
@@ -50,7 +50,9 @@ Produce `New Project Documents/TESTING_PATTERNS.md` — the **how-to-write-a-tes
 
 ## Required sections
 
-1. **Test pyramid** — unit vs integration vs e2e, counts, runtimes, what each catches. As of 2026-06-16: 54 backend `*.test.ts` (colocated), 25 frontend tests under `src/__tests__/`, 5 Playwright e2e specs. Note the live-DB integration tests (`rls.test.ts`) skip when `DATABASE_URL`/`PHI_ENCRYPTION_KEY` are absent.
+1. **Test pyramid** — unit vs integration vs e2e, counts, runtimes, what each catches. As of **2026-08-01**: **66** backend `*.test.ts` (colocated), **33** frontend tests under `src/__tests__/`, **6** Playwright e2e specs (`auth`, `biomarker-entry`, `data-export`, `export-delete-journey`, `health-guide`, `settings`). Note the live-DB integration tests (`rls.test.ts`) skip when `DATABASE_URL`/`PHI_ENCRYPTION_KEY` are absent. Re-derive these counts with `Glob` before writing — they moved 54→66 / 25→33 / 5→6 in six weeks.
+1a. **What CI actually runs** — since 2026-07-11 `ci.yml` has **five** jobs, not four: `frontend`, `backend`, `security`, `rls`, and **`e2e`** (`ci.yml:221`), the last running the full Playwright suite against real Postgres with a seeded standing user (`npm run test:e2e:setup`). Document which suite each job runs and which are *excluded* from `test:ci` (`rls.test.ts`, and the live-PG account-deletion cascade suite excluded in `6cbd829`). A reader must be able to tell why a test can pass locally and be skipped in the unit job.
+1b. **What the e2e job caught** — worth one paragraph, because it justifies the job's cost: its first real run surfaced OF-22, a refresh-rotation break invisible in dev/staging because those connect as a BYPASSRLS role (see `20260712_add_sessions_update_policy`). This is the canonical example of *tests must run under the same DB role production uses*.
 2. **Runners + commands** — exact `npm run` commands per scope. Backend: `test` (runs the full colocated suite), `test:watch`, `test:coverage`, `test:ci` (uses `vitest.config.ci.ts`; the real CI command — runs every colocated `*.test.ts` except `rls.test.ts`), `test:unit`, `test:integration`, `test:rls`. NOTE: `test:unit` (`src/__tests__/unit`) and `test:integration` (`src/__tests__/integration`) point at directories that do NOT exist today, so they run zero tests — the way to run the backend unit suite is `test` or `test:ci`, not `test:unit` (see the comment block in `vitest.config.ci.ts`). Root/frontend: `test`, `test:watch`, `test:coverage`, `test:ui`, `test:e2e` (runs `test:e2e:setup` seed first), `test:e2e:ui`, `test:e2e:install`.
 3. **Backend unit test recipe** — service functions.
 4. **Controller test recipe** — full example copy (uses `testHelpers.ts` factories + hoisted `vi.mock`).

@@ -1,6 +1,6 @@
 # Encryption Review — 2026-06-16
 
-> Executed against live code at HEAD `fb2cd32`, per [02-encryption.md](../../../prompts/02-encryption.md) and the [review protocol](../../../prompts/_review-protocol.md). Every tick below carries a `file:line` proof. No code was modified.
+> Executed against live code at HEAD `fb2cd32`, per [02-encryption.md](../../prompts/02-encryption.md) and the [review protocol](../../prompts/_review-protocol.md). Every tick below carries a `file:line` proof. No code was modified.
 
 ## Summary
 | Severity | Count |
@@ -45,7 +45,7 @@ Overall: the PHI encryption surface is implemented correctly and defensively. AE
 
 ### F-3 — Prompt drift: source `CLAUDE.md` PHI list understates encrypted fields — **Low**
 - **Location:** `CLAUDE.md` ("PHI Encryption" section) vs `backend/src/services/encryption.ts:476-562`
-- **Observation:** The repo `CLAUDE.md` PHI list says "Insurance: member ID, group ID, plan name, provider name, benefits" and "Health Goals/Progress: descriptions, notes, target values," and lists "unit" for Biomarker. The live `PHI_FIELDS` encrypts `InsurancePlan` only as `memberIdEncrypted`/`groupIdEncrypted` (no plan-name/benefits encrypted columns exist in schema), encrypts HealthGoal `currentValue`/`startValue` in addition to target (M4), and `Biomarker` has no `unitEncrypted` column. This is documentation drift, not a code defect — the authoritative `PHI_FIELDS` and the canonical [_phi-inventory](../../../prompts/_phi-inventory.md) are correct and CI-guarded.
+- **Observation:** The repo `CLAUDE.md` PHI list says "Insurance: member ID, group ID, plan name, provider name, benefits" and "Health Goals/Progress: descriptions, notes, target values," and lists "unit" for Biomarker. The live `PHI_FIELDS` encrypts `InsurancePlan` only as `memberIdEncrypted`/`groupIdEncrypted` (no plan-name/benefits encrypted columns exist in schema), encrypts HealthGoal `currentValue`/`startValue` in addition to target (M4), and `Biomarker` has no `unitEncrypted` column. This is documentation drift, not a code defect — the authoritative `PHI_FIELDS` and the canonical [_phi-inventory](../../prompts/_phi-inventory.md) are correct and CI-guarded.
 - **Impact:** None at runtime. Risk is a future developer trusting the stale `CLAUDE.md` list (e.g., assuming insurance "benefits" are encrypted). Per protocol §"When the prompt disagrees with the code," logged as a Low prompt-drift item.
 - **Fix:** Update the `CLAUDE.md` "PHI Encryption" bullet list to reference `PHI_FIELDS` / `_phi-inventory.md` as the single source of truth rather than re-listing fields inline.
 - **Evidence:**

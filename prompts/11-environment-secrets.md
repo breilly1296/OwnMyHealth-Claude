@@ -5,10 +5,18 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Environment & Secrets Review
+
+> **Posture note (2026-08-01):** GCP Secret Manager and Cloud Run secret mounts are **suspended**
+> (billing disabled ~2026-07-12; sandbox posture). Secrets in the *deployed* half of this prompt
+> (§1 Secret Manager wiring, §4 Cloud Run) are **Dormant (launch checklist)** — grade them per
+> `_review-protocol.md` §Current posture. What is fully live: `config/index.ts` startup validation,
+> `.env`/`.env.example` hygiene, the `requireEnv` hard-fails, the blocked-placeholder lists, and
+> **OF-01** (a real GCP service-account private key still reachable in git history — a hard gate on
+> ever re-enabling billing; cite the ledger, do not re-report it as new).
 
 ## Files to Review
 - `backend/src/config/index.ts` (config loading + startup validation/hard-fails)
@@ -18,15 +26,23 @@ updated: 2026-06-16
 - `.github/workflows/ci.yml` (the actual secret-hygiene gate — gitleaks secret scan + `npm audit --audit-level=high` + RLS-wrapper guard; `deploy.yml` invokes it via `workflow_call` and `needs: ci`)
 - `.github/workflows/deploy.yml`, `.github/workflows/deploy-staging.yml` (CI/CD secrets; deploy is now gated on `ci.yml`)
 - `.github/workflows/maintenance.yml` (one-time data-migration Cloud Run job — same secret wiring)
+- `.github/workflows/secret-history-scan.yml` (**new 2026-07-11**, OMH-M01 — nightly **full-history** gitleaks scan, distinct from the working-tree scan in `ci.yml`. Expect it to be **failing by design** while OF-01's committed key remains in history: it is that finding's regression guard, not a broken workflow. A green run here means either the history was purged or an allowlist entry was added — check which)
 - `backend/Dockerfile` (build-time variables; note migrations do NOT run at boot — see §4)
 - Note: some env vars are read directly via `process.env` outside `config/index.ts`
   (e.g. `GCP_PROCESSOR_ID`, `GCP_LOCATION` in `ocrService.ts`; `DISABLE_CSRF` in `csrf.ts`/`app.ts`; `DATABASE_POOL_SIZE` (default 10, pg pool `max`) in `database.ts:108` — grep `process.env` across `backend/src/`).
   `RLS_ENFORCEMENT` is documented in `.env.example` but NOT actually read by code — the BYPASSRLS posture is hardcoded in `database.ts → assertNoBypassRLS()` (prod hard-exits, non-prod warns). Flag the documented-but-dead flag.
 
 ## OwnMyHealth Secrets Architecture
-- **Secret Storage**: GCP Secret Manager
-- **Access**: Mounted as environment variables in Cloud Run
-- **Local Dev**: `.env` files (not committed)
+- **Secret Storage**: GCP Secret Manager — *dormant; the project has no deployment target as of 2026-07-14*
+- **Access**: Mounted as environment variables in Cloud Run — *dormant*
+- **Local Dev / current reality**: `.env` files (not committed). Under the sandbox posture this is
+  the **only** live secret surface, which raises the stakes on `.env` hygiene, the `requireEnv`
+  hard-fails, and `PHI_ENCRYPTION_KEY` handling
+- **Storage backend secrets (OF-23, new)**: `STORAGE_BACKEND` (`gcs` | `local`, default `local` in
+  development) and `LOCAL_STORAGE_DIR` (default `backend/.local-storage`). Neither is a secret, but
+  `STORAGE_BACKEND=local` makes `PHI_ENCRYPTION_KEY` the at-rest key for **files** as well as
+  columns — see prompt [28](./28-file-storage.md) §2b. `config/index.ts:349` refuses `local` in
+  production/staging
 
 ## Checklist
 
@@ -58,6 +74,8 @@ Verify these secrets exist and are used:
 - [ ] `EMAIL_FROM_NAME` - Sender display name (default `OwnMyHealth`)
 - [ ] `SENDGRID_SANDBOX_MODE` - validates but never delivers; forced on in staging; hard-fail if `true` in prod
 - [ ] `REDIS_URL` - shared rate-limit store (Cloud Memorystore); unset ⇒ per-instance in-memory store (audit #37)
+- [ ] `STORAGE_BACKEND` - **new (OF-23)** `gcs` | `local`; anything else hard-fails at boot in every env (`config/index.ts:343`); `local` is **refused** in production/staging (`config/index.ts:349`)
+- [ ] `LOCAL_STORAGE_DIR` - **new (OF-23)** root for the local encrypted-disk backend, default `backend/.local-storage`. Verify it is git-ignored (`backend/.gitignore:49`) and not reachable from any static mount
 
 **BAA Gates (HIPAA — PHI disclosure to third parties):**
 - [ ] `ANTHROPIC_BAA_ACTIVE` - asserts signed Anthropic BAA (C-7); prod hard-fails if `ANTHROPIC_API_KEY` set but this unset; dev/staging warn (runtime gate in `claudeExtraction`/`sbcExtraction` is load-bearing)
@@ -159,10 +177,17 @@ GitHub Actions secrets actually referenced in `deploy.yml` / `deploy-staging.yml
       only a NEW unpinned/tag-only action if one is introduced.
 
 ### 6. Local Development
+> Under the sandbox posture this section is no longer "the least important one" — it is the *only*
+> live environment. Weight findings here accordingly.
 - [ ] `.env` files in `.gitignore`
 - [ ] `.env.local` files in `.gitignore`
+- [ ] `backend/.local-storage/` in `.gitignore` (`backend/.gitignore:49`) — it holds encrypted PHI blobs (OF-23)
 - [ ] No real secrets in committed files
+- [ ] **No real secrets in git history either** — the working-tree scan in `ci.yml` cannot see the
+      past; that is what `secret-history-scan.yml` is for. Cross-reference OF-01
 - [ ] Clear instructions for local setup
+- [ ] A developer can run the full upload → download → delete flow with **zero GCP credentials**
+      (`STORAGE_BACKEND=local` + `PHI_ENCRYPTION_KEY`) — verify against `36-local-dev-setup-doc.md`
 
 ### 7. Secret Access Patterns
 - [ ] Secrets loaded once at startup (the `config` object in `config/index.ts`)
@@ -176,6 +201,7 @@ These are the load-bearing boot-time guards — confirm each still fires:
 - [ ] `AUDIT_LOG_SALT` missing or < 16 chars → throw (every env)
 - [ ] prod/staging only: `DATABASE_URL`, `PHI_ENCRYPTION_KEY` required; PHI key must be 64+ hex, not an insecure placeholder
 - [ ] prod: `GCS_BUCKET_NAME` required (F-28); `DEMO_ACCOUNT_ENABLED=true` forbidden; `SENDGRID_SANDBOX_MODE=true` forbidden
+- [ ] every env: `STORAGE_BACKEND` must be `gcs` or `local` → throw otherwise (`config/index.ts:343`); prod/staging: `STORAGE_BACKEND=local` → throw (`config/index.ts:349`, ephemeral Cloud Run disks must never hold PHI files)
 - [ ] BAA gates: prod throws if `ANTHROPIC_API_KEY` set without `ANTHROPIC_BAA_ACTIVE`, or `GCP_PROCESSOR_ID` set without `GOOGLE_BAA_ACTIVE`; dev/staging warn (runtime gates in `claudeExtraction`/`sbcExtraction`/`ocrService` are the real backstop)
 - [ ] prod/staging warn (non-fatal) when `ANTHROPIC_API_KEY` / `SENDGRID_API_KEY` / `GCP_PROJECT_ID` unset
 
@@ -211,6 +237,8 @@ These are the load-bearing boot-time guards — confirm each still fires:
 | GOOGLE_BAA_ACTIVE | Yes if processor+prod | Environment | Assert Google Document AI BAA |
 | AUDIT_CLEANUP_TOKEN | No | Secret Manager | Cloud Scheduler cleanup auth (audit #38) |
 | REDIS_URL | No | Secret Manager | Shared rate-limit store (audit #37) |
+| STORAGE_BACKEND | No (default `local` in dev) | Environment | `gcs` \| `local`; `local` refused in prod/staging (OF-23) |
+| LOCAL_STORAGE_DIR | No (default `backend/.local-storage`) | Environment | Root for the encrypted local-disk backend (OF-23) |
 | QUEST_FHIR_CLIENT_ID | No (disables feature) | Environment | SMART-on-FHIR client id |
 | QUEST_FHIR_CLIENT_SECRET | No | Secret Manager | SMART-on-FHIR client secret |
 | QUEST_FHIR_BASE_URL | No | Environment | FHIR R4 base URL |

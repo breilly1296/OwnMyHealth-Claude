@@ -1,12 +1,78 @@
 # CHANGELOG
 
-> **Last updated:** 2026-06-16 · **HEAD:** `fb2cd32` · **Format:** [Keep a Changelog](https://keepachangelog.com)
+> **Last updated:** 2026-08-01 · **HEAD:** `12b45ae` (previously `fb2cd32`) · **Format:** [Keep a Changelog](https://keepachangelog.com)
 >
 > **Prior-entry cutoff:** None. This is the **first** generated `CHANGELOG.md` for OwnMyHealth (`New Project Documents/` previously held only `security-reviews/`; verified via `Glob "New Project Documents/*"`). The cutoff is therefore the **start of git history** — `1e4a167 "backup before cleanup"` (2025-11-26) and `0c6c022 "Initial production-ready release"` (2025-12-03), confirmed by `git log --reverse --date=short`. Every merged PR from #1 through the 2026-06-15 security/UX wave is in scope; entries below are grouped by deploy date, most-recent first.
 >
 > **Versioning:** There are **no git tags** (`git tag -l` is empty) and both `package.json` files pin `"version": "1.0.0"` (root + `backend/package.json`, verified `git show HEAD:package.json`). Per the prompt, every entry uses the `deploy YYYY-MM-DD` form — no semver is invented.
 
 This document is a reference. Every non-trivial claim cites `file:line` or a PR. It is self-contained for a reader who has only the docs in `New Project Documents/` (the GitHub repo has outgrown the Claude Project attachment limit). It satisfies the five [`_doc-quality.md`](../prompts/_doc-quality.md) tests.
+
+---
+
+---
+
+## deploy 2026-07-14 — sandbox posture, local storage backend, doc reorg
+
+> **PRs:** #228, #229, #230 · **Not deployed** — this is the release where the project stopped deploying.
+
+### Changed
+- **Project posture: sandbox, no GCP.** GCP billing on project `#1046989989964` was disabled ~2026-07-12 (verified: deploys fail at image push), suspending the Cloud Run backend, Cloud SQL prod DB, and GCS buckets. No deployment target, no real users; the declared assumption is founder/test data only. Recorded with hard reactivation triggers in [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md). Findings that only exist when deployed moved to **Dormant (launch checklist)**, each carrying the severity it re-acquires at launch (#228, `86d2b03`).
+
+### Added
+- **Pluggable file-storage backend (OF-23)** — `storageService.ts` became a facade selecting `storage/gcsBackend.ts` or `storage/localBackend.ts` from `config.storage.backend` (`storageService.ts:33-44`). The new local backend seals every blob AES-256-GCM with the **master** `PHI_ENCRYPTION_KEY` in an `OMHL`-magic envelope, writes tmp-then-rename at mode `0600`, and validates key shape plus `path.resolve` containment so a corrupted DB key cannot escape the root (`localBackend.ts:38-42,65-74,97-103`). New env: `STORAGE_BACKEND` (`gcs`/`local`, default `local` in development) and `LOCAL_STORAGE_DIR`. `config/index.ts:349` refuses `local` in production/staging — Cloud Run disks are ephemeral and must not hold PHI files. **Effect: upload/download/delete now work with zero GCP credentials** (#229, `5e067db`).
+- `New Project Documents/OPEN_FINDINGS.md` reorganized as the single authoritative ledger; `Go-To-Market/` pack and `analysis/codebase-scrutiny-2026-07/` added (#230, `81a67d7`).
+
+### Fixed
+- Refreshed the stale committed Prisma client, which was missing the June consent fields (`3fdf3a0`).
+
+---
+
+## deploy 2026-07-11/12 — e2e in CI, and the bug it immediately found
+
+> **PRs:** #210, #223, #224, #225, #226
+
+### Fixed
+- **OF-22 — refresh-token rotation broken under enforced RLS** (`3159731`). `sessions` had SELECT/INSERT/DELETE policies but **no UPDATE policy**; PostgreSQL applies UPDATE-policy checks to `SELECT ... FOR UPDATE` row locks, so the rotation lock in `authService.refreshTokens()` matched zero rows under FORCE RLS with the NOBYPASSRLS role. Every token refresh returned 401, and the not-found row was misclassified as token **reuse**, firing `revokeAllUserTokens()` — wiping all sessions and stamping `tokens_valid_after` across devices. Invisible in dev/staging, which connect as BYPASSRLS. Fixed by migration `20260712_add_sessions_update_policy`; pinned by `rls.test.ts:541`.
+- e2e-db commands now run in an admin RLS transaction (`d6a21e7`); `VITE_API_URL` supplied so the meta CSP admits the e2e backend origin (`94b9ccd`).
+
+### Added
+- **`e2e` job in `ci.yml`** (`919398a`, #226) — the full Playwright suite against real Postgres with a seeded standing user, closing the long-standing `ci.yml` TODO. **Its first real run surfaced OF-22.**
+- **`secret-history-scan.yml`** (`8ec3989`, OMH-M01) — nightly plus on-demand **full-history** gitleaks scan. The `ci.yml` scan is working-tree-only and cannot see removed commits. Deliberately not on push so it never blocks a merge; red by design until OF-01's committed key is purged. Closed **OF-11**.
+- `export-delete-journey.spec.ts` — export plus account-deletion journey with DB forensics, completing scrutiny **P0-3** (`5c1787e`, #225).
+- Live-PG evidence that account deletion destroys the per-user salt (`8c9c3d6`, #224).
+- Test coverage for the three remaining untested PHI controllers, closing scrutiny **P1-6** (`440762d`, #223).
+
+### Security
+- **OF-02 closed** — Document AI OCR dollars now accrue into the fail-closed AI budget (`1047506`, #210).
+- Registration now requires a validated `acceptedTerms` at the API boundary (OMH-L03, `0456c50`).
+- `OPEN_FINDINGS.md` created as the single authoritative ledger, closing scrutiny **P0-6** — `SECURITY_STATUS.md` had claimed 0 open High while `KNOWN_ISSUES.md` listed H-1/H-2/H-3 (`d9616cb`).
+
+---
+
+## deploy 2026-06-20/21 — readiness fixes, accessibility, correctness waves
+
+> **PRs:** #183–#209
+
+### Added
+- **Registration consent (OMH-L04)** — migration `20260620_add_registration_consent` adds `users.terms_accepted_at` plus `users.terms_version`, stamped on successful registration. Deliberately **not PHI**: a timestamp and a version string, not encrypted, not in `PHI_FIELDS`. New `src/components/legal/` surface (`LegalPageShell`, `PrivacyPolicy`, `TermsOfService`).
+- **Accessibility subsystem** — shared `useFocusTrap` hook (`dc78c5b`, #185) migrated into 14 bespoke dialogs/overlays/cards plus `common/Modal` (`f41ed1f`, #198); ARIA tab semantics and `GoalTrackerPanel`/`AddInsurancePlan` dialogs (`c66ce43`, #186); keyboard-operable cards, header-menu ARIA, compare-form labels (`ff2a3c8`, #199); AI-chat screen-reader status and goal terminal-status confirm (`c2356cc`). Regression suite: `src/__tests__/components/dialogA11y.test.tsx`.
+- `src/services/api/pagination.ts` — deduped client pager, added when provider patient-PHI list endpoints were paginated (`4a9c67f`, #190).
+
+### Fixed
+- **Date-only UTC off-by-ones.** `new Date('2026-01-01')` parses as UTC midnight, so a plain `toLocaleDateString()` renders the *previous* day in any negative-UTC locale. Fixed for insurance `effectiveDate` (`b376949`, #192), then swept across all date-only display (`ea57001`, #194) and date arithmetic (`45a0cbc`, #195). The canonical helper is `formatDateOnly` (`src/utils/format.ts:47`), which pins `timeZone: 'UTC'` — use it for `@db.Date` values only, never for timestamps.
+- Trend statistics, goal-progress ordering, and history windowing corrected (`4795e1d`, #197).
+- SBC import now adopts the saved plan instead of re-creating it (`6faea4b`, #196).
+- Expense decrypt paths made robust to a corrupt row (`eaf8efe`, #202); `deleteAllData` success audit moved inside the deletion transaction (`f5b4b83`, #201); `PATCH /providers/:id` returns the documented shape and no longer leaks `notesEncrypted` (`485328a`, #204).
+- Four dead or broken interactions repaired — preview, double-submit, back, view-biomarker (`2fca770`, #205); `ExpenseActualsList` edit affordance wired (`7f30648`, #207).
+
+### Security
+- 2026-06-20 readiness-assessment fixes applied (`0dadd8d`); salt-create race hardened, internal-token compare made constant-time, RLS CI guard tightened (`1e4c9c2`, #203); admin consent reactivation locked down and the `canEditData` no-op dropped (`e805431`, #200).
+
+### Changed
+- FHIR lab-sync writes chunked into batched transactions with per-row fallback (`c7c28e6`, #191).
+- `InsurancePlan` types consolidated; all `as unknown as` casts removed (`98ee502`, #189); dead client contract surface pruned (`6e08748`, #187).
+- SHA-pinned GitHub Actions bumped to latest stable including majors (`a5b38a5`, #209); safe in-range backend dependency updates applied with majors held (`2a8dafe`, #208).
 
 ---
 
@@ -56,7 +122,7 @@ Nine PRs integrated via `release/security-ux-2026-06-15`, fast-forwarded to `mas
 - **Upload / extraction guards (#176, `8062a9f`)** — page cap, AI-text cap, strict WebP validation, biomarker numeric sanity bounds, and safe date parsing on the upload/extraction paths (L28–L32). OCR lab path also hard-rejects over-cap PDFs (L28 completeness, `c6d5993`).
 - **AI-path consent hardening (#177, `52efc7d`)** — server-side AI disclaimer enforcement, fail-closed pre-flight chat audit, corrected budget env docs (L33/L42/L39). The L33 disclaimer is appended server-side, which required updating the biomarker guidance happy-path assertion (`2a1206f`, and integration twin `ee76212` in `biomarkerController.test.ts`).
 - **Login-oracle / atomic audit / `canEditData` neutralization (#178, `f0563f0`)** — closes the login-lockout enumeration oracle (L21), makes bulk audit writes atomic (L41), and neutralizes the unconsumed `canEditData` provider permission (L37).
-- **IRREVERSIBLE drop of plaintext audit metadata (#179, `38e84e6`; migration `20260615_drop_legacy_audit_metadata`)** — see [Removed](#removed-20260615). The encrypted twin `AuditLog.metadataEncrypted` (added 2026-06-06) is now the sole metadata store.
+- **IRREVERSIBLE drop of plaintext audit metadata (#179, `38e84e6`; migration `20260615_drop_legacy_audit_metadata`)** — see [Removed](#removed-2026-06-15). The encrypted twin `AuditLog.metadataEncrypted` (added 2026-06-06) is now the sole metadata store.
 - **Encrypt raw lab filenames at rest (#180, `ae91986`; migration `20260615_encrypt_userfile_original_filename`, L24)** — adds `user_files.original_filename_encrypted` (per-user AES-256-GCM via `decryptOriginalFilename` helper) and drops `NOT NULL` on the plaintext twin; `Biomarker.sourceFile` is deliberately **left plaintext** (it is a FHIR idempotency/dedupe key — encrypting it breaks de-dup). `PHI_FIELDS` now lists `UserFile.originalFilenameEncrypted` at `backend/src/services/encryption.ts:499`. Live-PG validated. See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
 
 ### Added
@@ -68,7 +134,7 @@ Nine PRs integrated via `release/security-ux-2026-06-15`, fast-forwarded to `mas
 
 - **Enhanced-parser insurance plans now persist (#182, `16c9cc8`, FB-8)** — the client previously generated a `crypto.randomUUID()` id, which made `handleInsurancePlanExtracted` skip `createPlan`, so parsed plans were silently dropped. Fix routes an empty id through `createPlan` so the server assigns the id and the plan is saved.
 
-### Removed {#removed-20260615}
+### Removed (2026-06-15)
 
 - **`audit_logs.metadata` plaintext column DROPPED (#179, migration `20260615_drop_legacy_audit_metadata/migration.sql:18`)** — `DROP COLUMN IF EXISTS "metadata"`. **Breaking / irreversible:** any legacy plaintext metadata content is permanently lost (the encrypted twin `metadataEncrypted` has carried new writes since 2026-06-06). Done via DDL because `audit_logs` is immutable-by-RLS. See [`DATA_MODEL.md`](./DATA_MODEL.md), [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
 
@@ -139,7 +205,7 @@ The 2026-06-13 16-dimension teardown (`PROJECT_TEARDOWN_2026-06-13.md`, regenera
   ```
 
 - **Node 20 → Node 22 LTS (#169, `7fed6b6`, M15 — Node 20 EOL Apr 2026)** — `backend/Dockerfile:11,15,37` `FROM node:22-alpine@sha256:…` (digest-pinned, both stages); `ci.yml` `NODE_VERSION: '22'`; `deploy.yml` frontend `setup-node node-version: '22'`. `backend/package.json` `engines.node` = `"^20.19 || ^22.12 || >=24"` (verified `git show HEAD:backend/package.json`).
-- **Maintenance jobs as a Cloud Run job (#163, `75c8800`)** — `.github/workflows/maintenance.yml` (one of the 4 workflows).
+- **Maintenance jobs as a Cloud Run job (#163, `75c8800`)** — `.github/workflows/maintenance.yml` (one of the 4 workflows at that time; there are 5 today).
 - **Email scheduler multi-instance dedupe (#165, `6230467`; migration `20260614_add_email_sent_markers`)** — adds `users.last_weekly_summary_sent` + `last_plan_expiring_sent` for at-most-once claiming of scheduler emails across Cloud Run instances.
 - **Trend-semantics classifier (#173, `9e2c3c7`)** — UX wave 3 trend-direction classification fix.
 
@@ -448,6 +514,9 @@ A commit that fails any CI stage is never built, migrated, staged, or promoted.
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **`prompts/19-changelog-doc.md` assumes a prior `CHANGELOG.md` with a cutoff entry.** None exists — `New Project Documents/` held only `security-reviews/` at generation time (`Glob "New Project Documents/*"`). The cutoff was set to git-history start. The prompt author may want a "first-run / no-prior-doc" branch.
 - **`prompts/19-changelog-doc.md:108` says "Migrations `20260613_revoked_access_tokens`, `20260606000002_add_tokens_valid_after`" for cross-instance revocation** — confirmed correct; both directories exist (fact digest `FACT[db-schema]`).

@@ -1,6 +1,13 @@
 # FRONTEND_MAP.md — Component + Context + API-Service Atlas
 
-> Generated against HEAD `fb2cd32` (2026-06-15). Frontend = Vite + React 18 + TypeScript at repo **root** (`src/`); backend is at `backend/`. All paths below are repo-relative.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> The frontend is unaffected by the posture — it is the same build in every environment.
+>
+> Frontend = Vite + React 18 + TypeScript at repo **root** (`src/`); backend is at `backend/`. All paths below are repo-relative.
+>
+> **Changed since the last generation:** a new `legal/` component directory (registration consent, OMH-L04), a new `pagination.ts` API module, and a new `useFocusTrap` hook that 15 component files now depend on for dialog accessibility. Counts: 73→**75** `.tsx` across 14→**15** directories; 18→**19** files under `src/services/api/`; hooks 8→**9** including `index.ts`.
 
 This is the navigation atlas for the OwnMyHealth SPA frontend. A reader asking "where do I add a new biomarker input field?", "which component renders the insurance hub?", or "which API module backs the plan tier badge?" should land on the answer here without opening the repo.
 
@@ -19,11 +26,11 @@ It passes the five tests (question-answering, path-and-line, snippet, diagram, r
 
 | Fact | Value | Evidence |
 |---|---|---|
-| Component files (`*.tsx`) under `src/components/` | **73** | `Glob "src/components/**/*.tsx"` → 73 hits |
+| Component files (`*.tsx`) under `src/components/` | **75** | `Glob "src/components/**/*.tsx"` → 75 hits across **15** dirs |
 | Distinct component directories | **14** | `admin, analytics, auth, biomarkers, common, dashboard, files, health, insurance, onboarding, provider, settings, trends, upload` |
 | React contexts | **2** | `src/contexts/AuthContext.tsx`, `src/contexts/ThemeContext.tsx` |
-| API service modules (`src/services/api/*.ts`) | **18** (17 domain `*Api` objects + `client.ts`) | `Glob "src/services/api/*.ts"` |
-| Custom hooks (`src/hooks/*.ts`) | **8** | `useApi`, `useBiomarkerData`, `useBiomarkerStats`, `useBiomarkerTrends`, `useErrorNotification`, `useModals`, `useRBAC`, `index` |
+| API service modules (`src/services/api/*.ts`) | **19** (17 domain `*Api` objects + `client.ts` + `pagination.ts`) | `Glob "src/services/api/*.ts"` |
+| Custom hooks (`src/hooks/*.ts`) | **9** | `useApi`, `useBiomarkerData`, `useBiomarkerStats`, `useBiomarkerTrends`, `useErrorNotification`, `useFocusTrap` **(new)**, `useModals`, `useRBAC`, `index` |
 | Routing library | **None (no react-router)** | conditional rendering — see [§3](#3-routing--url-map) |
 | State model | **React Context only (no Redux/Zustand/MobX)** | `AuthContext`, `ThemeContext`; data state lives in hooks (`useBiomarkerData`) |
 | HTTP transport | **native `fetch`, NOT axios** | `apiFetch` (`src/services/api/client.ts:227`); CLAUDE.md's "axios + interceptors" is stale |
@@ -68,13 +75,14 @@ Per-directory `.tsx` counts (authoritative — verified `Glob "src/components/<d
 | dashboard | 10 | `categoryRouting.ts`, `index.ts` (note: `getIcon.tsx` is `.tsx`) |
 | files | 2 | `index.ts` |
 | health | 2 | (none) |
-| insurance | 18 | `index.ts`, `insuranceKnowledgeBaseConstants.ts`, `useInsuranceKnowledgeBase.ts` |
+| **legal** *(new)* | 3 | `LegalPageShell.tsx`, `PrivacyPolicy.tsx`, `TermsOfService.tsx` — added 2026-06-21 with the registration-consent flow (OMH-L04) |
+| insurance | 17 | `index.ts`, `insuranceKnowledgeBaseConstants.ts`, `planFormatters.ts`, `useInsuranceKnowledgeBase.ts` |
 | onboarding | 1 | `index.ts` |
 | provider | 2 | (none) |
 | settings | 7 | `index.ts` |
 | trends | 5 | `index.ts` |
 | upload | 4 | `index.ts` |
-| **Total** | **73** | |
+| **Total** | **75** | across 15 dirs |
 
 ### `src/components/admin/`
 
@@ -206,7 +214,6 @@ Purpose: insurance hub, plan CRUD/compare/view, SBC/enhanced upload, knowledge b
 | `InsurancePlanCompare` | `src/components/insurance/InsurancePlanCompare.tsx:125` (`InsuranceKnowledgePanel`) | Compare panel | `insuranceApi.*` |
 | `InsurancePlanViewer` | `src/components/insurance/InsurancePlanViewer.tsx:51` | Modal plan viewer | — |
 | `InsuranceStatsGrid` | `src/components/insurance/InsuranceStatsGrid.tsx:19` | Stat cards | — |
-| `InsuranceUtilizationTracker` | `src/components/insurance/InsuranceUtilizationTracker.tsx:60` | Utilization view | — |
 | `InsuranceGuide` | `src/components/insurance/InsuranceGuide.tsx:58` (`InsuranceEducationPanel`) | Education panel | — |
 | `InsuranceLearnTab` | `src/components/insurance/InsuranceLearnTab.tsx:46` | Learn tab | — |
 | `DeductibleProgressBar` | `src/components/insurance/DeductibleProgressBar.tsx:18` | Deductible bar | — |
@@ -529,6 +536,43 @@ Each `lazy()` page renders inside a `<Suspense fallback={<PageLoadSpinner/>}>` (
 
 ## 8. Notable patterns
 
+### `useFocusTrap` — the accessibility backbone (added 2026-06-20)
+
+`src/hooks/useFocusTrap.ts` provides WAI-ARIA dialog behavior for any modal-like overlay: Escape to
+close, a Tab focus trap, initial focus into the container, focus restoration to the opener on close,
+and body scroll-lock while open. It was extracted from `common/Modal` so bespoke overlays get the
+same behavior without the full Modal chrome.
+
+**Consumers (15 files):** `common/Modal`, plus 14 bespoke overlays — `analytics/GoalTrackerPanel`,
+`biomarkers/AddMeasurementModal`, `biomarkers/BiomarkerInsurancePanel`, `biomarkers/TrendModal`,
+`dashboard/DashboardSidebar`, `files/FilesPage`, `health/HealthNeedsPage`,
+`insurance/AddInsurancePlanModal`, `insurance/InsurancePlanCompare`, `insurance/InsurancePlanViewer`,
+`settings/AccountSettingsPage`, `settings/ChangeEmailModal`, `settings/ChangePasswordModal`,
+`trends/TrendDetailModal`.
+
+**Contract for a consumer** — apply the returned ref to the dialog container together with
+`role="dialog"`, `aria-modal="true"`, an accessible name (`aria-label`/`aria-labelledby`), **and**
+`tabIndex={-1}`. The last one is easy to miss and silently breaks the hook: without it,
+`container.focus()` is a no-op and the trap starts outside itself.
+
+```ts
+// Source: src/hooks/useFocusTrap.ts:30-34 — why onClose lives in a ref
+// A new onClose identity each render would otherwise re-run the effect, whose cleanup
+// restores focus to the opener — stealing focus mid-open.
+const onCloseRef = useRef(onClose);
+onCloseRef.current = onClose;
+```
+
+Regression coverage: `src/__tests__/components/dialogA11y.test.tsx` asserts each bespoke modal exposes
+`role="dialog"` + `aria-modal="true"` + an `aria-labelledby` that **resolves to an element that
+exists**, and closes on Escape. See [`prompts/47-accessibility.md`](../prompts/47-accessibility.md)
+for the full review checklist.
+
+### `pagination.ts` (added 2026-06-20)
+
+`src/services/api/pagination.ts` is the deduped client-side pager introduced when the provider
+patient-PHI list endpoints were paginated (`4a9c67f`). Prefer it over per-module paging logic.
+
 **RoleGuard / useRBAC** — `RoleGuard` (`src/components/common/RoleGuard.tsx:55`) is backed by `useRBAC` (`src/hooks/useRBAC.ts:18`), which reads `user.role` from `useAuth()` and exposes `hasRole`/`hasMinRole` (hierarchy ADMIN=3 > PROVIDER=2 > PATIENT=1, `useRBAC.ts:12-16`). **However, both are currently unused by any rendered component** (audit L-18, `RoleGuard.tsx:7-16`). Real UI role gating is done inline in `Dashboard`:
 
 ```ts
@@ -583,6 +627,9 @@ The error renders with an `AlertCircle` icon + `RefreshCw` retry button (importe
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **Per-directory `.tsx` counts in `prompts/39-frontend-component-map-doc.md` (and the fact-digest) are inflated.** The prompt lists e.g. `auth (8)`, `biomarkers (9)`, `common (7)`, `dashboard (11)`, `health (3)`, `insurance (22)`. Actual `.tsx`-only per `Glob "src/components/<dir>/*.tsx"`: `auth (6)`, `biomarkers (8)`, `common (6)`, `dashboard (10)`, `health (2)`, `insurance (18)`. The inflation comes from counting `index.ts` barrels and helper `.ts` files (`categoryRouting.ts`, `insuranceKnowledgeBaseConstants.ts`, `useInsuranceKnowledgeBase.ts`). **The total is correct: 73 `.tsx` across 14 dirs** (`find src/components -name '*.tsx' | wc -l` = 73). Per-directory truth is in [§2](#2-component-directory-catalog).
 - **Prompt §6 / acceptance Q7 implies `uploadApi` ("upload.ts") handles SBC upload.** It does not — SBC upload is `insuranceApi.uploadSBC` (`insurance.ts:295`); `uploadApi.uploadLabReport` has no consumer. Corrected in [§6](#6-api-to-component-matrix) and [§9](#9-drift-findings).

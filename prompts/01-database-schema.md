@@ -5,10 +5,16 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Database Schema Review
+
+> **Update (2026-08-01):** **34** migration directories (was 32) — `20260620_add_registration_consent`
+> (`users.terms_accepted_at` / `terms_version`; deliberately **not** PHI and **not** in `PHI_FIELDS`,
+> written by `createUser` in the admin/system RLS context, needing no new policy) and
+> `20260712_add_sessions_update_policy` (OF-22 — see the row-lock check below). Models remain **19**
+> and `PHI_FIELDS` remains **14 models / 39 fields**, still in lockstep with the schema columns.
 
 > Follow the [review protocol](./_review-protocol.md).
 > Use the [PHI inventory](./_phi-inventory.md) for encrypted-field verification.
@@ -71,6 +77,19 @@ updated: 2026-06-16
   `20260529_fix_has_provider_access` recreates the function; verify no copy still carries the `'view_dna'`
   branch (under a NOBYPASSRLS role the stale branch broke EVERY multi-tenant read, not just DNA).
 - [ ] `provider_patients` table has RLS for both `provider_id` and `patient_id`.
+- [ ] **Every row-locked table has an UPDATE policy, even if it is never `UPDATE`d** (OF-22, the highest-value
+  new check on this list). PostgreSQL applies UPDATE-policy checks to `SELECT ... FOR UPDATE` row locks.
+  `sessions` had SELECT/INSERT/DELETE policies but no UPDATE policy — rotation is delete+reinsert, so none
+  looked necessary — and under FORCE RLS with a NOBYPASSRLS role the `FOR UPDATE` lock in
+  `authService.refreshTokens()` matched **zero rows**. Consequences: every token refresh returned 401, and
+  the not-found row was misclassified as token **reuse**, firing the M-1 compromise detector so
+  `revokeAllUserTokens()` nuked every session and stamped `tokens_valid_after` across devices. Fixed by
+  `20260712_add_sessions_update_policy` (`sessions_update_own`). **Verification:** `Grep` for `FOR UPDATE`
+  and `SELECT ... FOR SHARE` across `backend/src/`, map each to its table, and confirm that table has an
+  UPDATE policy covering the locking role.
+- [ ] The bug above was invisible in dev/staging because they connect as a **BYPASSRLS** role. Confirm the
+  `rls` and `e2e` CI jobs both run under the NOBYPASSRLS `omh_app` role — that is the only place this class
+  of bug can surface before production.
 - [ ] Consent-column immutability (L23): `20260615_provider_consent_immutable_audit_insert_check` adds a
   BEFORE UPDATE trigger `provider_patients_guard_consent()` that restores the four consent permission columns
   (`can_view_biomarkers`, `can_view_insurance`, `can_view_health_needs`, `can_edit_data`) to their OLD values

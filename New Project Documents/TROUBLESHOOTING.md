@@ -1,6 +1,22 @@
 # TROUBLESHOOTING.md — Symptom-First Catalog
 
-> Generated from live code at HEAD `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`. See the [Prompt drift log](#prompt-drift-log) at the end for places the generating prompt disagreed with the code.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md). Symptoms tied to Cloud Run, Cloud SQL, or GCS describe the launch stack and cannot occur today.
+>
+> **Two new entries worth reading first:**
+>
+> **"Every token refresh returns 401 and users are logged out of all devices"** — this was **OF-22**,
+> fixed 2026-07-12. `sessions` had no RLS UPDATE policy, and PostgreSQL applies UPDATE-policy checks to
+> `SELECT ... FOR UPDATE` row locks, so the rotation lock matched zero rows under a NOBYPASSRLS role —
+> and the missing row was then misread as token **reuse**, firing a full family revoke. **It reproduced
+> only under the production DB role**; dev and staging connect as BYPASSRLS. If you see this symptom
+> again after adding a table or policy, check for a missing UPDATE policy before anything else
+> (`20260712_add_sessions_update_policy`, `rls.test.ts:541`).
+>
+> **"File upload fails with `Local storage backend requires a valid PHI_ENCRYPTION_KEY`"** — expected
+> under `STORAGE_BACKEND=local` (the development default since OF-23) when `PHI_ENCRYPTION_KEY` is unset
+> or malformed. The app deliberately still boots; only storage calls fail, with that message
+> (`localBackend.ts:44-55`). Set a valid 64-hex-char key. Generated from live code. Every non-trivial claim cites `file:line`. See the [Prompt drift log](#prompt-drift-log) at the end for places the generating prompt disagreed with the code.
 
 ---
 
@@ -35,7 +51,7 @@ res.status(statusCode).json(response);
 | Stuck on login / 401 loop | [Login fails / 401 loop](#decision-tree-login-fails--401-loop) |
 | Data disappears after page refresh | [Data disappears on refresh](#data-disappears-after-page-refresh) |
 | A previously-working token suddenly 401s | [Access token suddenly rejected (cross-instance revocation)](#access-token-suddenly-rejected-cross-instance-revocation) |
-| Idle for ~15 min, bounced to login | [Idle auto-logoff](#idle-auto-logoff-hipaa-§164312a2iii) |
+| Idle for ~15 min, bounced to login | [Idle auto-logoff](#idle-auto-logoff-hipaa-164312a2iii) |
 | Mutation returns 403 `CSRF_TOKEN_*` | [CSRF symptoms](#csrf-symptoms) |
 | Upload returns 500 / extraction empty | [Upload 500 / empty extraction](#decision-tree-upload-500--empty-extraction) |
 | Query returns fewer rows than expected | [RLS mystery](#decision-tree-rls-mystery-fewer-rows-than-expected) |
@@ -675,6 +691,9 @@ echo "$VITE_API_URL"
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - `./18-troubleshooting-doc.md` (line 44) cites `phiRedaction.ts` exports as `stripPHIFromText :86` and `redactPHI :97` — **confirmed exact** at `backend/src/utils/phiRedaction.ts:86,97`. No drift.
 - `./18-troubleshooting-doc.md` (line 60) cites `isAccessTokenStale` enforcement at `backend/src/middleware/auth.ts:106-108` — **confirmed exact**. No drift.

@@ -4,7 +4,16 @@
 >
 > The **middleware-chain lens** (security stack per route) lives in [`ROUTING_TABLE.md`](./ROUTING_TABLE.md); the two docs cross-link heavily. The **per-field PHI lens** lives in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
 >
-> Source HEAD: `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Re-verified 2026-08-01 — the HTTP contract did not change.** Two notes:
+> 1. `POST /api/v1/auth/register` now requires a validated `acceptedTerms` boolean at the API boundary
+>    (OMH-L03, `0456c50`); the server stamps `users.terms_accepted_at` and `users.terms_version` on success.
+> 2. `GET /api/v1/files/:id/download` is unchanged as a contract, but the bytes now come from whichever
+>    storage backend is active (`gcs` or the local encrypted disk — OF-23). It remains a backend stream
+>    proxy for both; there is still no signed-URL egress path. See
+>    [`ARCHITECTURE.md`](./ARCHITECTURE.md) §13.0. Every non-trivial claim cites `file:line`.
 
 ---
 
@@ -861,6 +870,9 @@ The Cloud Run deploy probes `GET /api/v1/health` (`deploy.yml:279`); `GET /healt
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **`./17-api-reference-doc.md` (and `_doc-quality.md` worked example) assume a 15-minute GCS signed URL on the Files endpoints** (acceptance Q9; the example "Which endpoint returns a signed GCS URL, and how long is it valid for?"). The signed-URL path was **removed**: `getFile` returns metadata only (`fileController.ts:128-137`) and `getFileDownloadUrl` now **proxies bytes through the backend** with `Cache-Control: no-store` (`fileController.ts:198-302`); `storageService.getSignedUrl(..., 'read')` is explicitly deprecated in favor of `getFileStream` (`storageService.ts:94-112`). No endpoint returns a signed URL — Q9 is answered as "none." Prompt author should update Q9.
 - **The prompt's per-endpoint biomarker example uses `"measuredAt":"…"` in the request body.** The real `schemas.biomarker.create` field is `date` (a `dateString`) with a nested `normalRange` object (`validation.ts:403-419`); there is no `measuredAt`. The curl in §6 uses the real shape.

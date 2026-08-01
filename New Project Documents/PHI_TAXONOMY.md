@@ -2,7 +2,22 @@
 
 > **Authoritative, citation-dense reference for every PHI field**: where each field is written, read, audited, redacted in logs, and whether another user (including a consented PROVIDER) can reach it.
 >
-> Generated at HEAD `fb2cd32` (2026-06-16). All counts re-verified against live code.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-16) · **Posture:** sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md)
+>
+> **Verdict of the 2026-08-01 re-verification: the PHI surface did not change.** `PHI_FIELDS` is still
+> **14 models / 39 fields**, still in exact lockstep with the 39 `*Encrypted` columns in
+> `schema.prisma`, and `phiFieldsCoverage.test.ts` still guards that invariant. Every field table
+> below was re-derived from `backend/src/services/encryption.ts` and re-confirmed.
+>
+> **Two things changed *around* the PHI surface and are covered in [§8 Drift findings](#8-drift-findings):**
+> 1. **Uploaded files are now encrypted at rest by the application**, not by a cloud provider. Under
+>    `STORAGE_BACKEND=local` (the development default since OF-23, 2026-07-14) every blob is sealed
+>    with AES-256-GCM using the **master** `PHI_ENCRYPTION_KEY` directly — not a per-user derived key.
+>    This is a genuinely new PHI-at-rest path with a different key model from every column below.
+> 2. **Registration consent columns were added and are deliberately NOT PHI** —
+>    `users.terms_accepted_at` + `users.terms_version` (`20260620_add_registration_consent`). A
+>    timestamp and a version string; not encrypted, not in `PHI_FIELDS`. Recorded here so a future
+>    reader does not "discover" them as a gap.
 
 ## Required reading before generating
 
@@ -523,6 +538,40 @@ provider → providerRoutes PHI route
 
 ## 8. Drift findings
 
+### 8.0 — New at-rest PHI path: file blobs under the local storage backend (2026-08-01)
+
+Every field in this document is a **database column** encrypted with a **per-user** key derived by
+PBKDF2-SHA512 from the master key plus the user's salt. As of OF-23 (2026-07-14) there is a second
+at-rest PHI path with different properties:
+
+| Property | Column PHI (§2–§3) | File blobs under `STORAGE_BACKEND=local` |
+|---|---|---|
+| Cipher | AES-256-GCM | AES-256-GCM |
+| Key | **Per-user**, PBKDF2-SHA512 from master + user salt | **Master `PHI_ENCRYPTION_KEY` directly** |
+| Blast radius of key compromise | Per-user, and account deletion destroys the salt | **All users' files at once** |
+| Envelope | `EncryptionService` format | `[ 'OMHL' \| 0x01 \| iv(16) \| authTag(16) \| ciphertext ]` (`localBackend.ts:38-42`) |
+| Integrity check timing | On decrypt | GCM tag verified at **end of stream** (`localBackend.ts:146-149`) |
+| Where | Postgres | `backend/.local-storage/{userId}/{fileId}.{ext}`, mode `0600`, gitignored |
+
+The documented rationale for the master key: `getFileStream(storageKey)` has no user context, and a
+600k-iteration derivation per file operation would be pure overhead for an at-rest guarantee
+(`backend/src/services/storage/localBackend.ts:15-19`). `config/index.ts:349` refuses
+`STORAGE_BACKEND=local` in production/staging, so this path is sandbox-only by construction.
+
+**What this means for PHI accounting:** the *filename* is column PHI
+(`UserFile.originalFilenameEncrypted`, L24, listed in §2) and follows the per-user key model. The
+*file contents* — lab reports and SBCs, the densest PHI in the system — follow the master-key model
+above. Any threat model that reasons about "one user's key" must not assume it bounds file exposure.
+
+### 8.1 — Registration consent columns are intentionally not PHI
+
+`users.terms_accepted_at` (`Timestamptz(6)`) and `users.terms_version` (`VarChar(20)`), added by
+`20260620_add_registration_consent` and written by `createUser` on successful registration. The
+migration states the reasoning inline: *"These are a timestamp + a short version string, NOT PHI: not
+encrypted, not added to PHI_FIELDS."* They carry no health information and no identifier beyond the
+row they sit on. Correctly absent from §2.
+
+
 ### Schema vs `PHI_FIELDS`
 
 No drift. Grep `Encrypted\s+String` over `backend/prisma/schema.prisma` returns **39** columns; `PHI_FIELDS` (`encryption.ts:476-562`) defines **39** entries; every column maps 1:1. Plaintext twins (`UserFile.originalFilename`, `HealthGoal.targetValue/currentValue/startValue`, `GoalProgressHistory.value`) and `Biomarker.sourceFile` (FHIR dedupe key) are deliberately excluded — not drift.
@@ -599,6 +648,9 @@ Encrypted with the **provider's** salt and written on access request (`providerR
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **`40-phi-taxonomy-doc.md` field count vs digest**: the prompt and `_phi-inventory.md` both state **14 models / 39 fields** (correct, re-verified by hand-count of `PHI_FIELDS` at `encryption.ts:476-562` and `Encrypted\s+String` → 39 schema hits). The intermediate `fact-digest.md` FACT[phi-fields] table totals "37 encrypted fields" — that is a **miscount** of the same correct field list; the canonical 39 stands. No code change needed; flag the digest.
 - **`CLAUDE.md` PHI section is stale** (not this prompt, but surfaced while verifying): it lists `Biomarker.unit`, `InsurancePlan.planName/insurerName/benefits` as encrypted — none are `*Encrypted` columns or in `PHI_FIELDS`. `InsuranceBenefit` has **no** encrypted columns (confirmed §2). It also omits `healthProfileEncrypted`, the M4 goal-value fields, `UserFile.originalFilenameEncrypted`, and `AuditLog.metadataEncrypted`. Update `CLAUDE.md` "PHI Encryption" to point at `PHI_FIELDS` rather than re-listing.

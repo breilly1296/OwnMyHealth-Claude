@@ -3,7 +3,17 @@
 > **Unit-economics + runway reference for OwnMyHealth.**
 > What does this app cost to run per user? Which services are metered? Where is the dollar ceiling? Most actual dollar values live in the GCP / SaaS billing consoles — but the *structure* of costs lives in the repo, and this doc extracts that structure with file:line evidence.
 >
-> Generated against HEAD `fb2cd32` (2026-06-15). All code claims cite `file:line`. Facts that genuinely live outside the repo are marked `TBD (external: …, <resolution path>)` — never invented.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Two facts that materially change the cost picture since the last generation:**
+> 1. **GCP spend is ~zero.** Billing was disabled ~2026-07-12. Cloud Run, Cloud SQL, GCS, and Document
+>    AI costs stopped. Any run-rate figure below that includes GCP is now a *launch* projection.
+> 2. **There is still no revenue path.** `PLANS[*].price` / `annualPrice` are display-only and tie to
+>    no charge (`config/plans.ts`); no Stripe SDK, checkout, or webhook exists in the repo (verified by
+>    grep, 2026-08-01 — only comments and TODOs). `users.plan` has exactly one application writer:
+>    `PATCH /api/v1/admin/users/:id/plan` (`adminRoutes.ts:598`). Tracked as **OF-15** / scrutiny P0-5.
+>    Treat every price in this document as a hypothesis, not a rate. All code claims cite `file:line`. Facts that genuinely live outside the repo are marked `TBD (external: …, <resolution path>)` — never invented.
 
 ---
 
@@ -414,6 +424,9 @@ Enforcement is via `planGating` middleware (`requirePlanLimit(...)` mounted on e
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - `./23-financial-tracker-doc.md` (Files-to-review table) lists `backend/src/middleware/rateLimiter.ts` as holding "**Eight** rate limiters" — confirmed exactly 8 (`standardLimiter`, `authLimiter`, `strictAuthLimiter`, `uploadLimiter`, `sensitiveLimiter`, `aiLimiter`, `providerAccessRequestLimiter`, `bulkOperationLimiter` at `rateLimiter.ts:66,88,105,134,151,177,211,240`). No drift; recorded for traceability.
 - The prompt's §3/§7 examples imply Document AI is "AI" spend; verified it is **not** dollar-tracked (`ocrService.ts:300` has no `trackAIUsage`), consistent with the prompt's own §4 caveat. No code/prompt conflict — the doc surfaces the gap as instructed.

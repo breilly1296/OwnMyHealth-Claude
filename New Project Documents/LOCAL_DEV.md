@@ -1,6 +1,14 @@
 # LOCAL_DEV.md — Zero-to-Running Setup Guide
 
-> Generated 2026-06-16 against HEAD `fb2cd32`. Every command runs verbatim on a stock machine with the prereqs below installed. Target: `git clone` → working login in under 20 minutes.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-16) · **Posture:** sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md)
+>
+> Every command runs verbatim on a stock machine with the prereqs below installed. Target: `git clone` → working login in under 20 minutes.
+>
+> **This is now the primary environment, not a convenience path.** The project has had no deployment
+> target since 2026-07-14, so local is where the app runs. The practical consequence for you:
+> **file upload, download and delete now work with zero GCP credentials.** `STORAGE_BACKEND=local` is
+> the development default (OF-23) and stores AES-256-GCM-sealed blobs under `backend/.local-storage`.
+> All you need is a valid `PHI_ENCRYPTION_KEY`.
 
 ## Required reading before generating
 
@@ -20,7 +28,7 @@ This doc passes the five tests in `_doc-quality.md` (question-answering, path-an
 | Node.js | 22.x | `backend/Dockerfile:15` pins `FROM node:22-alpine@sha256:…`; `backend/package.json:77` `engines` = `^20.19 \|\| ^22.12 \|\| >=24`. Prisma 7 requires Node `^22.12` (`backend/Dockerfile:13`). | `nvm install 22 && nvm use 22` |
 | npm | bundled with Node 22 | — | comes with Node |
 | PostgreSQL | 16.x recommended | CI's RLS-regression job runs `image: postgres:16` (`.github/workflows/ci.yml:165`); 15.x also works, or use `npx prisma dev` for local Prisma Postgres (`backend/.env.example:28`). | `docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:16` |
-| gcloud (optional) | latest | Only for GCS file upload + Document AI OCR features. Both skippable locally (see [§8](#8-local-mocking)). | [Cloud SDK install](https://cloud.google.com/sdk/docs/install) |
+| gcloud (optional) | latest | **No longer needed for file uploads** — the local storage backend covers them (OF-23). Only useful for Document AI OCR, which is also skippable (see [§8](#8-local-mocking)). | [Cloud SDK install](https://cloud.google.com/sdk/docs/install) |
 | Redis (optional) | latest | Only to test the *shared* rate-limit store (`REDIS_URL`). Unset → in-memory fallback (`backend/src/middleware/rateLimitStore.ts:41`). | `docker run -d -p 6379:6379 redis` |
 
 > **Windows ARM64 + Node 24 caveat**: native binaries can fail to install on Windows ARM64 under Node 24. Use Node 22 (recommended) or apply the documented SWC patch. See [`CLAUDE.md`](../CLAUDE.md) "Next.js SWC on Windows ARM64".
@@ -122,20 +130,20 @@ createdb ownmyhealth_dev
 
 cd backend
 npx prisma generate          # generate the Prisma client into backend/generated/
-npx prisma migrate deploy    # apply all 32 migrations
+npx prisma migrate deploy    # apply all 34 migrations
 cd ..
 
 # (optional) seed an already-verified PRO test user for smoke / e2e flows
-npx tsx e2e/setup/seed-test-user.ts
+npx tsx backend/scripts/e2e-db.ts
 ```
 
-- **32 migrations** as of 2026-06-16, newest `backend/prisma/migrations/20260615_provider_consent_immutable_audit_insert_check/`. Verify with `Glob pattern: backend/prisma/migrations/*/`.
+- **34 migrations** as of 2026-08-01, newest `backend/prisma/migrations/20260712_add_sessions_update_policy/`. Verify with `Glob pattern: backend/prisma/migrations/*/`.
 - **19 Prisma models** in `backend/prisma/schema.prisma` (incl. `RevokedAccessToken` at `:96` and `LabConnection` at `:755`). See [`DATA_MODEL.md`](./DATA_MODEL.md) for the full ER.
-- **The only seed script** is `e2e/setup/seed-test-user.ts`. There is **no** `backend/scripts/seed*` (`backend/scripts/` holds only `setup-rls-test-db.sh`).
+- **The only seed script** is `backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`). There is **no** `backend/scripts/seed*` (`backend/scripts/` holds only `setup-rls-test-db.sh`).
 
 > The seed user is created already-verified + PRO so it bypasses the email gate and plan gating:
 > ```ts
-> // Source: e2e/setup/seed-test-user.ts:64-74
+> // Source: backend/scripts/e2e-db.ts:64-74
 > await prisma.user.create({
 >   data: {
 >     email: EMAIL,
@@ -149,7 +157,7 @@ npx tsx e2e/setup/seed-test-user.ts
 >   },
 > });
 > ```
-> Seeded credentials: `e2e-test@ownmyhealth.io` / `E2ETestPass123!` (`e2e/setup/seed-test-user.ts:29-30`).
+> Seeded credentials: `e2e-test@ownmyhealth.io` / `E2ETestPass123!` (`backend/scripts/e2e-db.ts:29-30`).
 
 ### Migrations are NOT applied at container boot
 
@@ -176,7 +184,7 @@ git clone ──▶ npm install (root + backend)
             createdb  ──▶  npx prisma generate  ──▶  npx prisma migrate deploy (32)
                     │
                     ▼
-            [optional] npx tsx e2e/setup/seed-test-user.ts
+            [optional] npx tsx backend/scripts/e2e-db.ts
                     │
                     ▼
             backend npm run dev (:3001)  +  root npm run dev (:5173)
@@ -236,7 +244,7 @@ curl -X POST http://localhost:3001/api/v1/auth/register \
 #      /verify-email?token=... link and GET its backend equivalent:
 #        curl "http://localhost:3001/api/v1/auth/verify-email?token=<TOKEN>"
 #  (B) OR seed an already-verified user instead of registering:
-#        npx tsx e2e/setup/seed-test-user.ts
+#        npx tsx backend/scripts/e2e-db.ts
 #      then log in as e2e-test@ownmyhealth.io / E2ETestPass123!
 
 # --- Login (capture cookies — sets csrf_token + auth cookies) ---
@@ -354,7 +362,7 @@ External services are all skippable locally. The app boots without any of them (
 | Google Document AI OCR | yes | `GCP_PROCESSOR_ID` set without `GOOGLE_BAA_ACTIVE=true` → dev warns; runtime gate blocks image OCR (prod hard-fails). | `backend/src/config/index.ts:236`; gate `:401-414` |
 | SendGrid email | yes | No `SENDGRID_API_KEY` → `config.email.enabled=false`; emails are **logged, never sent** (verification URL via `devBox`). Or `SENDGRID_SANDBOX_MODE=true`. | `backend/src/config/index.ts:209`; `emailService.ts:313,376` |
 | Redis (rate-limit store) | yes | `REDIS_URL` unset → in-memory `MemoryStore` fallback. | `backend/src/middleware/rateLimitStore.ts:41,77`; `config/index.ts:186` |
-| GCS file storage | yes (uploads) | Dev/staging fall back to bucket `ownmyhealth-user-files`; only file-upload flows need real GCS. Prod hard-fails if `GCS_BUCKET_NAME` unset. | `backend/src/config/index.ts:228`; prod gate `:480` |
+| **File storage** | **not needed at all** | `STORAGE_BACKEND` defaults to `local` in development (OF-23): uploads are AES-256-GCM-sealed to `backend/.local-storage`, so upload/download/delete work end-to-end with **no GCP**. Set `STORAGE_BACKEND=gcs` only if you specifically want to exercise the bucket path. Requires `PHI_ENCRYPTION_KEY` — without it the app still boots and only storage calls fail, with a pointed message. | `backend/src/config/index.ts:251-256`; `services/storage/localBackend.ts:44-55`; dispatch `storageService.ts:33-44` |
 | Quest SMART-on-FHIR | yes | Unset creds → "Connect Quest" returns 503. Point `QUEST_FHIR_BASE_URL` at the **dev mock server** `http://localhost:3001/api/v1/mock-fhir/r4`. | `backend/.env.example:289`; mock mounted `app.ts:275-281` |
 
 ### Email verification without SendGrid
@@ -373,7 +381,7 @@ if (config.isDevelopment) {
 }
 ```
 
-Copy the printed `/verify-email?token=…` token and GET `http://localhost:3001/api/v1/auth/verify-email?token=<TOKEN>` (`backend/src/routes/authRoutes.ts:62-66`). Or skip the gate by seeding (`e2e/setup/seed-test-user.ts` sets `emailVerified: true`).
+Copy the printed `/verify-email?token=…` token and GET `http://localhost:3001/api/v1/auth/verify-email?token=<TOKEN>` (`backend/src/routes/authRoutes.ts:62-66`). Or skip the gate by seeding (`backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`) sets `emailVerified: true`).
 
 ### Quest FHIR / lab-connection without real Quest credentials
 
@@ -411,7 +419,7 @@ If the SPA and API run on different hosts/ports, `COOKIE_SAME_SITE` and `COOKIE_
 ## 9. Reset procedures
 
 ```bash
-# Nuke the local DB and reapply all 32 migrations from scratch
+# Nuke the local DB and reapply all 34 migrations from scratch
 cd backend
 npx prisma migrate reset --force
 ```
@@ -503,7 +511,10 @@ Pre-commit hygiene is enforced by `husky` + `lint-staged` (`package.json:20,68-7
 
 ## Prompt drift log
 
-- `prompts/36-local-dev-setup-doc.md:42,250` and the "Files to review" table say **32** migrations; confirmed accurate as of HEAD `fb2cd32` (`Glob backend/prisma/migrations/*/` → 32 dirs, newest `20260615_provider_consent_immutable_audit_insert_check`). No drift.
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
+
+- `prompts/36-local-dev-setup-doc.md:42,250` and the "Files to review" table say **32** migrations; accurate at HEAD `fb2cd32`, now **34** (`20260620_add_registration_consent`, `20260712_add_sessions_update_policy`) (`Glob backend/prisma/migrations/*/` → 32 dirs, newest `20260615_provider_consent_immutable_audit_insert_check`). No drift.
 - `prompts/36-local-dev-setup-doc.md:41` says **19 models** (with `RevokedAccessToken` + `LabConnection`); confirmed — `backend/prisma/schema.prisma` defines 19 models (`RevokedAccessToken` at `:96`, `LabConnection` at `:755`). The ground-truth `fact-digest.md` FACT[db-schema] block initially counted "17" then self-corrects to **18** for one omission and is itself stale on the canonical **19** — trusting the canonical number per the run instructions and the schema. Prompt author should reconcile `fact-digest.md` FACT[db-schema] to 19.
 - `prompts/36-local-dev-setup-doc.md:77` recommends Postgres "16.x … or 15.x"; confirmed against `.github/workflows/ci.yml:165` (`image: postgres:16`). The commented-out block at `ci.yml:227` references `postgres:15` (disabled). No drift; documented 16 as primary.
 - `CLAUDE.md` "Development Commands" still lists `npx prisma migrate dev` and omits the 32-migration / migrate-as-Cloud-Run-job split; the live Dockerfile (`backend/Dockerfile:86-93`) and deploy workflow (`.github/workflows/deploy.yml:43,158`) are authoritative. `CLAUDE.md` also predates the post-2026-06-01 env vars (`AI_DAILY_BUDGET_USD`, `COOKIE_SAME_SITE`, `OMH_DEPLOY_ENFORCE_PROD`). Documented from code per the "trust the code" rule.

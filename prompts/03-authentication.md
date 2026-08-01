@@ -5,7 +5,7 @@ tags:
   - critical
 type: prompt
 priority: 1
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Authentication Review
@@ -71,6 +71,12 @@ updated: 2026-06-16
 - [ ] Refresh endpoint (`POST /api/v1/auth/refresh`) issues new access token + new refresh token
 - [ ] Refresh token rotation on use — single-use; old session row deleted, new one inserted in the same transaction
 - [ ] Concurrent refresh with the same token serializes (`SELECT ... FOR UPDATE` row lock in `refreshTokens`) so only one succeeds
+- [ ] **That row lock depends on an RLS UPDATE policy** (OF-22, fixed `20260712_add_sessions_update_policy`).
+  PostgreSQL applies UPDATE-policy checks to `SELECT ... FOR UPDATE`, so under FORCE RLS with a NOBYPASSRLS
+  role the lock saw zero rows: every refresh 401'd, and the missing row was misread as **reuse**, firing
+  `revokeAllUserTokens()` and logging users out across all devices. Confirm `sessions_update_own` exists and
+  that the reuse detector cannot be triggered by a *policy* miss rather than a real replayed token — the
+  failure modes are indistinguishable at the call site. See prompt [01](./01-database-schema.md) §RLS.
 - [ ] Refresh-token REUSE triggers full family revocation — a signature-valid token whose `jti` is no longer the live session calls `revokeAllUserTokens(payload.id)` unless inside the 10s benign-race window (`REFRESH_REUSE_GRACE_MS`, `authService.ts:791-806`); reuse audited as `REFRESH_TOKEN_REUSE` (`:815-830`)
 - [ ] Old tokens invalidated on logout (refresh session deleted; access token added to in-memory blacklist AND `jti` upserted into `revoked_access_tokens` via `revokeAccessTokenCrossInstance`, scoped to the verified identity — `authController.ts:473,481`)
 - [ ] CSRF token regenerated on refresh (`setCsrfCookie`)

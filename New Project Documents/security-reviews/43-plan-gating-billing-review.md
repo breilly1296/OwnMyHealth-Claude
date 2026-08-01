@@ -1,5 +1,32 @@
 # Plan Gating & Billing-Tier Security Review — 2026-06-16
 
+> **Reconciled 2026-08-01 — not re-run.** The reviewed code (`planGating.ts`, `usageTracker.ts`,
+> `plans.ts`, `planRoutes.ts`, the 11 gate mount points) is **unchanged** since this review was
+> written, so its findings stand as-is. What changed is the governance around them:
+>
+> - **Posture:** sandbox — no GCP, no deployment target, founder-only data (declared 2026-07-14).
+>   See [OPEN_FINDINGS.md §Posture](../OPEN_FINDINGS.md). Severity below is impact × exposure at
+>   2026-06-16, when a deployed stack was assumed; the ledger has since re-rated these downward.
+> - **Ledger:** [OPEN_FINDINGS.md](../OPEN_FINDINGS.md) is now the single authoritative findings
+>   ledger and owns severity. This document does **not**. Mapping:
+>
+>   | Finding here | Ledger | Current ledger severity |
+>   |---|---|---|
+>   | F-1 blocked/failed guidance burns quota | *not yet in ledger* | proposed **Medium** |
+>   | F-2 TOCTOU + batch overshoot | **OF-06** (Accepted) | **Low** (was Medium) — becomes High and a launch blocker the day plan limits guard paid entitlements |
+>   | F-3 JWT `plan` snapshot unused | *hygiene, not ledgered* | — |
+>   | F-4 prompt drift | prompt-library issue → `_drift-audit-2026-08-01.md` | — |
+>   | F-5 `normalizePlan` is the only guard on the VARCHAR column | *not ledgered* | — |
+>   | (billing stub, noted in §4) | **OF-15** (product decision) | **Low** |
+>
+> - **Also observed 2026-08-01, not in this review:** `checkPlanLimit` calls `getUserUsage`, which
+>   issues **all six** count queries when one is needed (`usageTracker.ts:199`) — a lab upload passes
+>   two gates and so fires 12 counts before the handler runs. Low; performance only.
+> - **OF-06 amendment worth making:** the ledger describes the race as "N concurrent requests
+>   overshoot by N−1". F-2 below establishes something the ledger omits — `POST /biomarkers/batch`
+>   overshoots by `batchSize − 1` with **no concurrency at all**, because the gate is per-request,
+>   not per-row.
+
 Scope: subscription plan gating and billing tiers per `prompts/43-plan-gating-billing.md`, run against live code at HEAD `fb2cd32`. Every check was executed by reading the actual source; the AI guard stack and dollar-budget governance are cross-linked, not re-audited (owned by `27-ai-integration` / `42-ai-cost-control`).
 
 ## Summary
@@ -128,7 +155,7 @@ Headline: the gate is server-side, fail-closed, RLS-scoped, and reads the live D
 - [x] Upgrade CTA is honest about unwired billing — `PlanSection.tsx:162-163` surfaces "Upgrades are not available yet. Contact us to upgrade manually." No UI implies a working purchase flow.
 
 ### 6. Demo Accounts & Feature-Flag Alignment
-- [x] Demo vs plan independence — `blockDemoAI` returns a hard 403 `ForbiddenError` (`demoProtection.ts:164-175`) regardless of plan; it stacks alongside the plan gate on AI routes (e.g. `aiRoutes.ts:33-34`). Either guard refusing is sufficient, so ordering doesn't change the outcome; a demo account is blocked from AI even if its `plan` column were elevated.
+- [x] Demo vs plan independence — `blockDemoAI` returns a hard 403 `ForbiddenError` (`demoProtection.ts:81-175`) regardless of plan; it stacks alongside the plan gate on AI routes (e.g. `aiRoutes.ts:33-34`). Either guard refusing is sufficient, so ordering doesn't change the outcome; a demo account is blocked from AI even if its `plan` column were elevated.
 - [x] Feature flags align with route gates — `questFhirIntegration` key matches `plans.ts:28`/`61`/`80`/`99` ↔ `fhirRoutes.ts:34,59`; `healthProfile` matches `plans.ts:25`/`54`/`77`/`96` ↔ `settingsRoutes.ts:80`. The §1 reconciliations hold (insurancePlans + maxBiomarkers enforced; providerSharing intentionally ungated).
 - [x] `dataExport` is `true` on every tier (`plans.ts:60,79,98`, comment "HIPAA requires this regardless of plan") and the export route is correctly NOT gated (`settingsRoutes.ts:86-90`) — a correct absence of a gate.
 - [x] `healthProfile` GET ungated (`settingsRoutes.ts:66-70`) while PATCH is gated (`:76-83`) — a downgraded user can still read/export saved profile data but cannot write new profile data, matching the comment at `settingsRoutes.ts:73-75`.

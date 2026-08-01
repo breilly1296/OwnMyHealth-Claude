@@ -2,7 +2,16 @@
 
 > **The every-error-code playbook.** Symptom → root cause → user-facing message → developer recovery → related code paths. A frontend dev who sees a `403 FORBIDDEN` (CSRF) or a `401 TOKEN_EXPIRED` should land here and know exactly what to do.
 >
-> Generated against HEAD `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`. Codes are **verified against the live code**, not assumed.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **New failure mode to know: a missing RLS policy is silent.** With RLS enabled, a command with no
+> matching policy is denied by returning **zero rows**, not by raising an error — so the calling code
+> takes its not-found branch and reports something unrelated. OF-22 is the worked example: a missing
+> `sessions` UPDATE policy made a `SELECT ... FOR UPDATE` lock match nothing, and
+> `authService.refreshTokens()` interpreted that as token **reuse** and revoked every session the user
+> had. When a recovery path fires for a reason that makes no sense, check whether an RLS policy is
+> missing for that command before trusting the error classification. Generated against live code. Every non-trivial claim cites `file:line`. Codes are **verified against the live code**, not assumed.
 
 ---
 
@@ -580,6 +589,9 @@ A second pass found no additional thrown-but-undocumented codes: every `throw ne
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **`./37-error-recovery-doc.md` undercounts hand-built codes.** The prompt's master table lists ~14 codes; the live code has more hand-built bodies the prompt omits: `STORAGE_READ_FAILED` (502, `fileController.ts:295`), `EMAIL_NOT_VERIFIED` (403, `authController.ts:297`), `ACCOUNT_LOCKED` (423, `authController.ts:318`), `VERIFICATION_FAILED`/`RESET_FAILED`/`EMAIL_CHANGE_FAILED` (400, `authController.ts:730,867,983`), `GATEWAY_TIMEOUT` (504) + `AI_GUIDANCE_FAILED` (500) (`biomarkerRoutes.ts:303,312`), `CONTEXT_ASSEMBLY_FAILED` (500, `aiChatController.ts:177`), and the internal-route `UNAUTHORIZED`/`NOT_FOUND` (`internalRoutes.ts:49,59`). All are now in §3(d).
 - **The prompt's "storage failure" row is stale.** It claims a GCS read failure "falls through to the default 500 (`INTERNAL_ERROR`)". The download path now emits a dedicated **502 `STORAGE_READ_FAILED`** (`fileController.ts:293-296`). Only the *write* path (`storageService.ts:90,145`) still degrades to 500 `INTERNAL_ERROR`. Corrected in §3(d) and §9.

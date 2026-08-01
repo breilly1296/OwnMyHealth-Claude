@@ -1,10 +1,20 @@
 # HIPAA Compliance Checklist — OwnMyHealth
 
-> **Audit date:** 2026-06-16
-> **Codebase:** HEAD `fb2cd32` (2026-06-15)
+> **Audit date:** 2026-08-01 (previous: 2026-06-16)
+> **Codebase:** `master` @ `12b45ae` (previous: `fb2cd32`)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md). Administrative and physical safeguards that reference the deployed stack describe the **launch** configuration — a control on suspended infrastructure is neither PASS nor FAIL, it is dormant.
+> **Severity:** open findings and their severities are owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md). This checklist maps safeguards to code evidence; it does not grade the open-findings picture.
 > **Compliance officer:** TBD (external: no named Security/Privacy Officer in repo — assign per §164.308(a)(2); record in `New Project Documents/RUNBOOK.md` when designated)
-> **Maturity phase:** pre-beta (production infrastructure live on GCP Cloud Run; no public beta cohort; formal policy set not yet authored)
+> **Maturity phase:** pre-launch sandbox (GCP infrastructure **suspended** since ~2026-07-12; no public beta cohort; formal policy set not yet authored)
 > **Scope:** maps each HIPAA Security Rule safeguard (§164.308 / §164.310 / §164.312) and the Breach Notification Rule (§164.400–414) to **code evidence** (`file:line`) and a **status**.
+
+**New since the last audit (2026-08-01):**
+
+- **§164.520 consent capture** — registration now records `users.terms_accepted_at` plus `users.terms_version` (`20260620_add_registration_consent`), validated at the register API boundary (`0456c50`). This addresses the FTC Health Breach Notification Rule expectation that a consumer health app hold proof of consent to its stated data practices and AI processing of health data. Previously the flow presented an agreement notice but recorded nothing.
+- **§164.312(a)(2)(iv) encryption at rest — a new path.** Uploaded files are no longer encrypted by a cloud provider. Under `STORAGE_BACKEND=local` (the development default since OF-23) the application seals every blob AES-256-GCM before it touches disk. The key model differs from column PHI: the **master** `PHI_ENCRYPTION_KEY` is used directly rather than a per-user derived key (`localBackend.ts:15-19`), so one key compromise exposes every user's files. See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md) §8.0.
+- **§164.312(a)(2)(i) / (c)(1) access control and integrity — regression found and fixed.** OF-22: a missing RLS UPDATE policy on `sessions` broke refresh rotation under the production role and misfired the token-reuse detector into revoking all sessions. Fixed by `20260712_add_sessions_update_policy`; regression-pinned under a real NOBYPASSRLS role (`rls.test.ts:541`).
+- **§164.308(a)(1)(ii)(D) information system activity review** — CI gained a full-history secret scan (`secret-history-scan.yml`) and an end-to-end `e2e` job. The history scan is **failing by design** while **OF-01** (a production service-account key recoverable from git history) remains open; deleting that key in IAM is a hard precondition for re-enabling GCP billing.
+- **§164.308(a)(6) breach detection remains the largest open gap** — OF-12 (Dormant; expected to re-rate High at launch). There is no alerting on audit anomalies or repeated login failures, and no error-tracking SDK. Under the sandbox posture there is nothing to monitor; this is a launch blocker, not a current risk.
 
 This document is a reference, not a narrative. Every non-trivial claim cites `file:line`. It is generated against the live code per [`22-hipaa-checklist-doc.md`](../prompts/22-hipaa-checklist-doc.md) and the [`_doc-quality.md`](../prompts/_doc-quality.md) protocol.
 
@@ -309,6 +319,9 @@ Tracking is **in-repo** (no external issue tracker referenced in code); items ma
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - `../prompts/22-hipaa-checklist-doc.md` Files-to-review table and §164.312 example say `PHI_FIELDS` covers fields without a count, but the fact-digest's `FACT[phi-fields]` summary line states "14 models, 37 encrypted fields." The **live code and the canonical numbers are 14 models / 39 fields** (`backend/src/services/encryption.ts:476-562`, counted: User 6, Biomarker 2, BiomarkerHistory 1, UserFile 1, InsurancePlan 2, ProviderPatient 1, HealthNeed 1, HealthGoal 4, GoalProgressHistory 2, AuditLog 3, ExpenseProjection 3, ExpenseActual 8, CostAnalysis 3, LabConnection 2 = 39). The "37" in the fact-digest body is a stale sub-count; `prompts/_phi-inventory.md:29` correctly says 39. Used 39.
 - `../prompts/22-hipaa-checklist-doc.md` cites the RLS guards at `database.ts:192` (`assertNoBypassRLS`), `:193`/`:270` (`assertRLSForced`), and exits at `:253`/`:305`. Verified live: `assertNoBypassRLS` is **defined** at `backend/src/services/database.ts:217` (called at `:192`, prod-exit at `:253`); `assertRLSForced` defined at `:270` (called at `:193`, prod-exit at `:305`). The prompt's `:192`/`:193` are the *call sites* (correct); the definition line for `assertNoBypassRLS` is `:217`, not `:192`. Cited both.

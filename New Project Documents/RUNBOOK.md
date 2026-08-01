@@ -1,7 +1,29 @@
 # RUNBOOK.md — OwnMyHealth Operator's Reference
 
-> **Last verified:** 2026-06-01 against the live codebase.
+> **Last verified:** 2026-08-01 against `master` @ `12b45ae` (previous verification: 2026-06-01).
 > **Audience:** on-call / operator. Every command below is meant to run verbatim.
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> ## ⚠️ Read this before running anything below
+>
+> **There is no production to operate.** GCP billing was disabled ~2026-07-12; the Cloud Run backend,
+> Cloud SQL prod database, and GCS buckets are suspended, and deploys fail at image push. Sections
+> covering deploy, rollback, Cloud SQL, GCS, Secret Manager, and Cloud Run scaling are the
+> **launch/restore** runbook. They are accurate as a plan and untested as current operations.
+>
+> **What still applies today** (sandbox operations):
+> - Local Postgres provisioning and `prisma migrate deploy` — see [`LOCAL_DEV.md`](./LOCAL_DEV.md).
+> - File storage: `STORAGE_BACKEND=local` writes AES-256-GCM-sealed blobs to `backend/.local-storage`.
+>   To reset local file state, delete that directory; blobs are unreadable without `PHI_ENCRYPTION_KEY`
+>   and the directory is gitignored (`backend/.gitignore:49`).
+> - CI: `ci.yml` (5 jobs — `frontend`, `backend`, `security`, `rls`, `e2e`) and the nightly
+>   `secret-history-scan.yml`. Both still gate merges and still need triage when red.
+>
+> **Restore-from-suspension preconditions.** Before GCP billing is re-enabled, **OF-01 must be closed**:
+> the `ocr-service@ownmyhealth-prod` private key (key id `109ec48b…`) is recoverable from commit
+> `202f2dd` and re-enabling billing silently re-arms it. Deleting that key in GCP IAM is free, works
+> with billing disabled, and takes ~5 minutes. Re-enabling billing without it is the single highest-risk
+> action available in this project. Full gate: [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) OF-01.
 > **Source of truth:** `.github/workflows/deploy.yml` + `deploy-staging.yml` (project/region/service/bucket), `backend/Dockerfile` (runtime), `backend/src/app.ts` (boot), `backend/src/config/index.ts` (env validation). `DEPLOY.md` describes a **Railway** deploy that is no longer how prod ships — treat it as stale except for the domain/DNS table.
 
 This doc passes the five `_doc-quality.md` tests (question-answering, path-and-line, snippet, diagram, reproducibility). See [`## Acceptance questions`](#acceptance-questions) at the end for the self-check.
@@ -378,7 +400,7 @@ Prod + staging secrets live in **GCP Secret Manager** (staging variants use a `-
 | `JWT_ACCESS_SECRET` | `config/index.ts:61` (signs access tokens) | `requireEnv` — boot fails if unset; min 32 chars (`:264`). Rotating invalidates all access tokens. |
 | `JWT_REFRESH_SECRET` | `config/index.ts:65` (signs refresh tokens) | Same; rotating logs everyone out at next refresh. |
 | `PHI_ENCRYPTION_KEY` | `config/index.ts:355`; `encryption.ts` (PHI cipher) | 64 hex chars, prod-validated (`:358-369`). **Load-bearing — see [§8.3](#83-rotating-phi_encryption_key-load-bearing).** |
-| `AUDIT_LOG_SALT` | `config/index.ts:54,284` (audit-log PHI salt) | Min 16 chars; boot **hard-fails** if unset/short (`:284-293`). **Rotating destroys all historic audit-log decryptability — see [§8.4](#84-audit_log_salt-do-not-rotate-casually).** |
+| `AUDIT_LOG_SALT` | `config/index.ts:54,284` (audit-log PHI salt) | Min 16 chars; boot **hard-fails** if unset/short (`:284-293`). **Rotating destroys all historic audit-log decryptability — see [§8.4](#84-audit_log_salt--do-not-rotate-casually).** |
 | `ANTHROPIC_API_KEY` | `config/index.ts:181` | Optional; if set, prod also requires `ANTHROPIC_BAA_ACTIVE=true` (`:300-306`) or boot fails. |
 | `ANTHROPIC_BAA_ACTIVE` | `config/index.ts:185`; gate in `claudeExtraction.ts:106` | `"true"` asserts a signed BAA. Toggling it is the 2026-04-17 pinning-gotcha case. |
 | `SENDGRID_API_KEY` | `config/index.ts:150` | Optional; absence disables email (warn at `:434`). |
@@ -809,7 +831,7 @@ Re-verify the [Acceptance questions](#acceptance-questions) quarterly per `_doc-
 4. **Connect to prod Cloud SQL from laptop?** `gcloud sql connect <instance> --user=postgres --project=ownmyhealth-prod`, or Cloud SQL Auth Proxy + psql — [§7.1](#71-connect-to-prod-cloud-sql-from-your-laptop).
 5. **Which script validates `withRLSContext` wrapping, and where?** `scripts/check-rls-wrappers.sh` at the repo root (run in `ci.yml:130-131`) — [§10](#check-rls-wrapperssh).
 6. **Staging vs prod deploy trigger + prod canary flow?** Staging: push to `staging` → straight to 100%. Prod: push to `main`/`master` → build-and-stage (0%, tagged) → smoke-test `/api/v1/health` → promote (100% via `--to-revisions`) — [§2](#2-environments), [§4](#4-deploy-backend).
-7. **Rotate `PHI_ENCRYPTION_KEY` end-to-end; why is `AUDIT_LOG_SALT` dangerous?** PHI key needs a per-row decrypt-with-old / re-encrypt-with-new migration before the env swap (no in-repo tool yet) — [§8.3](#83-rotating-phi_encryption_key-load-bearing). `AUDIT_LOG_SALT` rotation makes all historic audit-log PHI undecryptable and boot hard-fails if unset/short — [§8.4](#84-audit_log_salt-do-not-rotate-casually).
+7. **Rotate `PHI_ENCRYPTION_KEY` end-to-end; why is `AUDIT_LOG_SALT` dangerous?** PHI key needs a per-row decrypt-with-old / re-encrypt-with-new migration before the env swap (no in-repo tool yet) — [§8.3](#83-rotating-phi_encryption_key-load-bearing). `AUDIT_LOG_SALT` rotation makes all historic audit-log PHI undecryptable and boot hard-fails if unset/short — [§8.4](#84-audit_log_salt--do-not-rotate-casually).
 8. **Where are prod secrets, and how to update both JWT secrets (real names)?** GCP Secret Manager; `gcloud secrets versions add jwt-access-secret`/`jwt-refresh-secret`, then `run services update --update-secrets=…:latest` + `update-traffic --to-latest` — [§8.1](#81-where-secrets-live)/[§8.3](#83-update-a-secret-example-both-jwt-secrets).
 9. **Post-deploy smoke test + endpoints?** `/health`, `/api/health/db`, `/api/v1/health` (the CI target) — [§14](#14-smoke-test-after-deploy).
 10. **Log filter for RLS-denied in last hour?** `resource.type="cloud_run_revision" jsonPayload.rls_denied=true` with `--freshness=1h` — [§9](#9-log-access--filtering).
@@ -836,6 +858,9 @@ Re-verify the [Acceptance questions](#acceptance-questions) quarterly per `_doc-
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **Migration count:** the spec (`15-runbook-doc.md:45`) says "22 dirs"; the live `backend/prisma/migrations/` directory holds **22 migration dirs + `migration_lock.toml`** (confirmed: `00000000000000_initial_schema` … `20260601_add_email_change`). Count matches.
 - **Prod DB name conflict:** `docs/STAGING.md:16` lists the prod DB as `ownmyhealth`, while CLAUDE.md/project memory records `verifymyprovider`, and the spec's environments table (`15-runbook-doc.md:120`) repeats `verifymyprovider`. These three disagree; the authoritative value is the live Cloud Run `DATABASE_URL` secret. Documented as a reconcile-in-GCP TBD in [§2](#2-environments).

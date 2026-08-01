@@ -1,6 +1,15 @@
 # ROUTING_TABLE.md — Middleware & Security Stack per Endpoint
 
-> **Generated** 2026-06-16 against HEAD `fb2cd32`. Source of truth = the live route files under `backend/src/routes/` (18 non-test files incl. `index.ts`), `backend/src/app.ts`, and the middleware in `backend/src/middleware/`. Every non-trivial claim cites `file:line`.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-16)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Re-verified 2026-08-01 — no routing drift.** 18 route files (incl. `index.ts`), 10 domain
+> controllers, 10 middleware, 8 rate limiters, and 8 `aiSpendGuard` mount points across 5 route files,
+> all unchanged. The only change in this area is behavioral, not structural: `POST /api/v1/auth/refresh`
+> depended on an RLS UPDATE policy that did not exist until `20260712_add_sessions_update_policy`
+> (OF-22) — see [`DATA_MODEL.md`](./DATA_MODEL.md#session--userencryptionkey-rls). Registration
+> (`POST /api/v1/auth/register`) now additionally requires a validated `acceptedTerms` field
+> (OMH-L03, `0456c50`). Generated against the live route files. Source of truth = the live route files under `backend/src/routes/` (18 non-test files incl. `index.ts`), `backend/src/app.ts`, and the middleware in `backend/src/middleware/`. Every non-trivial claim cites `file:line`.
 
 ## Purpose & how to read
 
@@ -254,7 +263,7 @@ router.post(
   '/:id/guidance',
   aiLimiter,            // 10/hr per user (rateLimiter.ts:177)
   aiSpendGuard,         // daily $ budget (aiSpendGuard.ts:28)
-  blockDemoAI,          // demo accounts blocked (demoProtection.ts:164)
+  blockDemoAI,          // demo accounts blocked (demoProtection.ts:81)
   requirePlanLimit('aiGuidancePerDay'),  // plan tier limit (planGating.ts:37)
   validate(schemas.uuidParam, 'params'),
   asyncHandler(async (req, res) => { /* inline AI handler, BAA-gated */ }),
@@ -386,9 +395,9 @@ if (!tokenMatches(provided, expected)) { res.status(401)... }
 | `aiSpendGuard` | `aiSpendGuard.ts:28` | **8 mount points across 5 route files**: biomarker guidance (`:136`), expenses analyze (`:114`), insurance reanalyze + upload-sbc (`:125,139`), upload ×3 (`:82,105,136`), ai chat (`:32`). |
 | `requirePlanLimit(...)` | `planGating.ts:37` | biomarker `POST`/`POST /batch` (`maxBiomarkers`), biomarker guidance (`aiGuidancePerDay`), insurance `POST /plans` (`insurancePlans`), insurance reanalyze + upload-sbc (`pdfUploadsPerMonth`), expenses analyze (`costAnalysisPerMonth`), upload ×3 (`pdfUploadsPerMonth` + `maxBiomarkers` on 2), ai chat (`aiChatsPerDay`). |
 | `requirePlanFeature(...)` | `planGating.ts:131` | settings `PATCH /health-profile` (`healthProfile`), fhir `/connect/quest` + `/sync` (`questFhirIntegration`). |
-| `blockDemoAI` | `demoProtection.ts:164` | biomarker guidance, insurance reanalyze + upload-sbc, expenses analyze, upload ×3, ai chat, fhir `/connect`+`/sync`+`DELETE /connections/:id`. |
+| `blockDemoAI` | `demoProtection.ts:81` | biomarker guidance, insurance reanalyze + upload-sbc, expenses analyze, upload ×3, ai chat, fhir `/connect`+`/sync`+`DELETE /connections/:id`. |
 | `blockDemoAdminAccess` | `demoProtection.ts:67` | Router-level `adminRoutes.ts:31`. |
-| `blockDemoProfileUpdate` | `demoProtection.ts:145` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` (`settingsRoutes.ts:44,60,79,101,110`). |
+| `blockDemoProfileUpdate` | `demoProtection.ts:62` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` (`settingsRoutes.ts:44,60,79,101,110`). |
 | `blockDemoRoleChange` | `demoProtection.ts:43` | **Exported but UNUSED** in routes — admin role changes are covered by `blockDemoAdminAccess` (router-level) + the self-role-elevation guard. Flagged in §12. |
 | `blockDemoUserModification` | `demoProtection.ts:85` | **Exported but UNUSED** in routes — admin user-management covered by `blockDemoAdminAccess`. Flagged in §12. |
 | `validate(schema, source?)` | `validation.ts` (factory) | See §11. |
@@ -475,9 +484,9 @@ sequenceDiagram
 
 | Variant | File:line | Routes guarded | Why |
 |---|---|---|---|
-| `blockDemoAI` | `demoProtection.ts:164` | biomarker `/:id/guidance`, insurance `/plans/:id/reanalyze` + `/upload-sbc`, expenses `/analyze`, upload `/lab-report`+`/insurance-sbc`+`/lab-results-ocr`, ai `/chat`, fhir `/connect/quest`+`/sync/:connectionId`+`DELETE /connections/:id` | Demo accounts can't create real PHI or burn AI quota / API spend |
+| `blockDemoAI` | `demoProtection.ts:81` | biomarker `/:id/guidance`, insurance `/plans/:id/reanalyze` + `/upload-sbc`, expenses `/analyze`, upload `/lab-report`+`/insurance-sbc`+`/lab-results-ocr`, ai `/chat`, fhir `/connect/quest`+`/sync/:connectionId`+`DELETE /connections/:id` | Demo accounts can't create real PHI or burn AI quota / API spend |
 | `blockDemoAdminAccess` | `demoProtection.ts:67` | **Router-level** in `adminRoutes.ts:31` → guards all 11 admin endpoints. Runs between `authenticate` (`:30`) and `requireRole('ADMIN')` (`:32`) so a demo account is rejected before any role check (F-5) | Demo accounts must never reach admin functions |
-| `blockDemoProfileUpdate` | `demoProtection.ts:145` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` | Demo state stays consistent for all testers; demo has a real password so would otherwise pass verification |
+| `blockDemoProfileUpdate` | `demoProtection.ts:62` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` | Demo state stays consistent for all testers; demo has a real password so would otherwise pass verification |
 | `blockDemoUserModification` | `demoProtection.ts:85` | **Exported, not mounted** on any route (covered by `blockDemoAdminAccess`). See §12 | — |
 | `blockDemoRoleChange` | `demoProtection.ts:43` | **Exported, not mounted** on any route (covered by `blockDemoAdminAccess` + self-role-elevation guard). See §12 | — |
 
@@ -626,6 +635,9 @@ No PHI-writing route was found missing `authenticate` or missing an RLS wrap. Th
 - [SECURITY_STATUS.md](./SECURITY_STATUS.md) — open findings, incl. the §12 drift items.
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - `./34-routing-table-doc.md` (and `00-index.md`) reference an "old ~70" endpoint figure; the live count is **111** user/security-relevant endpoints (§3). Prompt author should update the verified-counts table.
 - The prompt's mega-table placeholder shows `/api/v1/auth/login` rate limiter as "`authLimiter` + `strictAuthLimiter`" — confirmed correct (`authRoutes.ts:34,48`).

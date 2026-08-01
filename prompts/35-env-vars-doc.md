@@ -6,10 +6,24 @@ tags:
   - reference
 type: prompt
 priority: 2
-updated: 2026-06-16
+updated: 2026-08-01
 ---
 
 # Generate ENV_VARS.md
+
+> **New since 2026-06-16 (OF-23)** — both must appear in the generated table:
+> - `STORAGE_BACKEND` — `gcs` | `local`. Validated in **every** environment (`config/index.ts:343`)
+>   and **refused in production/staging** (`config/index.ts:349`, because Cloud Run disks are
+>   ephemeral and must never hold PHI files). `local` is the development default.
+> - `LOCAL_STORAGE_DIR` — root for the local encrypted-disk backend, default
+>   `backend/.local-storage` (`config/index.ts:255`). Git-ignored at `backend/.gitignore:49`.
+>
+> Document the **coupling**, not just the two rows: with `STORAGE_BACKEND=local`,
+> `PHI_ENCRYPTION_KEY` becomes the at-rest key for uploaded **files** as well as PHI columns
+> (`localBackend.ts:46-55`), which changes that variable's blast radius. Classify accordingly.
+>
+> **Posture stamp required** (see `_doc-quality.md`): Secret Manager sourcing is the *launch*
+> configuration; as of 2026-07-14 the only live secret surface is local `.env` files.
 
 ## Required reading before generating
 
