@@ -636,6 +636,9 @@ No PHI-writing route was found missing `authenticate` or missing an RLS wrap. Th
 
 ## Prompt drift log
 
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
+
 - `./34-routing-table-doc.md` (and `00-index.md`) reference an "old ~70" endpoint figure; the live count is **111** user/security-relevant endpoints (§3). Prompt author should update the verified-counts table.
 - The prompt's mega-table placeholder shows `/api/v1/auth/login` rate limiter as "`authLimiter` + `strictAuthLimiter`" — confirmed correct (`authRoutes.ts:34,48`).
 - The prompt says `internalRoutes` mounts only `/internal/audit-cleanup`; confirmed — it is the single endpoint, mounted at `app.ts:269` (not `routes/index.ts`).

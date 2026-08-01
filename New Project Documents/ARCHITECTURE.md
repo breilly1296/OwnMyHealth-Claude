@@ -95,7 +95,7 @@ Versions are pinned in `package.json` (frontend, repo root) and `backend/package
 | Database | PostgreSQL (Cloud SQL, PG 16 in CI RLS job) | — | `ci.yml` RLS regression job (see [§16](#16-deployment-topology)) |
 | ORM | Prisma Client + CLI | `^7.7.0` / `^7.8.0` | `backend/package.json:27,69` |
 | Driver/adapter | pg + @prisma/adapter-pg | `^8.16.3` / `^7.8.0` | `backend/package.json:43,26` |
-| Schema | 19 models, 13 enums, 32 migrations | — | `backend/prisma/schema.prisma`, [`DATA_MODEL.md`](./DATA_MODEL.md) |
+| Schema | 19 models, 13 enums, 34 migrations | — | `backend/prisma/schema.prisma`, [`DATA_MODEL.md`](./DATA_MODEL.md) |
 
 > **Model count note**: `schema.prisma` defines **19 models** (User, Session, RevokedAccessToken, UserEncryptionKey, ProviderPatient, UserFile, Biomarker, BiomarkerHistory, InsurancePlan, InsuranceBenefit, HealthNeed, HealthGoal, GoalProgressHistory, AuditLog, SystemConfig, ExpenseProjection, ExpenseActual, CostAnalysis, LabConnection). `RevokedAccessToken` (`schema.prisma:96`) and `LabConnection` (`schema.prisma:755`) are post-06-01 additions. Full ER + cascades in [`DATA_MODEL.md`](./DATA_MODEL.md).
 
@@ -844,7 +844,7 @@ Counts are non-test files at HEAD `fb2cd32` (verified via Glob; `*.test.ts` excl
 
 | Directory | Count | Purpose |
 |---|---|---|
-| `components/` | ~73 `.tsx` across 14 dirs | `admin, analytics, auth, biomarkers, common, dashboard, files, health, insurance, onboarding, provider, settings, trends, upload` |
+| `components/` | **75** `.tsx` across **15** dirs | `admin, analytics, auth, biomarkers, common, dashboard, files, health, insurance, legal, onboarding, provider, settings, trends, upload` |
 | `services/api/` | 18 `.ts` | `admin, ai, auth, biomarkers, client, expenses, fhir, files, healthGoals, healthNeeds, index, insurance, onboarding, patient, plan, provider, settings, upload` (`ai`, `fhir`, `onboarding`, `plan` are post-06-01) |
 | `contexts/` | — | `AuthContext` (token refresh + multi-tab session), `ThemeContext` |
 | `utils/`, `hooks/`, `data/`, `types/` | — | helpers, `useBiomarkerData` (bounded-parallel pagination), `biomarkerDirections`, types |
@@ -853,7 +853,7 @@ Counts are non-test files at HEAD `fb2cd32` (verified via Glob; `*.test.ts` excl
 
 | Path | Purpose |
 |---|---|
-| `.github/workflows/` | 4 workflows: `ci.yml`, `deploy.yml`, `deploy-staging.yml`, `maintenance.yml` |
+| `.github/workflows/` | **5** workflows: `ci.yml`, `deploy.yml`, `deploy-staging.yml`, `maintenance.yml`, `secret-history-scan.yml` |
 | `backend/Dockerfile` | Node 22-alpine multi-stage, digest-pinned, source-maps stripped, `CMD ["node","dist/app.js"]` |
 | `backend/railway.toml` | Runtime env config |
 | `vite.config.ts` | Build chunk splits (PDF, OCR, charts) |
@@ -922,6 +922,9 @@ Full ER, all 19 models, RLS policies, and cascade behavior in [`DATA_MODEL.md`](
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - `prompts/16-architecture-doc.md` and the verification table cite **"19 models"** and **"PHI_FIELDS 14 models / 39 fields"** (canonical numbers). The earlier in-task fact-digest draft transiently said "17/18 models" and "37 fields" before self-correcting; the **authoritative live values are 19 models and 14 models / 39 encrypted fields** (`encryption.ts:476-562`, `schema.prisma` model list). `00-index.md` "Verified codebase counts" should reflect 19 models / 39 PHI fields.
 - `CLAUDE.md` "Project Structure" / "Middleware Stack" / "Roles & Access Control" / "PHI Encryption" sections are **stale**: they list 10 controllers (incl. a non-existent `uploadController.ts`), 8 middleware, 13 route files, 18 services, and omit `compression`, `requireJsonContentType`, the `/api` no-store layer, `aiSpendGuard`, `planGating`, the time-series merge, FHIR, cross-instance token revocation, FORCE RLS, and the migrate-as-job change. This doc is generated against the live code per `_doc-quality.md` rule 6 ("trust the code over the prompt").

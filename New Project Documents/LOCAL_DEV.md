@@ -130,14 +130,14 @@ createdb ownmyhealth_dev
 
 cd backend
 npx prisma generate          # generate the Prisma client into backend/generated/
-npx prisma migrate deploy    # apply all 32 migrations
+npx prisma migrate deploy    # apply all 34 migrations
 cd ..
 
 # (optional) seed an already-verified PRO test user for smoke / e2e flows
 npx tsx e2e/setup/seed-test-user.ts
 ```
 
-- **32 migrations** as of 2026-06-16, newest `backend/prisma/migrations/20260615_provider_consent_immutable_audit_insert_check/`. Verify with `Glob pattern: backend/prisma/migrations/*/`.
+- **34 migrations** as of 2026-08-01, newest `backend/prisma/migrations/20260712_add_sessions_update_policy/`. Verify with `Glob pattern: backend/prisma/migrations/*/`.
 - **19 Prisma models** in `backend/prisma/schema.prisma` (incl. `RevokedAccessToken` at `:96` and `LabConnection` at `:755`). See [`DATA_MODEL.md`](./DATA_MODEL.md) for the full ER.
 - **The only seed script** is `e2e/setup/seed-test-user.ts`. There is **no** `backend/scripts/seed*` (`backend/scripts/` holds only `setup-rls-test-db.sh`).
 
@@ -419,7 +419,7 @@ If the SPA and API run on different hosts/ports, `COOKIE_SAME_SITE` and `COOKIE_
 ## 9. Reset procedures
 
 ```bash
-# Nuke the local DB and reapply all 32 migrations from scratch
+# Nuke the local DB and reapply all 34 migrations from scratch
 cd backend
 npx prisma migrate reset --force
 ```
@@ -511,7 +511,10 @@ Pre-commit hygiene is enforced by `husky` + `lint-staged` (`package.json:20,68-7
 
 ## Prompt drift log
 
-- `prompts/36-local-dev-setup-doc.md:42,250` and the "Files to review" table say **32** migrations; confirmed accurate as of HEAD `fb2cd32` (`Glob backend/prisma/migrations/*/` → 32 dirs, newest `20260615_provider_consent_immutable_audit_insert_check`). No drift.
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
+
+- `prompts/36-local-dev-setup-doc.md:42,250` and the "Files to review" table say **32** migrations; accurate at HEAD `fb2cd32`, now **34** (`20260620_add_registration_consent`, `20260712_add_sessions_update_policy`) (`Glob backend/prisma/migrations/*/` → 32 dirs, newest `20260615_provider_consent_immutable_audit_insert_check`). No drift.
 - `prompts/36-local-dev-setup-doc.md:41` says **19 models** (with `RevokedAccessToken` + `LabConnection`); confirmed — `backend/prisma/schema.prisma` defines 19 models (`RevokedAccessToken` at `:96`, `LabConnection` at `:755`). The ground-truth `fact-digest.md` FACT[db-schema] block initially counted "17" then self-corrects to **18** for one omission and is itself stale on the canonical **19** — trusting the canonical number per the run instructions and the schema. Prompt author should reconcile `fact-digest.md` FACT[db-schema] to 19.
 - `prompts/36-local-dev-setup-doc.md:77` recommends Postgres "16.x … or 15.x"; confirmed against `.github/workflows/ci.yml:165` (`image: postgres:16`). The commented-out block at `ci.yml:227` references `postgres:15` (disabled). No drift; documented 16 as primary.
 - `CLAUDE.md` "Development Commands" still lists `npx prisma migrate dev` and omits the 32-migration / migrate-as-Cloud-Run-job split; the live Dockerfile (`backend/Dockerfile:86-93`) and deploy workflow (`.github/workflows/deploy.yml:43,158`) are authoritative. `CLAUDE.md` also predates the post-2026-06-01 env vars (`AI_DAILY_BUDGET_USD`, `COOKIE_SAME_SITE`, `OMH_DEPLOY_ENFORCE_PROD`). Documented from code per the "trust the code" rule.

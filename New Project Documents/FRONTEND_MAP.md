@@ -1,6 +1,9 @@
 # FRONTEND_MAP.md — Component + Context + API-Service Atlas
 
 > **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> The frontend is unaffected by the posture — it is the same build in every environment.
 >
 > Frontend = Vite + React 18 + TypeScript at repo **root** (`src/`); backend is at `backend/`. All paths below are repo-relative.
 >
@@ -625,6 +628,9 @@ The error renders with an `AlertCircle` icon + `RefreshCw` retry button (importe
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **Per-directory `.tsx` counts in `prompts/39-frontend-component-map-doc.md` (and the fact-digest) are inflated.** The prompt lists e.g. `auth (8)`, `biomarkers (9)`, `common (7)`, `dashboard (11)`, `health (3)`, `insurance (22)`. Actual `.tsx`-only per `Glob "src/components/<dir>/*.tsx"`: `auth (6)`, `biomarkers (8)`, `common (6)`, `dashboard (10)`, `health (2)`, `insurance (18)`. The inflation comes from counting `index.ts` barrels and helper `.ts` files (`categoryRouting.ts`, `insuranceKnowledgeBaseConstants.ts`, `useInsuranceKnowledgeBase.ts`). **The total is correct: 73 `.tsx` across 14 dirs** (`find src/components -name '*.tsx' | wc -l` = 73). Per-directory truth is in [§2](#2-component-directory-catalog).
 - **Prompt §6 / acceptance Q7 implies `uploadApi` ("upload.ts") handles SBC upload.** It does not — SBC upload is `insuranceApi.uploadSBC` (`insurance.ts:295`); `uploadApi.uploadLabReport` has no consumer. Corrected in [§6](#6-api-to-component-matrix) and [§9](#9-drift-findings).

@@ -19,7 +19,7 @@ A reader with only this doc (no repo access) should be able to answer *"what doe
 | Encrypted fields | **39** `*Encrypted` columns across **14 models** (per `PHI_FIELDS`) | `backend/src/services/encryption.ts:476-562` |
 | Prisma migrations | **34** directories | `Glob backend/prisma/migrations/*/migration.sql` |
 | Prisma enums | **13** | `backend/prisma/schema.prisma:564-671` (see [§11](#11-enum-catalog)) |
-| Latest migration | `20260712_add_sessions_update_policy` (OF-22) | [§10 Migration timeline](#10-migration-timeline) |
+| Latest migration | `20260712_add_sessions_update_policy` (OF-22) | [§10 Migration timeline](#13-migration-timeline) |
 
 The database is PostgreSQL (Cloud SQL) accessed through Prisma with the `@prisma/adapter-pg` `Pool` adapter (`backend/src/services/database.ts:48-115`). All PHI is AES-256-GCM encrypted at the application layer **before** the DB write (per-user key, [§5](#5-encryption-matrix)). Tenant isolation is **PostgreSQL Row-Level Security**: every query that touches user data runs inside `withRLSContext` / `withRLSTransaction`, which issue `SET LOCAL app.current_user_id` so default-deny RLS policies fail **closed** (`database.ts:419-428`). All 19 RLS tables additionally have `FORCE ROW LEVEL SECURITY` so even the table owner is policy-checked, and the server **hard-exits at boot** if any RLS table lacks FORCE or the DB role has `BYPASSRLS` in production (`database.ts:192-193`, `:217-312`).
 
@@ -980,7 +980,7 @@ These no longer appear in `schema.prisma` or `PHI_FIELDS`. **Stale doc**: `CLAUD
 
 ## 13. Migration timeline
 
-32 migration directories (chronological by dir name). One-line effect each.
+34 migration directories (chronological by dir name). One-line effect each.
 
 | Date | Migration | Effect |
 |---|---|---|

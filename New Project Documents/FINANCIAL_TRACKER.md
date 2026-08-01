@@ -425,6 +425,9 @@ Enforcement is via `planGating` middleware (`requirePlanLimit(...)` mounted on e
 
 ## Prompt drift log
 
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
+
 - `./23-financial-tracker-doc.md` (Files-to-review table) lists `backend/src/middleware/rateLimiter.ts` as holding "**Eight** rate limiters" — confirmed exactly 8 (`standardLimiter`, `authLimiter`, `strictAuthLimiter`, `uploadLimiter`, `sensitiveLimiter`, `aiLimiter`, `providerAccessRequestLimiter`, `bulkOperationLimiter` at `rateLimiter.ts:66,88,105,134,151,177,211,240`). No drift; recorded for traceability.
 - The prompt's §3/§7 examples imply Document AI is "AI" spend; verified it is **not** dollar-tracked (`ocrService.ts:300` has no `trackAIUsage`), consistent with the prompt's own §4 caveat. No code/prompt conflict — the doc surfaces the gap as instructed.
 - The prompt notes instance sizing "moved out of `backend/railway.toml`." Confirmed: sizing (`--max-instances=3`, no `--cpu`/`--memory`) lives in `deploy.yml:189` and `deploy-staging.yml:88`; `railway.toml` was not cited for sizing.

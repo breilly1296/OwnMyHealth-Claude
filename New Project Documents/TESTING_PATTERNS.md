@@ -2,6 +2,7 @@
 title: Testing Patterns
 audience: Engineers adding a controller / route / service / middleware / component / e2e test
 status: refreshed 2026-08-01 against master @ 12b45ae (previous: fb2cd32, 2026-06-16)
+posture: sandbox - no GCP, no deployment target (declared 2026-07-14); see OPEN_FINDINGS.md. The test suites are unaffected - they run identically in the sandbox, and the `rls` and `e2e` jobs are the only place production's NOBYPASSRLS role is exercised.
 ---
 
 # TESTING_PATTERNS.md
@@ -859,15 +860,19 @@ See [PHI_TAXONOMY.md / DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see pro
 
 ## Prompt drift log
 
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
+
 - `../prompts/38-testing-patterns-doc.md` and `_doc-quality.md` instruct cross-linking to
   `DATA_MODEL.md`, `ROUTING_TABLE.md`, `ERROR_RECOVERY.md`, and `LOCAL_DEV.md`. At the time of this
-  generation run (HEAD `fb2cd32`), only `ARCHITECTURE.md` and `KNOWN_ISSUES.md` exist in
-  `New Project Documents/` (`Glob "New Project Documents/*.md"`). Per `_doc-quality.md:270`, the
+  generation run (HEAD `fb2cd32`), only `ARCHITECTURE.md` and `KNOWN_ISSUES.md` existed in
+  `New Project Documents/` (`Glob "New Project Documents/*.md"`). **As of 2026-08-01 all 20 docs
+  exist**, so those cross-links are now live and the `(doc pending …)` form is no longer needed. Per `_doc-quality.md:270`, the
   not-yet-present siblings are written with the `(doc pending — see prompt …)` form rather than as
   live links, to avoid linking to docs that do not yet exist in this run's output set.
-- The prompt's §1 says "54 backend `*.test.ts`, 25 frontend tests, 5 Playwright e2e specs" — all
-  three confirmed exactly by `Glob` (`backend/src/**/*.test.ts` = 54; `src/__tests__/**/*.test.{ts,tsx}`
-  = 25; `e2e/*.spec.ts` = 5). No drift.
+- ~~The prompt's §1 says "54 backend `*.test.ts`, 25 frontend tests, 5 Playwright e2e specs" — all
+  three confirmed exactly by `Glob`. No drift.~~ **Superseded 2026-08-01:** those counts were exact
+  at `fb2cd32` and are now **66 / 33 / 6**. Prompt 38 was corrected in the same pass. See §1.
 - The root `CLAUDE.md` "Testing" / structure section is stale in places the canonical fact digest
   corrects (e.g. it predates `vitest.config.ci.ts`, the `test:ci` script, and the removal of
   `rbac.test.ts`). This doc follows the live code and the fact digest, not `CLAUDE.md`.

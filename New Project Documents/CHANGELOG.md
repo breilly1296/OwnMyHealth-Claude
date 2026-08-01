@@ -122,7 +122,7 @@ Nine PRs integrated via `release/security-ux-2026-06-15`, fast-forwarded to `mas
 - **Upload / extraction guards (#176, `8062a9f`)** — page cap, AI-text cap, strict WebP validation, biomarker numeric sanity bounds, and safe date parsing on the upload/extraction paths (L28–L32). OCR lab path also hard-rejects over-cap PDFs (L28 completeness, `c6d5993`).
 - **AI-path consent hardening (#177, `52efc7d`)** — server-side AI disclaimer enforcement, fail-closed pre-flight chat audit, corrected budget env docs (L33/L42/L39). The L33 disclaimer is appended server-side, which required updating the biomarker guidance happy-path assertion (`2a1206f`, and integration twin `ee76212` in `biomarkerController.test.ts`).
 - **Login-oracle / atomic audit / `canEditData` neutralization (#178, `f0563f0`)** — closes the login-lockout enumeration oracle (L21), makes bulk audit writes atomic (L41), and neutralizes the unconsumed `canEditData` provider permission (L37).
-- **IRREVERSIBLE drop of plaintext audit metadata (#179, `38e84e6`; migration `20260615_drop_legacy_audit_metadata`)** — see [Removed](#removed-20260615). The encrypted twin `AuditLog.metadataEncrypted` (added 2026-06-06) is now the sole metadata store.
+- **IRREVERSIBLE drop of plaintext audit metadata (#179, `38e84e6`; migration `20260615_drop_legacy_audit_metadata`)** — see [Removed](#removed-2026-06-15). The encrypted twin `AuditLog.metadataEncrypted` (added 2026-06-06) is now the sole metadata store.
 - **Encrypt raw lab filenames at rest (#180, `ae91986`; migration `20260615_encrypt_userfile_original_filename`, L24)** — adds `user_files.original_filename_encrypted` (per-user AES-256-GCM via `decryptOriginalFilename` helper) and drops `NOT NULL` on the plaintext twin; `Biomarker.sourceFile` is deliberately **left plaintext** (it is a FHIR idempotency/dedupe key — encrypting it breaks de-dup). `PHI_FIELDS` now lists `UserFile.originalFilenameEncrypted` at `backend/src/services/encryption.ts:499`. Live-PG validated. See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
 
 ### Added
@@ -134,7 +134,7 @@ Nine PRs integrated via `release/security-ux-2026-06-15`, fast-forwarded to `mas
 
 - **Enhanced-parser insurance plans now persist (#182, `16c9cc8`, FB-8)** — the client previously generated a `crypto.randomUUID()` id, which made `handleInsurancePlanExtracted` skip `createPlan`, so parsed plans were silently dropped. Fix routes an empty id through `createPlan` so the server assigns the id and the plan is saved.
 
-### Removed {#removed-20260615}
+### Removed (2026-06-15)
 
 - **`audit_logs.metadata` plaintext column DROPPED (#179, migration `20260615_drop_legacy_audit_metadata/migration.sql:18`)** — `DROP COLUMN IF EXISTS "metadata"`. **Breaking / irreversible:** any legacy plaintext metadata content is permanently lost (the encrypted twin `metadataEncrypted` has carried new writes since 2026-06-06). Done via DDL because `audit_logs` is immutable-by-RLS. See [`DATA_MODEL.md`](./DATA_MODEL.md), [`SECURITY_STATUS.md`](./SECURITY_STATUS.md).
 
@@ -205,7 +205,7 @@ The 2026-06-13 16-dimension teardown (`PROJECT_TEARDOWN_2026-06-13.md`, regenera
   ```
 
 - **Node 20 → Node 22 LTS (#169, `7fed6b6`, M15 — Node 20 EOL Apr 2026)** — `backend/Dockerfile:11,15,37` `FROM node:22-alpine@sha256:…` (digest-pinned, both stages); `ci.yml` `NODE_VERSION: '22'`; `deploy.yml` frontend `setup-node node-version: '22'`. `backend/package.json` `engines.node` = `"^20.19 || ^22.12 || >=24"` (verified `git show HEAD:backend/package.json`).
-- **Maintenance jobs as a Cloud Run job (#163, `75c8800`)** — `.github/workflows/maintenance.yml` (one of the 4 workflows).
+- **Maintenance jobs as a Cloud Run job (#163, `75c8800`)** — `.github/workflows/maintenance.yml` (one of the 4 workflows at that time; there are 5 today).
 - **Email scheduler multi-instance dedupe (#165, `6230467`; migration `20260614_add_email_sent_markers`)** — adds `users.last_weekly_summary_sent` + `last_plan_expiring_sent` for at-most-once claiming of scheduler emails across Cloud Run instances.
 - **Trend-semantics classifier (#173, `9e2c3c7`)** — UX wave 3 trend-direction classification fix.
 
@@ -514,6 +514,9 @@ A commit that fails any CI stage is never built, migrated, staged, or promoted.
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 - **`prompts/19-changelog-doc.md` assumes a prior `CHANGELOG.md` with a cutoff entry.** None exists — `New Project Documents/` held only `security-reviews/` at generation time (`Glob "New Project Documents/*"`). The cutoff was set to git-history start. The prompt author may want a "first-run / no-prior-doc" branch.
 - **`prompts/19-changelog-doc.md:108` says "Migrations `20260613_revoked_access_tokens`, `20260606000002_add_tokens_valid_after`" for cross-instance revocation** — confirmed correct; both directories exist (fact digest `FACT[db-schema]`).

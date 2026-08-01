@@ -322,7 +322,7 @@ sequenceDiagram
 
 ## 7. FHIR sync idempotency + dedupe
 
-> The FHIR OAuth handshake, SSRF allowlist, and token encryption are owned by the FHIR lab-integration layer (`backend/src/services/fhir/smartAuth.ts`, `backend/src/services/fhir/urlSafety.ts`; tokens in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#labconnection)). This section owns only the **merge after sync** — how `syncLabResults` decides a given observation has already been imported.
+> The FHIR OAuth handshake, SSRF allowlist, and token encryption are owned by the FHIR lab-integration layer (`backend/src/services/fhir/smartAuth.ts`, `backend/src/services/fhir/urlSafety.ts`; tokens in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#labconnection-smart-on-fhir-oauth-tokens)). This section owns only the **merge after sync** — how `syncLabResults` decides a given observation has already been imported.
 
 `syncLabResults(userId, provider)` (`backend/src/services/fhir/labSyncService.ts:193`) pre-fetches existing biomarkers once and builds **two** dedupe sets.
 
@@ -340,7 +340,7 @@ if (existingSourceFiles.has(obsIdentity) && !isAmendment) {
 }
 ```
 
-`sourceFile` is deliberately **NOT encrypted** — it is an idempotency/dedupe key, and encrypting it (different ciphertext each time) would break this set lookup. The set is seeded without any decryption (`backend/src/services/fhir/labSyncService.ts:280-288`); the column is plaintext `VarChar(255)` in the schema (`backend/prisma/schema.prisma:195`). This is an intentional plaintext exception — see [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#biomarkersourcefile-plaintext-exception).
+`sourceFile` is deliberately **NOT encrypted** — it is an idempotency/dedupe key, and encrypting it (different ciphertext each time) would break this set lookup. The set is seeded without any decryption (`backend/src/services/fhir/labSyncService.ts:280-288`); the column is plaintext `VarChar(255)` in the schema (`backend/prisma/schema.prisma:195`). This is an intentional plaintext exception — see [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#biomarker--biomarkerhistory).
 
 ### Secondary value-based dedupe
 
@@ -508,7 +508,7 @@ extracted (name, value, unit)
 - **The consolidation layer never decrypts.** Ciphertext is moved as-is because all rows for one user share that user's salt — no PHI value is read or logged (`backend/src/services/biomarkerConsolidation.ts:18-20`). The maintenance runner logs metric **names/units and counts only**, never values (`backend/src/maintenance/consolidateBiomarkerSeries.ts:16-19`, `:95-100`).
 - **Encryption is owned by the controllers/services that call the merge.** Manual create encrypts at `backend/src/controllers/biomarkerController.ts:272-275`; bulk at `:538-539`; FHIR sync at `backend/src/services/fhir/labSyncService.ts:332`. Decryption happens only on read, in `toResponse` (`backend/src/controllers/biomarkerController.ts:99-112`).
 - **Per-user RLS scoping.** Every series operation runs inside `withRLSTransaction(userId, …)` / `withRLSContext(userId, …)`, and `upsertBiomarkerReading` **must** run inside an RLS transaction so repeated calls in one tx see each other's writes (`backend/src/services/biomarkerSeries.ts:68-73`). The consolidation job operates per-user so it can only ever touch one user's rows at a time (`backend/src/maintenance/consolidateBiomarkerSeries.ts:16-18`).
-- **PHI columns.** Only `Biomarker.valueEncrypted` / `notesEncrypted` and `BiomarkerHistory.valueEncrypted` are PHI; `name` / `unit` / `category` / `sourceFile` are plaintext (`backend/prisma/schema.prisma:185-189`, `:195`, `:223`). See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#biomarker).
+- **PHI columns.** Only `Biomarker.valueEncrypted` / `notesEncrypted` and `BiomarkerHistory.valueEncrypted` are PHI; `name` / `unit` / `category` / `sourceFile` are plaintext (`backend/prisma/schema.prisma:185-189`, `:195`, `:223`). See [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md#biomarker--biomarkerhistory).
 
 ---
 
@@ -532,6 +532,9 @@ extracted (name, value, unit)
 ---
 
 ## Prompt drift log
+
+
+> **These entries are a historical record of the 2026-06-16 generation run (HEAD `fb2cd32`), not a description of the current repo.** They were written to log where the *generating prompt* disagreed with the code at that time. Several cite counts that have since moved — as of the 2026-08-01 refresh the live figures are **34 migrations**, **66 backend / 33 frontend / 6 e2e tests**, **75 `.tsx` across 15 dirs**, **19 API modules**, **5 workflows**. Where an entry below conflicts with the body of this document, **the body is current and this log is not**. The prompt-side corrections were applied in `prompts/_drift-audit-2026-08-01.md`.
 
 The generating prompt (`prompts/46-biomarker-series.md`) is accurate in substance; a handful of cited line numbers drifted slightly from the code at HEAD `fb2cd32`. Trusting the code, the corrected anchors are:
 
