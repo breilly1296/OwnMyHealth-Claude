@@ -2,7 +2,16 @@
 
 > **The every-error-code playbook.** Symptom → root cause → user-facing message → developer recovery → related code paths. A frontend dev who sees a `403 FORBIDDEN` (CSRF) or a `401 TOKEN_EXPIRED` should land here and know exactly what to do.
 >
-> Generated against HEAD `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`. Codes are **verified against the live code**, not assumed.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **New failure mode to know: a missing RLS policy is silent.** With RLS enabled, a command with no
+> matching policy is denied by returning **zero rows**, not by raising an error — so the calling code
+> takes its not-found branch and reports something unrelated. OF-22 is the worked example: a missing
+> `sessions` UPDATE policy made a `SELECT ... FOR UPDATE` lock match nothing, and
+> `authService.refreshTokens()` interpreted that as token **reuse** and revoked every session the user
+> had. When a recovery path fires for a reason that makes no sense, check whether an RLS policy is
+> missing for that command before trusting the error classification. Generated against live code. Every non-trivial claim cites `file:line`. Codes are **verified against the live code**, not assumed.
 
 ---
 

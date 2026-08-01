@@ -1,6 +1,10 @@
 # DATA_MODEL.md
 
-> Complete reference for the OwnMyHealth database: every model, field, index, FK, RLS policy, cascade rule, encryption column, and the `withRLSContext` / `withRLSTransaction` usage matrix. Generated against HEAD `fb2cd32` (2026-06-15) by reading `backend/prisma/schema.prisma`, every file under `backend/prisma/migrations/`, and `backend/src/services/{database,encryption,userEncryption,auditLog}.ts`.
+> Complete reference for the OwnMyHealth database: every model, field, index, FK, RLS policy, cascade rule, encryption column, and the `withRLSContext` / `withRLSTransaction` usage matrix. Built by reading `backend/prisma/schema.prisma`, every file under `backend/prisma/migrations/`, and `backend/src/services/{database,encryption,userEncryption,auditLog}.ts`.
+>
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15) · **Posture:** sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md)
+>
+> **Changed since the last generation:** 2 new migrations (34 dirs, was 32) — `20260620_add_registration_consent` and `20260712_add_sessions_update_policy`. The second closed **OF-22**, a production-only refresh-rotation break, and is the most instructive RLS lesson in this schema: see [§6.x Sessions RLS](#session--userencryptionkey-rls). Models (19), enums (13), and the encryption matrix (14 models / 39 fields) are **unchanged**.
 
 A reader with only this doc (no repo access) should be able to answer *"what does the DB look like and how is it access-controlled?"* without opening the schema.
 
@@ -13,9 +17,9 @@ A reader with only this doc (no repo access) should be able to answer *"what doe
 | Prisma models | **19** | `backend/prisma/schema.prisma` (see [§4 Model catalog](#4-model-catalog)) |
 | RLS-enabled tables | **19** (every table has RLS ENABLE + FORCE) | [§6 RLS policy catalog](#6-rls-policy-catalog) |
 | Encrypted fields | **39** `*Encrypted` columns across **14 models** (per `PHI_FIELDS`) | `backend/src/services/encryption.ts:476-562` |
-| Prisma migrations | **32** directories | `Glob backend/prisma/migrations/*/migration.sql` |
+| Prisma migrations | **34** directories | `Glob backend/prisma/migrations/*/migration.sql` |
 | Prisma enums | **13** | `backend/prisma/schema.prisma:564-671` (see [§11](#11-enum-catalog)) |
-| Latest migration | `20260615_provider_consent_immutable_audit_insert_check` | [§10 Migration timeline](#10-migration-timeline) |
+| Latest migration | `20260712_add_sessions_update_policy` (OF-22) | [§10 Migration timeline](#10-migration-timeline) |
 
 The database is PostgreSQL (Cloud SQL) accessed through Prisma with the `@prisma/adapter-pg` `Pool` adapter (`backend/src/services/database.ts:48-115`). All PHI is AES-256-GCM encrypted at the application layer **before** the DB write (per-user key, [§5](#5-encryption-matrix)). Tenant isolation is **PostgreSQL Row-Level Security**: every query that touches user data runs inside `withRLSContext` / `withRLSTransaction`, which issue `SET LOCAL app.current_user_id` so default-deny RLS policies fail **closed** (`database.ts:419-428`). All 19 RLS tables additionally have `FORCE ROW LEVEL SECURITY` so even the table owner is policy-checked, and the server **hard-exits at boot** if any RLS table lacks FORCE or the DB role has `BYPASSRLS` in production (`database.ts:192-193`, `:217-312`).
 
@@ -438,6 +442,8 @@ Purpose: account + profile (encrypted identity PHI) + auth state + plan + email-
 | `tokensValidAfter` | `tokens_valid_after` | `Timestamptz(6)` | — (cross-instance access-token cutoff) | yes | — |
 | `pendingEmail` / `emailChangeToken` / `emailChangeExpires` | … | email-change flow | — | yes | — |
 | `plan` / `planExpiresAt` / `planUpdatedAt` / `onboardingCompletedAt` | … | — | — | mixed | — |
+| `termsAcceptedAt` | `terms_accepted_at` | `Timestamptz(6)` | — (registration consent, OMH-L04) | yes | `20260620_add_registration_consent` |
+| `termsVersion` | `terms_version` | `VarChar(20)` | — (which policy version was accepted) | yes | `20260620_add_registration_consent` |
 | `lastWeeklySummarySent` / `lastPlanExpiringSent` | … | scheduler at-most-once markers (non-PHI) | — | yes | — |
 | (+ `emailVerified`, verification/reset tokens, lockout fields, `notificationPreferences` Json, timestamps) | … | — | — | mixed | — |
 
@@ -701,7 +707,69 @@ CREATE POLICY revoked_access_tokens_delete_own ON revoked_access_tokens FOR DELE
 
 ### Session / UserEncryptionKey RLS
 
-`sessions_*` and `user_encryption_keys_*`: own/admin, with INSERT also allowing `current_user_id() IS NULL` (login/registration paths) — `migration.sql:118-144`.
+`sessions_*` and `user_encryption_keys_*`: own/admin, with INSERT also allowing `current_user_id() IS NULL` (login/registration paths) — `20260107_add_rls_policies/migration.sql:118-144`.
+
+**`sessions` gained an UPDATE policy on 2026-07-12 (OF-22).** This is the single most transferable
+RLS lesson in the schema, so it is worth stating in full:
+
+```sql
+-- Source: backend/prisma/migrations/20260712_add_sessions_update_policy/migration.sql:19-22
+CREATE POLICY sessions_update_own ON sessions
+  FOR UPDATE
+  USING (user_id = current_user_id() OR is_admin_session())
+  WITH CHECK (user_id = current_user_id() OR is_admin_session());
+```
+
+**Why it was missing, and why that broke production.** `sessions` rows are rotated by
+delete-and-reinsert, never `UPDATE`d, so an UPDATE policy looked unnecessary — the base migration
+shipped SELECT/INSERT/DELETE only. But **PostgreSQL applies UPDATE-policy checks to
+`SELECT ... FOR UPDATE` row locks**, and the refresh rotation in `authService.refreshTokens()` locks
+the session row exactly that way:
+
+```ts
+// Source: backend/src/services/authService.ts:730-736
+const locked = await tx.$queryRaw<...>`
+  SELECT id, user_id AS "userId", expires_at AS "expiresAt"
+  FROM sessions
+  WHERE id = ${payload!.jti}::uuid
+  FOR UPDATE
+`;
+```
+
+With RLS enabled and no UPDATE policy, the lock matched **zero rows**. Two consequences, both
+production-only:
+
+1. Every token refresh returned 401 (`Invalid or expired refresh token`), logging users out the
+   moment their 15-minute access token expired.
+2. Worse — the not-found row was classified as refresh-token **reuse**, firing the M-1 compromise
+   detector: `revokeAllUserTokens()` wiped all the user's sessions and stamped `tokens_valid_after`,
+   killing in-flight access tokens across every device.
+
+**Why it was invisible until production.** Dev and staging connect as a `BYPASSRLS` role; production
+(and now CI) connect as the NOBYPASSRLS `omh_app` role. The bug could only manifest under the latter.
+It was found by the `e2e` CI job's first real run (`919398a`) and fixed in `3159731`.
+
+**Generalized rule for this schema:** *every table that is row-locked needs an UPDATE policy, even if
+it is never `UPDATE`d.* A regression test pins it at `backend/src/services/rls.test.ts:541`
+(`describe('sessions row lock (refresh rotation regression)')`), running under a real NOBYPASSRLS
+role.
+
+**Tables that still have no UPDATE policy** — audited 2026-08-01 across all 34 migrations:
+
+| Table | UPDATE policy? | Is it UPDATEd by code? |
+|---|---|---|
+| `audit_logs` | none | **No — intentional.** Audit rows are immutable by design |
+| `biomarker_history` | none | **Yes** — `tx.biomarkerHistory.updateMany` (`biomarkerConsolidation.ts:145`, history re-parenting) |
+| `goal_progress_history` | none | **Yes** — `tx.goalProgressHistory.update` (`goalValueBackfill.ts:127`, PHI re-encryption) |
+| `revoked_access_tokens` | none | **Yes** — written by `upsert`, whose conflict branch is an UPDATE (`authService.ts:379-383`) |
+
+The last three are the same latent shape OF-22 had. All three run under a **user** RLS context, not
+admin (`withRLSTransaction(userId, …)` at `consolidateBiomarkerSeries.ts:103`,
+`backfillGoalValues.ts:113`; `withRLSContext(verifiedUserId, …)` at `authService.ts:378`), so
+`is_admin_session()` does not rescue them — and with no UPDATE policy at all, nothing can. These are
+recorded as findings in [44-token-revocation-review](./security-reviews/44-token-revocation-review.md)
+and are **not yet confirmed to fail at runtime**; confirming them requires executing against the
+NOBYPASSRLS role, which the `rls` CI job now provisions.
 
 ### UserFile RLS
 
@@ -947,7 +1015,9 @@ These no longer appear in `schema.prisma` or `PHI_FIELDS`. **Stale doc**: `CLAUD
 | 2026-06-14 | `20260614_add_email_sent_markers` | `users.last_weekly_summary_sent` + `last_plan_expiring_sent` (at-most-once scheduler claiming; non-PHI) |
 | 2026-06-15 | `20260615_drop_legacy_audit_metadata` (M6) | **Irreversibly drops the plaintext `audit_logs.metadata` column** (DDL) |
 | 2026-06-15 | `20260615_encrypt_userfile_original_filename` (L24) | `user_files.original_filename_encrypted` + dropped NOT NULL on `original_filename` |
-| 2026-06-15 | `20260615_provider_consent_immutable_audit_insert_check` (L23+L40) | `provider_patients_guard_consent()` BEFORE-UPDATE trigger + tightened `audit_logs_insert` WITH CHECK — **most recent migration** |
+| 2026-06-15 | `20260615_provider_consent_immutable_audit_insert_check` (L23+L40) | `provider_patients_guard_consent()` BEFORE-UPDATE trigger + tightened `audit_logs_insert` WITH CHECK |
+| 2026-06-20 | `20260620_add_registration_consent` (OMH-L04) | `users.terms_accepted_at` `TIMESTAMPTZ(6)` + `users.terms_version` `VARCHAR(20)`, both nullable. Captures **when** a user accepted and **which** policy version, stamped on successful registration in `createUser`. Deliberately **not PHI** — a timestamp and a short version string, not encrypted, **not** added to `PHI_FIELDS`. No new RLS policy needed: they live on `users`, which already carries owner/admin policies under FORCE RLS, and `createUser` writes them in the admin/system RLS context. Pre-existing users carry NULL |
+| 2026-07-12 | `20260712_add_sessions_update_policy` (**OF-22**) | `sessions_update_own` — the missing UPDATE policy that broke refresh rotation under FORCE RLS + NOBYPASSRLS. See [Sessions RLS](#session--userencryptionkey-rls) for the full mechanism — **most recent migration** |
 
 Migrations run as the dedicated Cloud Run job `ownmyhealth-migrate`, **not** at container boot (Dockerfile `CMD ["node","dist/app.js"]`); deploy is gated on CI (`needs: ci`). See [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
@@ -963,7 +1033,7 @@ Migrations run as the dedicated Cloud Run job `ownmyhealth-migrate`, **not** at 
 6. **One RLS policy body verbatim?** `CREATE POLICY biomarkers_delete_own ON biomarkers FOR DELETE USING (user_id = current_user_id() OR is_admin_session());` ([§6 Biomarker](#biomarker-rls)).
 7. **Index for biomarker dashboard list?** `biomarkers_user_category_date_idx` = `(user_id, category, measurement_date DESC)` ([§9](#9-index-catalog)).
 8. **Models holding the per-user wrap key, and where derived?** `UserEncryptionKey` holds the per-user salt; key derived by `deriveUserKey` (PBKDF2-SHA512, 600k iters) at `encryption.ts:236-247` ([§8](#8-per-user-encryption-key)).
-9. **How many migrations, most recent?** 32; `20260615_provider_consent_immutable_audit_insert_check` ([§13](#13-migration-timeline)).
+9. **How many migrations, most recent?** **34**; `20260712_add_sessions_update_policy` ([§13](#13-migration-timeline)).
 10. **Who passes `null` userId, and why?** Admin routes, userEncryption, auditLog, authService, emailScheduler, maintenance jobs — system/admin ops with no user RLS context ([§7](#7-withrlscontext-vs-withrlstransaction-usage-matrix)).
 11. **Dropped models + migration?** DNA/genetics in `20260423_drop_dna_genetics` ([§12](#12-removed-models)).
 12. **Is `Biomarker.notesEncrypted` in `PHI_FIELDS`?** Yes (`encryption.ts:489`) ([§5](#5-encryption-matrix)).
@@ -981,7 +1051,7 @@ Migrations run as the dedicated Cloud Run job `ownmyhealth-migrate`, **not** at 
 
 - `CLAUDE.md` "Key Files" table says `schema.prisma` has "Database models (15+)" and the PHI section lists DNA/Genetics, `InsurancePlan.planName/insurerName/benefits`, and `Biomarker.unit` as encrypted. **Actual**: 19 models (no DNA — dropped in `20260423_drop_dna_genetics`); `PHI_FIELDS` has 14 models / 39 fields and does **not** include `planName`/`insurerName`/`benefits`/`unit` (none are `*Encrypted` columns). `CLAUDE.md` should be refreshed.
 - `CLAUDE.md` lists `backend/src/controllers` as "10 files" incl. `uploadController.ts`; the single-file `uploadController.ts` no longer exists — upload handlers live under `backend/src/controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`, `index.ts`, `shared.ts`). Out of scope for DATA_MODEL but noted (also surfaced in `_doc-quality.md`).
-- The prompt's `00000000000000_initial_schema` is the base; the prompt's migration list and counts (32 dirs, 19 models, 13 enums, latest = `20260615_provider_consent_immutable_audit_insert_check`) all match the live repo — **no drift** in the prompt's schema facts.
+- The prompt's `00000000000000_initial_schema` is the base. As of the 2026-08-01 refresh the live counts are **34 migration dirs**, 19 models, 13 enums, latest = `20260712_add_sessions_update_policy`. Prompt `33-data-model-doc.md` and `00-index.md` cited 32 dirs / `20260615_...` — corrected in `_drift-audit-2026-08-01.md`. Models, enums and the encryption matrix did **not** drift.
 - Prompt §1/§5/§12 say `PHI_FIELDS` = "14 models / 39 fields" — confirmed verbatim against `encryption.ts:476-562`. The fact-digest's interim "37 fields" tally undercounts (it omits `User.healthProfileEncrypted` from the per-model sum and double-handles two goal columns); the authoritative count by direct read of `encryption.ts` is **39** across **14** models, matching the prompt's canonical number.
 
 ---

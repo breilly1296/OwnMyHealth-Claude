@@ -4,7 +4,16 @@
 >
 > The **middleware-chain lens** (security stack per route) lives in [`ROUTING_TABLE.md`](./ROUTING_TABLE.md); the two docs cross-link heavily. The **per-field PHI lens** lives in [`PHI_TAXONOMY.md`](./PHI_TAXONOMY.md).
 >
-> Source HEAD: `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Re-verified 2026-08-01 — the HTTP contract did not change.** Two notes:
+> 1. `POST /api/v1/auth/register` now requires a validated `acceptedTerms` boolean at the API boundary
+>    (OMH-L03, `0456c50`); the server stamps `users.terms_accepted_at` and `users.terms_version` on success.
+> 2. `GET /api/v1/files/:id/download` is unchanged as a contract, but the bytes now come from whichever
+>    storage backend is active (`gcs` or the local encrypted disk — OF-23). It remains a backend stream
+>    proxy for both; there is still no signed-URL egress path. See
+>    [`ARCHITECTURE.md`](./ARCHITECTURE.md) §13.0. Every non-trivial claim cites `file:line`.
 
 ---
 

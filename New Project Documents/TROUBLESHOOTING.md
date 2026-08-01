@@ -1,6 +1,22 @@
 # TROUBLESHOOTING.md — Symptom-First Catalog
 
-> Generated from live code at HEAD `fb2cd32` (2026-06-15). Every non-trivial claim cites `file:line`. See the [Prompt drift log](#prompt-drift-log) at the end for places the generating prompt disagreed with the code.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md). Symptoms tied to Cloud Run, Cloud SQL, or GCS describe the launch stack and cannot occur today.
+>
+> **Two new entries worth reading first:**
+>
+> **"Every token refresh returns 401 and users are logged out of all devices"** — this was **OF-22**,
+> fixed 2026-07-12. `sessions` had no RLS UPDATE policy, and PostgreSQL applies UPDATE-policy checks to
+> `SELECT ... FOR UPDATE` row locks, so the rotation lock matched zero rows under a NOBYPASSRLS role —
+> and the missing row was then misread as token **reuse**, firing a full family revoke. **It reproduced
+> only under the production DB role**; dev and staging connect as BYPASSRLS. If you see this symptom
+> again after adding a table or policy, check for a missing UPDATE policy before anything else
+> (`20260712_add_sessions_update_policy`, `rls.test.ts:541`).
+>
+> **"File upload fails with `Local storage backend requires a valid PHI_ENCRYPTION_KEY`"** — expected
+> under `STORAGE_BACKEND=local` (the development default since OF-23) when `PHI_ENCRYPTION_KEY` is unset
+> or malformed. The app deliberately still boots; only storage calls fail, with that message
+> (`localBackend.ts:44-55`). Set a valid 64-hex-char key. Generated from live code. Every non-trivial claim cites `file:line`. See the [Prompt drift log](#prompt-drift-log) at the end for places the generating prompt disagreed with the code.
 
 ---
 

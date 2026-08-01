@@ -1,8 +1,14 @@
 # KNOWN_ISSUES.md — Bug & Tech-Debt Ledger
 
-> **Scope**: the open-issue, tech-debt, and code-marker ledger for OwnMyHealth at HEAD `fb2cd32` (2026-06-15).
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15) · **Posture:** sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md)
+>
+> **Scope**: the open-issue, tech-debt, and code-marker ledger for OwnMyHealth.
 > **Audience**: a Claude Project reader who has only the `New Project Documents/` doc set (no repo access). Every non-trivial claim cites `file:line`. Use this doc to answer: *"is this a known issue? what's the workaround? where's the fix tracked?"*
-> **Authoritative security source (updated 2026-07-11)**: open findings and their severities are owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) — the single reconciled ledger (1 Critical / 3 High / 8 Medium / 8 Low at 2026-07-11; OF-02 closed same day). This doc's H-1/H-2/H-3 etc. severity labels predate the reconciliation; each entry below notes its canonical OF-nn id. Where this doc and `SECURITY_STATUS.md` disagreed, `OPEN_FINDINGS.md` resolves it.
+> **Authoritative security source (updated 2026-08-01)**: open findings and their severities are owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) — the single reconciled ledger. Current state after the 2026-07-14 sandbox re-triage: **Live: 0 Critical · 1 High · 0 Medium · 10 Low** (11 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7**. This doc's H-1/H-2/H-3 severity labels predate the reconciliation and are **not** current; each entry notes its canonical `OF-nn` id, and the ledger's number wins. Where this doc and `SECURITY_STATUS.md` disagree, the ledger resolves it.
+>
+> **Closed since this doc was written:** **OF-23** (file upload hard-depended on GCS — closed 2026-07-14 by the local encrypted-disk backend), **OF-11** (CI secret scan was working-tree-only — closed 2026-07-14 by `secret-history-scan.yml`), **OF-22** (refresh rotation broken under enforced RLS — found and fixed 2026-07-12), **OF-02** (Document AI OCR had no dollar cap — closed 2026-07-11). Do not carry any of these forward as open.
+>
+> **Added to the ledger 2026-08-01 — OF-24 through OF-27** (all Low under the sandbox posture): blocked/failed biomarker AI-guidance requests consume the user's `aiGuidancePerDay` quota (the L-35 fix exists on the chat path but was never mirrored to guidance — `biomarkerRoutes.ts:154,187`) · `revoked_access_tokens` has no RLS UPDATE policy but is written by `upsert` · two maintenance jobs UPDATE `biomarker_history` / `goal_progress_history`, which also have no UPDATE policy (potential irreversible PHI loss in consolidation — **High at launch**) · the plan gate issues six count queries per gated request. All four are the same story as OF-22 in three of the four cases: a policy set that omits UPDATE, invisible in dev because dev connects as BYPASSRLS. See [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) and [`security-reviews/44-token-revocation-review.md`](./security-reviews/44-token-revocation-review.md).
 
 This doc was generated against live code per [`prompts/20-known-issues-doc.md`](../prompts/20-known-issues-doc.md) and the [`_doc-quality.md`](../prompts/_doc-quality.md) protocol.
 

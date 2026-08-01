@@ -1,6 +1,8 @@
 # ARCHITECTURE.md — OwnMyHealth System Overview
 
-> **Generated**: 2026-06-16 · **HEAD**: `fb2cd32` · **Scope**: backend (`backend/src/`) + frontend (`src/`) + infra (`.github/workflows/`, `backend/Dockerfile`).
+> **Code state**: `master` @ `12b45ae` · **Refreshed**: 2026-08-01 (previous: `fb2cd32`, 2026-06-16) · **Posture**: sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md) · **Scope**: backend (`backend/src/`) + frontend (`src/`) + infra (`.github/workflows/`, `backend/Dockerfile`).
+>
+> **Read §1 and §16 with this in mind.** GCP billing was disabled ~2026-07-12 and the project has no deployment target. The Cloud Run / Cloud SQL / GCS topology described below is the **launch architecture**, not a running system. What actually runs today is the same application code against a local Postgres and the **local encrypted-disk storage backend** (§13.0, new — OF-23).
 >
 > This is the **root** of the `New Project Documents/` cross-link graph. It orients a reader to OwnMyHealth's moving parts: tech stack, request lifecycle, middleware stack, security data flows (auth, CSRF, RLS, encryption, consent), AI extraction + cost control, Quest SMART-on-FHIR lab sync, file/OCR pipeline, onboarding, audit logging, deployment topology, and schedulers. Per-endpoint, per-model, and per-field detail is deferred to the sibling docs linked at the bottom.
 
@@ -15,6 +17,12 @@ This doc was generated against [`_doc-quality.md`](../prompts/_doc-quality.md), 
 OwnMyHealth is a **privacy-first, HIPAA-grade health-tracking platform**: patients track biomarkers (with longitudinal trends and AI educational guidance), upload lab reports and insurance documents (parsed by Claude + Google Document AI OCR), connect Quest lab accounts over SMART-on-FHIR, track health goals/needs and medical expenses, and share data with providers under consent-based, granular access control. All PHI is AES-256-GCM encrypted with per-user keys, every PHI access is audit-logged with DB-enforced 7-year retention, and PostgreSQL **FORCE ROW LEVEL SECURITY** isolates each user's rows.
 
 The system is a **React SPA served from a GCS bucket** talking to a **stateless Express API on Cloud Run** backed by **Cloud SQL Postgres**, with Anthropic, Google Document AI, SendGrid, and Quest FHIR as external services.
+
+> **As of 2026-07-14 that topology is the target, not the state.** GCP billing is disabled; nothing is
+> deployed. The same Express API and SPA run locally against local Postgres, with uploaded files held
+> by the **local AES-256-GCM disk backend** instead of GCS (§13.0). Every security property in the
+> paragraph above — per-user encryption, audit retention, FORCE RLS — is application-level and holds
+> identically in both configurations; only the hosting substrate is suspended.
 
 ```
   ┌─────────────┐     ┌──────────────────┐     ┌───────────────────┐
@@ -420,6 +428,25 @@ await tx.providerPatient.update({
 | `canViewHealthNeeds` | Read health needs | `has_provider_access(..., 'view_health_needs')` |
 | `canEditData` | Write patient data | `has_provider_access(..., 'edit')` |
 
+#### The row-lock trap (OF-22) — required reading before adding a policy
+
+RLS in this system is default-deny per *command*: a table with RLS enabled and **no policy for a
+given command** denies that command outright, and `is_admin_session()` cannot rescue it because the
+admin branch lives inside policies that do not exist.
+
+That produced a production-only outage. `sessions` had SELECT/INSERT/DELETE policies but no UPDATE
+policy — rows are rotated by delete-and-reinsert, so none looked necessary. But **PostgreSQL applies
+UPDATE-policy checks to `SELECT ... FOR UPDATE` row locks**, and refresh rotation locks the session
+row exactly that way (`authService.ts:730-736`). Under FORCE RLS with the NOBYPASSRLS `omh_app` role
+the lock matched zero rows: every refresh 401'd, and the missing row was misread as token **reuse**,
+firing `revokeAllUserTokens()` and logging users out across all devices. Dev and staging connect as a
+BYPASSRLS role, so it was invisible there until the `e2e` CI job ran under a real role. Fixed by
+`20260712_add_sessions_update_policy` (`3159731`), pinned by `rls.test.ts:541`.
+
+**Rule:** every table that is row-locked needs an UPDATE policy, even if it is never `UPDATE`d — and
+review under the same DB role production uses. Full analysis, including three tables that still have
+no UPDATE policy, is in [`DATA_MODEL.md`](./DATA_MODEL.md#session--userencryptionkey-rls).
+
 `has_provider_access` additionally requires `status = 'ACTIVE'` AND `(consent_expires_at IS NULL OR consent_expires_at > NOW())` (`migration 20260107_add_rls_policies/migration.sql:44-58`) — so an EXPIRED window denies access even if `status` is still ACTIVE. Permission edits are blocked on expired consent (`patientRoutes.ts:364-369`). Post-06-01, migration `20260615_provider_consent_immutable_audit_insert_check` adds a BEFORE-UPDATE trigger that **restores the four consent columns to OLD values unless the writer is the patient or admin** (L23). The provider-side choke point is `services/providerAccess.ts` `resolveProviderAccess(...)`. See [`DATA_MODEL.md`](./DATA_MODEL.md) and [`API_REFERENCE.md`](./API_REFERENCE.md) for endpoints.
 
 ---
@@ -532,6 +559,63 @@ sequenceDiagram
 
 Upload handlers live in `backend/src/controllers/upload/` (`labUploadController.ts`, `sbcUploadController.ts`, `shared.ts`, `index.ts`) — the old top-level `uploadController.ts` no longer exists.
 
+### 13.0 Storage is pluggable (OF-23, 2026-07-14)
+
+`storageService.ts` is no longer a GCS client — it is a **façade** that resolves one of two
+interchangeable backends and delegates. Controllers, upload handlers, and bulk-deletion paths import
+from it only and stay backend-agnostic.
+
+```
+      controllers / upload handlers / deletion paths
+                        │  (import storageService only)
+                        ▼
+        backend/src/services/storageService.ts          ← façade, lazy selection
+                        │
+        config.storage.backend ──┬── 'gcs'   ──▶ storage/gcsBackend.ts    (deployed; SUSPENDED)
+                                 └── 'local' ──▶ storage/localBackend.ts  (dev default; LIVE today)
+                                                        │
+                                                        ▼
+                              backend/.local-storage/{userId}/{fileId}.{ext}
+                              [ 'OMHL' | 0x01 | iv(16) | authTag(16) | ciphertext ]
+```
+
+```ts
+// Source: backend/src/services/storageService.ts:33-44
+let selectionLogged = false;
+function activeBackend(): StorageBackend {
+  const useLocal = config.storage?.backend === 'local';
+  if (!selectionLogged) {
+    selectionLogged = true;
+    logger.info('Storage backend selected', { data: useLocal
+        ? { backend: 'local', dir: config.storage.localDir }
+        : { backend: 'gcs', bucket: config.gcp.bucketName } });
+  }
+  return useLocal ? localBackend : gcsBackend;
+}
+```
+
+Four properties worth knowing:
+
+1. **Selection is lazy, not at module load.** Test files that partially mock `config` (without
+   `storage`) import controllers whose chain loads this module; the optional chain makes an absent
+   mock value select GCS — the pre-OF-23 behavior those mocks were written against
+   (`storageService.ts:28-32`).
+2. **Both backends satisfy one contract** (`storage/types.ts`), including the error semantics
+   consumers rely on: delete is idempotent (missing object resolves, does not throw) and
+   `getFileStream` surfaces every failure as a **stream error**, not a throw.
+3. **`local` encrypts before touching disk**, sealed with the **master** `PHI_ENCRYPTION_KEY`
+   (not a per-user derived key — `getFileStream(storageKey)` has no user context;
+   `localBackend.ts:15-19`), written tmp-then-rename at mode `0600`, with `path.resolve` containment
+   so a corrupted DB key cannot escape the root (`localBackend.ts:65-74,97-103`). See
+   [`PHI_TAXONOMY.md#80`](./PHI_TAXONOMY.md) for how this differs from column PHI.
+4. **`local` is refused in production and staging** — Cloud Run disks are ephemeral and must never
+   hold PHI files (`config/index.ts:349-355`).
+
+Note the `storageKey` (`{userId}/{fileId}.{ext}`) carries **no backend discriminator**, so a row
+written under one backend resolves to nothing under the other. That is fine while the choice is
+per-environment and immutable; it becomes a migration question if the project returns to GCS.
+
+
 ```mermaid
 sequenceDiagram
   participant C as Client
@@ -539,7 +623,7 @@ sequenceDiagram
   participant U as labUploadController / sbcUploadController
   participant OCR as processDocument (pdfParser / pdfTextExtraction / ocrService)
   participant AI as claudeExtraction / sbcExtraction / biomarkerExtractor
-  participant GCS as Google Cloud Storage
+  participant ST as storageService (gcsBackend | localBackend)
   participant DB as Postgres
 
   C->>R: POST /api/v1/upload/lab-report (multipart, X-CSRF-Token)
@@ -548,7 +632,7 @@ sequenceDiagram
   OCR->>AI: extract biomarkers / SBC fields (Claude)
   AI-->>U: structured fields
   U->>U: encrypt PHI (per-user key) + truncate to maxBiomarkers
-  U->>GCS: persist source file (withGcsOrphanCleanup on tx rollback)
+  U->>ST: persist source file (withGcsOrphanCleanup on tx rollback)
   U->>DB: withRLSTransaction → upsertBiomarkerReading per reading + audit
   U-->>C: { biomarkers, ... }
 ```
@@ -650,14 +734,23 @@ flowchart LR
 - **Deploy gated on CI** — `deploy.yml` invokes `ci.yml` via `workflow_call` and `build-and-stage` has `needs: ci`. CI includes frontend lint/test/build, backend lint/`test:ci`/build, a **Security Audit** job (gitleaks + `npm audit --audit-level=high` both sides + `check-rls-wrappers.sh`), and an **RLS Regression job** that runs the tenant-isolation suite against a real Postgres 16 as a NOBYPASSRLS role.
 - **Staged deploy**: 0%-traffic revision → smoke-test → named-revision promote (deterministic rollback) → frontend `gsutil rsync` (needs `[ci, promote]`).
 - **`maintenance.yml`** — manual `workflow_dispatch` running one-time backfills (dry-run default) as job `ownmyhealth-maintenance`.
+- **CI gained an `e2e` job on 2026-07-11** (`919398a`, `ci.yml:221`) — `ci.yml` now has **five** jobs: `frontend`, `backend`, `security`, `rls`, `e2e`. The e2e job boots a real backend against Postgres, seeds a standing user (`npm run test:e2e:setup`), and runs the full Playwright suite. Its first real run is what surfaced **OF-22** (the missing `sessions` UPDATE policy), a bug invisible in dev/staging because those connect as a BYPASSRLS role. A stale commented-out `e2e-tests` block still sits at `ci.yml:313+` and should be deleted.
+- **`secret-history-scan.yml`** (new, 2026-07-11, `8ec3989`) — a nightly (`cron: '17 7 * * *'`) + on-demand **full-history** gitleaks scan. Distinct from the working-tree scan in `ci.yml`, which cannot see removed commits. Deliberately not on push, so it never blocks a merge. **Expect it red by design** until OF-01's committed GCP key is purged from history — it is that finding's regression guard, not a broken workflow.
+
+> **Deployment status (2026-08-01): none of the above is currently running.** GCP billing was disabled
+> ~2026-07-12; deploys fail at image push. `deploy.yml`, `deploy-staging.yml`, and `maintenance.yml`
+> have no reachable target. `ci.yml` and `secret-history-scan.yml` are unaffected and still gate every
+> merge. Read this section as the launch pipeline to restore, not as live operations. Restoring it has
+> a hard precondition: **OF-01** — the `ocr-service@` private key recoverable from git history must be
+> deleted in IAM *before* billing is re-enabled, because re-enabling silently re-arms it.
 
 ### Environment breakdown
 
 | Env | Frontend | Backend | DB | Notes |
 |---|---|---|---|---|
-| Local | Vite dev (`:5173`) | `tsx watch src/app.ts` (`:3001`) | local/Cloud SQL | `DISABLE_CSRF=true` optional; mock FHIR mounted (`app.ts:275`); migrations applied manually. |
-| Staging | GCS | Cloud Run | Cloud SQL | `deploy-staging.yml`; SendGrid sandbox forced; BAA gates warn. |
-| Prod | GCS bucket (SPA) | Cloud Run `ownmyhealth-backend` (Node 22) | Cloud SQL | `NODE_ENV=production` + `OMH_DEPLOY_ENFORCE_PROD=true` baked into image (`Dockerfile:53-54`); BAA gates hard-fail; FORCE-RLS boot assertion active. |
+| **Local (the only live environment today)** | Vite dev (`:5173`) | `tsx watch src/app.ts` (`:3001`) | local Postgres | `STORAGE_BACKEND=local` is the **default** (§13.0) — uploads work with zero GCP credentials, needing only `PHI_ENCRYPTION_KEY`. `DISABLE_CSRF=true` optional; mock FHIR mounted (`app.ts:275`); migrations applied manually. |
+| Staging *(suspended)* | GCS | Cloud Run | Cloud SQL | `deploy-staging.yml`; SendGrid sandbox forced; BAA gates warn. `STORAGE_BACKEND=local` is **refused at boot** here (`config/index.ts:349`). |
+| Prod *(suspended)* | GCS bucket (SPA) | Cloud Run `ownmyhealth-backend` (Node 22) | Cloud SQL | `NODE_ENV=production` + `OMH_DEPLOY_ENFORCE_PROD=true` baked into image (`Dockerfile:53-54`); BAA gates hard-fail; FORCE-RLS boot assertion active. |
 
 Cost model and per-user economics: [`FINANCIAL_TRACKER.md`](./FINANCIAL_TRACKER.md). Operations: [`RUNBOOK.md`](./RUNBOOK.md). Local setup: [`LOCAL_DEV.md`](./LOCAL_DEV.md).
 

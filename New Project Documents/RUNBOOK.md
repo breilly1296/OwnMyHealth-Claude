@@ -1,7 +1,29 @@
 # RUNBOOK.md — OwnMyHealth Operator's Reference
 
-> **Last verified:** 2026-06-01 against the live codebase.
+> **Last verified:** 2026-08-01 against `master` @ `12b45ae` (previous verification: 2026-06-01).
 > **Audience:** on-call / operator. Every command below is meant to run verbatim.
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> ## ⚠️ Read this before running anything below
+>
+> **There is no production to operate.** GCP billing was disabled ~2026-07-12; the Cloud Run backend,
+> Cloud SQL prod database, and GCS buckets are suspended, and deploys fail at image push. Sections
+> covering deploy, rollback, Cloud SQL, GCS, Secret Manager, and Cloud Run scaling are the
+> **launch/restore** runbook. They are accurate as a plan and untested as current operations.
+>
+> **What still applies today** (sandbox operations):
+> - Local Postgres provisioning and `prisma migrate deploy` — see [`LOCAL_DEV.md`](./LOCAL_DEV.md).
+> - File storage: `STORAGE_BACKEND=local` writes AES-256-GCM-sealed blobs to `backend/.local-storage`.
+>   To reset local file state, delete that directory; blobs are unreadable without `PHI_ENCRYPTION_KEY`
+>   and the directory is gitignored (`backend/.gitignore:49`).
+> - CI: `ci.yml` (5 jobs — `frontend`, `backend`, `security`, `rls`, `e2e`) and the nightly
+>   `secret-history-scan.yml`. Both still gate merges and still need triage when red.
+>
+> **Restore-from-suspension preconditions.** Before GCP billing is re-enabled, **OF-01 must be closed**:
+> the `ocr-service@ownmyhealth-prod` private key (key id `109ec48b…`) is recoverable from commit
+> `202f2dd` and re-enabling billing silently re-arms it. Deleting that key in GCP IAM is free, works
+> with billing disabled, and takes ~5 minutes. Re-enabling billing without it is the single highest-risk
+> action available in this project. Full gate: [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) OF-01.
 > **Source of truth:** `.github/workflows/deploy.yml` + `deploy-staging.yml` (project/region/service/bucket), `backend/Dockerfile` (runtime), `backend/src/app.ts` (boot), `backend/src/config/index.ts` (env validation). `DEPLOY.md` describes a **Railway** deploy that is no longer how prod ships — treat it as stale except for the domain/DNS table.
 
 This doc passes the five `_doc-quality.md` tests (question-answering, path-and-line, snippet, diagram, reproducibility). See [`## Acceptance questions`](#acceptance-questions) at the end for the self-check.

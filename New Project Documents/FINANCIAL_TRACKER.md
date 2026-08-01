@@ -3,7 +3,17 @@
 > **Unit-economics + runway reference for OwnMyHealth.**
 > What does this app cost to run per user? Which services are metered? Where is the dollar ceiling? Most actual dollar values live in the GCP / SaaS billing consoles — but the *structure* of costs lives in the repo, and this doc extracts that structure with file:line evidence.
 >
-> Generated against HEAD `fb2cd32` (2026-06-15). All code claims cite `file:line`. Facts that genuinely live outside the repo are marked `TBD (external: …, <resolution path>)` — never invented.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Two facts that materially change the cost picture since the last generation:**
+> 1. **GCP spend is ~zero.** Billing was disabled ~2026-07-12. Cloud Run, Cloud SQL, GCS, and Document
+>    AI costs stopped. Any run-rate figure below that includes GCP is now a *launch* projection.
+> 2. **There is still no revenue path.** `PLANS[*].price` / `annualPrice` are display-only and tie to
+>    no charge (`config/plans.ts`); no Stripe SDK, checkout, or webhook exists in the repo (verified by
+>    grep, 2026-08-01 — only comments and TODOs). `users.plan` has exactly one application writer:
+>    `PATCH /api/v1/admin/users/:id/plan` (`adminRoutes.ts:598`). Tracked as **OF-15** / scrutiny P0-5.
+>    Treat every price in this document as a hypothesis, not a rate. All code claims cite `file:line`. Facts that genuinely live outside the repo are marked `TBD (external: …, <resolution path>)` — never invented.
 
 ---
 

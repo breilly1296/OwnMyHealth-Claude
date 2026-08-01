@@ -1,5 +1,13 @@
 # BIOMARKER_SERIES.md
 
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-16)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Re-verified 2026-08-01 — no drift.** `biomarkerSeries.upsertBiomarkerReading`, `biomarkerConsolidation`, and the `Biomarker.sourceFile` idempotency contract are unchanged, and the `biomarkers` table still carries a full SELECT/INSERT/UPDATE/DELETE policy set.
+>
+> **One new caveat for the consolidation path.** `applyUserConsolidation` re-parents history rows via `tx.biomarkerHistory.updateMany` (`biomarkerConsolidation.ts:145`), but **`biomarker_history` has no RLS UPDATE policy** — and the call runs under a *user* RLS context (`withRLSTransaction(userId, …)`, `consolidateBiomarkerSeries.ts:103`), so `is_admin_session()` cannot rescue it. This is the same shape as OF-22. It matters here specifically because the ordering comment at `biomarkerConsolidation.ts:130-136` notes the re-parent must succeed *before* the duplicate delete, or the FK cascade drops the history: a silently-failing re-parent followed by a successful delete would be data loss. **Not yet confirmed to fail at runtime** — confirming requires executing against the NOBYPASSRLS role, which the `rls` CI job provisions. See [`DATA_MODEL.md`](./DATA_MODEL.md#session--userencryptionkey-rls).
+
+
 > Deep reference for the **biomarker time-series subsystem** — the data-model shape that turns a metric into a series, the single merge primitive every write path is meant to funnel through, the create/bulk API contract, FHIR sync idempotency + dedupe, the one-time legacy consolidation job, and the reference-range definition table.
 >
 > **Scope.** This doc owns the *series-merge semantics*. [`DATA_MODEL.md`](./DATA_MODEL.md) owns the raw `Biomarker` / `BiomarkerHistory` schema (indexes, cascades, RLS); [`API_REFERENCE.md`](./API_REFERENCE.md) owns the per-endpoint contracts; the FHIR OAuth/SSRF/token security lives in its own integration layer. This doc cross-links those and goes one layer deeper on the merge decision.

@@ -1,7 +1,7 @@
 ---
 title: Testing Patterns
 audience: Engineers adding a controller / route / service / middleware / component / e2e test
-status: generated from live code at HEAD fb2cd32 (2026-06-16)
+status: refreshed 2026-08-01 against master @ 12b45ae (previous: fb2cd32, 2026-06-16)
 ---
 
 # TESTING_PATTERNS.md
@@ -27,27 +27,53 @@ Before writing a single line, read:
 
 ## 1. Test pyramid
 
-As of 2026-06-16 (`Glob` counts, verbatim):
+As of **2026-08-01** (`Glob` counts, verbatim — they moved 54→66 / 25→33 / 5→6 in six weeks, so
+re-derive rather than trusting this table):
 
 | Layer | Count | Glob | Runner / env | What it catches |
 |---|---|---|---|---|
-| Backend unit + integration (colocated `*.test.ts`) | **54** | `backend/src/**/*.test.ts` | Vitest, `node` (`backend/vitest.config.ts:6`) | Controller/service/middleware/route logic, encryption, RLS-wrap usage, security regressions |
-| Frontend unit (`src/__tests__/`) | **25** | `src/__tests__/**/*.test.{ts,tsx}` | Vitest, `jsdom` (`vitest.config.ts:9`) | Component render/interaction, hooks, contexts, util math, PDF/export logic |
-| Live-DB RLS regression | 1 of the 54, **gated** | `backend/src/services/rls.test.ts` | Vitest + real Postgres (NOBYPASSRLS) | Tenant isolation, provider-consent policy, FORCE-RLS, audit retention |
-| E2E (Playwright) | **5 specs** | `e2e/*.spec.ts` | Playwright/Chromium (`playwright.config.ts:19`) | Full auth + biomarker-entry + export + health-guide + settings flows |
+| Backend unit + integration (colocated `*.test.ts`) | **66** | `backend/src/**/*.test.ts` | Vitest, `node` (`backend/vitest.config.ts:6`) | Controller/service/middleware/route logic, encryption, RLS-wrap usage, security regressions |
+| Frontend unit (`src/__tests__/`) | **33** | `src/__tests__/**/*.test.{ts,tsx}` | Vitest, `jsdom` (`vitest.config.ts:9`) | Component render/interaction, hooks, contexts, util math, PDF/export logic |
+| Live-DB RLS regression | 1 of the 66, **gated** | `backend/src/services/rls.test.ts` | Vitest + real Postgres (NOBYPASSRLS) | Tenant isolation, provider-consent policy, FORCE-RLS, audit retention |
+| E2E (Playwright) | **6 specs** | `e2e/*.spec.ts` | Playwright/Chromium (`playwright.config.ts:19`) | auth, biomarker-entry, data-export, **export-delete-journey**, health-guide, settings — **now runs in CI** (`ci.yml:221`) |
 
 ```
         ┌───────────────────────────────────────────────┐
-   E2E  │  5 Playwright specs  (e2e/*.spec.ts)           │  slow, real stack
-        │  auth / biomarker-entry / data-export /        │  NOT yet in CI (ci.yml:215)
-        │  health-guide / settings                       │
+   E2E  │  6 Playwright specs  (e2e/*.spec.ts)           │  slow, real stack
+        │  auth / biomarker-entry / data-export /        │  IN CI since 2026-07-11
+        │  export-delete-journey / health-guide /        │  (ci.yml:221, job `e2e`)
+        │  settings                                      │
         ├───────────────────────────────────────────────┤
-  FE U  │  25 frontend Vitest (jsdom)                    │  components/hooks/utils
-        │  src/__tests__/**                              │
+  FE U  │  33 frontend Vitest (jsdom)                    │  components/hooks/utils
+        │  src/__tests__/**  (incl. dialogA11y.test.tsx) │
         ├───────────────────────────────────────────────┤
-  BE U  │  54 backend Vitest (node) — colocated *.test.ts│  fast, mocked deps
+  BE U  │  66 backend Vitest (node) — colocated *.test.ts│  fast, mocked deps
         │  + 1 live-DB rls.test.ts (skip-if-no-DB)       │  the bulk of the pyramid
         └───────────────────────────────────────────────┘
+
+### What CI actually runs (five jobs, not four)
+
+| Job | Runs | Notes |
+|---|---|---|
+| `frontend` | lint → Vitest → Vite build | |
+| `backend` | lint → `prisma generate` → `npm run test:ci` → build | Excludes `rls.test.ts` **and** the live-PG account-deletion cascade suite (`6cbd829`) |
+| `security` | gitleaks (working tree) → `npm audit --audit-level=high` ×2 → `check-rls-wrappers.sh` | |
+| `rls` | `postgres:16` + NOBYPASSRLS `omh_app` role → `npm run test:rls` | The only job that can catch policy bugs |
+| **`e2e`** *(new 2026-07-11)* | real backend + Postgres → seed standing user → full Playwright suite | `ci.yml:221`; uploads `playwright-report/` |
+
+Separately, `secret-history-scan.yml` runs a **full-history** gitleaks scan nightly. It is red by
+design until OF-01 is resolved and never blocks a merge.
+
+### Why the e2e job earns its cost
+
+Its **first real run** surfaced OF-22: the `sessions` table had no RLS UPDATE policy, and PostgreSQL
+applies UPDATE-policy checks to `SELECT ... FOR UPDATE` row locks — so refresh rotation matched zero
+rows, every refresh 401'd, and the missing row was misread as token reuse, revoking all of the user's
+sessions. Dev and staging connect as a **BYPASSRLS** role, so no amount of local testing could see it.
+
+This is the canonical lesson for this codebase: **tests must run under the same DB role production
+uses.** Mocked unit tests cannot catch a policy bug by construction. When adding a test for anything
+that touches RLS, put it in `rls.test.ts` (which runs under `omh_app`), not in a mocked suite.
 ```
 
 The live-DB integration test (`rls.test.ts`) **skips** when `DATABASE_URL`/

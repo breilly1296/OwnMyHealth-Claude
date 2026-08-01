@@ -4,14 +4,17 @@
 
 | Field | Value |
 |---|---|
-| **Last updated** | 2026-06-16 (ISO) |
-| **Code state** | HEAD `fb2cd32` (2026-06-15) |
+| **Last updated** | 2026-08-01 (ISO) — controls re-verified; severities owned by the ledger |
+| **Code state** | `master` @ `12b45ae` (controls tables re-verified 2026-08-01; previously `fb2cd32`) |
 | **Last audit** | 2026-06-13 full 16-dimension multi-agent teardown (per [`prompts/24-full-security-audit.md`](../prompts/24-full-security-audit.md) orchestration) + 2026-06-15 security long-tail remediation cycle |
 | **Audit tool** | Multi-agent static review (105 agents, per-finding adversarial verification) + hands-on live-PG pentest (throwaway Docker Postgres 16) |
 | **Security grade** | ~~B+ → A-~~ **Superseded** — the 2026-06-21 assessment graded **D** on discovery of OF-01 (prod key in git history, unremediated). The A- reflects the *engineering core* (encryption/RLS/auth), which remains strong; the open-findings picture is owned by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) (1 C / 3 H / 8 M / 8 L at 2026-07-11) |
-| **Production deploy** | Live; deploy gated on full CI (`needs: ci`, [`deploy.yml`](#infrastructure--deploy)); migrations run as a Cloud Run job, not at boot |
+| **Production deploy** | **None — suspended.** GCP billing disabled ~2026-07-12; no deployment target (see Posture below). The CI-gated pipeline (`needs: ci`, [`deploy.yml`](#infrastructure--deploy)) and migrate-as-a-job model remain the *launch* design |
+| **Posture** | **Sandbox — no GCP**, declared 2026-07-14. No real users; founder/test data only. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md) |
 
-> **⚠️ RECONCILIATION NOTICE (2026-07-11)** — open-finding severities and counts in this document are **superseded by [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md)**, the single authoritative ledger. The "0 open Critical / 0 open High" claims below reflect this doc's fb2cd32-era rubric and **predate the 2026-06-21 assessment**, which found a Critical (OF-01: production GCP service-account key recoverable from git history). Posture at 2026-07-11: **1 Critical, 3 High, 8 Medium, 8 Low open** (OF-02, the OCR dollar cap, closed same day by `1047506`) — see the ledger for the list, the unified rubric, and the legacy-ID crosswalk (this doc's L-39/L-M11/L34-L36 map to OF-05/OF-07/OF-06). The controls tables in §5 remain accurate as verified at fb2cd32.
+> **⚠️ SEVERITY IS NOT OWNED BY THIS DOCUMENT (updated 2026-08-01).** [`OPEN_FINDINGS.md`](./OPEN_FINDINGS.md) is the single authoritative findings ledger and the single severity rubric. This document describes **controls** — what exists, where, and how it is verified. Any open-count or severity claim below is stale by construction; go to the ledger. Current ledger state (2026-07-14 sandbox re-triage): **Live: 0 Critical · 1 High · 0 Medium · 10 Low** (11 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7**. The earlier "0 open Critical / 0 open High" language in this doc reflects an fb2cd32-era rubric and predates the 2026-06-21 assessment that found **OF-01** (production GCP service-account key recoverable from git history — still open, now graded High under the sandbox posture because billing is disabled; it re-arms the instant billing returns). Legacy-ID crosswalk (this doc's L-39 / L-M11 / L34-L36 → OF-05 / OF-07 / OF-06) lives in the ledger. The controls tables in §5 were re-verified at `12b45ae` on 2026-08-01 and remain accurate.
+>
+> **Why this rule exists:** this document claiming "0 open High" while `KNOWN_ISSUES.md` listed H-1/H-2/H-3 *was* scrutiny finding **P0-6**. The fix was to make one document authoritative, not to re-synchronize two.
 
 ---
 

@@ -1,6 +1,15 @@
 # ROUTING_TABLE.md — Middleware & Security Stack per Endpoint
 
-> **Generated** 2026-06-16 against HEAD `fb2cd32`. Source of truth = the live route files under `backend/src/routes/` (18 non-test files incl. `index.ts`), `backend/src/app.ts`, and the middleware in `backend/src/middleware/`. Every non-trivial claim cites `file:line`.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-16)
+> **Posture:** sandbox — no GCP (billing disabled ~2026-07-12; no deployment target, founder/test data only), declared 2026-07-14. See [`OPEN_FINDINGS.md` §Posture](./OPEN_FINDINGS.md).
+>
+> **Re-verified 2026-08-01 — no routing drift.** 18 route files (incl. `index.ts`), 10 domain
+> controllers, 10 middleware, 8 rate limiters, and 8 `aiSpendGuard` mount points across 5 route files,
+> all unchanged. The only change in this area is behavioral, not structural: `POST /api/v1/auth/refresh`
+> depended on an RLS UPDATE policy that did not exist until `20260712_add_sessions_update_policy`
+> (OF-22) — see [`DATA_MODEL.md`](./DATA_MODEL.md#session--userencryptionkey-rls). Registration
+> (`POST /api/v1/auth/register`) now additionally requires a validated `acceptedTerms` field
+> (OMH-L03, `0456c50`). Generated against the live route files. Source of truth = the live route files under `backend/src/routes/` (18 non-test files incl. `index.ts`), `backend/src/app.ts`, and the middleware in `backend/src/middleware/`. Every non-trivial claim cites `file:line`.
 
 ## Purpose & how to read
 

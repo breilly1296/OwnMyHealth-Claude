@@ -9,11 +9,11 @@
 
 | Field | Value |
 |---|---|
-| **Last updated** | 2026-07-14 (sandbox-posture re-triage) |
+| **Last updated** | 2026-08-01 (OF-24–OF-27 from the prompt-library refresh; OF-28–OF-31 from the first runs of prompts 47/48/49) |
 | **Posture** | **Sandbox — no GCP** (see §Posture) |
-| **Code state** | master `f57061e` (PR #228 merged) + branch `feat/local-storage-backend-2026-07-14` (OF-23 fix + this ledger revision); docs reorg still uncommitted in the working tree |
-| **Sources reconciled** | This ledger @ `2656a82`; founder posture decision (2026-07-14 session); repo re-verification 2026-07-14 (OF-01 blob presence via `git cat-file -e`, commits `8ec3989`/`0456c50`, migrations through `20260712`, PR #227 state) |
-| **Open counts** | **Live: 0 Critical · 1 High · 0 Medium · 10 Low** (11 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7** · OF-20 merged into OF-08 · OF-11 & OF-23 closed 2026-07-14 |
+| **Code state** | master `12b45ae` (PR #230 merged). Working tree carries the 2026-08-01 prompt-library refresh + `New Project Documents/` regeneration, uncommitted |
+| **Sources reconciled** | This ledger @ `2656a82`; founder posture decision (2026-07-14 session); repo re-verification 2026-07-14 (OF-01 blob presence via `git cat-file -e`, commits `8ec3989`/`0456c50`, migrations through `20260712`, PR #227 state). **2026-08-01**: full RLS policy inventory across all 34 migrations, `prompts/_drift-audit-2026-08-01.md`, and `security-reviews/44-token-revocation-review.md` |
+| **Open counts** | **Live: 0 Critical · 1 High · 0 Medium · 18 Low** (19 items; 7 Lows Accepted-with-trigger) **· Dormant (launch checklist): 7** · OF-20 merged into OF-08 · OF-11 & OF-23 closed 2026-07-14 · **OF-24–OF-31 added 2026-08-01** |
 
 ---
 
@@ -83,6 +83,7 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 ### OF-06 — Plan-limit / AI-quota TOCTOU race (count-then-allow)
 - **Class**: correctness · **Status**: Accepted · **Aliases**: H-1 (KNOWN_ISSUES), M-L34/L36 (SECURITY_STATUS), scrutiny P1-7 · **Medium → Low 2026-07-14**
 - **Fact**: `checkPlanLimit` is read-only; N concurrent requests can overshoot a finite limit by N−1 (`backend/src/services/usageTracker.ts` KNOWN RACE comment). Highest-cost path backstopped by the fail-closed dollar `aiSpendGuard`.
+- **Amended 2026-08-01 — concurrency is not required.** `requirePlanLimit('maxBiomarkers')` gates per-**request**, not per-**row**, so a single `POST /api/v1/biomarkers/batch` from a user one row under the cap overshoots by up to `batchSize−1` with **no concurrency at all** (`backend/src/routes/biomarkerRoutes.ts:95-105`, where the residual is commented). The OCR/upload path mitigates by truncating the batch in-transaction (`controllers/upload/shared.ts`, M12); the direct batch endpoint has no equivalent. Consequence for the prescribed fix: the atomic reservation must reserve **N slots**, not one.
 - **Why Low now**: no deployed instance and no third-party users — an overshoot requires the founder racing their own requests, bounded by the dollar cap.
 - **Re-eval trigger (unchanged, sharpened)**: **becomes High and a launch blocker the day plan limits guard paid entitlements** — atomic reservation (`UPDATE … WHERE n < :limit RETURNING n` inside `withRLSTransaction`) is a billing-launch prerequisite (scrutiny P0-5). Also: observed abuse.
 
@@ -116,6 +117,85 @@ Status values: **Open** · **In progress** (fix drafted/uncommitted) · **Accept
 ### OF-21 — Transitive npm advisories: 1 high (hono) + 8 moderate (uuid chain)
 - **Status**: Accepted / deferred majors · **Aliases**: M-5 (KNOWN_ISSUES), OMH-I01/I02 · unchanged Low. `hono` advisories are Lambda/Windows-static specific; `uuid` fix gated on a breaking `@google-cloud/storage` major (which OF-23's storage abstraction may make swappable). Nothing is deployed, so reachability is nil.
 
+### OF-24 — Blocked and failed AI-guidance requests consume the user's daily quota
+- **Class**: correctness / product trust · **Status**: Open · **Found**: 2026-08-01 (prompt-43 review re-run)
+- **Fact**: the `aiGuidancePerDay` counter counts audit rows matching `resourceType='biomarker_ai_guidance'` **and** `action='READ'`, with **no filter on the `operation` metadata field** (`backend/src/services/usageTracker.ts:115-122`). All three guidance audit writes use `auditService.logAccess(...)` under that resourceType, and `logAccess` unconditionally writes `action: 'READ'` (`backend/src/services/auditLog.ts:383`). So the BAA-gate refusal (`GUIDANCE_BLOCKED_NO_BAA`, 503, `biomarkerRoutes.ts:154`) and the not-found path (`GUIDANCE_NOT_FOUND`, 404, `:187`) each burn a quota slot for a request that never reached Claude — only `:284` (`PHI_ACCESS`) is a real use.
+- **Why this is a bug and not a design choice**: the identical defect was found and deliberately fixed on the AI-**chat** path. `aiChatController.ts:40-48` documents it as **L-35** and routes blocked/failed attempts to a separate `RESOURCE_TYPE_ATTEMPT = 'HealthGuideAttempt'` that the counter does not match, explicitly so they do not consume quota. The guidance path never received the same treatment.
+- **Impact**: a FREE user (`aiGuidancePerDay: 5`) exhausts their whole daily allowance with five requests against non-existent biomarker UUIDs, or on any day `ANTHROPIC_BAA_ACTIVE` is unset — the BAA gate 503s *and* burns quota, so restoring the key leaves the user still locked out for the rest of the UTC day. Self-inflicted only: the audit row carries the caller's own `userId` and RLS scopes the count, so there is no cross-tenant path.
+- **Why Low now**: founder-only sandbox; the only person whose quota can be burned is the person who can also raise the limit.
+- **Done when**: the two non-success writes move to a distinct resourceType (e.g. `biomarker_ai_guidance_attempt`) that `usageTracker` does not match, preserving the audit trail without consuming quota — a controller-side change only, exactly as in L-35; plus a case in `biomarkerRoutes.guidance.test.ts`.
+- **Re-eval trigger**: **Medium the moment any non-founder user exists.** The fix is small and has a working precedent in the same codebase, so there is no good reason to carry this to launch.
+
+### OF-25 — `revoked_access_tokens` has no RLS UPDATE policy but is written by `upsert`
+- **Class**: correctness / RLS · **Status**: Open (**structural fact confirmed; runtime failure UNVERIFIED**) · **Found**: 2026-08-01 (prompt-44 review re-run) · **Same class as**: OF-22 (closed)
+- **Fact (confirmed)**: the table is `ENABLE` + `FORCE ROW LEVEL SECURITY` and defines exactly three policies — `_select_own`, `_insert_own`, `_delete_own` (`backend/prisma/migrations/20260613_revoked_access_tokens/migration.sql:29-39`). There is **no UPDATE policy**. On an RLS-enabled table a command with no matching policy is denied outright; `is_admin_session()` cannot help, because the admin branch lives inside policies that do not exist for UPDATE. The single-device revocation write is a Prisma `upsert` keyed by `jti`, running under a **user** context (`withRLSContext(verifiedUserId, ...)`, `backend/src/services/authService.ts:377-383`). The `create` branch satisfies `_insert_own`; the **conflict branch is an UPDATE** with nothing to satisfy.
+- **Not established**: whether Prisma's `upsert` with an **empty** `update: {}` actually emits an UPDATE at runtime (it may emit `INSERT ... ON CONFLICT DO UPDATE`, a SELECT-then-UPDATE pair, or optimize the no-op away). Both non-optimized forms require an UPDATE policy. This was not executed — do not treat the failure as confirmed.
+- **Impact if realized**: bounded. The conflict branch is reached only on a **replayed revocation of the same `jti`** (double-clicked logout, client retry, logout on an already-revoked token). The first insert succeeded, so the revocation holds and **no token stays valid** — this is not a security bypass. What breaks is (a) the documented idempotency of the write, (b) silently, because the throw is swallowed by the best-effort catch (`authService.ts:388-393`) and surfaces only as a `warn`, and (c) as a trap for any future code that legitimately needs to update a revocation row, which would pass in dev (BYPASSRLS) and fail in production (NOBYPASSRLS) — precisely the OF-22 failure shape.
+- **Note**: the migration's own comment says the policies mirror `sessions` (`migration.sql:20-25`). That is no longer true — `sessions` gained `sessions_update_own` on 2026-07-12 and this table did not.
+- **Done when**: (1) confirm-or-refute by revoking the same `jti` twice under the NOBYPASSRLS `omh_app` role — cheap, the `rls` CI job already provisions that role; (2) if confirmed, either add `revoked_access_tokens_update_own` mirroring `sessions_update_own`, or make the write insert-only and tolerate the duplicate-key error (`update: {}` shows no update is actually wanted); (3) pin it with a case in `rls.test.ts` beside the existing `sessions row lock` block (`rls.test.ts:541`).
+- **Re-eval trigger**: any deploy; or any change that makes a revocation row legitimately mutable.
+
+### OF-26 — Two maintenance jobs UPDATE tables that have no RLS UPDATE policy (potential silent data loss)
+- **Class**: correctness / data-loss risk · **Status**: Open (**structural fact confirmed; runtime behavior UNVERIFIED**) · **Found**: 2026-08-01 · **Same class as**: OF-22 (closed), OF-25
+- **Fact (confirmed)**: a full policy inventory across all 34 migrations found four live tables with SELECT/INSERT/DELETE policies and no UPDATE policy. `audit_logs` is **intentional** (audit rows are immutable by design). The other three are UPDATEd by code:
+
+  | Table | Written by | RLS context |
+  |---|---|---|
+  | `biomarker_history` | `tx.biomarkerHistory.updateMany` — history re-parenting (`backend/src/services/biomarkerConsolidation.ts:145`) | **user** (`withRLSTransaction(userId, ...)`, `maintenance/consolidateBiomarkerSeries.ts:103`) |
+  | `goal_progress_history` | `tx.goalProgressHistory.update` — PHI re-encryption (`backend/src/services/goalValueBackfill.ts:127`) | **user** (`withRLSTransaction(userId, ...)`, `maintenance/backfillGoalValues.ts:113`) |
+  | `revoked_access_tokens` | `upsert` conflict branch | **user** — tracked separately as OF-25 |
+
+  Unlike OF-25 there is no Prisma ambiguity here: `.update()` and `.updateMany()` are unambiguously UPDATE statements. Both run under a *user* context, so `is_admin_session()` does not apply — and with no UPDATE policy at all, nothing does.
+- **Impact if realized**: `backfill-goal-values` would fail to re-encrypt `GoalProgressHistory.valueEncrypted`; `consolidate-biomarkers` would fail to re-parent history rows. The second is the dangerous one: `applyUserConsolidation` documents that the re-parent must succeed **before** the duplicate delete, or the duplicate's FK cascade drops the history (`biomarkerConsolidation.ts:130-136`). A silently-failing re-parent followed by a successful delete is **irreversible PHI loss**, not a no-op. Whether the transaction aborts (safe) or the failure is caught and the delete proceeds (unsafe) is the specific question to answer.
+- **Why Low now**: no deployment target; these are `workflow_dispatch`-only jobs, DRY-RUN by default, and local development connects as a BYPASSRLS role — so the failure cannot be triggered by ordinary sandbox work.
+- **Done when**: (1) determine per table whether UPDATE should be **allowed** (add the policy) or **forbidden** (change the code — for `biomarker_history`, delete-and-reinsert rather than re-parent). Do not add policies reflexively: `audit_logs` proves the absence is sometimes the point. (2) Establish the abort-vs-continue behavior of `applyUserConsolidation` on a failed re-parent. (3) Add live-PG coverage under the NOBYPASSRLS role.
+- **Re-eval trigger**: **High** on any `apply=true` maintenance run against a NOBYPASSRLS role, or any deploy. This is a launch blocker, not a current risk.
+
+### OF-27 — Plan gate issues six count queries per gated request
+- **Class**: performance / tech debt · **Status**: Open · **Found**: 2026-08-01
+- **Fact**: `checkPlanLimit` needs exactly one usage counter but calls `getUserUsage`, which issues all six counts in a `Promise.all` — including unbounded `tx.biomarker.count` and `tx.auditLog.count` (`backend/src/services/usageTracker.ts:199`, `:87-137`). A single lab upload passes two gates (`pdfUploadsPerMonth` + `maxBiomarkers`, `uploadRoutes.ts:84,88`) and therefore fires **12** count queries before the handler runs.
+- **Why Low now**: single user, no load. No security consequence.
+- **Done when**: `checkPlanLimit` resolves `NUMERIC_LIMIT_TO_USAGE[action]` and issues only that count. Keep `getUserUsage` as-is for `planRoutes.ts`, which genuinely needs all six for the usage-bar display — the one-transaction design there is deliberate (mutually-consistent numbers, `usageTracker.ts:84-85`).
+- **Re-eval trigger**: any load testing, or a deploy.
+
+### OF-28 — Accessibility defects (4 items, one owner, one fix session)
+- **Class**: accessibility · **Status**: Open · **Found**: 2026-08-01 (first run of prompt 47) · **Full detail**: [`security-reviews/47-accessibility-review.md`](./security-reviews/47-accessibility-review.md)
+- **Context**: the 2026-06-20/21 a11y waves largely succeeded — all 15 dialog surfaces use `useFocusTrap` with `role="dialog"` + `aria-modal` + a resolving `aria-labelledby` **and** `tabIndex={-1}`; a skip link works; `lang` is set; zoom is not blocked; there are no positive `tabIndex` values; every `focus:outline-none` has a `focus-visible` replacement. Data export and account deletion — the two compliance-critical flows — are fully keyboard-operable. These four items are what the waves did not reach.
+- **Items**:
+  1. **The HIPAA idle-timeout dialog bypasses the shared focus trap** (`src/contexts/AuthContext.tsx:379-418`). It has the right ARIA and `autoFocus` moves focus in, but there is no Tab trap, no Escape, no focus restoration, no scroll-lock — so `aria-modal="true"` promises an inertness nothing enforces, on the one modal whose purpose is to be acted on before an automatic logoff. Missed because the wave searched `src/components/**` and this lives in `src/contexts/`.
+  2. **Trend charts have no non-visual equivalent** (`BiomarkerChart.tsx`, `TrendSparkline.tsx`) — Recharts emits SVG with no accessible name. `BiomarkerRangeBar.tsx:65-70` is the in-repo pattern to copy (`role="img"` + a label carrying status in words).
+  3. **Dropdowns declare `role="menu"` / `aria-haspopup="listbox"` without arrow-key or Escape support** (`ExportMenu.tsx:112-130`, `TrendsPage.tsx:189,248`) — promising an interaction model that is not implemented is worse than promising nothing.
+  4. **No `eslint-plugin-jsx-a11y`** (zero hits in `eslint.config.js` / `package.json`), so the waves' gains have no regression guard. Item 1 is the proof: one dialog outside the search path stayed unmigrated for six weeks with nothing flagging it.
+- **Why Low now**: founder-only sandbox. Accessibility harm requires users who are not the author.
+- **Done when**: item 1 migrated to `useFocusTrap` and added to `dialogA11y.test.tsx`; items 2-3 addressed or explicitly accepted; `eslint-plugin-jsx-a11y` recommended ruleset added to the existing `frontend` CI lint step.
+- **Re-eval trigger**: **Medium on any non-founder user.** ADA Title III / Section 508 expectations attach to consumer health services — a legal question this ledger does not answer, but the reason this is not purely cosmetic.
+- **Caveat on the evidence**: all verification was **static** (attributes present, handlers wired, names resolving). No screen reader was used, and nothing in CI uses one. Treat the passes as "correct by construction", not "verified in use".
+
+### OF-29 — Goal deadlines off by one day in negative-UTC locales, and the whole date class is unguarded
+- **Class**: correctness · **Status**: Open · **Found**: 2026-08-01 (first run of prompt 49) · **Full detail**: [`security-reviews/49-calculation-correctness-review.md`](./security-reviews/49-calculation-correctness-review.md)
+- **Fact (a) — the bug**: `daysRemaining` (`src/components/analytics/GoalTrackerPanel.tsx:97-101`) mixes a UTC-parsed date-only value (`new Date(targetDate)`, where `HealthGoal.targetDate` is `@db.Date`) with a local `new Date()`. In America/Los_Angeles a goal due `2026-08-02` reads **"Due today"** on the afternoon of Aug 1 and **"Overdue by 1 day"** on the afternoon of Aug 2. Silent, plausible, consistent — nothing looks broken.
+- **Fact (b) — why it survived, and will recur**: `Grep` for `TZ=` / `timezone` / `America/` across `vitest.config.ts`, `src/__tests__/setup.ts` and `package.json` returns **zero hits**, and there is no test file for `src/utils/format.ts`. CI runs in **UTC** — the one timezone where this entire class is invisible. Three commits of fixes (`b376949`, `ea57001`, `45a0cbc`) are protected by nothing.
+- **Why Low now**: display-only (no stored value is wrong) and one user.
+- **Done when**: (1) `daysRemaining` compares calendar days on both sides, with a deliberate, commented choice between viewer-UTC and viewer-local "today"; (2) the frontend suite runs under a forced negative-UTC timezone (`test: { env: { TZ: 'America/Los_Angeles' } }`), ideally a two-timezone matrix; (3) a `format.test.ts` asserts `formatDateOnly('2026-01-01')` renders Jan 1 and that `formatDate` on a timestamp still renders local.
+- **Re-eval trigger**: **Medium on any non-founder user.** Fix (1) and (2) together — (1) alone fixes one instance of a class that has now recurred four times.
+
+### OF-30 — `isInRange` reports "out of range" for a biomarker with no reference range
+- **Class**: correctness / clinical trust · **Status**: Open (**reachability UNVERIFIED**) · **Found**: 2026-08-01
+- **Fact**: `isInRange` is `value >= normalRange.min && value <= normalRange.max` (`src/utils/biomarkers/trendCalculations.ts:179-181`). `Biomarker.normalRange` is non-optional, but **`ExtractedBiomarker.normalRange` is optional** (`src/types/index.ts:125`) — a lab report stating no reference range legitimately produces one. With an absent range both comparisons against `undefined` are false, so the function returns `false`, rendering as **out of range**.
+- **Not established**: whether the upload → review → save path can deliver such a biomarker to `isInRange` without a range being populated first. The type permits it; the runtime path was not traced.
+- **Impact if reachable**: "we don't know this marker's reference range" and "this marker is abnormal" are different clinical statements. Showing the second for the first is alarming rather than reassuring — the safer failure direction, but still wrong, and it erodes trust in every other out-of-range badge.
+- **Done when**: absence is represented explicitly (`boolean | null`, or a `hasRange` flag) and rendered as "range unknown" rather than a status. Cheaper than tracing the reachability question.
+- **Re-eval trigger**: any real lab upload lacking a stated reference range.
+
+### OF-31 — SBC extraction confidence is computed then discarded; plan financials shown without uncertainty
+- **Class**: product trust · **Status**: Open · **Found**: 2026-08-01 (first run of prompt 48) · **Full detail**: [`security-reviews/48-insurance-domain-review.md`](./security-reviews/48-insurance-domain-review.md)
+- **Fact**: `sbcExtraction.ts:734` defines a confidence-scoring contract for the model, and the lab path persists an equivalent (`UserFile.extractionConfidence`). `InsurancePlan` has no such column and no confidence value reaches the SBC upload UI. A deductible extracted at low confidence from a poor scan is stored and rendered identically to a high-confidence one — and then feeds `extractProjectedOOP` to produce a dollar figure the user makes decisions on.
+- **Context — what is *not* wrong**: the extraction trust boundary itself is sound. `sanitizeExtractedSbc` (`controllers/upload/shared.ts:509-562`) type-checks, non-negative-checks and ceiling-clamps every numeric, strips control characters and caps every string, caps every array, whitelists `planType`, and validates dates — so a hallucinated or hostile value cannot reach the database out of range. This finding is about *uncertainty disclosure*, not input validation.
+- **Why Low**: the user can see and edit every extracted field in the confirm step before it is used.
+- **Done when**: confidence is persisted alongside the plan and surfaced per-field in the existing SBC review step.
+- **Re-eval trigger**: any non-founder user; any marketing claim about extraction accuracy.
+- **Related, not separately ledgered**: `comparePlans` silently drops unowned/stale plan ids then 404s with "At least 2 valid plans required", which reads as a broken feature (`insuranceController.ts:802-812`) — note the per-id silence is deliberate and correct, since naming the id would confirm another user's plan exists. And `planIdNumber` is unvalidated plaintext `VarChar(100)` sitting next to the encrypted `memberId`; a user transcribing from their card can put a member ID in it, outside `PHI_FIELDS` and every guarantee `PHI_TAXONOMY.md` makes. Cheap to encrypt now, expensive after there are rows.
+
 ---
 
 ## Dormant — launch checklist (not current risks; reactivation severity in parentheses)
@@ -129,6 +209,7 @@ These items were open operational risks under the deployed-on-GCP posture. Under
 - **Aliases**: H-2 (KNOWN_ISSUES), L-39 (SECURITY_STATUS), scrutiny P1-2. PKCE `code_verifier` Map is per-process (`backend/src/services/fhir/smartAuth.ts` — "SHARED STORE REQUIRED"); a callback routed to a different instance drops the connect. Feature off by default; single-process sandbox unaffected. Ships with OF-07's shared-store work. Done when: shared verifier store; multi-instance OAuth verified.
 
 ### OF-07 (Medium) — Rate-limit + AI-spend stores are per-process without `REDIS_URL`
+- **Amended 2026-08-01**: there is a **third** per-process store with the same multi-instance caveat — the revocation-state cache in `authService.ts` (`TOKENS_VALID_AFTER_TTL_MS = 15_000`, `authService.ts:168`), which bounds cross-instance convergence of `tokens_valid_after` and the revoked-`jti` set to ~15s. Correct single-process; must be considered alongside the rate-limit and AI-spend stores before `max-instances > 1`.
 - **Aliases**: M-1 (KNOWN_ISSUES), L-M11 (SECURITY_STATUS), scrutiny P1-1. Under N instances the effective AI ceiling is N×budget and per-IP limits are per-instance. Code is Redis-pluggable; store failure fails closed (503). **Hard requirement before `max-instances > 1` on any platform.** Done when: shared Redis provisioned wherever the app next deploys; `REDIS_URL` set; documented as required.
 
 ### OF-08 (Medium) — No HSTS / HTTPS-redirect / security headers codified on the SPA (PHI) origin
@@ -142,6 +223,29 @@ These items were open operational risks under the deployed-on-GCP posture. Under
 
 ### OF-15 (Low; product decision) — Upgrade button is a billing stub
 - **Aliases**: L-1 (KNOWN_ISSUES), scrutiny P0-5. `src/components/settings/PlanSection.tsx` toasts "not available yet"; no Stripe in deps. Harmful only when non-founder eyes see the app; the billing-or-remove-CTA decision (P0-5) can be made any time. Done when: live checkout + webhooks, **or** the CTA is removed.
+
+---
+
+## Revision 2026-08-01 — findings added from the prompt-library refresh
+
+Four findings were added (OF-24–OF-27) and two existing entries amended (OF-06, OF-07). None came
+from new code — all four are pre-existing conditions surfaced by re-running the prompt library
+against HEAD and by a full RLS policy inventory. Sources: `prompts/_drift-audit-2026-08-01.md`,
+`security-reviews/44-token-revocation-review.md`.
+
+| ID | Title | Severity | Note |
+|---|---|---|---|
+| OF-24 | Blocked/failed AI-guidance requests consume daily quota | Low (Medium with any real user) | The L-35 fix exists on the chat path and was never mirrored to guidance |
+| OF-25 | `revoked_access_tokens` has no RLS UPDATE policy but is `upsert`ed | Low | Structural fact confirmed; runtime failure **unverified** |
+| OF-26 | Two maintenance jobs UPDATE tables with no RLS UPDATE policy | Low (**High** at launch) | Potential irreversible PHI loss in biomarker consolidation |
+| OF-27 | Plan gate issues six count queries per gated request | Low | Performance only |
+
+**Theme worth naming:** OF-22 was not a one-off. Three more tables have the same shape — code
+issues an UPDATE-flavored statement against a table whose RLS policy set omits UPDATE — and the
+class is invisible in dev because dev connects as BYPASSRLS. The standing rule now recorded in
+`DATA_MODEL.md` and `prompts/01-database-schema.md`: **every table that is row-locked or updated
+needs an UPDATE policy, even if it looks like it is never `UPDATE`d — and review under the same DB
+role production uses.**
 
 ---
 

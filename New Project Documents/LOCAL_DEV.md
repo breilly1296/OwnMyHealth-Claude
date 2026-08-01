@@ -1,6 +1,14 @@
 # LOCAL_DEV.md — Zero-to-Running Setup Guide
 
-> Generated 2026-06-16 against HEAD `fb2cd32`. Every command runs verbatim on a stock machine with the prereqs below installed. Target: `git clone` → working login in under 20 minutes.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-16) · **Posture:** sandbox — no GCP, see [OPEN_FINDINGS.md §Posture](./OPEN_FINDINGS.md)
+>
+> Every command runs verbatim on a stock machine with the prereqs below installed. Target: `git clone` → working login in under 20 minutes.
+>
+> **This is now the primary environment, not a convenience path.** The project has had no deployment
+> target since 2026-07-14, so local is where the app runs. The practical consequence for you:
+> **file upload, download and delete now work with zero GCP credentials.** `STORAGE_BACKEND=local` is
+> the development default (OF-23) and stores AES-256-GCM-sealed blobs under `backend/.local-storage`.
+> All you need is a valid `PHI_ENCRYPTION_KEY`.
 
 ## Required reading before generating
 
@@ -20,7 +28,7 @@ This doc passes the five tests in `_doc-quality.md` (question-answering, path-an
 | Node.js | 22.x | `backend/Dockerfile:15` pins `FROM node:22-alpine@sha256:…`; `backend/package.json:77` `engines` = `^20.19 \|\| ^22.12 \|\| >=24`. Prisma 7 requires Node `^22.12` (`backend/Dockerfile:13`). | `nvm install 22 && nvm use 22` |
 | npm | bundled with Node 22 | — | comes with Node |
 | PostgreSQL | 16.x recommended | CI's RLS-regression job runs `image: postgres:16` (`.github/workflows/ci.yml:165`); 15.x also works, or use `npx prisma dev` for local Prisma Postgres (`backend/.env.example:28`). | `docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:16` |
-| gcloud (optional) | latest | Only for GCS file upload + Document AI OCR features. Both skippable locally (see [§8](#8-local-mocking)). | [Cloud SDK install](https://cloud.google.com/sdk/docs/install) |
+| gcloud (optional) | latest | **No longer needed for file uploads** — the local storage backend covers them (OF-23). Only useful for Document AI OCR, which is also skippable (see [§8](#8-local-mocking)). | [Cloud SDK install](https://cloud.google.com/sdk/docs/install) |
 | Redis (optional) | latest | Only to test the *shared* rate-limit store (`REDIS_URL`). Unset → in-memory fallback (`backend/src/middleware/rateLimitStore.ts:41`). | `docker run -d -p 6379:6379 redis` |
 
 > **Windows ARM64 + Node 24 caveat**: native binaries can fail to install on Windows ARM64 under Node 24. Use Node 22 (recommended) or apply the documented SWC patch. See [`CLAUDE.md`](../CLAUDE.md) "Next.js SWC on Windows ARM64".
@@ -354,7 +362,7 @@ External services are all skippable locally. The app boots without any of them (
 | Google Document AI OCR | yes | `GCP_PROCESSOR_ID` set without `GOOGLE_BAA_ACTIVE=true` → dev warns; runtime gate blocks image OCR (prod hard-fails). | `backend/src/config/index.ts:236`; gate `:401-414` |
 | SendGrid email | yes | No `SENDGRID_API_KEY` → `config.email.enabled=false`; emails are **logged, never sent** (verification URL via `devBox`). Or `SENDGRID_SANDBOX_MODE=true`. | `backend/src/config/index.ts:209`; `emailService.ts:313,376` |
 | Redis (rate-limit store) | yes | `REDIS_URL` unset → in-memory `MemoryStore` fallback. | `backend/src/middleware/rateLimitStore.ts:41,77`; `config/index.ts:186` |
-| GCS file storage | yes (uploads) | Dev/staging fall back to bucket `ownmyhealth-user-files`; only file-upload flows need real GCS. Prod hard-fails if `GCS_BUCKET_NAME` unset. | `backend/src/config/index.ts:228`; prod gate `:480` |
+| **File storage** | **not needed at all** | `STORAGE_BACKEND` defaults to `local` in development (OF-23): uploads are AES-256-GCM-sealed to `backend/.local-storage`, so upload/download/delete work end-to-end with **no GCP**. Set `STORAGE_BACKEND=gcs` only if you specifically want to exercise the bucket path. Requires `PHI_ENCRYPTION_KEY` — without it the app still boots and only storage calls fail, with a pointed message. | `backend/src/config/index.ts:251-256`; `services/storage/localBackend.ts:44-55`; dispatch `storageService.ts:33-44` |
 | Quest SMART-on-FHIR | yes | Unset creds → "Connect Quest" returns 503. Point `QUEST_FHIR_BASE_URL` at the **dev mock server** `http://localhost:3001/api/v1/mock-fhir/r4`. | `backend/.env.example:289`; mock mounted `app.ts:275-281` |
 
 ### Email verification without SendGrid

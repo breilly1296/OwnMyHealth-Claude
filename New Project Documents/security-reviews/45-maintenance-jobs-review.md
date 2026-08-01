@@ -1,5 +1,31 @@
 # Maintenance Jobs (One-Shot PHI Backfills / Data Migrations) Review — 2026-06-16
 
+> **Reconciled 2026-08-01 — not re-run.** The reviewed job code is unchanged; `maintenance.yml` moved
+> only via the SHA-pinned actions bump (`a5b38a5`). What changed is the governance and one new finding:
+>
+> - **Posture:** sandbox — no GCP, no deployment target (declared 2026-07-14). See
+>   [OPEN_FINDINGS.md §Posture](../OPEN_FINDINGS.md). **These jobs cannot currently run**: the
+>   `ownmyhealth-maintenance` Cloud Run job has no target since billing was disabled ~2026-07-12.
+>   Severities below were assigned assuming a live fleet; re-read them as launch-blocking, not current.
+> - **Ledger:** [OPEN_FINDINGS.md](../OPEN_FINDINGS.md) owns severity. This document does not.
+> - **F-2 (no `environment:`/approval gate on a fleet-wide `apply=true` PHI rewrite)** is the finding
+>   most changed by posture: there is no fleet and no target, so it is dormant — but it remains a hard
+>   launch prerequisite and is *more* important now, because the next `apply=true` run will happen
+>   against a freshly-restored stack by someone reconstructing context.
+>
+> **New finding not in this review — added to the ledger as OF-26.** Two of the jobs reviewed here
+> UPDATE tables that have **no RLS UPDATE policy**:
+> `tx.goalProgressHistory.update` (`goalValueBackfill.ts:127`) and `tx.biomarkerHistory.updateMany`
+> (`biomarkerConsolidation.ts:145`). Both run under a **user** RLS context
+> (`withRLSTransaction(userId, …)` at `backfillGoalValues.ts:113` and
+> `consolidateBiomarkerSeries.ts:103`), so `is_admin_session()` does not apply — and with no UPDATE
+> policy at all, nothing does. This is the same shape as OF-22, which took a production-role e2e run
+> to surface. It compounds **F-1** and **F-5** below: `applyUserConsolidation` requires the re-parent
+> to succeed *before* the duplicate delete or the FK cascade drops the history
+> (`biomarkerConsolidation.ts:130-136`), so a silently-failing re-parent followed by a successful
+> delete is irreversible PHI loss. **Not confirmed at runtime** — confirming needs a run under the
+> NOBYPASSRLS `omh_app` role. Treat this as the highest-priority item on this page.
+
 Scope: the one-off PHI-backfill / data-migration jobs under `backend/src/maintenance/`, their pure/apply service halves (`goalValueBackfill.ts`, `biomarkerConsolidation.ts`), and the `maintenance.yml` Cloud Run job runner. Reviewed at HEAD `fb2cd32`. Static review only — gcloud auth was unavailable in this environment, so prod run-status (Acceptance Q1) is answered from documented operating state, not a live job-execution query (see Unverifiable).
 
 These are the highest-blast-radius scripts in the repo: they run in prod, as the runtime SA, with the live `PHI_ENCRYPTION_KEY`, and bulk-mutate PHI across every user. Findings are ranked by exploitability × blast radius.

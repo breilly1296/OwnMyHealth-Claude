@@ -1,6 +1,10 @@
 # FRONTEND_MAP.md — Component + Context + API-Service Atlas
 
-> Generated against HEAD `fb2cd32` (2026-06-15). Frontend = Vite + React 18 + TypeScript at repo **root** (`src/`); backend is at `backend/`. All paths below are repo-relative.
+> **Code state:** `master` @ `12b45ae` · **Refreshed:** 2026-08-01 (previous: `fb2cd32`, 2026-06-15)
+>
+> Frontend = Vite + React 18 + TypeScript at repo **root** (`src/`); backend is at `backend/`. All paths below are repo-relative.
+>
+> **Changed since the last generation:** a new `legal/` component directory (registration consent, OMH-L04), a new `pagination.ts` API module, and a new `useFocusTrap` hook that 15 component files now depend on for dialog accessibility. Counts: 73→**75** `.tsx` across 14→**15** directories; 18→**19** files under `src/services/api/`; hooks 8→**9** including `index.ts`.
 
 This is the navigation atlas for the OwnMyHealth SPA frontend. A reader asking "where do I add a new biomarker input field?", "which component renders the insurance hub?", or "which API module backs the plan tier badge?" should land on the answer here without opening the repo.
 
@@ -19,11 +23,11 @@ It passes the five tests (question-answering, path-and-line, snippet, diagram, r
 
 | Fact | Value | Evidence |
 |---|---|---|
-| Component files (`*.tsx`) under `src/components/` | **73** | `Glob "src/components/**/*.tsx"` → 73 hits |
+| Component files (`*.tsx`) under `src/components/` | **75** | `Glob "src/components/**/*.tsx"` → 75 hits across **15** dirs |
 | Distinct component directories | **14** | `admin, analytics, auth, biomarkers, common, dashboard, files, health, insurance, onboarding, provider, settings, trends, upload` |
 | React contexts | **2** | `src/contexts/AuthContext.tsx`, `src/contexts/ThemeContext.tsx` |
-| API service modules (`src/services/api/*.ts`) | **18** (17 domain `*Api` objects + `client.ts`) | `Glob "src/services/api/*.ts"` |
-| Custom hooks (`src/hooks/*.ts`) | **8** | `useApi`, `useBiomarkerData`, `useBiomarkerStats`, `useBiomarkerTrends`, `useErrorNotification`, `useModals`, `useRBAC`, `index` |
+| API service modules (`src/services/api/*.ts`) | **19** (17 domain `*Api` objects + `client.ts` + `pagination.ts`) | `Glob "src/services/api/*.ts"` |
+| Custom hooks (`src/hooks/*.ts`) | **9** | `useApi`, `useBiomarkerData`, `useBiomarkerStats`, `useBiomarkerTrends`, `useErrorNotification`, `useFocusTrap` **(new)**, `useModals`, `useRBAC`, `index` |
 | Routing library | **None (no react-router)** | conditional rendering — see [§3](#3-routing--url-map) |
 | State model | **React Context only (no Redux/Zustand/MobX)** | `AuthContext`, `ThemeContext`; data state lives in hooks (`useBiomarkerData`) |
 | HTTP transport | **native `fetch`, NOT axios** | `apiFetch` (`src/services/api/client.ts:227`); CLAUDE.md's "axios + interceptors" is stale |
@@ -68,13 +72,14 @@ Per-directory `.tsx` counts (authoritative — verified `Glob "src/components/<d
 | dashboard | 10 | `categoryRouting.ts`, `index.ts` (note: `getIcon.tsx` is `.tsx`) |
 | files | 2 | `index.ts` |
 | health | 2 | (none) |
-| insurance | 18 | `index.ts`, `insuranceKnowledgeBaseConstants.ts`, `useInsuranceKnowledgeBase.ts` |
+| **legal** *(new)* | 3 | `LegalPageShell.tsx`, `PrivacyPolicy.tsx`, `TermsOfService.tsx` — added 2026-06-21 with the registration-consent flow (OMH-L04) |
+| insurance | 17 | `index.ts`, `insuranceKnowledgeBaseConstants.ts`, `planFormatters.ts`, `useInsuranceKnowledgeBase.ts` |
 | onboarding | 1 | `index.ts` |
 | provider | 2 | (none) |
 | settings | 7 | `index.ts` |
 | trends | 5 | `index.ts` |
 | upload | 4 | `index.ts` |
-| **Total** | **73** | |
+| **Total** | **75** | across 15 dirs |
 
 ### `src/components/admin/`
 
@@ -528,6 +533,43 @@ Each `lazy()` page renders inside a `<Suspense fallback={<PageLoadSpinner/>}>` (
 ---
 
 ## 8. Notable patterns
+
+### `useFocusTrap` — the accessibility backbone (added 2026-06-20)
+
+`src/hooks/useFocusTrap.ts` provides WAI-ARIA dialog behavior for any modal-like overlay: Escape to
+close, a Tab focus trap, initial focus into the container, focus restoration to the opener on close,
+and body scroll-lock while open. It was extracted from `common/Modal` so bespoke overlays get the
+same behavior without the full Modal chrome.
+
+**Consumers (15 files):** `common/Modal`, plus 14 bespoke overlays — `analytics/GoalTrackerPanel`,
+`biomarkers/AddMeasurementModal`, `biomarkers/BiomarkerInsurancePanel`, `biomarkers/TrendModal`,
+`dashboard/DashboardSidebar`, `files/FilesPage`, `health/HealthNeedsPage`,
+`insurance/AddInsurancePlanModal`, `insurance/InsurancePlanCompare`, `insurance/InsurancePlanViewer`,
+`settings/AccountSettingsPage`, `settings/ChangeEmailModal`, `settings/ChangePasswordModal`,
+`trends/TrendDetailModal`.
+
+**Contract for a consumer** — apply the returned ref to the dialog container together with
+`role="dialog"`, `aria-modal="true"`, an accessible name (`aria-label`/`aria-labelledby`), **and**
+`tabIndex={-1}`. The last one is easy to miss and silently breaks the hook: without it,
+`container.focus()` is a no-op and the trap starts outside itself.
+
+```ts
+// Source: src/hooks/useFocusTrap.ts:30-34 — why onClose lives in a ref
+// A new onClose identity each render would otherwise re-run the effect, whose cleanup
+// restores focus to the opener — stealing focus mid-open.
+const onCloseRef = useRef(onClose);
+onCloseRef.current = onClose;
+```
+
+Regression coverage: `src/__tests__/components/dialogA11y.test.tsx` asserts each bespoke modal exposes
+`role="dialog"` + `aria-modal="true"` + an `aria-labelledby` that **resolves to an element that
+exists**, and closes on Escape. See [`prompts/47-accessibility.md`](../prompts/47-accessibility.md)
+for the full review checklist.
+
+### `pagination.ts` (added 2026-06-20)
+
+`src/services/api/pagination.ts` is the deduped client-side pager introduced when the provider
+patient-PHI list endpoints were paginated (`4a9c67f`). Prefer it over per-module paging logic.
 
 **RoleGuard / useRBAC** — `RoleGuard` (`src/components/common/RoleGuard.tsx:55`) is backed by `useRBAC` (`src/hooks/useRBAC.ts:18`), which reads `user.role` from `useAuth()` and exposes `hasRole`/`hasMinRole` (hierarchy ADMIN=3 > PROVIDER=2 > PATIENT=1, `useRBAC.ts:12-16`). **However, both are currently unused by any rendered component** (audit L-18, `RoleGuard.tsx:7-16`). Real UI role gating is done inline in `Dashboard`:
 
