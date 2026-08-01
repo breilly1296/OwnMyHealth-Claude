@@ -158,6 +158,14 @@ jobs:
       - name: Documentation integrity
         run: node scripts/check-docs.mjs
 
+      # The "Verified codebase counts" table in prompts/00-index.md is the
+      # prompt library's shared fact base — every prompt is told to trust it
+      # when prompts disagree, so a wrong number there reaches every generated
+      # doc. It is derived from the repo, not transcribed; this fails the build
+      # if the two diverge. Fix with: node scripts/check-counts.mjs --write
+      - name: Prompt-library counts
+        run: node scripts/check-counts.mjs
+
   # RLS regression — runs the tenant-isolation + provider-consent suite against
   # a REAL Postgres connected as a NOBYPASSRLS role, so Row-Level Security
   # policies are actually enforced (dev/staging connect as a BYPASSRLS
