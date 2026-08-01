@@ -214,7 +214,6 @@ Purpose: insurance hub, plan CRUD/compare/view, SBC/enhanced upload, knowledge b
 | `InsurancePlanCompare` | `src/components/insurance/InsurancePlanCompare.tsx:125` (`InsuranceKnowledgePanel`) | Compare panel | `insuranceApi.*` |
 | `InsurancePlanViewer` | `src/components/insurance/InsurancePlanViewer.tsx:51` | Modal plan viewer | — |
 | `InsuranceStatsGrid` | `src/components/insurance/InsuranceStatsGrid.tsx:19` | Stat cards | — |
-| `InsuranceUtilizationTracker` | `src/components/insurance/InsuranceUtilizationTracker.tsx:60` | Utilization view | — |
 | `InsuranceGuide` | `src/components/insurance/InsuranceGuide.tsx:58` (`InsuranceEducationPanel`) | Education panel | — |
 | `InsuranceLearnTab` | `src/components/insurance/InsuranceLearnTab.tsx:46` | Learn tab | — |
 | `DeductibleProgressBar` | `src/components/insurance/DeductibleProgressBar.tsx:18` | Deductible bar | — |

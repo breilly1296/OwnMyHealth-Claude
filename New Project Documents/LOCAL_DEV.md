@@ -134,16 +134,16 @@ npx prisma migrate deploy    # apply all 34 migrations
 cd ..
 
 # (optional) seed an already-verified PRO test user for smoke / e2e flows
-npx tsx e2e/setup/seed-test-user.ts
+npx tsx backend/scripts/e2e-db.ts
 ```
 
 - **34 migrations** as of 2026-08-01, newest `backend/prisma/migrations/20260712_add_sessions_update_policy/`. Verify with `Glob pattern: backend/prisma/migrations/*/`.
 - **19 Prisma models** in `backend/prisma/schema.prisma` (incl. `RevokedAccessToken` at `:96` and `LabConnection` at `:755`). See [`DATA_MODEL.md`](./DATA_MODEL.md) for the full ER.
-- **The only seed script** is `e2e/setup/seed-test-user.ts`. There is **no** `backend/scripts/seed*` (`backend/scripts/` holds only `setup-rls-test-db.sh`).
+- **The only seed script** is `backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`). There is **no** `backend/scripts/seed*` (`backend/scripts/` holds only `setup-rls-test-db.sh`).
 
 > The seed user is created already-verified + PRO so it bypasses the email gate and plan gating:
 > ```ts
-> // Source: e2e/setup/seed-test-user.ts:64-74
+> // Source: backend/scripts/e2e-db.ts:64-74
 > await prisma.user.create({
 >   data: {
 >     email: EMAIL,
@@ -157,7 +157,7 @@ npx tsx e2e/setup/seed-test-user.ts
 >   },
 > });
 > ```
-> Seeded credentials: `e2e-test@ownmyhealth.io` / `E2ETestPass123!` (`e2e/setup/seed-test-user.ts:29-30`).
+> Seeded credentials: `e2e-test@ownmyhealth.io` / `E2ETestPass123!` (`backend/scripts/e2e-db.ts:29-30`).
 
 ### Migrations are NOT applied at container boot
 
@@ -184,7 +184,7 @@ git clone ──▶ npm install (root + backend)
             createdb  ──▶  npx prisma generate  ──▶  npx prisma migrate deploy (32)
                     │
                     ▼
-            [optional] npx tsx e2e/setup/seed-test-user.ts
+            [optional] npx tsx backend/scripts/e2e-db.ts
                     │
                     ▼
             backend npm run dev (:3001)  +  root npm run dev (:5173)
@@ -244,7 +244,7 @@ curl -X POST http://localhost:3001/api/v1/auth/register \
 #      /verify-email?token=... link and GET its backend equivalent:
 #        curl "http://localhost:3001/api/v1/auth/verify-email?token=<TOKEN>"
 #  (B) OR seed an already-verified user instead of registering:
-#        npx tsx e2e/setup/seed-test-user.ts
+#        npx tsx backend/scripts/e2e-db.ts
 #      then log in as e2e-test@ownmyhealth.io / E2ETestPass123!
 
 # --- Login (capture cookies — sets csrf_token + auth cookies) ---
@@ -381,7 +381,7 @@ if (config.isDevelopment) {
 }
 ```
 
-Copy the printed `/verify-email?token=…` token and GET `http://localhost:3001/api/v1/auth/verify-email?token=<TOKEN>` (`backend/src/routes/authRoutes.ts:62-66`). Or skip the gate by seeding (`e2e/setup/seed-test-user.ts` sets `emailVerified: true`).
+Copy the printed `/verify-email?token=…` token and GET `http://localhost:3001/api/v1/auth/verify-email?token=<TOKEN>` (`backend/src/routes/authRoutes.ts:62-66`). Or skip the gate by seeding (`backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`) sets `emailVerified: true`).
 
 ### Quest FHIR / lab-connection without real Quest credentials
 

@@ -168,7 +168,7 @@ Overall the file-storage surface is in good shape: the signed-read-URL egress ve
 - [x] `sensitiveLimiter` (10/hr) on the download endpoint — `fileRoutes.ts:61`.
 - [x] `requirePlanLimit('pdfUploadsPerMonth')` on each upload; `requirePlanLimit('maxBiomarkers')` also on lab-report + OCR (M12) — `uploadRoutes.ts:84,88,106,137,139`; planGating fails CLOSED to FREE on DB error (`planGating.ts:76-88`) and enforces `planExpiresAt` downgrade (`:73-75`).
 - [x] Per-upload biomarker overshoot truncated at the shared insert site — `createBiomarkersFromOCRResult` caps to remaining quota (`shared.ts:206-231`).
-- [x] `blockDemoAI` on all three upload routes — `uploadRoutes.ts:83,105,136`; impl `demoProtection.ts:164-175`.
+- [x] `blockDemoAI` on all three upload routes — `uploadRoutes.ts:83,105,136`; impl `demoProtection.ts:81-175`.
 - [x] Limiters share a Redis store when `REDIS_URL` set — `createRateLimitStore` per-limiter (`rateLimiter.ts:8,67,89,...`); falls back to per-instance MemoryStore otherwise (`rateLimitStore.ts`, documented N×limit ceiling at `rateLimiter.ts:56-63`).
 
 ### 9. Audit Logging

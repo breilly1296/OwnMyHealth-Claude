@@ -36,7 +36,7 @@ updated: 2026-06-16
 - `backend/src/services/encryption.ts` (`getEncryptionService`, `encrypt`/`decrypt` at `encryption.ts:328`/`:353`, `deriveUserKey` PBKDF2-SHA512 at `encryption.ts:236`)
 - `backend/src/services/userEncryption.ts` (`getUserEncryptionSalt` — per-user salt source)
 - `backend/src/middleware/planGating.ts` (`requirePlanFeature('questFhirIntegration')` → `requirePlanLimit`; plan read fresh from DB under RLS)
-- `backend/src/middleware/demoProtection.ts` (`blockDemoAI` at `demoProtection.ts:164`)
+- `backend/src/middleware/demoProtection.ts` (`blockDemoAI` at `demoProtection.ts:81`)
 - `backend/src/middleware/rateLimiter.ts` (`sensitiveLimiter` at `rateLimiter.ts:151` — 10 req/hour, `:153-154`)
 - `backend/src/middleware/validation.ts` (`schemas.connectionIdParam` / `schemas.uuidParam` — both `z.object` of a UUID)
 - `backend/src/config/plans.ts` (`questFhirIntegration` feature flag — `false` on FREE (`plans.ts:61`), `true` on PRO/TEAM (`:80`/`:99`))

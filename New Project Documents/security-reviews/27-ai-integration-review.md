@@ -116,7 +116,7 @@ not exploitable disclosure or auth-bypass paths.
 - [x] Fails closed with 503 on budget reached AND on shared-store error — `aiSpendGuard.ts:42-52` (Redis error → 503), `:54-68` (budget reached → 503); `0` disables a scope (`aiCostTracker.ts:130/134`, `:209/213`).
 - [x] Shared store implemented — `RedisSpendStore` with atomic `INCRBYFLOAT` selected when `REDIS_URL` set, else `InMemorySpendStore` (`aiCostTracker.ts:95`, `:172`, `:257-274`); N×budget per-instance caveat documented.
 - [x] Spend recorded post-call, not pre-debited; a runaway loop is still bounded — reservation+settle keeps in-flight charges bounded and `trackAIUsage` records actuals; the NEXT call is refused once over budget (`aiSpendGuard.ts:54`).
-- [x] Demo accounts hard-blocked from AI (403) — `blockDemoAI` on all 8 mount points; `demoProtection.ts:164-175`; `isDemoAccount` is safe when `DEMO_EMAIL` unset (`:33-36`).
+- [x] Demo accounts hard-blocked from AI (403) — `blockDemoAI` on all 8 mount points; `demoProtection.ts:81-175`; `isDemoAccount` is safe when `DEMO_EMAIL` unset (`:33-36`).
 - [x] Retries bounded — chat `maxRetries: 1` (`aiChatController.ts:77`), extractors default 2 (`anthropicClient.ts:25`).
 - [x] `isAISpendExceeded` removed and replaced by reserve+check `admitAISpend` — grep returns no `isAISpendExceeded`; only `admitAISpend` (`aiCostTracker.ts:285`).
 

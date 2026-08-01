@@ -114,7 +114,7 @@ budget breach.
 - [x] `requirePlanLimit` reads plan from DB under RLS (`planGating.ts:66-71`), downgrades to FREE when `planExpiresAt` passed (`:73-74`), and fails CLOSED to FREE on DB error (`:76-88`, catch comment explicitly rejects the JWT path).
 
 ### 6. Demo-account cost containment
-- [x] `blockDemoAI` (403) present on every Claude route in the guard stack — chat `aiRoutes.ts:33`, guidance `biomarkerRoutes.ts:137`, analyze `expenseRoutes.ts:115`, upload-sbc `insuranceRoutes.ts:135` + `uploadRoutes.ts:105`, reanalyze `insuranceRoutes.ts:122`, lab-report `uploadRoutes.ts:83`, lab-results-ocr `:136` (`demoProtection.ts:164-175`).
+- [x] `blockDemoAI` (403) present on every Claude route in the guard stack — chat `aiRoutes.ts:33`, guidance `biomarkerRoutes.ts:137`, analyze `expenseRoutes.ts:115`, upload-sbc `insuranceRoutes.ts:135` + `uploadRoutes.ts:105`, reanalyze `insuranceRoutes.ts:122`, lab-report `uploadRoutes.ts:83`, lab-results-ocr `:136` (`demoProtection.ts:81-175`).
 - [x] `isDemoAccount` returns false when `DEMO_EMAIL` unset (`demoProtection.ts:34`); demo mode hard-fails in production (`config/index.ts:489-495`).
 
 ### 7. Scope boundaries (cross-link verified, not re-audited)

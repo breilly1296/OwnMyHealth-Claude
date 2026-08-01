@@ -263,7 +263,7 @@ router.post(
   '/:id/guidance',
   aiLimiter,            // 10/hr per user (rateLimiter.ts:177)
   aiSpendGuard,         // daily $ budget (aiSpendGuard.ts:28)
-  blockDemoAI,          // demo accounts blocked (demoProtection.ts:164)
+  blockDemoAI,          // demo accounts blocked (demoProtection.ts:81)
   requirePlanLimit('aiGuidancePerDay'),  // plan tier limit (planGating.ts:37)
   validate(schemas.uuidParam, 'params'),
   asyncHandler(async (req, res) => { /* inline AI handler, BAA-gated */ }),
@@ -395,9 +395,9 @@ if (!tokenMatches(provided, expected)) { res.status(401)... }
 | `aiSpendGuard` | `aiSpendGuard.ts:28` | **8 mount points across 5 route files**: biomarker guidance (`:136`), expenses analyze (`:114`), insurance reanalyze + upload-sbc (`:125,139`), upload ×3 (`:82,105,136`), ai chat (`:32`). |
 | `requirePlanLimit(...)` | `planGating.ts:37` | biomarker `POST`/`POST /batch` (`maxBiomarkers`), biomarker guidance (`aiGuidancePerDay`), insurance `POST /plans` (`insurancePlans`), insurance reanalyze + upload-sbc (`pdfUploadsPerMonth`), expenses analyze (`costAnalysisPerMonth`), upload ×3 (`pdfUploadsPerMonth` + `maxBiomarkers` on 2), ai chat (`aiChatsPerDay`). |
 | `requirePlanFeature(...)` | `planGating.ts:131` | settings `PATCH /health-profile` (`healthProfile`), fhir `/connect/quest` + `/sync` (`questFhirIntegration`). |
-| `blockDemoAI` | `demoProtection.ts:164` | biomarker guidance, insurance reanalyze + upload-sbc, expenses analyze, upload ×3, ai chat, fhir `/connect`+`/sync`+`DELETE /connections/:id`. |
+| `blockDemoAI` | `demoProtection.ts:81` | biomarker guidance, insurance reanalyze + upload-sbc, expenses analyze, upload ×3, ai chat, fhir `/connect`+`/sync`+`DELETE /connections/:id`. |
 | `blockDemoAdminAccess` | `demoProtection.ts:67` | Router-level `adminRoutes.ts:31`. |
-| `blockDemoProfileUpdate` | `demoProtection.ts:145` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` (`settingsRoutes.ts:44,60,79,101,110`). |
+| `blockDemoProfileUpdate` | `demoProtection.ts:62` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` (`settingsRoutes.ts:44,60,79,101,110`). |
 | `blockDemoRoleChange` | `demoProtection.ts:43` | **Exported but UNUSED** in routes — admin role changes are covered by `blockDemoAdminAccess` (router-level) + the self-role-elevation guard. Flagged in §12. |
 | `blockDemoUserModification` | `demoProtection.ts:85` | **Exported but UNUSED** in routes — admin user-management covered by `blockDemoAdminAccess`. Flagged in §12. |
 | `validate(schema, source?)` | `validation.ts` (factory) | See §11. |
@@ -484,9 +484,9 @@ sequenceDiagram
 
 | Variant | File:line | Routes guarded | Why |
 |---|---|---|---|
-| `blockDemoAI` | `demoProtection.ts:164` | biomarker `/:id/guidance`, insurance `/plans/:id/reanalyze` + `/upload-sbc`, expenses `/analyze`, upload `/lab-report`+`/insurance-sbc`+`/lab-results-ocr`, ai `/chat`, fhir `/connect/quest`+`/sync/:connectionId`+`DELETE /connections/:id` | Demo accounts can't create real PHI or burn AI quota / API spend |
+| `blockDemoAI` | `demoProtection.ts:81` | biomarker `/:id/guidance`, insurance `/plans/:id/reanalyze` + `/upload-sbc`, expenses `/analyze`, upload `/lab-report`+`/insurance-sbc`+`/lab-results-ocr`, ai `/chat`, fhir `/connect/quest`+`/sync/:connectionId`+`DELETE /connections/:id` | Demo accounts can't create real PHI or burn AI quota / API spend |
 | `blockDemoAdminAccess` | `demoProtection.ts:67` | **Router-level** in `adminRoutes.ts:31` → guards all 11 admin endpoints. Runs between `authenticate` (`:30`) and `requireRole('ADMIN')` (`:32`) so a demo account is rejected before any role check (F-5) | Demo accounts must never reach admin functions |
-| `blockDemoProfileUpdate` | `demoProtection.ts:145` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` | Demo state stays consistent for all testers; demo has a real password so would otherwise pass verification |
+| `blockDemoProfileUpdate` | `demoProtection.ts:62` | settings `PATCH /profile`, `PATCH /notifications`, `PATCH /health-profile`, `DELETE /delete-data`, `DELETE /delete-account` | Demo state stays consistent for all testers; demo has a real password so would otherwise pass verification |
 | `blockDemoUserModification` | `demoProtection.ts:85` | **Exported, not mounted** on any route (covered by `blockDemoAdminAccess`). See §12 | — |
 | `blockDemoRoleChange` | `demoProtection.ts:43` | **Exported, not mounted** on any route (covered by `blockDemoAdminAccess` + self-role-elevation guard). See §12 | — |
 

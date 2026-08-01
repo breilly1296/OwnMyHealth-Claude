@@ -123,7 +123,7 @@ in the dedicated `rls` CI job against a real Postgres instead (`backend/vitest.c
 | `test:watch` | `vitest` | Watch mode (`package.json:13`) |
 | `test:coverage` | `vitest run --coverage` | Coverage (`package.json:14`) |
 | `test:ui` | `vitest --ui` | Vitest UI (`package.json:15`) |
-| `test:e2e:setup` | `cd backend && npx tsx ../e2e/setup/seed-test-user.ts` | Seed the e2e user (`package.json:16`) |
+| `test:e2e:setup` | `cd backend && npx tsx ../backend/scripts/e2e-db.ts` | Seed the e2e user (`package.json:16`) |
 | `test:e2e` | `npm run test:e2e:setup && playwright test` | **Seeds first, then runs Playwright** (`package.json:17`) |
 | `test:e2e:ui` | `playwright test --ui` | Playwright UI (`package.json:18`) |
 | `test:e2e:install` | `playwright install chromium` | Install the browser (`package.json:19`) |
@@ -636,13 +636,13 @@ test.describe('Biomarker manual entry', () => {
 
 ### Seed-test-user helper
 
-The seed script is at **`e2e/setup/seed-test-user.ts`**. It is idempotent (creates or refreshes
+The seed script is at **`backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`)**. It is idempotent (creates or refreshes
 the user) and is run automatically by `npm run test:e2e` via the `test:e2e:setup` script
 (`package.json:16-17`). It seeds `emailVerified: true`, `plan: 'PRO'`, and
 `onboardingCompletedAt: now` so plan-gating / email-gate / onboarding don't block flow tests:
 
 ```ts
-// Source: e2e/setup/seed-test-user.ts:42-61
+// Source: backend/scripts/e2e-db.ts:42-61
 const existing = await prisma.user.findUnique({ where: { email: EMAIL } });
 if (existing) {
   await prisma.user.update({
@@ -755,7 +755,7 @@ it('rejects the cloud metadata endpoint', () => {
 | Mock audit service | `createMockAuditService()` | `controllers/testHelpers.ts:87-97` |
 | Mock encryption service | `createMockEncryptionService()` | `controllers/testHelpers.ts:106-114` |
 | Inline row builders | per-test `makeBiomarkerRow` / `cannedBiomarkerRow` / `relRow` | `biomarkerController.test.ts`, `biomarkerRoutes.guidance.test.ts:156-170`, `providerAccess.test.ts:22-40` |
-| Seed e2e user | `e2e/setup/seed-test-user.ts` (idempotent, run by `test:e2e`) | `seed-test-user.ts:32-80` |
+| Seed e2e user | `backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`) (idempotent, run by `test:e2e`) | `seed-test-user.ts:32-80` |
 
 There are **no** `fixtures/`, `factories/`, or `__mocks__/` source directories — `e2e/fixtures/`
 holds only a README. The shared factory module is `testHelpers.ts` (named non-`*.test.ts` so
@@ -843,7 +843,7 @@ See [PHI_TAXONOMY.md / DATA_MODEL.md](./DATA_MODEL.md) *(doc pending — see pro
 | Service test | Stubs encryption to return plaintext | Real encryption path with a test `PHI_ENCRYPTION_KEY` (`encryption.test.ts:20`) |
 | Middleware test | Stubs `planGating` itself (asserts nothing) | Runs the real middleware against a mocked `withRLSContext` (`planGating.test.ts:25-34`) |
 | RLS test | Adds a `where: { userId }` filter that hides whether RLS works | Omits the filter; gates on `describe.skipIf(!hasLiveDb)` against a live DB (`rls.test.ts:29, 228-242`) |
-| E2E | Hardcodes test creds inline | Imports `TEST_USER`/`loginAsTestUser` from `e2e/helpers/auth.ts`; seeds via `e2e/setup/seed-test-user.ts` (run by `test:e2e`) (`auth.ts:18-45`) |
+| E2E | Hardcodes test creds inline | Imports `TEST_USER`/`loginAsTestUser` from `e2e/helpers/auth.ts`; seeds via `backend/scripts/e2e-db.ts` (`npm run test:e2e:setup`) (run by `test:e2e`) (`auth.ts:18-45`) |
 
 ---
 

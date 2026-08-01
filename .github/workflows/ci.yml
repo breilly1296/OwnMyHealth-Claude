@@ -148,6 +148,16 @@ jobs:
       - name: RLS wrapper guard
         run: bash scripts/check-rls-wrappers.sh
 
+      # Fail the build on broken navigation or stale line citations in the doc
+      # set. `New Project Documents/` substitutes for repo access in a Claude
+      # Project and `prompts/` regenerates it, so both rot silently: a dead
+      # anchor sends a reader nowhere, and a line number that moved in a
+      # refactor is worse than no citation because it looks verified.
+      # Introduced 2026-08-01 after a manual pass found 22 broken links and a
+      # single wrong line number that had fanned out into 6 documents.
+      - name: Documentation integrity
+        run: node scripts/check-docs.mjs
+
   # RLS regression — runs the tenant-isolation + provider-consent suite against
   # a REAL Postgres connected as a NOBYPASSRLS role, so Row-Level Security
   # policies are actually enforced (dev/staging connect as a BYPASSRLS

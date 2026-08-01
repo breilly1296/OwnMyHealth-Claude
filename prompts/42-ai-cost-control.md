@@ -182,7 +182,7 @@ response, or health values. The Anthropic key itself is owned by
 - [ ] `requirePlanLimit` reads the plan from the **DB under RLS**, not the JWT (`planGating.ts:66`), and downgrades to FREE when `planExpiresAt` has passed (`planGating.ts:73-74`) — confirm this so an expired paid plan can't keep spending at PRO/TEAM ceilings. On a DB-lookup error it fails **CLOSED to FREE** (`effectivePlan = 'FREE'`, `planGating.ts:76-88`), deliberately NOT trusting the more-permissive JWT snapshot (the catch comment explicitly rejects the JWT path) — so a transient DB outage degrades to the SAFEST tier, not a more-permissive one.
 
 ### 6. Demo-account cost containment
-- [ ] `blockDemoAI` (403) is present on every Claude-backed route that carries it in the guard stack — chat, guidance, analyze, upload-sbc, reanalyze, and the three upload routes — so the demo account can't generate anonymous Anthropic cost (`demoProtection.ts:164`).
+- [ ] `blockDemoAI` (403) is present on every Claude-backed route that carries it in the guard stack — chat, guidance, analyze, upload-sbc, reanalyze, and the three upload routes — so the demo account can't generate anonymous Anthropic cost (`demoProtection.ts:81`).
 - [ ] `isDemoAccount` (`demoProtection.ts:33`) returns `false` when `DEMO_EMAIL` is unset (the empty-email guard at `demoProtection.ts:34`), so an empty `req.user.email` can't be mistaken for the demo user; and demo mode hard-fails in production (`config/index.ts:489-493`). Confirm both still hold (demo-account blocking on AI routes is also surveyed by [[27-ai-integration]]).
 
 ### 7. Scope boundaries (owned elsewhere — verify the cross-link, don't re-audit)
